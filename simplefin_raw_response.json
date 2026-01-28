@@ -1,0 +1,1903 @@
+{
+  "errors": [
+    "Connection to M1 Finance may need attention. Auth required",
+    "Connection to Discover Bank Account may need attention. The answer or answers were not provided in time. Please try again.",
+    "Connection to PayPal may need attention. The answer or answers were not provided in time. Please try again.",
+    "Connection to BILT Rewards may need attention. The answer or answers were not provided in time. Please try again.",
+    "Connection to Bank of America may need attention. The credentials entered do not match your credentials at this institution."
+  ],
+  "accounts": [
+    {
+      "org": {
+        "domain": "www.chase.com",
+        "name": "Chase Bank",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.chase.com",
+        "id": "www.chase.com"
+      },
+      "id": "ACT-caa90951-f51e-49ef-a0ff-ff323dcb66e3",
+      "name": "Amazon Rewards Visa Signature",
+      "currency": "USD",
+      "balance": "-1061.27",
+      "available-balance": "0.00",
+      "balance-date": 1766831427,
+      "transactions": [
+        {
+          "id": "TRN-978b4788-2a87-4391-b928-4a8e24ab87fa",
+          "posted": 1766497159,
+          "amount": "-64.67",
+          "description": "Amazon.com*076R94F33",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1766334953
+        },
+        {
+          "id": "TRN-640690fc-b32a-4499-9b98-dc4286b04a69",
+          "posted": 1766409179,
+          "amount": "-3.79",
+          "description": "Prime Video *Z65DP2T33",
+          "payee": "Prime Video",
+          "memo": "",
+          "transacted_at": 1766328803
+        },
+        {
+          "id": "TRN-e50c4270-e250-4545-b144-aa014001a491",
+          "posted": 1766318400,
+          "amount": "-148.73",
+          "description": "AMAZON MKTPL*120P43CI3",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1766086384
+        },
+        {
+          "id": "TRN-410b03f2-e922-4cde-b3b9-4ca4ec60bf78",
+          "posted": 1766152642,
+          "amount": "30.63",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1766082781
+        },
+        {
+          "id": "TRN-4db93722-0895-4175-98cf-b8adfc0ea88c",
+          "posted": 1766152643,
+          "amount": "24.51",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1766082685
+        },
+        {
+          "id": "TRN-2ae60d2a-db71-431f-9957-0bae4071f511",
+          "posted": 1766152641,
+          "amount": "-95.60",
+          "description": "AMAZON MKTPL*RB9SQ7013",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1766010177
+        },
+        {
+          "id": "TRN-fedc0d27-2a2b-4818-88f7-b3fc5daa69f7",
+          "posted": 1765981072,
+          "amount": "-3.72",
+          "description": "AMAZON MKTPL*J07IT31B3",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765837434
+        },
+        {
+          "id": "TRN-00815436-a362-4e53-adf0-3cdac8ca0e6d",
+          "posted": 1765893445,
+          "amount": "-22.57",
+          "description": "AMAZON MKTPL*JC50212P3",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765812273
+        },
+        {
+          "id": "TRN-0cbf8ff3-d50b-488d-9156-c94d90b7f36f",
+          "posted": 1765893446,
+          "amount": "-24.43",
+          "description": "Amazon.com*PF8WT2NS3",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765800000
+        },
+        {
+          "id": "TRN-51734124-1968-4f50-bc3d-fa5152d70de9",
+          "posted": 1765804082,
+          "amount": "-9.53",
+          "description": "Amazon.com*LJ7K450I3",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765725386
+        },
+        {
+          "id": "TRN-52774104-08f0-4f70-8140-dbc5cabec7c5",
+          "posted": 1765728086,
+          "amount": "-60.55",
+          "description": "AMAZON MKTPL*A41F67313",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765555908
+        },
+        {
+          "id": "TRN-c3bedcec-37a3-46bd-97a5-7c0cf80bd706",
+          "posted": 1765728087,
+          "amount": "-56.90",
+          "description": "SP OFFTHEWAGONSHOP.COM",
+          "payee": "Offthewagonshop.com",
+          "memo": "",
+          "transacted_at": 1765465051
+        },
+        {
+          "id": "TRN-c01e244f-4d77-45b2-842a-a1006f784e8a",
+          "posted": 1765551821,
+          "amount": "-24.51",
+          "description": "AMAZON MKTPL*DG1PI8F53",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765388110
+        },
+        {
+          "id": "TRN-ca95a6a1-1b15-4efa-9e61-2bb76a91af36",
+          "posted": 1765381063,
+          "amount": "-3.99",
+          "description": "Prime Video *Y83GU9VR3",
+          "payee": "Prime Video",
+          "memo": "",
+          "transacted_at": 1765299612
+        },
+        {
+          "id": "TRN-cd3900da-19b6-4ca9-ad3a-44b1c65139b6",
+          "posted": 1765381064,
+          "amount": "30.59",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765297382
+        },
+        {
+          "id": "TRN-7b1aea13-2c93-4eeb-83dd-2502bfc97b3e",
+          "posted": 1765381062,
+          "amount": "4.56",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765293525
+        },
+        {
+          "id": "TRN-16a4b95e-a24b-4532-a498-3b5b53d94119",
+          "posted": 1765381065,
+          "amount": "31.86",
+          "description": "Amazon.com",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765287517
+        },
+        {
+          "id": "TRN-518c46d5-2d90-4350-a080-88dfb285e476",
+          "posted": 1765291663,
+          "amount": "-1.49",
+          "description": "Prime Video *BI1QZ67H0",
+          "payee": "Prime Video",
+          "memo": "",
+          "transacted_at": 1765195200
+        },
+        {
+          "id": "TRN-1c8e6b7a-23be-492c-ba55-bdfa28dc4692",
+          "posted": 1765291664,
+          "amount": "-49.43",
+          "description": "AMAZON MKTPL*7S2EF2E93",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1765047991
+        },
+        {
+          "id": "TRN-ab8741f7-cd3d-4eba-ae68-8e2d63a208d8",
+          "posted": 1765124485,
+          "amount": "-30.63",
+          "description": "AMAZON MKTPL*BI0JG9QA1",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764936000
+        },
+        {
+          "id": "TRN-1fb729d5-f610-4bc8-ad16-5d115832e907",
+          "posted": 1765124484,
+          "amount": "-47.80",
+          "description": "AMAZON MKTPL*BI0E955P1",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764936000
+        },
+        {
+          "id": "TRN-283efd1b-b9ed-4a66-b8dd-a6a2aa1ab2b1",
+          "posted": 1765124486,
+          "amount": "-19.02",
+          "description": "AMAZON MKTPL*BI6XQ25G1",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764936000
+        },
+        {
+          "id": "TRN-22545cca-c8d7-4325-af42-e2318e6bf2fb",
+          "posted": 1764965894,
+          "amount": "1559.95",
+          "description": "Payment Thank You - Web",
+          "payee": "Payment",
+          "memo": "",
+          "transacted_at": 1764936000
+        },
+        {
+          "id": "TRN-afd12ba2-3e82-44a7-b282-50b62a910974",
+          "posted": 1764950148,
+          "amount": "-4.56",
+          "description": "AMAZON MKTPL*BI0Q59ZN0",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764861829
+        },
+        {
+          "id": "TRN-2257be55-36be-4197-aaac-5869b6c21410",
+          "posted": 1764950147,
+          "amount": "-31.86",
+          "description": "AMAZON MKTPL*BI6SK3Z90",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764861824
+        },
+        {
+          "id": "TRN-43a09ae6-a788-4156-8d50-83473143b022",
+          "posted": 1764867608,
+          "amount": "500.00",
+          "description": "Payment Thank You - Web",
+          "payee": "Payment",
+          "memo": "",
+          "transacted_at": 1764763200
+        },
+        {
+          "id": "TRN-38787c3c-d09f-4ba3-97be-91ca0127097b",
+          "posted": 1764774363,
+          "amount": "-8.49",
+          "description": "AMAZON MKTPL*BB3CC3RL1",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764685902
+        },
+        {
+          "id": "TRN-56be09b3-c48b-4f9b-bd0a-08d04b6363d1",
+          "posted": 1764753825,
+          "amount": "31.28",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-dabdb4d7-3823-4527-b624-bbd94df7ce53",
+          "posted": 1764753827,
+          "amount": "14.86",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-1b1a0db0-8d00-4c86-acda-8dab4b135bd0",
+          "posted": 1764753830,
+          "amount": "32.29",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-7dd8a505-117d-42ba-84c6-5286464ce4a2",
+          "posted": 1764753828,
+          "amount": "38.28",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-25145335-6594-4506-a306-ac1ae0ecbb3b",
+          "posted": 1764753829,
+          "amount": "37.34",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-5ad2cd6f-6232-4438-8f68-52846579e97e",
+          "posted": 1764774364,
+          "amount": "34.95",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-9321e48c-aef8-4f1e-b128-424792bcdbe5",
+          "posted": 1764753831,
+          "amount": "35.37",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764626920
+        },
+        {
+          "id": "TRN-aa9aa30b-944b-4835-bbf2-55245d6d460e",
+          "posted": 1764753826,
+          "amount": "19.11",
+          "description": "AMAZON MKTPLACE PMTS",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764622667
+        },
+        {
+          "id": "TRN-bc2c2ee6-880c-4fa9-8b77-14cacfcd2c35",
+          "posted": 1764774366,
+          "amount": "-42.49",
+          "description": "AMAZON MKTPL*BB8SX8BG0",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764589163
+        },
+        {
+          "id": "TRN-aa704b22-c427-468f-b514-ef95c7ab6e4f",
+          "posted": 1764774365,
+          "amount": "-10.61",
+          "description": "AMAZON MKTPL*BI0086ZJ2",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764589158
+        },
+        {
+          "id": "TRN-22583685-b7d9-4005-830c-6fba870ec597",
+          "posted": 1764600274,
+          "amount": "-31.86",
+          "description": "Amazon.com*BB6CE7G91",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764504000
+        },
+        {
+          "id": "TRN-2d4fa89a-71d6-40f9-9f5c-58e91f7c993d",
+          "posted": 1764600273,
+          "amount": "-18.05",
+          "description": "AMAZON MKTPL*BB64S8LG0",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764458165
+        },
+        {
+          "id": "TRN-7815c907-b0a2-40ac-b8f8-85fb2cb1a3ed",
+          "posted": 1764504000,
+          "amount": "-92.41",
+          "description": "AMAZON MKTPL*BB5W714I0",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764422144
+        },
+        {
+          "id": "TRN-c9e8170a-7bb5-4aa7-a8df-004af8aaf890",
+          "posted": 1764522717,
+          "amount": "-84.87",
+          "description": "AMAZON MKTPL*BB67Y1542",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764422139
+        },
+        {
+          "id": "TRN-e2711a6c-d93a-45b2-b699-ba49afb4d774",
+          "posted": 1764522718,
+          "amount": "-24.41",
+          "description": "AMAZON MKTPL*BB0OE15L2",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764422134
+        },
+        {
+          "id": "TRN-182681aa-d0c0-44fb-9476-da005fa65753",
+          "posted": 1764504000,
+          "amount": "-30.62",
+          "description": "AMAZON MKTPL*B284V3WL0",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764417600
+        },
+        {
+          "id": "TRN-2601b831-b1f0-4aae-8def-a68514570e9b",
+          "posted": 1764522719,
+          "amount": "-10.61",
+          "description": "AMAZON MKTPL*BB1UV9Z82",
+          "payee": "Amazon",
+          "memo": "",
+          "transacted_at": 1764331200
+        }
+      ],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.bankofamerica.com",
+        "name": "Bank of America",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.bankofamerica.com",
+        "id": "www.bankofamerica.com"
+      },
+      "id": "ACT-c973ff29-71dd-4b83-9fb1-857fc6259dc3",
+      "name": "Customized Cash Rewards Visa Signature - 8007",
+      "currency": "USD",
+      "balance": "-5544.12",
+      "available-balance": "0.00",
+      "balance-date": 1762434036,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.discover.com",
+        "name": "Discover Credit Card",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.discover.com",
+        "id": "www.discover.com"
+      },
+      "id": "ACT-75193335-e09a-40b0-b891-74633551203a",
+      "name": "Discover it Card",
+      "currency": "USD",
+      "balance": "-78.30",
+      "available-balance": "-7562.00",
+      "balance-date": 1766792770,
+      "transactions": [
+        {
+          "id": "TRN-b750faa2-cc5a-4798-a766-433343744b00",
+          "posted": 1766404800,
+          "amount": "-3.00",
+          "description": "PAYPAL *PATREON MEMBER 888-221-1161 CA",
+          "payee": "Patreon",
+          "memo": "",
+          "transacted_at": 1766404800
+        },
+        {
+          "id": "TRN-44083a62-ba8b-436d-bb91-7fe37cba6370",
+          "posted": 1766145600,
+          "amount": "-40.25",
+          "description": "MAN-O-SALWA KABOB & GRIL EVERETT MA",
+          "payee": "Man O Salwa Kabob & Gril",
+          "memo": "",
+          "transacted_at": 1766145600
+        },
+        {
+          "id": "TRN-e383e59a-53f6-4404-87b8-8eabab77a806",
+          "posted": 1765972800,
+          "amount": "-2.25",
+          "description": "PMUSA 717014 SOMERVILL ATLANTA GAAPPLE PAY ENDING IN 7691",
+          "payee": "ParkMobile",
+          "memo": "",
+          "transacted_at": 1765972800
+        },
+        {
+          "id": "TRN-f4d769e8-a6b1-4185-b519-a4a8bdd6aae6",
+          "posted": 1765540800,
+          "amount": "-30.00",
+          "description": "CAMBRIDGE HEALTH MYCHART 781-338-0357 MA",
+          "payee": "Cambridge Health Mychart",
+          "memo": "",
+          "transacted_at": 1765540800
+        },
+        {
+          "id": "TRN-ee0c6d79-adce-4362-b106-45414766e88e",
+          "posted": 1764936000,
+          "amount": "23.77",
+          "description": "PAYPAL *TEMU 888-221-1161 CA",
+          "payee": "Temu",
+          "memo": "",
+          "transacted_at": 1764849600
+        },
+        {
+          "id": "TRN-305ff631-2383-4aa3-b358-cb9fc99138dc",
+          "posted": 1764849600,
+          "amount": "-20.00",
+          "description": "E-ZPASS MA 877-627-7745 MAE-ZPASS MA",
+          "payee": "E-ZPass",
+          "memo": "",
+          "transacted_at": 1764849600
+        },
+        {
+          "id": "TRN-eb803f16-21eb-406c-8529-741a12f24a8f",
+          "posted": 1764763200,
+          "amount": "193.33",
+          "description": "INTERNET PAYMENT - THANK YOU",
+          "payee": "Payment",
+          "memo": "",
+          "transacted_at": 1764763200
+        },
+        {
+          "id": "TRN-ca03a5fb-04c3-429a-98d2-5bd3d8d5a0cf",
+          "posted": 1764590400,
+          "amount": "-6.57",
+          "description": "TESLA SUPERCHARGER US TESLA.COM CA",
+          "payee": "Supercharger",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-1aed229e-88c0-4292-91a4-e0cfac8ff30a",
+          "posted": 1764417600,
+          "amount": "-4.00",
+          "description": "PAYPAL *PATREON INC ME 888-221-1161 CA",
+          "payee": "Patreon",
+          "memo": "",
+          "transacted_at": 1764417600
+        }
+      ],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.discover.com",
+        "name": "Discover Credit Card",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.discover.com",
+        "id": "www.discover.com"
+      },
+      "id": "ACT-bf92bf38-3cfd-4ebf-91a7-10c5be78d1f5",
+      "name": "Online Savings",
+      "currency": "USD",
+      "balance": "531.73",
+      "available-balance": "531.73",
+      "balance-date": 1766792770,
+      "transactions": [
+        {
+          "id": "TRN-9ccddfb7-75fd-4380-8e11-1d4be9e5df2b",
+          "posted": 1765800000,
+          "amount": "-220.00",
+          "description": "ACH Withdrawal BETTERMENT SEC TRANSFER",
+          "payee": "Betterment",
+          "memo": "",
+          "transacted_at": 1765800000
+        },
+        {
+          "id": "TRN-576950d5-5595-43e6-b395-30383342d9ff",
+          "posted": 1765540800,
+          "amount": "397.87",
+          "description": "Early Pay PAYROLL ACH from NORTHEASTERN UNI",
+          "payee": "Early Pay Payroll From Northeastern Uni",
+          "memo": "",
+          "transacted_at": 1765540800
+        },
+        {
+          "id": "TRN-c53d7187-6a2a-4957-a612-6228ee8d01ad",
+          "posted": 1765195200,
+          "amount": "-51.82",
+          "description": "ACH Withdrawal NGRID06 NGRID06",
+          "payee": "National Grid",
+          "memo": "",
+          "transacted_at": 1765195200
+        },
+        {
+          "id": "TRN-12b4ce95-d552-4d99-ac1a-64468a9dca6f",
+          "posted": 1764849600,
+          "amount": "-500.00",
+          "description": "Transfer To CHECKING 7036",
+          "payee": "Transfer to Checking",
+          "memo": "",
+          "transacted_at": 1764849600
+        },
+        {
+          "id": "TRN-4f878ee2-b856-467f-b291-1d999960f7dd",
+          "posted": 1764504000,
+          "amount": "1.60",
+          "description": "Interest Paid",
+          "payee": "Interest Paid",
+          "memo": "",
+          "transacted_at": 1764504000
+        }
+      ],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.discover.com",
+        "name": "Discover Credit Card",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.discover.com",
+        "id": "www.discover.com"
+      },
+      "id": "ACT-c7f1d2eb-cdbc-4e93-bf3f-2346c259da62",
+      "name": "Cashback Debit",
+      "currency": "USD",
+      "balance": "347.02",
+      "available-balance": "347.02",
+      "balance-date": 1766792770,
+      "transactions": [
+        {
+          "id": "TRN-7170479d-a32e-4275-8d82-ecb39b2364f2",
+          "posted": 1766577600,
+          "amount": "-34.98",
+          "description": "ACH Withdrawal PAYPAL INST XFER",
+          "payee": "PayPal Purchase",
+          "memo": "",
+          "transacted_at": 1766577600
+        },
+        {
+          "id": "TRN-c7617742-0bdf-4b74-bf0e-4f3cb07fc2f4",
+          "posted": 1766404800,
+          "amount": "-40.00",
+          "description": "ACH Withdrawal ROBINHOOD DEBITS",
+          "payee": "Robinhood",
+          "memo": "",
+          "transacted_at": 1766404800
+        },
+        {
+          "id": "TRN-3388d878-561c-47fe-a19b-3fc209b4a202",
+          "posted": 1766145600,
+          "amount": "-324.80",
+          "description": "ACH Withdrawal APPLECARD GSBANK PAYMENT",
+          "payee": "Apple Credit Card",
+          "memo": "",
+          "transacted_at": 1766145600
+        },
+        {
+          "id": "TRN-5278f57e-146f-467d-9126-476e4829d704",
+          "posted": 1765886400,
+          "amount": "-450.00",
+          "description": "ACH Withdrawal CAPITAL ONE TRANSFER",
+          "payee": "Capital One",
+          "memo": "",
+          "transacted_at": 1765886400
+        },
+        {
+          "id": "TRN-3e2502a7-dd78-4b7c-bedb-224c2c7eb7f0",
+          "posted": 1765886400,
+          "amount": "-855.00",
+          "description": "ACH Withdrawal CAPITAL ONE TRANSFER",
+          "payee": "Capital One",
+          "memo": "",
+          "transacted_at": 1765886400
+        },
+        {
+          "id": "TRN-077db530-ce7c-45be-9557-5ccd93a053cc",
+          "posted": 1765886400,
+          "amount": "-100.00",
+          "description": "ACH Withdrawal M1 PAYMENTS",
+          "payee": "M1 Finance",
+          "memo": "",
+          "transacted_at": 1765886400
+        },
+        {
+          "id": "TRN-e74964ba-fd25-4b08-9e7d-f8c4fcf7fc74",
+          "posted": 1765886400,
+          "amount": "-100.00",
+          "description": "ACH Withdrawal M1 PAYMENTS",
+          "payee": "M1 Finance",
+          "memo": "",
+          "transacted_at": 1765886400
+        },
+        {
+          "id": "TRN-bd4ec481-5e49-4ed6-9d1d-4ffd73c9f065",
+          "posted": 1765886400,
+          "amount": "-1150.00",
+          "description": "ACH Withdrawal CAPITAL ONE TRANSFER",
+          "payee": "Capital One",
+          "memo": "",
+          "transacted_at": 1765886400
+        },
+        {
+          "id": "TRN-d8fd4699-34d6-4356-acc0-e451e1df374a",
+          "posted": 1765800000,
+          "amount": "-250.00",
+          "description": "ACH Withdrawal BETTERMENT SEC TRANSFER",
+          "payee": "Betterment",
+          "memo": "",
+          "transacted_at": 1765800000
+        },
+        {
+          "id": "TRN-85242444-07fc-4fd0-94b3-55ba73244e75",
+          "posted": 1765800000,
+          "amount": "-100.00",
+          "description": "ACH Withdrawal BETTERMENT SEC TRANSFER",
+          "payee": "Betterment",
+          "memo": "",
+          "transacted_at": 1765800000
+        },
+        {
+          "id": "TRN-a81a01d3-24c3-4419-910b-7b1a145279bd",
+          "posted": 1765800000,
+          "amount": "-40.00",
+          "description": "ACH Withdrawal ROBINHOOD DEBITS",
+          "payee": "Robinhood",
+          "memo": "",
+          "transacted_at": 1765800000
+        },
+        {
+          "id": "TRN-8fc5e4a5-9202-415b-b9c8-068fc65e63a0",
+          "posted": 1765540800,
+          "amount": "3580.87",
+          "description": "Early Pay PAYROLL ACH from NORTHEASTERN UNI",
+          "payee": "Early Pay Payroll From Northeastern Uni",
+          "memo": "",
+          "transacted_at": 1765540800
+        },
+        {
+          "id": "TRN-f5760d4b-8b7d-4f91-b635-1b1f802ea2e9",
+          "posted": 1765540800,
+          "amount": "70.00",
+          "description": "ACH Deposit From VENMO CASHOUT",
+          "payee": "Transfer from Venmo",
+          "memo": "",
+          "transacted_at": 1765540800
+        },
+        {
+          "id": "TRN-dd06ad5b-151d-46c8-8a64-aa65d5ae4582",
+          "posted": 1765195200,
+          "amount": "-40.00",
+          "description": "ACH Withdrawal ROBINHOOD DEBITS",
+          "payee": "Robinhood",
+          "memo": "",
+          "transacted_at": 1765195200
+        },
+        {
+          "id": "TRN-eaf7f8ac-4ecc-4e24-adc4-547e3f956145",
+          "posted": 1765195200,
+          "amount": "-5.00",
+          "description": "ACH Withdrawal PAYPAL INST XFER",
+          "payee": "PayPal Purchase",
+          "memo": "",
+          "transacted_at": 1765195200
+        },
+        {
+          "id": "TRN-14cb00ae-2c6d-42a4-90fe-5902bf77cf11",
+          "posted": 1764936000,
+          "amount": "-500.00",
+          "description": "ACH Withdrawal CAPITAL ONE TRANSFER",
+          "payee": "Capital One",
+          "memo": "",
+          "transacted_at": 1764936000
+        },
+        {
+          "id": "TRN-20e347e9-c8c6-40d0-a3df-8d33d4b55548",
+          "posted": 1764936000,
+          "amount": "-500.00",
+          "description": "ACH Withdrawal CHASE CREDIT CRD EPAY",
+          "payee": "Chase Credit Card",
+          "memo": "",
+          "transacted_at": 1764936000
+        },
+        {
+          "id": "TRN-e78b8630-12a5-4af1-b06c-9753d7f9fdcb",
+          "posted": 1764849600,
+          "amount": "500.00",
+          "description": "Transfer From ONLINE SAVINGS 6655",
+          "payee": "Transfer From Online Savings",
+          "memo": "",
+          "transacted_at": 1764849600
+        },
+        {
+          "id": "TRN-4ce71b08-8ad1-4c64-9f7b-e41416b00b86",
+          "posted": 1764763200,
+          "amount": "-193.33",
+          "description": "ACH Withdrawal DISCOVER E-PAYMENT",
+          "payee": "Discover Credit Card",
+          "memo": "",
+          "transacted_at": 1764763200
+        },
+        {
+          "id": "TRN-ecd93005-af96-4d04-ac8c-1811c47e1a7e",
+          "posted": 1764676800,
+          "amount": "-450.00",
+          "description": "ACH Withdrawal CAPITAL ONE TRANSFER",
+          "payee": "Capital One",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-bca3e0da-a228-4cd3-9b43-5c0892ca9ee0",
+          "posted": 1764676800,
+          "amount": "-450.00",
+          "description": "ACH Withdrawal CAPITAL ONE TRANSFER",
+          "payee": "Capital One",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-4b2cf265-44bf-4cc2-acba-38ab667d5168",
+          "posted": 1764676800,
+          "amount": "-1150.00",
+          "description": "ACH Withdrawal CAPITAL ONE TRANSFER",
+          "payee": "Capital One",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-1a168329-ceca-407f-8a03-1f75b76677f2",
+          "posted": 1764676800,
+          "amount": "-100.00",
+          "description": "ACH Withdrawal M1 PAYMENTS",
+          "payee": "M1 Finance",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-2d404d81-3fa5-4a1b-bb71-87837d47bfbc",
+          "posted": 1764590400,
+          "amount": "-225.00",
+          "description": "ACH Withdrawal BETTERMENT SEC TRANSFER",
+          "payee": "Betterment",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-77dd1553-c3c8-4795-9850-2f5e04cb1a10",
+          "posted": 1764590400,
+          "amount": "-100.00",
+          "description": "ACH Withdrawal BETTERMENT SEC TRANSFER",
+          "payee": "Betterment",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-9bc94efb-545a-4e28-9368-03045d4b57f9",
+          "posted": 1764590400,
+          "amount": "-250.00",
+          "description": "ACH Withdrawal BETTERMENT SEC TRANSFER",
+          "payee": "Betterment",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-af4e0b28-1dd9-4ed4-ab15-db9622bc38df",
+          "posted": 1764590400,
+          "amount": "-40.00",
+          "description": "ACH Withdrawal ROBINHOOD DEBITS",
+          "payee": "Robinhood",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-2cd6efa7-7f1f-4428-ada3-0c9872e71d7b",
+          "posted": 1764590400,
+          "amount": "-64.00",
+          "description": "BK OF AMER VISA ONLINE PMT",
+          "payee": "Bank of America Credit Card",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-c4d381da-8b9f-4368-b4f8-070234404b7f",
+          "posted": 1764331200,
+          "amount": "-42.95",
+          "description": "ACH Withdrawal PAYPAL INST XFER",
+          "payee": "PayPal Purchase",
+          "memo": "",
+          "transacted_at": 1764331200
+        }
+      ],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "discoverbank.com",
+        "name": "Discover Bank Account",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://discoverbank.com",
+        "id": "discoverbank.com"
+      },
+      "id": "ACT-23ad14e0-2447-44d4-810c-2ef63b2324af",
+      "name": "Discover it Card",
+      "currency": "USD",
+      "balance": "-3160.40",
+      "available-balance": "-7640.00",
+      "balance-date": 1742610405,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "discoverbank.com",
+        "name": "Discover Bank Account",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://discoverbank.com",
+        "id": "discoverbank.com"
+      },
+      "id": "ACT-f258ef1a-dab1-4e3c-bfe7-11150f0e755d",
+      "name": " ONLINE SAVINGS ",
+      "currency": "USD",
+      "balance": "88.77",
+      "available-balance": "88.77",
+      "balance-date": 1742696321,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "discoverbank.com",
+        "name": "Discover Bank Account",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://discoverbank.com",
+        "id": "discoverbank.com"
+      },
+      "id": "ACT-d06321d7-c828-4b26-9404-170c9a39cf78",
+      "name": " CASHBACK DEBIT ",
+      "currency": "USD",
+      "balance": "571.21",
+      "available-balance": "571.21",
+      "balance-date": 1742696321,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.americanexpress.com",
+        "name": "American Express",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.americanexpress.com",
+        "id": "www.americanexpress.com"
+      },
+      "id": "ACT-a09fcd8c-8e36-4e57-8c33-ac7d6914ed49",
+      "name": "Blue Cash Preferred\u00ae",
+      "currency": "USD",
+      "balance": "-332.71",
+      "available-balance": "0.00",
+      "balance-date": 1766812307,
+      "transactions": [
+        {
+          "id": "TRN-0ad2f527-09dc-4c76-9422-37ba3dcbd9db",
+          "posted": 1766404800,
+          "amount": "-21.65",
+          "description": "AplPay MARKET BASKETREVERE MA",
+          "payee": "Market Basket",
+          "memo": "",
+          "transacted_at": 1766318400
+        },
+        {
+          "id": "TRN-69402f0d-a91c-40c0-9116-18155081623e",
+          "posted": 1766145600,
+          "amount": "-40.95",
+          "description": "STOP&SHOP 62 800-573-2763 MA",
+          "payee": "Stop & Shop",
+          "memo": "",
+          "transacted_at": 1766145600
+        },
+        {
+          "id": "TRN-70a88964-464a-4641-85ef-b1aad13fbcdc",
+          "posted": 1765886400,
+          "amount": "566.47",
+          "description": "ONLINE PAYMENT - THANK YOU",
+          "payee": "Payment",
+          "memo": "",
+          "transacted_at": 1765886400
+        },
+        {
+          "id": "TRN-b672e0a0-c661-4e55-9ed5-6d24d84feed4",
+          "posted": 1765972800,
+          "amount": "-129.56",
+          "description": "AplPay CVS PHARMACY MALDEN MA",
+          "payee": "CVS",
+          "memo": "",
+          "transacted_at": 1765886400
+        },
+        {
+          "id": "TRN-6e9a3e21-b5a1-4c3c-b837-797b0ef20581",
+          "posted": 1765713600,
+          "amount": "-17.14",
+          "description": "AplPay TARGET MEDFORD MA",
+          "payee": "Aplpay Target",
+          "memo": "",
+          "transacted_at": 1765713600
+        },
+        {
+          "id": "TRN-df4d6218-e1c1-452d-9412-73ee21c44a94",
+          "posted": 1765713600,
+          "amount": "-51.48",
+          "description": "AplPay HARBOR FREIGHMEDFORD MA",
+          "payee": "Harbor Freight Tools",
+          "memo": "",
+          "transacted_at": 1765627200
+        },
+        {
+          "id": "TRN-421d05bf-37f7-4323-a530-199762f1d7a6",
+          "posted": 1765713600,
+          "amount": "-30.16",
+          "description": "AplPay MARSHALLS MEDFORD MA",
+          "payee": "Marshalls",
+          "memo": "",
+          "transacted_at": 1765627200
+        },
+        {
+          "id": "TRN-36f984bd-5423-4d10-b29f-42734919d4ea",
+          "posted": 1765713600,
+          "amount": "-36.33",
+          "description": "AplPay WEGMANS MEDFOMEDFORD MA",
+          "payee": "Wegmans",
+          "memo": "",
+          "transacted_at": 1765627200
+        },
+        {
+          "id": "TRN-45a10a2d-21c2-48e5-95f3-b232a4c30865",
+          "posted": 1765454400,
+          "amount": "-2.40",
+          "description": "AplPay MBTA-55000930BOSTON MA",
+          "payee": "Aplpay Mbta",
+          "memo": "",
+          "transacted_at": 1765368000
+        },
+        {
+          "id": "TRN-df4072ad-b862-4cfa-9233-5f91f195bebe",
+          "posted": 1765368000,
+          "amount": "-3.04",
+          "description": "AplPay WHOLE FOODS MMELROSE MA",
+          "payee": "Whole Foods",
+          "memo": "",
+          "transacted_at": 1765281600
+        },
+        {
+          "id": "TRN-ff536ece-9882-45e4-be53-6a383073128a",
+          "posted": 1764936000,
+          "amount": "-22.99",
+          "description": "GOOGLE *YOUTUBEPREMI G.CO/HELPPAY# CA",
+          "payee": "YouTube Premium",
+          "memo": "",
+          "transacted_at": 1764849600
+        },
+        {
+          "id": "TRN-e2effce5-f56e-4e41-8482-764241055b96",
+          "posted": 1764676800,
+          "amount": "-10.00",
+          "description": "WGBH.ORG BOSTON MA",
+          "payee": "Wgbh.org",
+          "memo": "",
+          "transacted_at": 1764676800
+        },
+        {
+          "id": "TRN-ae9ce707-4ac6-4d25-a700-26ab9b8faf3f",
+          "posted": 1764676800,
+          "amount": "-4.24",
+          "description": "AplPay TRADER JOE S CAMBRIDGE MA",
+          "payee": "Trader Joe's",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-003c851a-ace1-4861-a59e-2fbf1a00ae9b",
+          "posted": 1764676800,
+          "amount": "-59.59",
+          "description": "AplPay TRADER JOE S CAMBRIDGE MA",
+          "payee": "Trader Joe's",
+          "memo": "",
+          "transacted_at": 1764590400
+        },
+        {
+          "id": "TRN-d10856af-1885-427c-9c21-b545d039cb10",
+          "posted": 1764504000,
+          "amount": "-20.70",
+          "description": "ACLU 212-549-2543 NY",
+          "payee": "American Civil Liberties Union",
+          "memo": "",
+          "transacted_at": 1764417600
+        },
+        {
+          "id": "TRN-4581af96-eb44-47a3-8b90-a66bc19adf4a",
+          "posted": 1764504000,
+          "amount": "-11.76",
+          "description": "AplPay JIMMY JOHNS 4SARASOTA FL",
+          "payee": "Jimmy John's",
+          "memo": "",
+          "transacted_at": 1764417600
+        },
+        {
+          "id": "TRN-50d5f3fc-bc9c-476c-ae16-c57bd8f65972",
+          "posted": 1764504000,
+          "amount": "-25.00",
+          "description": "PLANNED PARENTHOOD F800-4304907 NY",
+          "payee": "Planned Parenthood",
+          "memo": "",
+          "transacted_at": 1764417600
+        },
+        {
+          "id": "TRN-ccf82365-dd21-419e-ac1e-543e36155e8c",
+          "posted": 1764331200,
+          "amount": "-50.00",
+          "description": "AplPay STARBUCKS 800-782-7282 WA",
+          "payee": "Starbucks",
+          "memo": "",
+          "transacted_at": 1764331200
+        },
+        {
+          "id": "TRN-7d79a882-3b5c-432c-a3b2-3823d0dda362",
+          "posted": 1764417600,
+          "amount": "-13.00",
+          "description": "REG HOLLYWOOD 20 04SARASOTA FL",
+          "payee": "Reg Hollywood",
+          "memo": "",
+          "transacted_at": 1764331200
+        }
+      ],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-f6ea2b07-0ebc-40ca-a375-3d36594edf73",
+      "name": "Bond Emergency - Taxable",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742177005,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-cf4db6af-1381-423f-b8e5-b3031bfc0a60",
+      "name": "Year end Roth - Taxable",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742699092,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-a75fc089-42ad-455e-a738-65610e7d5b54",
+      "name": "Emergency Savings - Taxable",
+      "currency": "USD",
+      "balance": "42416.94",
+      "available-balance": "0.00",
+      "balance-date": 1742177005,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-c496c9fd-6e16-4d5f-98fb-fc38d198b816",
+      "name": "Travel - Taxable",
+      "currency": "USD",
+      "balance": "0.99",
+      "available-balance": "0.00",
+      "balance-date": 1742699092,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-08e597bb-7161-4e2b-b46b-f6dbf7cf7624",
+      "name": "Cash Reserve - Taxable",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742177006,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-0d13e0d1-a864-421a-8b6c-3cd548f4fe8c",
+      "name": "General - Taxable",
+      "currency": "USD",
+      "balance": "22165.96",
+      "available-balance": "0.00",
+      "balance-date": 1742699092,
+      "transactions": [],
+      "holdings": [
+        {
+          "id": "HOL-09dbb90f-a430-4cdc-8d64-636ef8558a59",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Total Stock Market Index Fund",
+          "market_value": "3024.80",
+          "purchase_price": "0.00",
+          "shares": "10.85",
+          "symbol": "VTI"
+        },
+        {
+          "id": "HOL-a8367018-d5bd-4002-b181-2730f97b8114",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares 0-5 Year TIPS Bond ETF",
+          "market_value": "2.20",
+          "purchase_price": "0.00",
+          "shares": "0.02",
+          "symbol": "STIP"
+        },
+        {
+          "id": "HOL-59d31ece-f15d-4ddb-8f14-254a09fd37c3",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares Russell Mid-Cap Value ETF",
+          "market_value": "1.63",
+          "purchase_price": "0.00",
+          "shares": "0.01",
+          "symbol": "IWS"
+        },
+        {
+          "id": "HOL-bea6aeff-edce-48a9-b2fb-d3ab4dbf6e68",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares Russell 2000 Value ETF",
+          "market_value": "0.09",
+          "purchase_price": "0.00",
+          "shares": "0.00",
+          "symbol": "IWN"
+        },
+        {
+          "id": "HOL-d7241c72-e146-4657-bae6-fa9276fd77c6",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Developed Markets Index Fund",
+          "market_value": "4121.90",
+          "purchase_price": "0.00",
+          "shares": "79.19",
+          "symbol": "VEA"
+        },
+        {
+          "id": "HOL-555dcd86-97bd-4813-b177-abc52ef9fc5e",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Emerging Markets Stock Index Fund",
+          "market_value": "1783.68",
+          "purchase_price": "0.00",
+          "shares": "38.79",
+          "symbol": "VWO"
+        },
+        {
+          "id": "HOL-3e1804e9-b42d-4022-938a-31a77cacaf18",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Schwab U.S. Small-Cap ETF\u2122",
+          "market_value": "0.68",
+          "purchase_price": "0.00",
+          "shares": "0.03",
+          "symbol": "SCHA"
+        },
+        {
+          "id": "HOL-18b9f963-28ac-4176-bd53-ef86ddffd4f9",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares Core U.S. Aggregate Bond ETF",
+          "market_value": "3.53",
+          "purchase_price": "0.00",
+          "shares": "0.04",
+          "symbol": "AGG"
+        },
+        {
+          "id": "HOL-ecdd090d-3cf5-410c-8107-b46e0f792235",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Emerging Markets Government Bond Index Fund",
+          "market_value": "64.27",
+          "purchase_price": "0.00",
+          "shares": "1.00",
+          "symbol": "VWOB"
+        },
+        {
+          "id": "HOL-b0281748-169e-4fa2-82ee-1a0eab0916d6",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Total International Bond Index Fund",
+          "market_value": "330.80",
+          "purchase_price": "0.00",
+          "shares": "6.80",
+          "symbol": "BNDX"
+        },
+        {
+          "id": "HOL-6a00c523-aeda-40be-a070-c75dc65fc16b",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "SPDR\u00ae Portfolio S&P 400 Mid Cap ETF",
+          "market_value": "3.91",
+          "purchase_price": "0.00",
+          "shares": "0.08",
+          "symbol": "SPMD"
+        },
+        {
+          "id": "HOL-1fa69727-661b-40dd-868c-d8bdd1ade9c0",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares National Muni Bond ETF",
+          "market_value": "1176.27",
+          "purchase_price": "0.00",
+          "shares": "11.11",
+          "symbol": "MUB"
+        },
+        {
+          "id": "HOL-2efe0471-6777-426f-8b34-b1cc811e586f",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "SPDR\u00ae Nuveen Bloomberg Municipal Bond ETF",
+          "market_value": "425.46",
+          "purchase_price": "0.00",
+          "shares": "9.39",
+          "symbol": "TFI"
+        },
+        {
+          "id": "HOL-517955bb-5c84-4ebd-a8b1-7d55da4a0c9e",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares J.P. Morgan USD Emerging Markets Bond ETF",
+          "market_value": "200.33",
+          "purchase_price": "0.00",
+          "shares": "2.20",
+          "symbol": "EMB"
+        },
+        {
+          "id": "HOL-0395fde2-4706-4893-b30e-12c4564f0d66",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares Core S&P Total U.S. Stock Market ETF",
+          "market_value": "4893.85",
+          "purchase_price": "0.00",
+          "shares": "39.67",
+          "symbol": "ITOT"
+        },
+        {
+          "id": "HOL-09129dbe-ba4d-4368-a980-866aa1bbba6e",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Value Index Fund",
+          "market_value": "850.59",
+          "purchase_price": "0.00",
+          "shares": "4.93",
+          "symbol": "VTV"
+        },
+        {
+          "id": "HOL-0952c95b-bf19-4fd7-9527-1b030fe078c6",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Schwab U.S. Large-Cap Value ETF\u2122",
+          "market_value": "420.47",
+          "purchase_price": "0.00",
+          "shares": "15.84",
+          "symbol": "SCHV"
+        },
+        {
+          "id": "HOL-aedb967c-6120-4a83-b5b8-99947e3b682f",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Mid-Cap Value Index Fund",
+          "market_value": "1243.20",
+          "purchase_price": "0.00",
+          "shares": "7.74",
+          "symbol": "VOE"
+        },
+        {
+          "id": "HOL-3faebd63-b8b1-48ad-8f6d-4d8339c8f0cd",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares S&P Mid-Cap 400 Value ETF",
+          "market_value": "0.02",
+          "purchase_price": "0.00",
+          "shares": "0.00",
+          "symbol": "IJJ"
+        },
+        {
+          "id": "HOL-9e975129-c7a3-4106-9fe8-2bab3f796adb",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Goldman Sachs Access Inflation Protected USD Bond ETF",
+          "market_value": "0.00",
+          "purchase_price": "0.00",
+          "shares": "0.00",
+          "symbol": "GTIP"
+        },
+        {
+          "id": "HOL-c3c5fcc7-24ef-4b6a-8d59-d5ed2f3214fa",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Small Cap Value Index Fund",
+          "market_value": "925.92",
+          "purchase_price": "0.00",
+          "shares": "4.92",
+          "symbol": "VBR"
+        },
+        {
+          "id": "HOL-19282a74-acb7-4b9d-acc1-72ad16d001c2",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "SPDR\u00ae Portfolio S&P 500 ETF",
+          "market_value": "404.84",
+          "purchase_price": "0.00",
+          "shares": "6.08",
+          "symbol": "SPLG"
+        },
+        {
+          "id": "HOL-427aada0-d712-4b8c-9858-e8518600f9d9",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares Core MSCI EAFE ETF",
+          "market_value": "1500.01",
+          "purchase_price": "0.00",
+          "shares": "19.34",
+          "symbol": "IEFA"
+        },
+        {
+          "id": "HOL-bab2d2df-531a-4dc4-a8f9-93e272c201e7",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "iShares Core MSCI Emerging Markets ETF",
+          "market_value": "7.39",
+          "purchase_price": "0.00",
+          "shares": "0.13",
+          "symbol": "IEMG"
+        },
+        {
+          "id": "HOL-0f28e67e-d5af-4a7f-a6a1-2caaf2603faf",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "SPDR\u00ae Portfolio Developed World ex-US ETF",
+          "market_value": "15.85",
+          "purchase_price": "0.00",
+          "shares": "0.42",
+          "symbol": "SPDW"
+        },
+        {
+          "id": "HOL-00107a68-a5ee-4df2-89b8-48d9540cb619",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "SPDR\u00ae Portfolio S&P 500 Value ETF",
+          "market_value": "763.58",
+          "purchase_price": "0.00",
+          "shares": "14.96",
+          "symbol": "SPYV"
+        },
+        {
+          "id": "HOL-0283035b-83c1-4b9e-a947-9a17dffa4557",
+          "created": 1736353185,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "SPDR\u00ae Portfolio S&P 600 Small Cap ETF",
+          "market_value": "0.48",
+          "purchase_price": "0.00",
+          "shares": "0.01",
+          "symbol": "SPSM"
+        },
+        {
+          "id": "HOL-2fceb713-4925-432b-94b3-cf01a45d2729",
+          "created": 1739509708,
+          "currency": "USD",
+          "cost_basis": "0.00",
+          "description": "Vanguard Mid Cap Index Fund",
+          "market_value": "0.21",
+          "purchase_price": "0.00",
+          "shares": "0.00",
+          "symbol": "VO"
+        }
+      ]
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-719822d8-183c-4ff0-a70d-fd8379291a62",
+      "name": "Retirement - Taxable",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742177006,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-3fa5e9fc-0dce-4bfa-a417-2750a67ef5ae",
+      "name": "Retirement - Roth IRA",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742177006,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-0ac2121f-5808-40ae-a02e-1e3eac34290a",
+      "name": "Retirement - Traditional IRA",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742699092,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-cff832e6-a2a3-4ee0-963e-ad281969d2df",
+      "name": "Wedding - Joint Taxable",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742699092,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-8ac05a38-e6cf-427b-adb5-64380af9371b",
+      "name": "Nova Fund - Joint Taxable",
+      "currency": "USD",
+      "balance": "27.82",
+      "available-balance": "0.00",
+      "balance-date": 1742177006,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-5d8d79de-10c9-40a6-b75a-1e708c1d0fbd",
+      "name": "Future home - Joint Taxable",
+      "currency": "USD",
+      "balance": "0.00",
+      "available-balance": "0.00",
+      "balance-date": 1742177006,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.betterment.com",
+        "name": "Betterment (Login with App Password)",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.betterment.com/",
+        "id": "www.betterment.com"
+      },
+      "id": "ACT-ead527b6-7bfa-4a09-818e-e7ffd87b1f4a",
+      "name": "Checking",
+      "currency": "USD",
+      "balance": "40.77",
+      "available-balance": "40.77",
+      "balance-date": 1742177006,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "m1.com",
+        "name": "M1",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://m1.com/",
+        "id": "m1.com"
+      },
+      "id": "ACT-117896d4-33db-4d78-a881-ad603804ab16",
+      "name": "Invest",
+      "currency": "USD",
+      "balance": "25721.74",
+      "available-balance": "0.00",
+      "balance-date": 1736471765,
+      "transactions": [],
+      "holdings": [
+        {
+          "id": "HOL-b775ed58-c054-47c1-a691-46c62175d7a3",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "1697.83",
+          "description": "Southern Copper Corp",
+          "market_value": "2226.37",
+          "purchase_price": "0.00",
+          "shares": "23.49",
+          "symbol": "SCCO"
+        },
+        {
+          "id": "HOL-ab45685a-23f0-487c-9be1-3caae52b4773",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "855.01",
+          "description": "Microsoft Corp",
+          "market_value": "1637.65",
+          "purchase_price": "0.00",
+          "shares": "3.85",
+          "symbol": "MSFT"
+        },
+        {
+          "id": "HOL-e3d90e24-c825-4a68-ac84-5fa107ef1904",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "1231.09",
+          "description": "VICI Properties Inc",
+          "market_value": "1199.45",
+          "purchase_price": "0.00",
+          "shares": "41.58",
+          "symbol": "VICI"
+        },
+        {
+          "id": "HOL-acba2a57-9ca5-4fd1-b1ff-0772dc0bee07",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "848.31",
+          "description": "Waste Management Inc",
+          "market_value": "1183.99",
+          "purchase_price": "0.00",
+          "shares": "5.76",
+          "symbol": "WM"
+        },
+        {
+          "id": "HOL-8008d542-1a57-47f6-b5e1-50c2d1ebd7c2",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "1360.79",
+          "description": "Flowers Foods Inc",
+          "market_value": "1171.19",
+          "purchase_price": "0.00",
+          "shares": "59.72",
+          "symbol": "FLO"
+        },
+        {
+          "id": "HOL-9da28ae7-f0d3-4617-bf82-9046fcac1f79",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "788.17",
+          "description": "Kellanova",
+          "market_value": "1076.57",
+          "purchase_price": "0.00",
+          "shares": "13.22",
+          "symbol": "K"
+        },
+        {
+          "id": "HOL-7a14ff34-b9de-44c7-be47-cd7bcfd2cbb3",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "614.11",
+          "description": "Lowe's Companies Inc",
+          "market_value": "995.54",
+          "purchase_price": "0.00",
+          "shares": "4.04",
+          "symbol": "LOW"
+        },
+        {
+          "id": "HOL-21096cbe-6cd8-4f89-bf3b-1151eae05545",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "1142.53",
+          "description": "Pfizer Inc",
+          "market_value": "901.16",
+          "purchase_price": "0.00",
+          "shares": "33.52",
+          "symbol": "PFE"
+        },
+        {
+          "id": "HOL-703a8466-3b98-4c83-87f4-32d143887100",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "1117.18",
+          "description": "Dominion Energy Inc",
+          "market_value": "896.45",
+          "purchase_price": "0.00",
+          "shares": "16.68",
+          "symbol": "D"
+        },
+        {
+          "id": "HOL-a512c781-a50f-4d95-9a05-282c3a067d25",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "973.11",
+          "description": "The Walt Disney Co",
+          "market_value": "868.77",
+          "purchase_price": "0.00",
+          "shares": "7.93",
+          "symbol": "DIS"
+        },
+        {
+          "id": "HOL-cb2d54d2-8cb5-415b-a09f-288e65e1bc2a",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "735.29",
+          "description": "Amgen Inc",
+          "market_value": "806.91",
+          "purchase_price": "0.00",
+          "shares": "3.07",
+          "symbol": "AMGN"
+        },
+        {
+          "id": "HOL-9aff356a-3139-4d2a-8831-fb95416f5ea4",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "732.05",
+          "description": "Omega Healthcare Investors Inc",
+          "market_value": "806.88",
+          "purchase_price": "0.00",
+          "shares": "21.24",
+          "symbol": "OHI"
+        },
+        {
+          "id": "HOL-d76fb0c5-a926-4ae9-9b8a-0f0b1c0c99aa",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "1133.72",
+          "description": "Target Corp",
+          "market_value": "776.50",
+          "purchase_price": "0.00",
+          "shares": "5.61",
+          "symbol": "TGT"
+        },
+        {
+          "id": "HOL-062d3aba-2c55-4af6-955f-7ea46d09495b",
+          "created": 1736353372,
+          "currency": "",
+          "cost_basis": "653.27",
+          "description": "",
+          "market_value": "756.81",
+          "purchase_price": "0.00",
+          "shares": "8.56",
+          "symbol": "ED \u2605 ED CONSOLIDATED EDISON INC."
+        },
+        {
+          "id": "HOL-9463ee3b-69dc-437e-8055-0236fa0678fb",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "703.35",
+          "description": "Schwab U.S. Dividend Equity ETF\u2122",
+          "market_value": "724.10",
+          "purchase_price": "0.00",
+          "shares": "26.65",
+          "symbol": "SCHD"
+        },
+        {
+          "id": "HOL-3f4e664b-df95-4e18-9a38-8ae5f25165b8",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "529.52",
+          "description": "Microchip Technology Inc",
+          "market_value": "346.91",
+          "purchase_price": "0.00",
+          "shares": "6.12",
+          "symbol": "MCHP"
+        },
+        {
+          "id": "HOL-6b5c2929-f857-4704-9419-8d206c164524",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "678.01",
+          "description": "Applied Materials Inc",
+          "market_value": "985.70",
+          "purchase_price": "0.00",
+          "shares": "5.58",
+          "symbol": "AMAT"
+        },
+        {
+          "id": "HOL-1d991ffa-a0cb-4157-b04d-8d414058a751",
+          "created": 1736353372,
+          "currency": "USD",
+          "cost_basis": "181.06",
+          "description": "Costco Wholesale Corp",
+          "market_value": "197.33",
+          "purchase_price": "0.00",
+          "shares": "0.21",
+          "symbol": "COST"
+        }
+      ]
+    },
+    {
+      "org": {
+        "domain": "www.biltrewards.com",
+        "name": "BILT Rewards",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.biltrewards.com",
+        "id": "www.biltrewards.com"
+      },
+      "id": "ACT-cdf9feee-02fe-45ca-9f14-b4b57833a2fd",
+      "name": "Bilt Mastercard\u00ae",
+      "currency": "USD",
+      "balance": "-62.80",
+      "available-balance": "0.00",
+      "balance-date": 1743675878,
+      "transactions": [],
+      "holdings": []
+    },
+    {
+      "org": {
+        "domain": "www.paypal.com",
+        "name": "PayPal",
+        "sfin-url": "https://beta-bridge.simplefin.org/simplefin",
+        "url": "https://www.paypal.com/",
+        "id": "www.paypal.com"
+      },
+      "id": "ACT-3f6e304a-ebc7-48ed-b02b-63fda057f843",
+      "name": "PayPal Credit",
+      "currency": "USD",
+      "balance": "-830.00",
+      "available-balance": "-9070.00",
+      "balance-date": 1742934991,
+      "transactions": [],
+      "holdings": []
+    }
+  ]
+}
