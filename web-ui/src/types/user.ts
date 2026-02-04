@@ -31,6 +31,8 @@ export interface User {
   numberFormat?: string;
   weekStartDay?: 'sunday' | 'monday';
   fiscalYearStart?: number;
+  // Demo mode fields
+  is_demo_user?: boolean;
 }
 
 export interface OnboardingData {
@@ -46,6 +48,9 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   hasCompletedOnboarding: boolean;
+  // Demo mode state
+  isDemoUser: boolean;
+  demoExpiresAt: string | null;
 }
 
 export interface LoginCredentials {
@@ -63,6 +68,7 @@ export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   user: User;
+  demo_expires_at?: string;
 }
 
 export interface ProfileUpdate {

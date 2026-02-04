@@ -9,6 +9,7 @@ from src.models.transaction import Expense
 from src.models.account import Account
 from src.models.category import Category
 from src.extensions import db
+from src.utils.decorators import demo_restricted
 from datetime import datetime
 from werkzeug.datastructures import FileStorage
 
@@ -94,6 +95,7 @@ class CSVImport(Resource):
     @ns.doc('import_csv', security='Bearer')
     @ns.expect(column_mapping_model)
     @jwt_required()
+    @demo_restricted
     def post(self):
         """Import transactions from CSV file with column mapping"""
         current_user_id = get_jwt_identity()

@@ -1,5 +1,5 @@
 """Authentication API endpoints"""
-from flask import request
+from flask import request, current_app
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import (
     create_access_token,
@@ -11,7 +11,7 @@ from flask_jwt_extended import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from src.models.user import User
 from src.extensions import db
-from datetime import timedelta
+from datetime import datetime, timedelta
 from src.data import seed_user_defaults
 import logging
 
@@ -66,27 +66,47 @@ class Login(Resource):
         if not user or not user.check_password(password):
             return {'message': 'Invalid email or password'}, 401
 
+        # Determine token expiry based on demo status
+        is_demo = user.is_demo_user
+        demo_timeout_minutes = current_app.config.get('DEMO_TIMEOUT_MINUTES', 10)
+
+        if is_demo:
+            access_expires = timedelta(minutes=demo_timeout_minutes)
+            refresh_expires = timedelta(minutes=demo_timeout_minutes)
+            demo_expires_at = (datetime.utcnow() + access_expires).isoformat() + 'Z'
+        else:
+            access_expires = timedelta(hours=24)
+            refresh_expires = timedelta(days=30)
+            demo_expires_at = None
+
         # Create tokens
         access_token = create_access_token(
             identity=user.id,
-            additional_claims={'email': user.id},  # id IS the email
-            expires_delta=timedelta(hours=24)
+            additional_claims={'email': user.id, 'is_demo_user': is_demo},
+            expires_delta=access_expires
         )
         refresh_token = create_refresh_token(
             identity=user.id,
-            expires_delta=timedelta(days=30)
+            expires_delta=refresh_expires
         )
 
-        return {
+        response_data = {
             'access_token': access_token,
             'refresh_token': refresh_token,
             'user': {
                 'id': user.id,  # This is the email
                 'name': user.name,
                 'email': user.id,  # id IS the email
-                'default_currency_code': user.default_currency_code
+                'default_currency_code': user.default_currency_code,
+                'is_demo_user': is_demo,
+                'hasCompletedOnboarding': user.has_completed_onboarding
             }
-        }, 200
+        }
+
+        if demo_expires_at:
+            response_data['demo_expires_at'] = demo_expires_at
+
+        return response_data, 200
 
 
 @ns.route('/register')

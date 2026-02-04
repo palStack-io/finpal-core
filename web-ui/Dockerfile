@@ -13,7 +13,8 @@ RUN npm ci
 COPY . .
 
 # Set API base URL environment variable for build
-ARG VITE_API_BASE_URL=http://localhost
+# Empty string = relative URLs (goes through nginx proxy)
+ARG VITE_API_BASE_URL=""
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Build the app

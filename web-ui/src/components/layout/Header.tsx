@@ -38,11 +38,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
             {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
 
-          <div className="flex items-center gap-2">
-            <div className="text-3xl">{branding.currencySymbol}</div>
-            <div>
-              <h1 className="text-xl font-bold text-white">{branding.appName}</h1>
-              <p className="text-xs text-gray-400 hidden sm:block">{branding.parentBrand}</p>
+          <div className="flex items-center gap-3">
+            <img
+              src="/finPal.png"
+              alt="finPal"
+              className="h-10 w-auto"
+            />
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-bold text-white">{branding.appName}</h1>
+              <p className="text-xs text-gray-400">Part of {branding.parentBrand}</p>
             </div>
           </div>
         </div>

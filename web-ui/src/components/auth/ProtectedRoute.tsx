@@ -7,6 +7,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Loading } from '../common/Loading';
+import { DemoBanner } from '../DemoBanner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,7 +18,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requireOnboarding = true,
 }) => {
-  const { isAuthenticated, hasCompletedOnboarding, isLoading } = useAuthStore();
+  const { isAuthenticated, hasCompletedOnboarding, isLoading, isDemoUser } = useAuthStore();
   const location = useLocation();
 
   if (isLoading) {
@@ -32,5 +33,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/onboarding" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {isDemoUser && <DemoBanner />}
+      {children}
+    </>
+  );
 };

@@ -49,6 +49,7 @@ class Config:
     TIMEZONE = 'EST'
     
     # Demo mode
+    DEMO_MODE = os.getenv('DEMO_MODE', 'False').lower() == 'true'
     DEMO_TIMEOUT_MINUTES = int(os.getenv('DEMO_TIMEOUT_MINUTES', 10))
     MAX_CONCURRENT_DEMO_SESSIONS = int(os.getenv('MAX_CONCURRENT_DEMO_SESSIONS', 10))
     

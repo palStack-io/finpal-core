@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:13-alpine
+    container_name: finpal-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-finpal}
+      POSTGRES_USER: ${DB_USER:-finpal}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-finpal}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - finpal-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-finpal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finpal-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${DB_USER:-finpal}:${DB_PASSWORD:-finpal}@db:5432/${DB_NAME:-finpal}
+      SQLALCHEMY_DATABASE_URI: postgresql://${DB_USER:-finpal}:${DB_PASSWORD:-finpal}@db:5432/${DB_NAME:-finpal}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-finpal}
+      DB_USER: ${DB_USER:-finpal}
+      DB_PASSWORD: ${DB_PASSWORD:-finpal}
+
+      # Flask
+      FLASK_APP: app.py
+      FLASK_ENV: ${FLASK_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key}
+
+      # JWT
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-jwt-dev-secret}
+      JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:-86400}
+
+      # Demo mode
+      DEMO_MODE: ${DEMO_MODE:-true}
+
+      # Application
+      DEFAULT_CURRENCY: ${DEFAULT_CURRENCY:-USD}
+      INVESTMENT_TRACKING_ENABLED: ${INVESTMENT_TRACKING_ENABLED:-true}
+      SIMPLEFIN_ENABLED: ${SIMPLEFIN_ENABLED:-false}
+    expose:
+      - "5001"
+    networks:
+      - finpal-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Web UI
+  web:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: finpal-web
+    depends_on:
+      - backend
+    expose:
+      - "80"
+    networks:
+      - finpal-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: finpal-nginx
+    depends_on:
+      - backend
+      - web
+    ports:
+      - "${HTTP_PORT:-8085}:80"
+    networks:
+      - finpal-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  finpal-network:
+    driver: bridge

@@ -47,7 +47,7 @@ export const Landing = () => {
     {
       icon: <Wallet size={32} />,
       title: 'Dynamic Branding by Currency',
-      description: 'The app becomes your "pal" based on your currency: Dollar Dollar, Pound Pound, Euro Euro, Rupee Rupee, and more!'
+      description: 'finPal adapts to your currency: DollarPal, PoundPal, EuroPal, RupeePal, and more!'
     }
   ];
 
@@ -67,10 +67,7 @@ export const Landing = () => {
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '32px' }}>💰</span>
-            <span style={{ fontSize: '20px', fontWeight: 'bold', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              Dollar Dollar Bill Y'all
-            </span>
+            <img src="/finPal.png" alt="finPal" style={{ height: '40px', width: 'auto' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -133,7 +130,7 @@ export const Landing = () => {
 
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
-                onClick={() => window.open('https://github.com/harung1993/dollardollar', '_blank')}
+                onClick={() => window.open('https://github.com/palStack-io/finpal-core', '_blank')}
                 style={{ padding: '16px 32px', background: '#15803d', border: 'none', borderRadius: '12px', color: 'white', fontSize: '18px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
                 onMouseEnter={(e) => {
                   (e.target as HTMLButtonElement).style.background = '#166534';
@@ -250,7 +247,7 @@ export const Landing = () => {
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <h2 style={{ fontSize: '42px', fontWeight: 'bold', marginBottom: '16px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              Why DollarDollar Bill Y'all?
+              Why finPal?
             </h2>
             <p style={{ fontSize: '18px', color: '#94a3b8', maxWidth: '700px', margin: '0 auto' }}>
               Born from a desire to move beyond restrictive financial tracking platforms. We give you the tools to manage your money, your way.
@@ -347,7 +344,7 @@ export const Landing = () => {
               </ul>
 
               <button
-                onClick={() => window.open('https://github.com/harung1993/dollardollar', '_blank')}
+                onClick={() => window.open('https://github.com/palStack-io/finpal-core', '_blank')}
                 style={{
                   width: '100%',
                   padding: '16px',
@@ -388,13 +385,13 @@ export const Landing = () => {
       <section style={{ padding: '100px 24px' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center', background: 'rgba(21, 128, 61, 0.1)', border: '1px solid rgba(21, 128, 61, 0.3)', borderRadius: '24px', padding: '64px 32px' }}>
           <h2 style={{ fontSize: '42px', fontWeight: 'bold', marginBottom: '16px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-            Part of palStack
+            Part of the palStack Ecosystem
           </h2>
           <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '32px' }}>
             "That's what pals do – they show up and help with the everyday stuff."
           </p>
           <button
-            onClick={() => window.open('https://github.com/harung1993/dollardollar', '_blank')}
+            onClick={() => window.open('https://github.com/palStack-io/finpal-core', '_blank')}
             style={{ padding: '16px 48px', background: '#15803d', border: 'none', borderRadius: '12px', color: 'white', fontSize: '18px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
             onMouseEnter={(e) => {
               (e.target as HTMLButtonElement).style.background = '#166534';
@@ -414,16 +411,13 @@ export const Landing = () => {
       <footer style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', padding: '48px 24px', background: 'rgba(17, 24, 39, 0.8)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '24px' }}>
-            <span style={{ fontSize: '32px' }}>💰</span>
-            <span style={{ fontSize: '20px', fontWeight: 'bold', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              Dollar Dollar Bill Y'all
-            </span>
+            <img src="/finPal.png" alt="finPal" style={{ height: '48px', width: 'auto' }} />
           </div>
           <p style={{ color: '#64748b', marginBottom: '24px', margin: '0 0 24px 0' }}>
             Open source • Self-hosted • Part of the palStack ecosystem
           </p>
           <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', flexWrap: 'wrap', color: '#94a3b8', fontSize: '14px' }}>
-            <a href="https://github.com/harung1993/dollardollar" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>GitHub</a>
+            <a href="https://github.com/palStack-io/finpal-core" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>GitHub</a>
             <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Documentation</a>
             <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Community</a>
             <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Support</a>

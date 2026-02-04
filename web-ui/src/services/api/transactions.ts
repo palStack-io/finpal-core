@@ -1,20 +1,5 @@
-import axios from 'axios';
+import { api } from '../api';
 import { API_CONFIG } from '../../config/api';
-import { useAuthStore } from '../../store/authStore';
-
-const api = axios.create({
-  baseURL: API_CONFIG.baseURL,
-  timeout: API_CONFIG.timeout,
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 export interface Transaction {
   id: number;

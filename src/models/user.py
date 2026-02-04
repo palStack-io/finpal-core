@@ -37,6 +37,9 @@ class User(UserMixin, db.Model):
     notification_budget_alerts = db.Column(db.Boolean, default=True)
     notification_transaction_alerts = db.Column(db.Boolean, default=False)
 
+    # Demo mode
+    is_demo_user = db.Column(db.Boolean, default=False)
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 

@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from src.models.user import User, UserApiSettings
 from src.extensions import db
+from src.utils.decorators import demo_restricted
 from datetime import datetime
 from flask import current_app
 import os
@@ -449,6 +450,7 @@ class ApiSettings(Resource):
 
     @ns.doc('update_api_settings')
     @jwt_required()
+    @demo_restricted
     def put(self):
         """Update user API settings"""
         user_id = get_jwt_identity()

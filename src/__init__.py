@@ -53,7 +53,7 @@ def create_app(config_name=None):
     # Configure CORS for React Native and web frontend
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost", "http://localhost:5173", "http://localhost:3000"],
+            "origins": "*",  # Allow all origins for development/demo
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
             "expose_headers": ["Content-Type", "Authorization"],
@@ -110,6 +110,10 @@ def create_app(config_name=None):
                 'demo@example.com',
                 'demo1@example.com',
                 'demo2@example.com',
+                'demo1@finpal.demo',
+                'demo2@finpal.demo',
+                'demo3@finpal.demo',
+                'demo4@finpal.demo',
             ]
         )
         demo_timeout.init_app(app)
@@ -198,7 +202,20 @@ def create_app(config_name=None):
     app.logger.info(f"OIDC enabled: {oidc_enabled}")
     app.logger.info(f"SimpleFin enabled: {app.config.get('SIMPLEFIN_ENABLED', False)}")
     app.logger.info(f"Investment tracking enabled: {app.config.get('INVESTMENT_TRACKING_ENABLED', False)}")
-    
+
+    # Seed demo accounts if demo mode is enabled
+    if app.config.get('DEMO_MODE', False):
+        with app.app_context():
+            try:
+                from src.services.demo import DemoService
+                result = DemoService.seed_demo_accounts()
+                if result.get('success'):
+                    app.logger.info(f"Demo mode enabled: {result.get('message')}")
+                else:
+                    app.logger.warning(f"Demo seeding issue: {result.get('message', result.get('error'))}")
+            except Exception as e:
+                app.logger.error(f"Failed to seed demo accounts: {e}")
+
     return app
 
 

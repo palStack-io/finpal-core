@@ -114,12 +114,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ))}
           </nav>
 
-          {/* Footer */}
+          {/* Footer - Branding */}
           <div className="p-4 border-t border-gray-800">
-            <div className="px-4 py-3 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg border border-primary/30">
-              <p className="text-xs text-gray-400 mb-1">Pro Tip</p>
-              <p className="text-sm text-white">
-                Track your spending daily for better insights
+            <div className="flex flex-col items-center gap-2 py-3">
+              <img
+                src="/palStack.png"
+                alt="palStack"
+                className="h-6 w-auto opacity-70"
+              />
+              <p className="text-xs text-gray-500 text-center">
+                Part of the palStack ecosystem
               </p>
             </div>
           </div>

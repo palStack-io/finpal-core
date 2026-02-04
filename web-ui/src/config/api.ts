@@ -4,8 +4,9 @@
  */
 
 export const API_CONFIG = {
-  // Base URL - goes through nginx proxy on port 80
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost',
+  // Base URL - empty string uses relative URLs through nginx proxy
+  // Use ?? instead of || so empty string "" is preserved (not falsy fallback)
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
 
   // API timeout
   timeout: 30000,

@@ -28,7 +28,7 @@ api = Api(
 )
 
 # Import and register namespaces (will be created next)
-from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules
+from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo
 
 # Register namespaces
 api.add_namespace(auth.ns, path='/auth')
@@ -44,3 +44,4 @@ api.add_namespace(csv_import.ns, path='/csv-import')
 api.add_namespace(users.ns, path='/users')
 api.add_namespace(team.ns, path='/team')
 api.add_namespace(transaction_rules.ns, path='/transaction-rules')
+api.add_namespace(demo.ns, path='/demo')

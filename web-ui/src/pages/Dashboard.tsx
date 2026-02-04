@@ -297,11 +297,14 @@ export const Dashboard = () => {
       <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
         {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-            💰 {branding.appName}
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>Welcome back! Here's your financial overview.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <img src="/finPal.png" alt="finPal" style={{ height: '48px', width: 'auto' }} />
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '4px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+              {branding.appName}
+            </h1>
+            <p style={{ color: '#94a3b8', fontSize: '14px' }}>Welcome back! Here's your financial overview.</p>
+          </div>
         </div>
       </div>
 
@@ -686,8 +689,9 @@ export const Dashboard = () => {
     </div>
 
     {/* Footer */}
-    <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '13px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
-      Part of {branding.parentBrand} ecosystem
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
+      <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
+      <p style={{ color: '#64748b', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
     </div>
     </>
   );

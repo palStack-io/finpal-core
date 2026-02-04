@@ -860,18 +860,11 @@ export const Settings: React.FC = () => {
 
                   <div style={{ marginBottom: '24px', padding: '24px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                      <div style={{
-                        width: '64px',
-                        height: '64px',
-                        background: 'linear-gradient(135deg, #15803d, #22c55e)',
-                        borderRadius: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '28px'
-                      }}>
-                        💰
-                      </div>
+                      <img
+                        src="/finPal.png"
+                        alt="finPal"
+                        style={{ height: '64px', width: 'auto' }}
+                      />
                       <div>
                         <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>{branding.appName}</h3>
                         <p style={{ color: '#94a3b8', fontSize: '14px' }}>Version 1.0.0</p>
@@ -898,10 +891,20 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ padding: '20px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px' }}>
-                    <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Part of {branding.parentBrand}</h3>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                      <img
+                        src="/palStack.png"
+                        alt="palStack"
+                        style={{ height: '32px', width: 'auto' }}
+                      />
+                      <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>Part of {branding.parentBrand}</h3>
+                    </div>
+                    <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
                       {branding.appName} is part of the {branding.parentBrand} ecosystem - a suite of privacy-focused
                       productivity tools designed to help you manage your digital life.
+                    </p>
+                    <p style={{ color: '#64748b', fontSize: '13px', fontStyle: 'italic' }}>
+                      "That's what pals do – they show up and help with the everyday stuff."
                     </p>
                     <p style={{ color: '#64748b', fontSize: '12px', marginTop: '16px' }}>
                       © {new Date().getFullYear()} {branding.parentBrand}. All rights reserved.
@@ -913,8 +916,9 @@ export const Settings: React.FC = () => {
           </div>
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '13px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
-            Part of {branding.parentBrand} ecosystem
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
+            <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
+            <p style={{ color: '#64748b', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
           </div>
         </div>
       </div>
