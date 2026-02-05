@@ -16,8 +16,8 @@ class EmailService:
         self.smtp_user = os.getenv('SMTP_USER', '')
         self.smtp_password = os.getenv('SMTP_PASSWORD', '')
         self.smtp_use_tls = os.getenv('SMTP_USE_TLS', 'false').lower() == 'true'
-        self.from_email = os.getenv('FROM_EMAIL', 'noreply@dollardollar.app')
-        self.from_name = os.getenv('FROM_NAME', 'DollarDollar')
+        self.from_email = os.getenv('FROM_EMAIL', 'noreply@finpal.app')
+        self.from_name = os.getenv('FROM_NAME', 'finPal')
         self.enabled = os.getenv('EMAIL_ENABLED', 'false').lower() == 'true'
 
     def send_email(
@@ -107,10 +107,10 @@ class EmailService:
                     <tr>
                         <td style="padding: 24px 40px;">
                             <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
-                                <strong style="color: #86efac;">{inviter_name}</strong> has invited you to join the group <strong style="color: #86efac;">"{group_name}"</strong> on DollarDollar.
+                                <strong style="color: #86efac;">{inviter_name}</strong> has invited you to join the group <strong style="color: #86efac;">"{group_name}"</strong> on finPal.
                             </p>
                             <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-                                DollarDollar makes it easy to track shared expenses, split bills, and manage group finances. Join now to start collaborating!
+                                finPal makes it easy to track shared expenses, split bills, and manage group finances. Join now to start collaborating!
                             </p>
 
                             <!-- Features -->
@@ -160,7 +160,7 @@ class EmailService:
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2025 DollarDollar. All rights reserved.
+                                © 2026 finPal. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -175,9 +175,9 @@ class EmailService:
         text_body = f"""
 You're Invited!
 
-{inviter_name} has invited you to join the group "{group_name}" on DollarDollar.
+{inviter_name} has invited you to join the group "{group_name}" on finPal.
 
-DollarDollar makes it easy to track shared expenses, split bills, and manage group finances.
+finPal makes it easy to track shared expenses, split bills, and manage group finances.
 
 What you can do:
 - Track shared expenses
@@ -190,7 +190,7 @@ Accept your invitation here:
 This invitation was sent to {to_email}
 If you don't want to join this group, you can safely ignore this email.
 
-© 2025 DollarDollar. All rights reserved.
+© 2026 finPal. All rights reserved.
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -202,7 +202,7 @@ If you don't want to join this group, you can safely ignore this email.
         login_link: str
     ) -> bool:
         """Send welcome email to new user"""
-        subject = f"Welcome to DollarDollar, {user_name}!"
+        subject = f"Welcome to finPal, {user_name}!"
 
         html_body = f"""
 <!DOCTYPE html>
@@ -223,7 +223,7 @@ If you don't want to join this group, you can safely ignore this email.
                                 <span style="font-size: 32px;">💰</span>
                             </div>
                             <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
-                                Welcome to DollarDollar!
+                                Welcome to finPal!
                             </h1>
                         </td>
                     </tr>
@@ -287,7 +287,7 @@ If you don't want to join this group, you can safely ignore this email.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2025 DollarDollar. All rights reserved.
+                                © 2026 finPal. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -300,7 +300,7 @@ If you don't want to join this group, you can safely ignore this email.
 """
 
         text_body = f"""
-Welcome to DollarDollar!
+Welcome to finPal!
 
 Hi {user_name},
 
@@ -317,7 +317,7 @@ Get started: {login_link}
 
 Need help? Check out our guides or contact support.
 
-© 2025 DollarDollar. All rights reserved.
+© 2026 finPal. All rights reserved.
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -362,7 +362,7 @@ Need help? Check out our guides or contact support.
                                 Hi <strong style="color: #86efac;">{user_name}</strong>,
                             </p>
                             <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-                                Thanks for signing up for DollarDollar! Please verify your email address to get started.
+                                Thanks for signing up for finPal! Please verify your email address to get started.
                             </p>
 
                             <!-- CTA Button -->
@@ -392,7 +392,7 @@ Need help? Check out our guides or contact support.
                             </div>
 
                             <p style="color: #64748b; font-size: 13px; margin: 24px 0 0; text-align: center; line-height: 1.5;">
-                                This link will expire in 24 hours. If you didn't sign up for DollarDollar, you can safely ignore this email.
+                                This link will expire in 24 hours. If you didn't sign up for finPal, you can safely ignore this email.
                             </p>
                         </td>
                     </tr>
@@ -411,7 +411,7 @@ Need help? Check out our guides or contact support.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2025 DollarDollar. All rights reserved.
+                                © 2026 finPal. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -428,18 +428,18 @@ Verify Your Email Address
 
 Hi {user_name},
 
-Thanks for signing up for DollarDollar! Please verify your email address to get started.
+Thanks for signing up for finPal! Please verify your email address to get started.
 
 Verify your email: {verification_link}
 
 ℹ️ Why verify?
 Verifying your email helps us keep your account secure and ensures you receive important notifications.
 
-This link will expire in 24 hours. If you didn't sign up for DollarDollar, you can safely ignore this email.
+This link will expire in 24 hours. If you didn't sign up for finPal, you can safely ignore this email.
 
 Having trouble? Contact support.
 
-© 2025 DollarDollar. All rights reserved.
+© 2026 finPal. All rights reserved.
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -452,7 +452,7 @@ Having trouble? Contact support.
         expires_in: str = "1 hour"
     ) -> bool:
         """Send password reset email"""
-        subject = "Reset Your DollarDollar Password"
+        subject = "Reset Your finPal Password"
 
         html_body = f"""
 <!DOCTYPE html>
@@ -485,7 +485,7 @@ Having trouble? Contact support.
                                 Hi <strong style="color: #86efac;">{user_name}</strong>,
                             </p>
                             <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-                                We received a request to reset your password for your DollarDollar account.
+                                We received a request to reset your password for your finPal account.
                             </p>
 
                             <!-- CTA Button -->
@@ -530,7 +530,7 @@ Having trouble? Contact support.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2025 DollarDollar. All rights reserved.
+                                © 2026 finPal. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -547,7 +547,7 @@ Password Reset Request
 
 Hi {user_name},
 
-We received a request to reset your password for your DollarDollar account.
+We received a request to reset your password for your finPal account.
 
 Reset your password: {reset_link}
 
@@ -556,7 +556,7 @@ This link will expire in {expires_in}. If you didn't request a password reset, p
 
 For security reasons, we never send your password via email.
 
-© 2025 DollarDollar. All rights reserved.
+© 2026 finPal. All rights reserved.
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -687,7 +687,7 @@ For security reasons, we never send your password via email.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2025 DollarDollar. All rights reserved.
+                                © 2026 finPal. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -716,7 +716,7 @@ View full report: {report_link}
 
 Want to change your report preferences? Visit Settings.
 
-© 2025 DollarDollar. All rights reserved.
+© 2026 finPal. All rights reserved.
 """
 
         return self.send_email(to_email, subject, html_body, text_body)

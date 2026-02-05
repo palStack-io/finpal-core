@@ -1,5 +1,5 @@
 """
-Application factory for DollarDollar
+Application factory for finPal
 Creates and configures the Flask application
 """
 
@@ -17,30 +17,28 @@ from src import models
 
 def create_app(config_name=None):
     """Create and configure the Flask application"""
-    
+
     # Create Flask app
-    app = Flask(__name__, 
-                template_folder='../templates',
-                static_folder='../static')
-    
+    app = Flask(__name__)
+
     # Load configuration
     config = get_config()
     app.config.from_object(config)
-    
+
     # Ensure instance path exists for SQLite
     try:
         os.makedirs(app.instance_path, exist_ok=True)
     except OSError:
         pass
-    
+
     # Set up SQLite database path if not using PostgreSQL
     if not app.config.get('SQLALCHEMY_DATABASE_URI'):
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(app.instance_path, "expenses.db")}'
-    
+
     # Set up logging
     log_level = getattr(logging, app.config.get('LOG_LEVEL', 'INFO'))
     logging.basicConfig(level=log_level)
-    
+
     # Initialize Flask extensions
     init_extensions(app)
 
@@ -62,18 +60,18 @@ def create_app(config_name=None):
         }
     })
 
-    # Configure login manager (for template-based routes)
+    # Configure login manager
     @login_manager.user_loader
     def load_user(user_id):
         from src.models.user import User
         return User.query.filter_by(id=user_id).first()
-    
+
     # Set up OIDC if enabled
     oidc_enabled = False
     try:
         from integrations.oidc.auth import setup_oidc_config, register_oidc_routes
         from integrations.oidc.user import extend_user_model
-        
+
         oidc_enabled = setup_oidc_config(app)
         if oidc_enabled:
             # Extend User model with OIDC methods
@@ -84,7 +82,7 @@ def create_app(config_name=None):
             app.logger.info("OIDC authentication enabled")
     except Exception as e:
         app.logger.warning(f"OIDC setup failed: {e}")
-    
+
     # Set up SimpleFin client
     try:
         from integrations.simplefin.client import SimpleFin
@@ -92,7 +90,7 @@ def create_app(config_name=None):
         app.extensions['simplefin_client'] = simplefin_client
     except Exception as e:
         app.logger.warning(f"SimpleFin client setup failed: {e}")
-    
+
     # Set up FMP cache for investments
     try:
         from integrations.investments.fmp_cache import FMPCache
@@ -100,7 +98,7 @@ def create_app(config_name=None):
         app.extensions['fmp_cache'] = fmp_cache
     except Exception as e:
         app.logger.warning(f"FMP cache setup failed: {e}")
-    
+
     # Set up demo timeout middleware
     try:
         from src.utils.session_timeout import DemoTimeout
@@ -120,66 +118,29 @@ def create_app(config_name=None):
         app.extensions['demo_timeout'] = demo_timeout
     except Exception as e:
         app.logger.warning(f"Demo timeout setup failed: {e}")
-    
-    # Register blueprints (services)
-    # Currency Service
-    from src.services.currency import bp as currency_bp
-    app.register_blueprint(currency_bp)
 
-    # Category Service (has 3 blueprints: categories, mappings, and API)
-    from src.services.category import bp as category_bp, mapping_bp as category_mapping_bp, api_bp as category_api_bp
-    app.register_blueprint(category_bp)
-    app.register_blueprint(category_mapping_bp)
-    app.register_blueprint(category_api_bp)  # JWT-based API for React frontend
+    # Register API blueprints
+    # Category API
+    from src.services.category import api_bp as category_api_bp
+    app.register_blueprint(category_api_bp)
 
-    # Auth Service (has 3 blueprints: auth, admin, and API)
-    from src.services.auth import bp as auth_bp, admin_bp as admin_auth_bp, api_bp as auth_api_bp
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(admin_auth_bp)
-    app.register_blueprint(auth_api_bp)  # JWT-based API for React Native
+    # Auth API
+    from src.services.auth import api_bp as auth_api_bp
+    app.register_blueprint(auth_api_bp)
 
-    # Transaction Service (has 3 blueprints: transaction, tag, and API)
-    from src.services.transaction import bp as transaction_bp, tag_bp as tag_transaction_bp, api_bp as transaction_api_bp
-    app.register_blueprint(transaction_bp)
-    app.register_blueprint(tag_transaction_bp)
-    app.register_blueprint(transaction_api_bp)  # JWT-based API for React frontend
+    # Transaction API
+    from src.services.transaction import api_bp as transaction_api_bp
+    app.register_blueprint(transaction_api_bp)
 
-    # Account Service (has 2 blueprints: account and simplefin)
-    from src.services.account import bp as account_bp, simplefin_bp as simplefin_account_bp
-    app.register_blueprint(account_bp)
-    app.register_blueprint(simplefin_account_bp)
+    # Group API
+    from src.services.group import api_bp as group_api_bp
+    app.register_blueprint(group_api_bp)
 
-    # Budget Service
-    from src.services.budget import bp as budget_bp
-    app.register_blueprint(budget_bp)
-
-    # Group Service (has 3 blueprints: group, settlement, and API)
-    from src.services.group import bp as group_bp, settlement_bp as settlement_group_bp, api_bp as group_api_bp
-    app.register_blueprint(group_bp)
-    app.register_blueprint(settlement_group_bp)
-    app.register_blueprint(group_api_bp)  # JWT-based API for React frontend
-
-    # Recurring Service
-    from src.services.recurring import bp as recurring_bp
-    app.register_blueprint(recurring_bp)
-
-    # Investment Service
-    from src.services.investment import bp as investment_bp
-    app.register_blueprint(investment_bp)
-
-    # Analytics Service
-    from src.services.analytics import bp as analytics_bp
-    app.register_blueprint(analytics_bp)
-
-    # Transaction Rule Service (API only)
+    # Transaction Rule API
     from src.services.transaction_rule import api_bp as transaction_rule_api_bp
-    app.register_blueprint(transaction_rule_api_bp)  # JWT-based API for React frontend
+    app.register_blueprint(transaction_rule_api_bp)
 
-    # Notification Service (internal - no blueprint)
-    # NotificationService is imported directly when needed
-
-    # ===== REST API Blueprints (NEW) =====
-    # Register API v1 blueprint for React Native frontend
+    # REST API v1
     try:
         from api import api_bp
         app.register_blueprint(api_bp)
@@ -187,26 +148,30 @@ def create_app(config_name=None):
     except Exception as e:
         app.logger.warning(f"REST API registration failed: {e}")
 
-    # Register context processors
-    from src.utils.context_processors import utility_processor
-    app.context_processor(utility_processor)
-
-    # For now, register a basic route from the old app.py
-    # This will be replaced as we extract services
-    register_legacy_routes(app)
+    # Health check endpoint
+    @app.route('/health')
+    def health():
+        return {'status': 'healthy'}, 200
 
     # Set up scheduled tasks
     setup_scheduled_tasks(app)
-    
-    app.logger.info(f"DollarDollar application created successfully")
+
+    app.logger.info(f"finPal application created successfully")
     app.logger.info(f"OIDC enabled: {oidc_enabled}")
     app.logger.info(f"SimpleFin enabled: {app.config.get('SIMPLEFIN_ENABLED', False)}")
     app.logger.info(f"Investment tracking enabled: {app.config.get('INVESTMENT_TRACKING_ENABLED', False)}")
 
-    # Seed demo accounts if demo mode is enabled
-    if app.config.get('DEMO_MODE', False):
-        with app.app_context():
+    # Ensure database tables exist and seed demo data if needed
+    with app.app_context():
+        db.create_all()
+        app.logger.info("Database tables verified")
+
+        if app.config.get('DEMO_MODE', False):
             try:
+                # Seed default currencies
+                from src.cli import create_default_currencies
+                create_default_currencies()
+
                 from src.services.demo import DemoService
                 result = DemoService.seed_demo_accounts()
                 if result.get('success'):
@@ -217,106 +182,6 @@ def create_app(config_name=None):
                 app.logger.error(f"Failed to seed demo accounts: {e}")
 
     return app
-
-
-def register_legacy_routes(app):
-    """
-    Register routes from the legacy app.py temporarily
-    These will be moved to service blueprints gradually
-    """
-    from flask import render_template, redirect, url_for, request, jsonify
-    from flask_login import login_required, current_user
-    from src.utils.decorators import login_required_dev
-
-    @app.route('/')
-    def index():
-        # If user is logged in, redirect to dashboard
-        if current_user.is_authenticated:
-            return redirect(url_for('analytics.dashboard'))
-        # Otherwise redirect to login
-        return redirect(url_for('auth.login'))
-
-    @app.route('/dashboard')
-    @login_required
-    def dashboard():
-        # Redirect to analytics dashboard
-        return redirect(url_for('analytics.dashboard'))
-
-    @app.route('/about')
-    def about():
-        """About page with version info"""
-        from datetime import datetime
-        return render_template('about.html',
-                             version='1.0.0',
-                             release_date='January 2026',
-                             current_year=datetime.now().year)
-
-    @app.route('/detect_recurring_transactions')
-    @login_required_dev
-    def detect_recurring_transactions_legacy():
-        """API endpoint to detect recurring transactions - legacy route for JavaScript"""
-        try:
-            from integrations.recurring.detector import detect_recurring_transactions
-            from src.models.recurring import IgnoredRecurringPattern
-            from src.utils.helpers import get_base_currency
-
-            # Default to 60 days lookback and 2 min occurrences
-            lookback_days = int(request.args.get('lookback_days', 60))
-            min_occurrences = int(request.args.get('min_occurrences', 2))
-
-            # Detect recurring transactions
-            candidates = detect_recurring_transactions(
-                current_user.id,
-                lookback_days=lookback_days,
-                min_occurrences=min_occurrences
-            )
-
-            # Get base currency symbol for formatting
-            base_currency = get_base_currency(current_user)
-            currency_symbol = base_currency['symbol'] if isinstance(base_currency, dict) else base_currency.symbol
-
-            # Get all ignored patterns for this user
-            ignored_patterns = IgnoredRecurringPattern.query.filter_by(user_id=current_user.id).all()
-            ignored_keys = [pattern.pattern_key for pattern in ignored_patterns]
-
-            # Prepare response data
-            candidate_data = []
-            for candidate in candidates:
-                # Create a unique pattern key for this candidate
-                pattern_key = f"{candidate['description']}_{candidate['amount']}_{candidate['frequency']}"
-
-                # Skip if this pattern is in the ignored list
-                if pattern_key in ignored_keys:
-                    continue
-
-                # Create a candidate ID that's stable across requests
-                candidate_id = f"candidate_{hash(pattern_key) & 0xffffffff}"
-
-                # Create a serializable version of the candidate
-                candidate_dict = {
-                    'id': candidate_id,
-                    'description': candidate['description'],
-                    'amount': float(candidate['amount']),
-                    'frequency': candidate['frequency'],
-                    'occurrences': len(candidate.get('dates', [])),
-                    'pattern_key': pattern_key,
-                    'currency_symbol': currency_symbol
-                }
-                candidate_data.append(candidate_dict)
-
-            return jsonify({
-                'success': True,
-                'candidates': candidate_data,
-                'count': len(candidate_data)
-            })
-
-        except Exception as e:
-            app.logger.error(f"Error detecting recurring transactions: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': str(e),
-                'candidates': []
-            }), 500
 
 
 def setup_scheduled_tasks(app):
@@ -338,23 +203,15 @@ def setup_scheduled_tasks(app):
         """Run on the 1st day of each month at 1:00 AM"""
         with app.app_context():
             try:
-                # Import here to avoid circular imports
-                # from src.services.notification.service import NotificationService
-                # notification_service = NotificationService()
-                # notification_service.send_automatic_monthly_reports()
                 app.logger.info("Monthly reports task executed")
             except Exception as e:
                 app.logger.error(f"Monthly reports failed: {e}")
-    
+
     @scheduler.task('cron', id='simplefin_sync', hour=23, minute=0)
     def scheduled_simplefin_sync():
         """Run every day at 11:00 PM"""
         with app.app_context():
             try:
-                # Import here to avoid circular imports
-                # from src.services.account.service import AccountService
-                # account_service = AccountService()
-                # account_service.sync_all_simplefin_accounts()
                 app.logger.info("SimpleFin sync task executed")
             except Exception as e:
                 app.logger.error(f"SimpleFin sync failed: {e}")

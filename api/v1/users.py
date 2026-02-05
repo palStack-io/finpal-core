@@ -325,7 +325,7 @@ class Export(Resource):
             buffer,
             mimetype='application/json',
             as_attachment=True,
-            download_name=f'dollardollar_export_{datetime.now().strftime("%Y%m%d")}.json'
+            download_name=f'finpal_export_{datetime.now().strftime("%Y%m%d")}.json'
         )
 
 

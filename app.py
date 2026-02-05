@@ -1,16 +1,6 @@
 """
-DollarDollar - Personal Finance & Expense Tracking Application
-Main application entry point (modularized version)
-
-The original monolithic app.py has been refactored into a modular structure:
-- Models: src/models/
-- Services: src/services/
-- Utilities: src/utils/
-- Integrations: integrations/
-- Configuration: src/config.py
-- Extensions: src/extensions.py
-
-Original code is preserved in app_old.py for reference.
+finPal - Personal Finance & Expense Tracking Application
+Main application entry point
 """
 
 import os

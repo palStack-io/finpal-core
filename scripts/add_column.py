@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text, inspect
 import os
 
 # Get database URI from environment or use default
-db_uri = os.environ.get('SQLALCHEMY_DATABASE_URI', 'postgresql://postgres:postgres@db:5432/dollardollar')
+db_uri = os.environ.get('SQLALCHEMY_DATABASE_URI', 'postgresql://postgres:postgres@db:5432/finpal')
 
 # Connect to database
 engine = create_engine(db_uri)

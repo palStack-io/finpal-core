@@ -1,6 +1,6 @@
 """
-REST API Package for DollarDollar
-Provides JSON API endpoints for React Native frontend
+REST API Package for finPal
+Provides JSON API endpoints for web and mobile frontends
 """
 
 from flask import Blueprint
@@ -13,8 +13,8 @@ api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
 api = Api(
     api_bp,
     version='1.0',
-    title='DollarDollar API',
-    description='REST API for DollarDollar expense tracking application',
+    title='finPal API',
+    description='REST API for finPal expense tracking application',
     doc='/docs',  # Swagger UI available at /api/v1/docs
     authorizations={
         'Bearer': {

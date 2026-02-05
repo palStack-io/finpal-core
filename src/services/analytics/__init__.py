@@ -1,2 +1,4 @@
-from src.services.analytics.routes import bp
-__all__ = ['bp']
+"""
+Analytics Service Module
+Handles dashboard and statistics
+"""

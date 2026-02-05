@@ -460,7 +460,7 @@ class AuthService:
 
     def send_welcome_email(self, user):
         """Send a welcome email to a newly registered user"""
-        subject = "Welcome to Dollar Dollar Bill Y'all!"
+        subject = "Welcome to finPal!"
 
         # Create welcome email body
         body_html = f"""
@@ -478,7 +478,7 @@ class AuthService:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to Dollar Dollar Bill Y'all!</h1>
+                    <h1>Welcome to finPal!</h1>
                 </div>
                 <div class="content">
                     <h2>Hi {user.name},</h2>
@@ -497,7 +497,7 @@ class AuthService:
                     <p>Happy tracking!</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2024 Dollar Dollar Bill Y'all. All rights reserved.</p>
+                    <p>&copy; 2026 finPal. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -514,11 +514,13 @@ class AuthService:
 
     def send_password_reset_email(self, user, token):
         """Send password reset email with token link"""
-        from flask import url_for
+        from flask import request
 
-        reset_url = url_for('auth.reset_password', token=token, _external=True)
+        # Build reset URL pointing to the React frontend
+        base_url = request.host_url.rstrip('/')
+        reset_url = f"{base_url}/reset-password?token={token}"
 
-        subject = "Password Reset Request - Dollar Dollar Bill Y'all"
+        subject = "Password Reset Request - finPal"
 
         body_html = f"""
         <html>

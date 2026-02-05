@@ -86,7 +86,7 @@ export const SimpleFinConnect: React.FC<SimpleFinConnectProps> = ({
           <h3 className="text-white font-semibold mb-3">How to get your SimpleFin Access URL:</h3>
           <ol className="space-y-2 text-gray-400 text-sm list-decimal list-inside">
             <li>Visit SimpleFin's setup token page</li>
-            <li>Create a new setup token for DollarDollar</li>
+            <li>Create a new setup token for finPal</li>
             <li>Copy the access URL provided</li>
             <li>Paste it below to connect your accounts</li>
           </ol>

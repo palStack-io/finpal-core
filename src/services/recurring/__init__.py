@@ -1,2 +1,4 @@
-from src.services.recurring.routes import bp
-__all__ = ['bp']
+"""
+Recurring Service Module
+Handles recurring transaction detection and management
+"""

@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if os.environ.get('DOCKER_ENV') == 'true' or not sys.stdin.isatty():
         reset_database()
     else:
-        print("DollarDollar Database Reset Utility")
+        print("finPal Database Reset Utility")
         print("---------------------------------")
         print("WARNING: This will delete all data in your database!")
         confirm = input("Are you sure you want to proceed? (y/n): ").lower()

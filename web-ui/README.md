@@ -1,21 +1,21 @@
-# DollarPal Web App
+# finPal Web App
 
-**Modern React-based web frontend for Dollar Dollar Bill Y'all**
+**Modern React-based web frontend for finPal**
 
 Part of the **PalStacks** ecosystem.
 
-## 🎨 Branding
+## Branding
 
 This app uses **currency-based branding**:
-- **USD** → DollarPal
-- **EUR** → EuroPal
-- **GBP** → PoundPal
-- **INR** → RupeePal
+- **USD** -> DollarPal
+- **EUR** -> EuroPal
+- **GBP** -> PoundPal
+- **INR** -> RupeePal
 - And more...
 
 Users select their preferred currency during onboarding, which determines the app name and branding displayed throughout.
 
-## 🚀 Tech Stack
+## Tech Stack
 
 - **Framework**: React 18 + TypeScript
 - **Build Tool**: Vite
@@ -25,13 +25,12 @@ Users select their preferred currency during onboarding, which determines the ap
 - **API Client**: Axios + TanStack Query
 - **Date Handling**: date-fns
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-dollardollar-web/
+web-ui/
 ├── src/
 │   ├── assets/          # Images, fonts, static files
-│   │   └── images/      # dddby.png, dollar.png logos
 │   ├── components/      # React components
 │   │   ├── auth/        # Login, Register, Onboarding
 │   │   ├── layout/      # Header, Sidebar, Footer
@@ -51,10 +50,9 @@ dollardollar-web/
 └── nginx.conf          # Nginx config for production
 ```
 
-## 🎨 Design System
+## Design System
 
 ### Color Palette
-Ported from the original HTML theme:
 
 ```css
 Primary Green:    #15803d
@@ -73,7 +71,7 @@ Money Green:      #22c55e
 - Custom scrollbar styling
 - Rounded cards with backdrop blur
 
-## 🔧 Setup & Development
+## Setup & Development
 
 ### Prerequisites
 - Node.js 18+
@@ -101,11 +99,11 @@ Create a `.env` file with:
 ```env
 VITE_API_BASE_URL=http://localhost:5000
 VITE_DEFAULT_CURRENCY=USD
-VITE_APP_NAME=DollarPal
+VITE_APP_NAME=finPal
 VITE_PARENT_BRAND=PalStacks
 ```
 
-## 📦 Building for Production
+## Building for Production
 
 ```bash
 # Build the app
@@ -115,21 +113,21 @@ npm run build
 npm run preview
 ```
 
-## 🐳 Docker
+## Docker
 
 ### Build Docker image
 
 ```bash
-docker build -t dollardollar-web .
+docker build -t finpal-web .
 ```
 
 ### Run container
 
 ```bash
-docker run -p 3000:80 dollardollar-web
+docker run -p 3000:80 finpal-web
 ```
 
-## 🔐 User Onboarding Flow
+## User Onboarding Flow
 
 On first login, users are prompted to set:
 
@@ -139,36 +137,23 @@ On first login, users are prompted to set:
 
 These settings can be changed later in user preferences.
 
-## 🌐 API Integration
+## API Integration
 
-The web app communicates with the Flask backend at:
-- **Development**: `http://localhost:5000`
+The web app communicates with the Flask backend via nginx reverse proxy:
+- **Development**: Proxied through nginx at `http://localhost:8085`
 - **Production**: Set via `VITE_API_BASE_URL`
 
 API endpoints are defined in `src/config/api.ts`
 
-## 📱 Related Projects
+## Related Projects
 
-- **dollardollar-mobile/** - React Native mobile app (iOS/Android)
-- **dollardollar/** - Flask backend API
+- **finpal-mobile/** - React Native mobile app (iOS/Android)
+- **finPal/backend/** - Flask backend API
 
-## 🎯 Roadmap
+## License
 
-- [x] Basic Vite + React setup
-- [x] Tailwind CSS configuration
-- [x] Branding system with currency support
-- [x] Theme configuration
-- [ ] Authentication pages (Login/Register)
-- [ ] User onboarding flow
-- [ ] Dashboard
-- [ ] Transactions management
-- [ ] Budgets & analytics
-- [ ] Settings & preferences
-
-## 📄 License
-
-Part of the Dollar Dollar Bill Y'all project.
+Part of the finPal project.
 
 ---
 
-**Built with ❤️ for the PalStacks ecosystem**
+**Built for the PalStacks ecosystem**

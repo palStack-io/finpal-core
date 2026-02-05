@@ -1,4 +1,4 @@
-# Installation and Usage Guide for DollarDollar Bill Y'all
+# Installation and Usage Guide for finPal
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@
 - 10GB disk space
 - Internet connection for initial setup
 
-### NOTE : The first user to signup will become the admin 
+### NOTE: The first user to signup will become the admin
 
 ## Installation Methods
 
@@ -22,8 +22,8 @@
 #### Quick Start
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/dollardollar.git
-cd dollardollar
+git clone https://github.com/palStack-io/finpal-core.git
+cd finpal-core
 
 # Copy environment template
 cp .env.template .env
@@ -32,7 +32,7 @@ cp .env.template .env
 nano .env
 
 # Build and run the application
-docker-compose up --build
+docker compose -f docker-compose.local.yml up --build
 ```
 
 #### Detailed Configuration
@@ -44,7 +44,7 @@ docker-compose up --build
    - Configure email settings if needed
 
 2. **Access the Application**
-   - Open http://localhost:5001 in your web browser
+   - Open http://localhost:8085 in your web browser
    - First registered user becomes the admin
 
 ### 2. Local Development Setup
@@ -70,41 +70,13 @@ flask db upgrade
 flask run
 ```
 
-## Basic Use Cases
-
-### 1. Adding an Expense
-
-1. Click "Add New Expense"
-2. Fill in details:
-   - Description
-   - Amount
-   - Date
-   - Card Used
-   - Split Method (Equal/Custom/Percentage)
-3. Select participants
-4. Save expense
-
-### 2. Creating a Group
-
-1. Navigate to "Groups"
-2. Click "Create Group"
-3. Add group name and description
-4. Invite group members
-5. Start sharing expenses within the group
-
-### 3. Settling Up
-
-1. Go to "Settle Up" page
-2. View who owes what
-3. Record settlements
-4. Track balance between users
-
 ## Security Considerations
 
 - Use strong, unique passwords
-- Enable two-factor authentication if possible
+- Enable OIDC/SSO authentication if possible
 - Regularly update the application
 - Keep your Docker and dependencies updated
+- Use a reverse proxy with SSL in production
 
 ## Troubleshooting
 
@@ -116,11 +88,11 @@ flask run
 
 ```bash
 # View container logs
-docker-compose logs web
+docker compose logs backend
 
 # Restart services
-docker-compose down
-docker-compose up --build
+docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml up --build
 ```
 
 ## Backup and Restore
@@ -128,10 +100,10 @@ docker-compose up --build
 ### Database Backup
 ```bash
 # Backup PostgreSQL database
-docker-compose exec db pg_dump -U postgres dollardollar > backup.sql
+docker compose exec db pg_dump -U finpal finpal > backup.sql
 
 # Restore database
-docker-compose exec -T db psql -U postgres dollardollar < backup.sql
+docker compose exec -T db psql -U finpal finpal < backup.sql
 ```
 
 ## Upgrade Process
@@ -143,16 +115,16 @@ docker-compose exec -T db psql -U postgres dollardollar < backup.sql
 
 ```bash
 git pull origin main
-docker-compose down
-docker-compose up --build
+docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml up --build
 ```
 
 ## Contributing
 
-- Report issues on GitHub
-- Submit pull requests
-- Follow project coding standards
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT License - See LICENSE file for details
+AGPL-3.0 - See [LICENSE](../LICENSE) file for details.
+
+For comprehensive documentation, visit [finpal.palstack.io/docs](https://finpal.palstack.io/docs)

@@ -51,6 +51,18 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Shell scripts
+*.sh
+
+# Test and check scripts
+test_*.py
+simplefin_*.py
+simplefin_*.json
+
+# Data files
+app.db
+*.sqlite3
+
 # Misc
 *.bak
 *.tmp

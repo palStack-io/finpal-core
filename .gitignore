@@ -61,13 +61,17 @@ htmlcov/
 *.pem
 *.key
 *.crt
-simplefin_data.json
 
-# Project-specific
+# Shell scripts (utility/deployment scripts, not part of codebase)
 *.sh
-signature.sh
-simplefin-30-days.py
-simplefin_test.py
+
+# Test and check scripts
+test_*.py
+simplefin_*.py
+simplefin_*.json
+
+# Data files
+app.db
 
 
 # Docker

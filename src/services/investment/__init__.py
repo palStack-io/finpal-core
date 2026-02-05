@@ -1,2 +1,4 @@
-from src.services.investment.routes import bp
-__all__ = ['bp']
+"""
+Investment Service Module
+Handles portfolio and investment tracking
+"""
