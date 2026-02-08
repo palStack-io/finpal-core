@@ -7,6 +7,7 @@ import os
 import logging
 import pytz
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 from src.config import get_config
 from src.extensions import db, login_manager, mail, migrate, scheduler, init_extensions
 from flask_jwt_extended import JWTManager
@@ -20,6 +21,10 @@ def create_app(config_name=None):
 
     # Create Flask app
     app = Flask(__name__)
+
+    # Apply ProxyFix so Flask respects X-Forwarded-Proto/Host/For from reverse proxies
+    # This fixes HTTPS redirect URLs when behind SSL-terminating proxies (Traefik, Caddy, etc.)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # Load configuration
     config = get_config()

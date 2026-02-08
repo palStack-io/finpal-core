@@ -88,7 +88,7 @@ class Profile(Resource):
 
         return {
             'id': user.id,
-            'email': user.email,
+            'email': user.id,  # id IS the email in this model
             'name': user.name,
             'user_color': user.user_color,
             'default_currency_code': user.default_currency_code,
