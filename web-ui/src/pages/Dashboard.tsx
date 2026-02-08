@@ -301,7 +301,7 @@ export const Dashboard = () => {
           <img src="/finPal.png" alt="finPal" style={{ height: '48px', width: 'auto' }} />
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '4px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              {branding.appName}
+              {branding.internalName}
             </h1>
             <p style={{ color: '#94a3b8', fontSize: '14px' }}>Welcome back! Here's your financial overview.</p>
           </div>

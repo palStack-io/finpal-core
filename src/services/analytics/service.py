@@ -168,7 +168,13 @@ class AnalyticsService:
         currencies = Currency.query.all()
 
         # Calculate asset and debt trends
-        asset_debt_trends = calculate_asset_debt_trends(current_user)
+        try:
+            asset_debt_trends = calculate_asset_debt_trends(current_user)
+        except Exception:
+            asset_debt_trends = {
+                'months': [], 'assets': [], 'debts': [],
+                'total_assets': 0, 'total_debts': 0, 'net_worth': 0, 'investment_total': 0
+            }
 
         return {
             'expenses': expenses,

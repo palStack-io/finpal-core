@@ -23,35 +23,47 @@ class Dashboard(Resource):
             # Get dashboard data from service
             dashboard_data = analytics_service.get_dashboard_data(current_user_id)
 
-            # Convert any SimpleNamespace objects to dicts for JSON serialization
-            from datetime import datetime, date
+            # Pre-serialize expenses into simple dicts (avoid deep SQLAlchemy serialization)
+            serialized_expenses = []
+            for exp in (dashboard_data.get('expenses') or []):
+                try:
+                    serialized_expenses.append({
+                        'id': exp.id,
+                        'description': exp.description,
+                        'amount': exp.amount,
+                        'date': exp.date.isoformat() if exp.date else None,
+                        'transaction_type': getattr(exp, 'transaction_type', 'expense'),
+                        'category': {
+                            'name': exp.category.name if exp.category else 'Uncategorized',
+                            'color': exp.category.color if exp.category else None,
+                            'icon': exp.category.icon if exp.category else None,
+                        } if exp.category else 'Uncategorized',
+                        'account': {
+                            'name': exp.account.name if exp.account else 'Unknown',
+                            'color': getattr(exp.account, 'color', None) if exp.account else None,
+                        } if exp.account else 'Unknown',
+                    })
+                except Exception:
+                    continue
 
-            def convert_to_dict(obj, visited=None):
-                if visited is None:
-                    visited = set()
-
-                # Handle datetime objects
-                if isinstance(obj, (datetime, date)):
-                    return obj.isoformat()
-
-                # Check for circular references
-                obj_id = id(obj)
-                if obj_id in visited:
-                    return None
-
-                if hasattr(obj, '__dict__') and not isinstance(obj, (datetime, date)):
-                    visited.add(obj_id)
-                    result = {key: convert_to_dict(value, visited) for key, value in obj.__dict__.items() if not key.startswith('_')}
-                    visited.remove(obj_id)
-                    return result
-                elif isinstance(obj, list):
-                    return [convert_to_dict(item, visited) for item in obj]
-                elif isinstance(obj, dict):
-                    return {key: convert_to_dict(value, visited) for key, value in obj.items()}
-                else:
-                    return obj
-
-            serializable_data = convert_to_dict(dashboard_data)
+            # Build clean response with only what the frontend needs
+            serializable_data = {
+                'net_worth': dashboard_data.get('net_worth', 0) or 0,
+                'total_income': dashboard_data.get('total_income', 0) or 0,
+                'total_expenses_only': dashboard_data.get('total_expenses_only', 0) or 0,
+                'total_expenses': dashboard_data.get('total_expenses', 0) or 0,
+                'current_month_total': dashboard_data.get('current_month_total', 0) or 0,
+                'current_month_expenses_only': dashboard_data.get('current_month_expenses_only', 0) or 0,
+                'net_cash_flow': dashboard_data.get('net_cash_flow', 0) or 0,
+                'savings_rate': dashboard_data.get('savings_rate', 0) or 0,
+                'total_assets': dashboard_data.get('total_assets', 0) or 0,
+                'total_debts': dashboard_data.get('total_debts', 0) or 0,
+                'investment_total': dashboard_data.get('investment_total', 0) or 0,
+                'expenses': serialized_expenses,
+                'top_categories': dashboard_data.get('top_categories', []),
+                'monthly_labels': dashboard_data.get('monthly_labels', []),
+                'monthly_amounts': dashboard_data.get('monthly_amounts', []),
+            }
 
             return {
                 'success': True,

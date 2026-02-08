@@ -96,6 +96,7 @@ def detect_recurring_transactions(user_id, lookback_days=60, min_occurrences=2):
             sample = sorted_transactions[0]
             
             recurring_candidates.append({
+                'pattern_key': key,
                 'description': sample['description'],
                 'amount': sample['amount'],
                 'currency_code': sample['currency_code'],
@@ -103,12 +104,14 @@ def detect_recurring_transactions(user_id, lookback_days=60, min_occurrences=2):
                 'account_id': sample['account_id'],
                 'category_id': sample['category_id'],
                 'transaction_type': sample['transaction_type'],
-                'confidence': min(interval_consistency * 100, 98),
+                'confidence': min(interval_consistency, 0.98),
                 'occurrences': len(sorted_transactions),
-                'last_date': last_transaction['date'],
-                'next_date': next_date,
+                'last_date': last_transaction['date'].isoformat() if last_transaction['date'] else None,
+                'next_date': next_date.isoformat() if next_date else None,
+                'start_date': sorted_transactions[0]['date'].isoformat() if sorted_transactions[0]['date'] else None,
                 'avg_interval': round(avg_interval, 1),
-                'transaction_ids': [t['id'] for t in sorted_transactions]
+                'transaction_ids': [t['id'] for t in sorted_transactions],
+                'transactions': sorted_transactions
             })
     
     # Sort by confidence (highest first)

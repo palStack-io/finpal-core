@@ -35,15 +35,25 @@ class RecurringList(Resource):
         """Get all recurring transactions for current user"""
         current_user_id = get_jwt_identity()
 
-        recurring_expenses = recurring_service.get_all_recurring(current_user_id)
+        try:
+            recurring_expenses = recurring_service.get_all_recurring(current_user_id)
 
-        # Serialize
-        result = recurrings_schema.dump(recurring_expenses)
+            # Serialize
+            result = recurrings_schema.dump(recurring_expenses)
 
-        return {
-            'success': True,
-            'recurring': result
-        }, 200
+            return {
+                'success': True,
+                'recurring': result
+            }, 200
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'error': str(e),
+                'recurring': []
+            }, 500
 
     @ns.doc('create_recurring', security='Bearer')
     @ns.expect(recurring_model)

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -34,7 +35,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -76,7 +77,6 @@ export const Modal: React.FC<ModalProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             background: 'rgba(17, 24, 39, 0.6)',
-            backdropFilter: 'blur(12px)',
             flexShrink: 0
           }}
         >
@@ -131,6 +131,7 @@ export const Modal: React.FC<ModalProps> = ({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

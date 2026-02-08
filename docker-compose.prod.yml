@@ -1,23 +1,44 @@
 version: '3.8'
 
+# ===================================
+# finPal PRODUCTION Environment
+# ===================================
+# Domain: finpal.palstack.io
+# Purpose: Full-featured production budget tracking
+# 
+# Features:
+# - User registration enabled
+# - Email support for password reset
+# - SimpleFin bank sync enabled
+# - Investment tracking enabled
+# - OIDC/SSO support (optional)
+# - Full data persistence
+#
+# Directory: /home/harungunasekaran/Documents/docket_mnt/finpal
+#
+# Directory structure:
+#   finpal/
+#   └── postgres/          - PostgreSQL data
+# ===================================
+
 services:
   # ===================================
   # PostgreSQL Database
   # ===================================
   db:
     image: postgres:15-alpine
-    container_name: finpal-db
+    container_name: finpal-postgres
     environment:
-      POSTGRES_DB: ${DB_NAME:-finpal}
-      POSTGRES_USER: ${DB_USER:-finpal}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-finpal}
+      POSTGRES_DB: finpal
+      POSTGRES_USER: finpal
+      POSTGRES_PASSWORD: CHANGE_ME_STRONG_PASSWORD
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /home/harungunasekaran/Documents/docket_mnt/finpal/postgres:/var/lib/postgresql/data
     networks:
       - finpal-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-finpal}"]
+      test: ["CMD-SHELL", "pg_isready -U finpal"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,43 +54,60 @@ services:
         condition: service_healthy
     environment:
       # Database
-      DATABASE_URL: postgresql://${DB_USER:-finpal}:${DB_PASSWORD:-finpal}@db:5432/${DB_NAME:-finpal}
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-finpal}
-      DB_USER: ${DB_USER:-finpal}
-      DB_PASSWORD: ${DB_PASSWORD:-finpal}
+      - DATABASE_URL=postgresql://finpal:CHANGE_ME_STRONG_PASSWORD@db:5432/finpal
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=finpal
+      - DB_USER=finpal
+      - DB_PASSWORD=CHANGE_ME_STRONG_PASSWORD
 
       # Flask
-      FLASK_APP: app.py
-      FLASK_ENV: ${FLASK_ENV:-production}
-      SECRET_KEY: ${SECRET_KEY}
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - SECRET_KEY=CHANGE_ME_RANDOM_STRING_USE_openssl_rand_hex_32
+      - DEBUG=False
+      - DEVELOPMENT_MODE=False
+      - LOG_LEVEL=INFO
 
       # JWT
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:-86400}
+      - JWT_SECRET_KEY=CHANGE_ME_RANDOM_STRING_USE_openssl_rand_hex_32
+      - JWT_ACCESS_TOKEN_EXPIRES=86400
 
       # Application
-      DEFAULT_CURRENCY: ${DEFAULT_CURRENCY:-USD}
-      INVESTMENT_TRACKING_ENABLED: ${INVESTMENT_TRACKING_ENABLED:-true}
+      - DEFAULT_CURRENCY=USD
+      - DISABLE_SIGNUPS=False
+      
+      # Feature Flags
+      - INVESTMENT_TRACKING_ENABLED=true
+      - SIMPLEFIN_ENABLED=true
+      - FMP_API_KEY=
 
-      # Email
-      MAIL_SERVER: ${MAIL_SERVER}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USE_TLS: ${MAIL_USE_TLS:-True}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_DEFAULT_SENDER: ${MAIL_DEFAULT_SENDER}
+      # Demo Mode - DISABLED for production
+      - DEMO_MODE=False
+      - DEMO_TIMEOUT_MINUTES=10
+      - MAX_CONCURRENT_DEMO_SESSIONS=10
 
-      # OIDC (Optional)
-      OIDC_ENABLED: ${OIDC_ENABLED:-false}
-      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID}
-      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
-      OIDC_DISCOVERY_URL: ${OIDC_DISCOVERY_URL}
-      OIDC_PROVIDER_NAME: ${OIDC_PROVIDER_NAME}
+      # Email (Configure for password reset)
+      - EMAIL_ENABLED=false
+      - MAIL_SERVER=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_USE_TLS=True
+      - MAIL_USE_SSL=False
+      - MAIL_USERNAME=
+      - MAIL_PASSWORD=
+      - MAIL_DEFAULT_SENDER=
 
-      # SimpleFin (Optional)
-      SIMPLEFIN_ENABLED: ${SIMPLEFIN_ENABLED:-false}
+      # OIDC (Optional SSO)
+      - OIDC_ENABLED=false
+      - OIDC_CLIENT_ID=
+      - OIDC_CLIENT_SECRET=
+      - OIDC_ISSUER=
+      - OIDC_DISCOVERY_URL=
+      - OIDC_PROVIDER_NAME=SSO
+      - OIDC_LOGOUT_URI=
+      - APP_URL=https://finpal.palstack.io
+      - LOCAL_LOGIN_DISABLE=False
+
     networks:
       - finpal-network
     restart: unless-stopped
@@ -88,6 +126,8 @@ services:
     container_name: finpal-web
     depends_on:
       - backend
+    environment:
+      - NODE_ENV=production
     networks:
       - finpal-network
     restart: unless-stopped
@@ -102,10 +142,15 @@ services:
       - backend
       - web
     ports:
-      - "${HTTP_PORT:-8085}:80"
+      - "8085:80"
     networks:
       - finpal-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
 volumes:
   postgres_data:

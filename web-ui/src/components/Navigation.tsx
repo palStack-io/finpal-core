@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { getBranding } from '../config/branding';
 import {
   Menu,
   X,
@@ -22,6 +23,7 @@ export const Navigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
+  const branding = getBranding(user?.default_currency_code || 'USD');
 
   const handleLogout = () => {
     logout();
@@ -96,19 +98,15 @@ export const Navigation: React.FC = () => {
       >
         {/* Logo */}
         <div style={{ marginTop: '40px', marginBottom: '32px', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '64px',
-            height: '64px',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-            marginBottom: '12px',
-            fontSize: '32px'
-          }}>
-            💲
-          </div>
+          <img
+            src="/finPal.png"
+            alt="finPal"
+            style={{
+              height: '64px',
+              width: 'auto',
+              marginBottom: '12px'
+            }}
+          />
           <h2 style={{
             fontSize: '24px',
             fontWeight: '700',
@@ -118,7 +116,7 @@ export const Navigation: React.FC = () => {
             backgroundClip: 'text',
             margin: 0
           }}>
-            DollarPal
+            {branding.internalName}
           </h2>
           {user && (
             <p style={{ color: '#64748b', fontSize: '14px', marginTop: '8px' }}>

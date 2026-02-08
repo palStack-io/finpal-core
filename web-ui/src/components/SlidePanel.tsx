@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface SlidePanelProps {
@@ -42,7 +43,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -86,8 +87,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(17, 24, 39, 0.6)',
-            backdropFilter: 'blur(12px)'
+            background: 'rgba(17, 24, 39, 0.6)'
           }}
         >
           <h2
@@ -165,6 +165,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           }
         }
       `}</style>
-    </>
+    </>,
+    document.body
   );
 };
