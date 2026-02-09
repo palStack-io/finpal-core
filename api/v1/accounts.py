@@ -28,11 +28,12 @@ class AccountList(Resource):
     @ns.doc('list_accounts', security='Bearer')
     @jwt_required()
     def get(self):
-        """Get all accounts for current user"""
+        """Get all accounts for household"""
+        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all accounts for user
-        accounts = Account.query.filter_by(user_id=current_user_id).all()
+        # Get all accounts for the household
+        accounts = Account.query.filter(Account.user_id.in_(get_all_user_ids())).all()
 
         # Serialize
         result = accounts_schema.dump(accounts)

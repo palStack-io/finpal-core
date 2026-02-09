@@ -305,15 +305,29 @@ class GroupInvite(Resource):
 
                 message = f'{invited_user.id} added to group successfully'
             else:
-                # User doesn't exist yet - send invite email
+                # User doesn't exist yet - create a household invitation so they can register,
+                # then send the group invite email
                 from src.services.email_service import email_service
+                from src.models.invitation import Invitation
+                import os
 
                 current_user = User.query.get(current_user_id)
                 inviter_name = getattr(current_user, 'name', current_user_id) if current_user else 'Someone'
 
-                # Generate invite link (could be enhanced with invite tokens)
-                base_url = request.host_url.rstrip('/')
-                invite_link = f"{base_url}/signup?group_invite={id}&email={invite_email}"
+                # Create a household invitation if one doesn't already exist
+                existing_invitation = Invitation.query.filter_by(email=invite_email, status='pending').first()
+                if not existing_invitation:
+                    invitation = Invitation(
+                        email=invite_email,
+                        role='member',
+                        invited_by=current_user_id,
+                    )
+                    db.session.add(invitation)
+                    db.session.commit()
+
+                # Generate invite link pointing to register page
+                app_url = os.getenv('APP_URL', request.host_url.rstrip('/'))
+                invite_link = f"{app_url}/register?group_invite={id}&email={invite_email}"
 
                 success = email_service.send_group_invite(
                     to_email=invite_email,

@@ -27,11 +27,12 @@ class BudgetList(Resource):
     @ns.doc('list_budgets', security='Bearer')
     @jwt_required()
     def get(self):
-        """Get all budgets for current user"""
+        """Get all budgets for household"""
+        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all budgets for user
-        budgets = Budget.query.filter_by(user_id=current_user_id).all()
+        # Get all budgets for the household
+        budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids())).all()
 
         # Serialize
         result = budgets_schema.dump(budgets)
@@ -206,10 +207,11 @@ class BudgetOverview(Resource):
     @jwt_required()
     def get(self):
         """Get budget overview with total budget, spent, and remaining"""
+        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
         try:
-            budgets = Budget.query.filter_by(user_id=current_user_id, active=True).all()
+            budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids()), Budget.active == True).all()
 
             total_budget = 0
             total_spent = 0

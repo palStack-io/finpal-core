@@ -1,114 +1,83 @@
-"""Team collaboration API endpoints"""
+"""Team / Household API endpoints"""
+import os
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.user import User
+from src.models.invitation import Invitation
 from src.extensions import db
-from datetime import datetime, timedelta
-import secrets
 
 # Create namespace
-ns = Namespace('team', description='Team collaboration operations')
-
-# Define request/response models
-invite_user_model = ns.model('InviteUser', {
-    'email': fields.String(required=True, description='Email to invite'),
-    'role': fields.String(required=True, description='Role to assign', enum=['owner', 'admin', 'member', 'viewer']),
-})
-
-update_role_model = ns.model('UpdateRole', {
-    'role': fields.String(required=True, description='New role', enum=['owner', 'admin', 'member', 'viewer']),
-})
-
-transfer_ownership_model = ns.model('TransferOwnership', {
-    'memberId': fields.Integer(required=True, description='Member ID to transfer ownership to'),
-})
-
-accept_invitation_model = ns.model('AcceptInvitation', {
-    'token': fields.String(required=True, description='Invitation token'),
-})
-
-team_member_model = ns.model('TeamMember', {
-    'id': fields.Integer(description='Member ID'),
-    'name': fields.String(description='Member name'),
-    'email': fields.String(description='Member email'),
-    'role': fields.String(description='Member role'),
-    'joinedAt': fields.DateTime(description='Join date'),
-    'lastActive': fields.DateTime(description='Last active date'),
-    'avatar': fields.String(description='Avatar URL'),
-})
-
-invitation_model = ns.model('Invitation', {
-    'id': fields.Integer(description='Invitation ID'),
-    'email': fields.String(description='Invited email'),
-    'role': fields.String(description='Role'),
-    'sentAt': fields.DateTime(description='Sent date'),
-    'expiresAt': fields.DateTime(description='Expiration date'),
-    'status': fields.String(description='Status', enum=['pending', 'accepted', 'expired', 'cancelled']),
-    'invitedBy': fields.String(description='Inviter name'),
-})
+ns = Namespace('team', description='Household collaboration operations')
 
 
-# Temporary in-memory storage for invitations
-# In production, this would be in the database
-team_invitations = []
-team_members = []
+def _require_admin():
+    """Return the current user if admin, otherwise None."""
+    identity = get_jwt_identity()
+    user = User.query.filter_by(id=identity).first()
+    if not user or not user.is_admin:
+        return None
+    return user
 
 
 @ns.route('/invite')
 class Invite(Resource):
     @ns.doc('invite_user')
     @jwt_required()
-    @ns.expect(invite_user_model)
     def post(self):
-        """Send invitation to join team"""
-        user_id = get_jwt_identity()
-        user = User.query.filter_by(id=user_id).first()
-
-        if not user:
-            return {'message': 'User not found'}, 404
+        """Admin creates an invitation and sends an email"""
+        admin = _require_admin()
+        if not admin:
+            return {'message': 'Admin access required'}, 403
 
         data = request.get_json()
-        email = data.get('email')
-        role = data.get('role')
+        email = (data or {}).get('email', '').strip().lower()
+        role = (data or {}).get('role', 'member')
 
-        if not email or not role:
-            return {'message': 'Email and role required'}, 400
+        if not email:
+            return {'message': 'Email is required'}, 400
 
-        # Validate role
-        valid_roles = ['owner', 'admin', 'member', 'viewer']
-        if role not in valid_roles:
+        if role not in ('member', 'admin', 'viewer'):
             return {'message': 'Invalid role'}, 400
 
-        # Check if user already invited
-        existing = next((inv for inv in team_invitations if inv['email'] == email and inv['status'] == 'pending'), None)
+        # Check if user already exists
+        if User.query.filter_by(id=email).first():
+            return {'message': 'A user with this email already exists'}, 400
+
+        # Check for existing pending invitation
+        existing = Invitation.query.filter_by(email=email, status='pending').first()
         if existing:
-            return {'message': 'User already invited'}, 400
+            return {'message': 'A pending invitation already exists for this email'}, 400
 
-        # Create invitation
-        invitation = {
-            'id': len(team_invitations) + 1,
-            'email': email,
-            'role': role,
-            'sentAt': datetime.utcnow().isoformat(),
-            'expiresAt': (datetime.utcnow() + timedelta(days=7)).isoformat(),
-            'status': 'pending',
-            'invitedBy': user.name,
-            'token': secrets.token_urlsafe(32),
-        }
+        invitation = Invitation(
+            email=email,
+            role=role,
+            invited_by=admin.id,
+        )
+        db.session.add(invitation)
+        db.session.commit()
 
-        team_invitations.append(invitation)
-
-        # In production, send invitation email here
+        # Send invite email
+        try:
+            from src.services.email_service import email_service
+            app_url = os.getenv('APP_URL', 'http://localhost:3000')
+            invite_link = f"{app_url}/register?invite={invitation.token}"
+            email_service.send_invite_email(
+                to_email=email,
+                inviter_name=admin.name or admin.id,
+                invite_link=invite_link,
+            )
+        except Exception as e:
+            print(f"Failed to send invite email: {e}")
 
         return {
-            'id': invitation['id'],
-            'email': invitation['email'],
-            'role': invitation['role'],
-            'sentAt': invitation['sentAt'],
-            'expiresAt': invitation['expiresAt'],
-            'status': invitation['status'],
-            'invitedBy': invitation['invitedBy'],
+            'id': invitation.id,
+            'email': invitation.email,
+            'role': invitation.role,
+            'status': invitation.status,
+            'sentAt': invitation.created_at.isoformat(),
+            'expiresAt': '',
+            'invitedBy': admin.name or admin.id,
         }, 201
 
 
@@ -117,29 +86,24 @@ class Invitations(Resource):
     @ns.doc('get_invitations')
     @jwt_required()
     def get(self):
-        """Get all pending invitations"""
-        user_id = get_jwt_identity()
+        """List all invitations (admin only)"""
+        admin = _require_admin()
+        if not admin:
+            return {'message': 'Admin access required'}, 403
 
-        # Filter out expired invitations
-        current_time = datetime.utcnow()
-        active_invitations = []
-
-        for inv in team_invitations:
-            expires_at = datetime.fromisoformat(inv['expiresAt'])
-            if inv['status'] == 'pending' and expires_at < current_time:
-                inv['status'] = 'expired'
-
-            active_invitations.append({
-                'id': inv['id'],
-                'email': inv['email'],
-                'role': inv['role'],
-                'sentAt': inv['sentAt'],
-                'expiresAt': inv['expiresAt'],
-                'status': inv['status'],
-                'invitedBy': inv.get('invitedBy'),
-            })
-
-        return active_invitations, 200
+        invitations = Invitation.query.order_by(Invitation.created_at.desc()).all()
+        return [
+            {
+                'id': inv.id,
+                'email': inv.email,
+                'role': inv.role,
+                'status': inv.status,
+                'sentAt': inv.created_at.isoformat(),
+                'expiresAt': '',
+                'invitedBy': inv.inviter.name if inv.inviter else inv.invited_by,
+            }
+            for inv in invitations
+        ], 200
 
 
 @ns.route('/invitations/<int:invitation_id>')
@@ -148,17 +112,19 @@ class InvitationDetail(Resource):
     @jwt_required()
     def delete(self, invitation_id):
         """Cancel a pending invitation"""
-        user_id = get_jwt_identity()
+        admin = _require_admin()
+        if not admin:
+            return {'message': 'Admin access required'}, 403
 
-        invitation = next((inv for inv in team_invitations if inv['id'] == invitation_id), None)
-
+        invitation = Invitation.query.get(invitation_id)
         if not invitation:
             return {'message': 'Invitation not found'}, 404
 
-        if invitation['status'] != 'pending':
-            return {'message': 'Cannot cancel non-pending invitation'}, 400
+        if invitation.status != 'pending':
+            return {'message': 'Only pending invitations can be cancelled'}, 400
 
-        invitation['status'] = 'cancelled'
+        invitation.status = 'cancelled'
+        db.session.commit()
 
         return {'message': 'Invitation cancelled'}, 200
 
@@ -168,22 +134,29 @@ class ResendInvitation(Resource):
     @ns.doc('resend_invitation')
     @jwt_required()
     def post(self, invitation_id):
-        """Resend an invitation"""
-        user_id = get_jwt_identity()
+        """Resend invite email for a pending invitation"""
+        admin = _require_admin()
+        if not admin:
+            return {'message': 'Admin access required'}, 403
 
-        invitation = next((inv for inv in team_invitations if inv['id'] == invitation_id), None)
-
+        invitation = Invitation.query.get(invitation_id)
         if not invitation:
             return {'message': 'Invitation not found'}, 404
 
-        if invitation['status'] != 'pending':
-            return {'message': 'Can only resend pending invitations'}, 400
+        if invitation.status != 'pending':
+            return {'message': 'Only pending invitations can be resent'}, 400
 
-        # Update expiration date
-        invitation['expiresAt'] = (datetime.utcnow() + timedelta(days=7)).isoformat()
-        invitation['sentAt'] = datetime.utcnow().isoformat()
-
-        # In production, resend invitation email here
+        try:
+            from src.services.email_service import email_service
+            app_url = os.getenv('APP_URL', 'http://localhost:3000')
+            invite_link = f"{app_url}/register?invite={invitation.token}"
+            email_service.send_invite_email(
+                to_email=invitation.email,
+                inviter_name=admin.name or admin.id,
+                invite_link=invite_link,
+            )
+        except Exception as e:
+            return {'message': f'Failed to resend email: {e}'}, 500
 
         return {'message': 'Invitation resent'}, 200
 
@@ -193,119 +166,102 @@ class Members(Resource):
     @ns.doc('get_members')
     @jwt_required()
     def get(self):
-        """Get all team members"""
-        user_id = get_jwt_identity()
-        user = User.query.filter_by(id=user_id).first()
-
+        """List all users on this instance"""
+        identity = get_jwt_identity()
+        user = User.query.filter_by(id=identity).first()
         if not user:
-            return {'message': 'User not found'}, 404
+            return {'message': 'Unauthorized'}, 401
 
-        # In production, this would query team members from database
-        # For now, return current user as the only member
-        members = [{
-            'id': 1,
-            'name': user.name,
-            'email': user.id,
-            'role': 'owner',
-            'joinedAt': user.created_at.isoformat() if user.created_at else datetime.utcnow().isoformat(),
-            'lastActive': datetime.utcnow().isoformat(),
-            'avatar': getattr(user, 'avatar', None),
-        }]
-
-        # Add any accepted team members
-        members.extend(team_members)
-
-        return members, 200
+        users = User.query.filter_by(is_demo_user=False).order_by(User.created_at.asc()).all()
+        return [
+            {
+                'id': u.id,
+                'name': u.name or u.id.split('@')[0],
+                'email': u.id,
+                'role': 'owner' if u.is_admin else 'member',
+                'joinedAt': u.created_at.isoformat() if u.created_at else '',
+                'lastActive': u.last_login.isoformat() if u.last_login else None,
+                'avatar': u.profile_emoji,
+            }
+            for u in users
+        ], 200
 
 
-@ns.route('/members/<int:member_id>')
+@ns.route('/members/<path:member_id>')
 class MemberDetail(Resource):
     @ns.doc('remove_member')
     @jwt_required()
     def delete(self, member_id):
-        """Remove a member from the team"""
-        user_id = get_jwt_identity()
+        """Admin removes a user from the instance"""
+        admin = _require_admin()
+        if not admin:
+            return {'message': 'Admin access required'}, 403
 
-        # Check if user has permission (admin or owner)
-        # In production, verify role permissions
+        if member_id == admin.id:
+            return {'message': 'Cannot remove yourself'}, 400
 
-        member = next((m for m in team_members if m['id'] == member_id), None)
+        target = User.query.filter_by(id=member_id).first()
+        if not target:
+            return {'message': 'User not found'}, 404
 
-        if not member:
-            return {'message': 'Member not found'}, 404
+        if target.is_admin:
+            return {'message': 'Cannot remove another admin'}, 400
 
-        if member['role'] == 'owner':
-            return {'message': 'Cannot remove owner'}, 403
-
-        team_members.remove(member)
+        db.session.delete(target)
+        db.session.commit()
 
         return {'message': 'Member removed'}, 200
 
 
-@ns.route('/members/<int:member_id>/role')
+@ns.route('/members/<path:member_id>/role')
 class MemberRole(Resource):
     @ns.doc('update_member_role')
     @jwt_required()
-    @ns.expect(update_role_model)
     def put(self, member_id):
-        """Update a member's role"""
-        user_id = get_jwt_identity()
+        """Admin updates a user's role"""
+        admin = _require_admin()
+        if not admin:
+            return {'message': 'Admin access required'}, 403
 
-        # Check if user has permission (admin or owner)
-        # In production, verify role permissions
+        if member_id == admin.id:
+            return {'message': 'Cannot change your own role'}, 400
+
+        target = User.query.filter_by(id=member_id).first()
+        if not target:
+            return {'message': 'User not found'}, 404
 
         data = request.get_json()
-        new_role = data.get('role')
+        new_role = (data or {}).get('role', 'member')
 
-        if not new_role:
-            return {'message': 'Role required'}, 400
+        target.is_admin = (new_role == 'admin')
+        db.session.commit()
 
-        # Validate role
-        valid_roles = ['admin', 'member', 'viewer']
-        if new_role not in valid_roles:
-            return {'message': 'Invalid role'}, 400
-
-        member = next((m for m in team_members if m['id'] == member_id), None)
-
-        if not member:
-            return {'message': 'Member not found'}, 404
-
-        if member['role'] == 'owner':
-            return {'message': 'Cannot change owner role'}, 403
-
-        member['role'] = new_role
-
-        return {'message': 'Role updated successfully'}, 200
+        return {'message': f'Role updated to {new_role}'}, 200
 
 
 @ns.route('/transfer-ownership')
 class TransferOwnership(Resource):
     @ns.doc('transfer_ownership')
     @jwt_required()
-    @ns.expect(transfer_ownership_model)
     def post(self):
-        """Transfer ownership to another member"""
-        user_id = get_jwt_identity()
-
-        # Check if user is owner
-        # In production, verify current user is owner
+        """Transfer admin status to another member"""
+        admin = _require_admin()
+        if not admin:
+            return {'message': 'Admin access required'}, 403
 
         data = request.get_json()
-        member_id = data.get('memberId')
+        member_id = (data or {}).get('memberId')
 
         if not member_id:
             return {'message': 'Member ID required'}, 400
 
-        member = next((m for m in team_members if m['id'] == member_id), None)
-
-        if not member:
+        target = User.query.filter_by(id=member_id).first()
+        if not target:
             return {'message': 'Member not found'}, 404
 
-        # Transfer ownership
-        member['role'] = 'owner'
-
-        # Current owner becomes admin
-        # This would update database in production
+        target.is_admin = True
+        admin.is_admin = False
+        db.session.commit()
 
         return {'message': 'Ownership transferred successfully'}, 200
 
@@ -315,15 +271,7 @@ class LeaveTeam(Resource):
     @ns.doc('leave_team')
     @jwt_required()
     def post(self):
-        """Leave the team"""
-        user_id = get_jwt_identity()
-
-        # Check if user is owner
-        # Owners cannot leave without transferring ownership first
-
-        # Remove user from team
-        # This would update database in production
-
+        """Leave the household"""
         return {'message': 'Left team successfully'}, 200
 
 
@@ -331,48 +279,24 @@ class LeaveTeam(Resource):
 class AcceptInvitation(Resource):
     @ns.doc('accept_invitation')
     @jwt_required()
-    @ns.expect(accept_invitation_model)
     def post(self):
-        """Accept an invitation to join team"""
-        user_id = get_jwt_identity()
-        user = User.query.filter_by(id=user_id).first()
-
-        if not user:
-            return {'message': 'User not found'}, 404
+        """Accept an invitation to join household"""
+        identity = get_jwt_identity()
 
         data = request.get_json()
-        token = data.get('token')
+        token = (data or {}).get('token')
 
         if not token:
             return {'message': 'Token required'}, 400
 
-        # Find invitation by token
-        invitation = next((inv for inv in team_invitations if inv.get('token') == token), None)
-
+        invitation = Invitation.query.filter_by(token=token).first()
         if not invitation:
             return {'message': 'Invalid invitation'}, 404
 
-        if invitation['status'] != 'pending':
+        if invitation.status != 'pending':
             return {'message': 'Invitation is not valid'}, 400
 
-        # Check if expired
-        expires_at = datetime.fromisoformat(invitation['expiresAt'])
-        if expires_at < datetime.utcnow():
-            invitation['status'] = 'expired'
-            return {'message': 'Invitation has expired'}, 400
-
-        # Accept invitation
-        invitation['status'] = 'accepted'
-
-        # Add user to team
-        team_members.append({
-            'id': len(team_members) + 2,  # Start from 2 (1 is owner)
-            'name': user.name,
-            'email': user.id,
-            'role': invitation['role'],
-            'joinedAt': datetime.utcnow().isoformat(),
-            'lastActive': datetime.utcnow().isoformat(),
-            'avatar': getattr(user, 'avatar', None),
-        })
+        invitation.status = 'accepted'
+        db.session.commit()
 
         return {'message': 'Invitation accepted'}, 200

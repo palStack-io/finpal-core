@@ -96,31 +96,26 @@ export const Navigation: React.FC = () => {
           boxShadow: isOpen ? '4px 0 24px rgba(0, 0, 0, 0.3)' : 'none'
         }}
       >
-        {/* Logo */}
+        {/* User Profile */}
         <div style={{ marginTop: '40px', marginBottom: '32px', textAlign: 'center' }}>
-          <img
-            src="/finPal.png"
-            alt="finPal"
-            style={{
-              height: '64px',
-              width: 'auto',
-              marginBottom: '12px'
-            }}
-          />
+          <div style={{
+            fontSize: '48px',
+            lineHeight: 1,
+            marginBottom: '12px'
+          }}>
+            {user?.profile_emoji || '😊'}
+          </div>
           <h2 style={{
-            fontSize: '24px',
+            fontSize: '20px',
             fontWeight: '700',
-            background: 'linear-gradient(135deg, #15803d 0%, #fbbf24 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
+            color: '#ffffff',
             margin: 0
           }}>
-            {branding.internalName}
+            {user?.name || 'User'}
           </h2>
           {user && (
-            <p style={{ color: '#64748b', fontSize: '14px', marginTop: '8px' }}>
-              {user.email || user.name || 'User'}
+            <p style={{ color: '#64748b', fontSize: '13px', marginTop: '6px' }}>
+              {user.email}
             </p>
           )}
         </div>

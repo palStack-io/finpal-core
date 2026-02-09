@@ -50,11 +50,12 @@ class PortfolioList(Resource):
     @ns.doc('list_portfolios', security='Bearer')
     @jwt_required()
     def get(self):
-        """Get all portfolios for current user"""
+        """Get all portfolios for household"""
+        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all portfolios for user
-        portfolios = Portfolio.query.filter_by(user_id=current_user_id).all()
+        # Get all portfolios for the household
+        portfolios = Portfolio.query.filter(Portfolio.user_id.in_(get_all_user_ids())).all()
 
         # Serialize
         result = portfolios_schema.dump(portfolios)

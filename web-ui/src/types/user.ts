@@ -16,6 +16,7 @@ export interface User {
   email: string;
   name: string;
   user_color?: string;
+  profile_emoji?: string;
   is_admin?: boolean;
   default_currency_code?: Currency;
   timezone?: string;
@@ -39,6 +40,7 @@ export interface OnboardingData {
   default_currency_code: Currency;
   timezone: string;
   notifications: UserNotifications;
+  profile_emoji?: string;
 }
 
 export interface AuthState {
@@ -78,6 +80,7 @@ export interface ProfileUpdate {
   bio?: string;
   avatar?: string;
   user_color?: string;
+  profile_emoji?: string;
   timezone?: string;
   default_currency_code?: Currency;
 }

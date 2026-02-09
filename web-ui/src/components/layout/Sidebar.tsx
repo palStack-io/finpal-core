@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -71,6 +72,8 @@ const baseNavItems: NavItem[] = [
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const { user } = useAuthStore();
+
   return (
     <>
       {/* Mobile overlay */}
@@ -93,6 +96,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         `}
       >
         <div className="flex flex-col h-full pt-20 lg:pt-4">
+          {/* User Profile */}
+          <div className="hidden lg:flex items-center gap-3 px-4 pb-4 mb-2 border-b border-gray-800">
+            <span className="text-2xl">{user?.profile_emoji || '😊'}</span>
+            <span className="text-white font-semibold text-sm truncate">{user?.name || 'User'}</span>
+          </div>
+
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {baseNavItems.map((item) => (

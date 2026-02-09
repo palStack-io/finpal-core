@@ -18,16 +18,18 @@ class AnalyticsService:
     def get_dashboard_data(self, user_id):
         """Get dashboard overview data"""
         from src.utils.helpers import get_base_currency, sync_investments_with_accounts, calculate_asset_debt_trends
+        from src.utils.household import get_all_user_ids
         from src.models.user import User
 
         now = datetime.now()
         current_user = User.query.get(user_id)
         base_currency = get_base_currency(current_user)
+        household_ids = get_all_user_ids()
 
-        # Fetch all expenses where the user is either the creator or a split participant
+        # Fetch all expenses for the household
         expenses = Expense.query.filter(
             or_(
-                Expense.user_id == user_id,
+                Expense.user_id.in_(household_ids),
                 Expense.split_with.like(f'%{user_id}%')
             )
         ).order_by(Expense.date.desc()).all()
@@ -164,7 +166,7 @@ class AnalyticsService:
             savings_rate = 0
 
         # Get categories and currencies
-        categories = Category.query.filter_by(user_id=user_id).order_by(Category.name).all()
+        categories = Category.query.filter(Category.user_id.in_(household_ids)).order_by(Category.name).all()
         currencies = Currency.query.all()
 
         # Calculate asset and debt trends
@@ -256,7 +258,8 @@ class AnalyticsService:
 
     def _calculate_budget_summary(self, user_id, now):
         """Calculate budget summary for the current month"""
-        budgets = Budget.query.filter_by(user_id=user_id, active=True).all()
+        from src.utils.household import get_all_user_ids
+        budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids()), Budget.active == True).all()
 
         # Use a namespace object so template can access with dot notation
         from types import SimpleNamespace
@@ -370,11 +373,13 @@ class AnalyticsService:
 
     def get_spending_trends(self, user_id, months=6):
         """Get spending trends over time"""
+        from src.utils.household import get_all_user_ids
+        household_ids = get_all_user_ids()
         trends = []
         for i in range(months):
             month_date = datetime.now() - timedelta(days=30*i)
             expenses = Expense.query.filter(
-                Expense.user_id == user_id,
+                Expense.user_id.in_(household_ids),
                 Expense.date >= datetime(month_date.year, month_date.month, 1),
                 Expense.date < datetime(month_date.year, month_date.month + 1, 1) if month_date.month < 12
                     else datetime(month_date.year + 1, 1, 1)
@@ -390,12 +395,15 @@ class AnalyticsService:
 
         # Add monthly_income for stats page
         from src.models.transaction import Expense
+        from src.utils.household import get_all_user_ids
         from sqlalchemy import or_
 
-        # Get all expenses for the user
+        household_ids = get_all_user_ids()
+
+        # Get all expenses for the household
         expenses = Expense.query.filter(
             or_(
-                Expense.user_id == user_id,
+                Expense.user_id.in_(household_ids),
                 Expense.split_with.like(f'%{user_id}%')
             )
         ).all()
@@ -478,11 +486,14 @@ class AnalyticsService:
         from sqlalchemy import or_
         from datetime import datetime, timedelta
         from calendar import month_abbr
+        from src.utils.household import get_all_user_ids
 
-        # Get all transactions for the user
+        household_ids = get_all_user_ids()
+
+        # Get all transactions for the household
         expenses = Expense.query.filter(
             or_(
-                Expense.user_id == user_id,
+                Expense.user_id.in_(household_ids),
                 Expense.split_with.like(f'%{user_id}%')
             )
         ).all()

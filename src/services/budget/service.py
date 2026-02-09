@@ -20,8 +20,9 @@ class BudgetService:
     # Budget CRUD Methods
 
     def get_all_budgets(self, user_id, year=None, month=None):
-        """Get all budgets for a user with calculated data for a specific month"""
+        """Get all budgets for the household with calculated data for a specific month"""
         from datetime import datetime
+        from src.utils.household import get_all_user_ids
 
         # If no year/month provided, use current month
         if not year or not month:
@@ -29,7 +30,7 @@ class BudgetService:
             year = now.year
             month = now.month
 
-        budgets = Budget.query.filter_by(user_id=user_id).order_by(Budget.created_at.desc()).all()
+        budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids())).order_by(Budget.created_at.desc()).all()
 
         budget_data = []
         total_month_budget = 0
@@ -326,7 +327,8 @@ class BudgetService:
         Get budget trends data for charts
         Returns spending trends over time
         """
-        budgets = Budget.query.filter_by(user_id=user_id, active=True).all()
+        from src.utils.household import get_all_user_ids
+        budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids()), Budget.active == True).all()
 
         trends_data = []
         for budget in budgets:
@@ -354,7 +356,8 @@ class BudgetService:
         Get budget summary data for overview
         Returns aggregate budget statistics
         """
-        budgets = Budget.query.filter_by(user_id=user_id, active=True).all()
+        from src.utils.household import get_all_user_ids
+        budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids()), Budget.active == True).all()
 
         total_budgeted = 0
         total_spent = 0

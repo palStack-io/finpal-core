@@ -39,14 +39,10 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
           </button>
 
           <div className="flex items-center gap-3">
-            <img
-              src="/finPal.png"
-              alt="finPal"
-              className="h-10 w-auto"
-            />
+            <span className="text-3xl">{user?.profile_emoji || '😊'}</span>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-white">{branding.appName}</h1>
-              <p className="text-xs text-gray-400">Part of {branding.parentBrand}</p>
+              <h1 className="text-lg font-bold text-white">{user?.name || 'User'}</h1>
+              <p className="text-xs text-gray-400">{branding.appName}</p>
             </div>
           </div>
         </div>
@@ -66,8 +62,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800 transition-colors"
             >
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">
-                  {user?.name?.[0]?.toUpperCase() || 'U'}
+                <span className="text-lg leading-none">
+                  {user?.profile_emoji || user?.name?.[0]?.toUpperCase() || 'U'}
                 </span>
               </div>
               <span className="hidden sm:block text-white font-medium">{user?.name || 'User'}</span>

@@ -5,7 +5,7 @@ import { authService } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
 import { getBranding, supportedCurrencies, type Currency } from '../config/branding';
 import type { OnboardingData } from '../types/user';
-import { DollarSign, Globe, Bell, ChevronRight, ChevronLeft } from 'lucide-react';
+import { DollarSign, Globe, Bell, Smile, ChevronRight, ChevronLeft } from 'lucide-react';
 
 const timezones = [
   'America/New_York',
@@ -20,6 +20,12 @@ const timezones = [
   'Asia/Dubai',
   'Australia/Sydney',
   'Pacific/Auckland',
+];
+
+const profileEmojis = [
+  '😊', '😎', '🤓', '🦊', '🐱', '🐶', '🦁', '🐼',
+  '🦄', '🐉', '🌟', '🔥', '💎', '🎯', '🚀', '💰',
+  '🌈', '🎨', '🎵', '🏆', '⚡', '🍀', '🌺', '🦋',
 ];
 
 export const Onboarding: React.FC = () => {
@@ -37,6 +43,7 @@ export const Onboarding: React.FC = () => {
       budgetAlerts: true,
       transactionAlerts: true,
     },
+    profile_emoji: '😊',
   });
 
   const branding = getBranding(formData.default_currency_code);
@@ -60,7 +67,7 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleNext = () => {
-    if (step < 3) {
+    if (step < 4) {
       setStep(step + 1);
     }
   };
@@ -170,7 +177,8 @@ export const Onboarding: React.FC = () => {
                     const updatedUser = await authService.completeOnboarding({
                       default_currency_code: formData.default_currency_code,
                       timezone: formData.timezone,
-                      notifications: formData.notifications
+                      notifications: formData.notifications,
+                      profile_emoji: formData.profile_emoji,
                     });
                     updateUser({
                       ...updatedUser,
@@ -215,8 +223,8 @@ export const Onboarding: React.FC = () => {
           {/* Progress Bar */}
           <div style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Step {step} of 3</span>
-              <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>{Math.round((step / 3) * 100)}%</span>
+              <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Step {step} of 4</span>
+              <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>{Math.round((step / 4) * 100)}%</span>
             </div>
             <div style={{
               height: '0.5rem',
@@ -227,7 +235,7 @@ export const Onboarding: React.FC = () => {
               <div style={{
                 height: '100%',
                 background: 'linear-gradient(to right, #15803d, #fbbf24)',
-                width: `${(step / 3) * 100}%`,
+                width: `${(step / 4) * 100}%`,
                 transition: 'width 0.3s ease'
               }}></div>
             </div>
@@ -456,6 +464,96 @@ export const Onboarding: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Step 4: Profile Emoji */}
+            {step === 4 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <div style={{
+                    height: '3rem',
+                    width: '3rem',
+                    borderRadius: '9999px',
+                    background: 'linear-gradient(135deg, #15803d 0%, #fbbf24 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Smile size={24} color="#ffffff" />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
+                      Pick Your Emoji
+                    </h2>
+                    <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>
+                      Choose an emoji as your profile picture
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '96px',
+                    height: '96px',
+                    borderRadius: '24px',
+                    background: 'rgba(21, 128, 61, 0.15)',
+                    border: '3px solid rgba(21, 128, 61, 0.3)',
+                    fontSize: '56px',
+                    lineHeight: 1,
+                    marginBottom: '0.75rem'
+                  }}>
+                    {formData.profile_emoji}
+                  </div>
+                  <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>This will appear as your profile picture</p>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(8, 1fr)',
+                  gap: '0.75rem'
+                }}>
+                  {profileEmojis.map((emoji) => {
+                    const isSelected = formData.profile_emoji === emoji;
+                    return (
+                      <button
+                        key={emoji}
+                        onClick={() => setFormData((prev) => ({ ...prev, profile_emoji: emoji }))}
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: '0.75rem',
+                          border: isSelected ? '2px solid #15803d' : '2px solid #334155',
+                          background: isSelected ? 'rgba(21, 128, 61, 0.1)' : 'rgba(15, 23, 42, 0.5)',
+                          cursor: 'pointer',
+                          fontSize: '1.75rem',
+                          lineHeight: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s',
+                          boxShadow: isSelected ? '0 4px 6px -1px rgba(21, 128, 61, 0.3)' : 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.borderColor = '#475569';
+                            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.7)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.borderColor = '#334155';
+                            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+                          }
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Navigation Buttons */}
@@ -501,7 +599,7 @@ export const Onboarding: React.FC = () => {
               Back
             </button>
 
-            {step < 3 ? (
+            {step < 4 ? (
               <button
                 onClick={handleNext}
                 style={{

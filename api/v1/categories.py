@@ -22,11 +22,12 @@ class CategoryList(Resource):
     @ns.doc('list_categories', security='Bearer')
     @jwt_required()
     def get(self):
-        """Get all categories for current user"""
+        """Get all categories for household"""
+        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all categories (including parent/subcategories)
-        categories = Category.query.filter_by(user_id=current_user_id).all()
+        # Get all categories for the household
+        categories = Category.query.filter(Category.user_id.in_(get_all_user_ids())).all()
 
         # Serialize
         result = categories_schema.dump(categories)

@@ -23,6 +23,7 @@ profile_update_model = ns.model('ProfileUpdate', {
     'bio': fields.String(description='User bio'),
     'avatar': fields.String(description='Avatar URL'),
     'user_color': fields.String(description='User color preference'),
+    'profile_emoji': fields.String(description='Profile emoji'),
     'timezone': fields.String(description='User timezone'),
     'default_currency_code': fields.String(description='Default currency code'),
 })
@@ -79,6 +80,8 @@ class Profile(Resource):
             user.name = data['name']
         if 'user_color' in data:
             user.user_color = data.get('user_color')
+        if 'profile_emoji' in data:
+            user.profile_emoji = data.get('profile_emoji')
         if 'timezone' in data:
             user.timezone = data.get('timezone')
         if 'default_currency_code' in data:
@@ -91,6 +94,7 @@ class Profile(Resource):
             'email': user.id,  # id IS the email in this model
             'name': user.name,
             'user_color': user.user_color,
+            'profile_emoji': user.profile_emoji,
             'default_currency_code': user.default_currency_code,
             'timezone': user.timezone,
             'created_at': user.created_at.isoformat() if user.created_at else None,

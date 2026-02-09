@@ -14,6 +14,7 @@ from src.models.group import Group, Settlement
 from src.models.recurring import RecurringExpense, IgnoredRecurringPattern
 from src.models.budget import Budget
 from src.models.investment import Portfolio, Investment, InvestmentTransaction
+from src.models.invitation import Invitation
 
 __all__ = [
     'group_users',
@@ -37,4 +38,5 @@ __all__ = [
     'Portfolio',
     'Investment',
     'InvestmentTransaction',
+    'Invitation',
 ]

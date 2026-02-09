@@ -26,8 +26,9 @@ class AccountService:
     # Account CRUD Methods
 
     def get_all_accounts(self, user_id):
-        """Get all accounts for a user"""
-        return Account.query.filter_by(user_id=user_id).all()
+        """Get all accounts for the household"""
+        from src.utils.household import get_all_user_ids
+        return Account.query.filter(Account.user_id.in_(get_all_user_ids())).all()
 
     def get_account(self, account_id, user_id):
         """

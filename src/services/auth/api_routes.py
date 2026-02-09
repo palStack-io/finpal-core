@@ -12,6 +12,7 @@ from flask_jwt_extended import (
     get_jwt
 )
 from src.models.user import User
+from src.models.invitation import Invitation
 from src.extensions import db
 from werkzeug.security import generate_password_hash
 
@@ -37,6 +38,13 @@ def register():
         if User.query.filter_by(id=email).first():
             return jsonify({'error': 'User already exists'}), 400
 
+        # Check invitation requirement: if other users exist, require an invitation
+        user_count = User.query.filter_by(is_demo_user=False).count()
+        invitation = Invitation.query.filter_by(email=email, status='pending').first()
+
+        if user_count > 0 and not invitation:
+            return jsonify({'error': 'Registration is by invitation only. Ask your household admin for an invite.'}), 403
+
         # Create new user
         user = User(
             id=email,
@@ -46,10 +54,19 @@ def register():
         )
         user.set_password(password)
 
+        # First non-demo user becomes admin
+        if user_count == 0:
+            user.is_admin = True
+
         # Generate verification token
         token = user.generate_verification_token()
 
         db.session.add(user)
+
+        # Mark invitation as accepted if one exists
+        if invitation:
+            invitation.status = 'accepted'
+
         db.session.commit()
 
         # Send verification email
@@ -81,6 +98,7 @@ def register():
                 'name': user.name,
                 'email': user.id,
                 'email_verified': user.email_verified,
+                'is_admin': user.is_admin,
                 'default_currency_code': user.default_currency_code
             }
         }), 201
@@ -120,6 +138,7 @@ def login():
                 'id': user.id,
                 'name': user.name,
                 'email': user.id,
+                'profile_emoji': user.profile_emoji,
                 'default_currency_code': user.default_currency_code,
                 'hasCompletedOnboarding': user.has_completed_onboarding,  # Added
                 'timezone': user.timezone,
@@ -168,6 +187,7 @@ def get_current_user():
             'name': user.name,
             'email': user.id,
             'user_color': user.user_color,
+            'profile_emoji': user.profile_emoji,
             'is_admin': user.is_admin,
             'default_currency_code': user.default_currency_code,
             'timezone': user.timezone,
@@ -224,6 +244,9 @@ def complete_onboarding():
         if 'timezone' in data:
             user.timezone = data['timezone']
 
+        if 'profile_emoji' in data:
+            user.profile_emoji = data['profile_emoji']
+
         # Update notification preferences
         if 'notifications' in data:
             notifications = data['notifications']
@@ -247,6 +270,7 @@ def complete_onboarding():
                 'id': user.id,
                 'name': user.name,
                 'email': user.id,
+                'profile_emoji': user.profile_emoji,
                 'default_currency_code': user.default_currency_code,
                 'timezone': user.timezone,
                 'hasCompletedOnboarding': user.has_completed_onboarding,  # Changed to camelCase

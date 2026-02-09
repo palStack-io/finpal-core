@@ -36,12 +36,13 @@ class TransactionRuleList(Resource):
     @ns.doc('list_transaction_rules', security='Bearer')
     @jwt_required()
     def get(self):
-        """Get all transaction rules for current user"""
+        """Get all transaction rules for household"""
+        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all rules for user
-        rules = TransactionRule.query.filter_by(
-            user_id=current_user_id
+        # Get all rules for the household
+        rules = TransactionRule.query.filter(
+            TransactionRule.user_id.in_(get_all_user_ids())
         ).order_by(TransactionRule.priority.desc(), TransactionRule.created_at.desc()).all()
 
         # Serialize

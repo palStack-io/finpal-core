@@ -22,6 +22,7 @@ class User(UserMixin, db.Model):
     default_currency_code = db.Column(db.String(3), db.ForeignKey('currencies.code'), nullable=True)
     default_currency = db.relationship('Currency', backref=db.backref('users', lazy=True))
     user_color = db.Column(db.String(7), default="#15803d")
+    profile_emoji = db.Column(db.String(10), nullable=True)
     # OIDC related fields
     oidc_id = db.Column(db.String(255), nullable=True, index=True, unique=True)
     oidc_provider = db.Column(db.String(50), nullable=True)

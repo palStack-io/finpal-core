@@ -722,5 +722,131 @@ Want to change your report preferences? Visit Settings.
         return self.send_email(to_email, subject, html_body, text_body)
 
 
+    def send_invite_email(
+        self,
+        to_email: str,
+        inviter_name: str,
+        invite_link: str
+    ) -> bool:
+        """Send household invitation email"""
+        subject = f"{inviter_name} invited you to join their household on finPal"
+
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 0; text-align: center;">
+                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 32px;">🏠</span>
+                            </div>
+                            <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
+                                You're Invited!
+                            </h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 24px 40px;">
+                            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                                <strong style="color: #86efac;">{inviter_name}</strong> has invited you to join their household on finPal.
+                            </p>
+                            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+                                finPal helps households track expenses, manage budgets, and stay on top of finances together. Create your account to get started!
+                            </p>
+
+                            <!-- Features -->
+                            <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin: 0 0 32px;">
+                                <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
+                                    📊 Shared expense tracking
+                                </p>
+                                <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
+                                    💰 Household budgets
+                                </p>
+                                <p style="color: #e2e8f0; font-size: 14px; margin: 0; line-height: 1.6;">
+                                    📈 Financial insights for everyone
+                                </p>
+                            </div>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" style="width: 100%;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <a href="{invite_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                            Accept Invitation
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="color: #64748b; font-size: 13px; margin: 24px 0 0; text-align: center;">
+                                Or copy and paste this link into your browser:<br>
+                                <a href="{invite_link}" style="color: #3b82f6; word-break: break-all;">{invite_link}</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                            <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                                This invitation was sent to {to_email}<br>
+                                If you don't want to join, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Footer branding -->
+                <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <p style="color: #475569; font-size: 12px; margin: 0;">
+                                &copy; 2026 finPal. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        text_body = f"""
+You're Invited!
+
+{inviter_name} has invited you to join their household on finPal.
+
+finPal helps households track expenses, manage budgets, and stay on top of finances together.
+
+What you can do:
+- Shared expense tracking
+- Household budgets
+- Financial insights for everyone
+
+Accept your invitation here:
+{invite_link}
+
+This invitation was sent to {to_email}
+If you don't want to join, you can safely ignore this email.
+
+(c) 2026 finPal. All rights reserved.
+"""
+
+        return self.send_email(to_email, subject, html_body, text_body)
+
+
 # Global instance
 email_service = EmailService()

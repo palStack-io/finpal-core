@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X } from 'lucide-react';
+import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home } from 'lucide-react';
 import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
@@ -8,6 +8,7 @@ import { CategoryManagement } from '../components/CategoryManagement';
 import { SimpleFinSettings } from '../components/import/SimpleFinSettings';
 import { InvestmentSettings } from '../components/investment/InvestmentSettings';
 import { RecurringTransactions } from '../components/RecurringTransactions';
+import { TeamManagement } from '../components/settings/TeamManagement';
 import { userService } from '../services/userService';
 
 export const Settings: React.FC = () => {
@@ -24,6 +25,7 @@ export const Settings: React.FC = () => {
     name: user?.name || '',
     email: user?.email || '',
     userColor: user?.user_color || '#3b82f6',
+    profileEmoji: user?.profile_emoji || '😊',
     timezone: user?.timezone || 'America/New_York',
     currency: user?.default_currency_code || 'USD'
   });
@@ -49,6 +51,7 @@ export const Settings: React.FC = () => {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: <User size={18} /> },
     { id: 'security', label: 'Security', icon: <Lock size={18} /> },
+    ...(user?.is_admin ? [{ id: 'household', label: 'Household', icon: <Home size={18} /> }] : []),
     { id: 'integrations', label: 'Integrations', icon: <Link size={18} /> },
     { id: 'categories', label: 'Categories', icon: <Tag size={18} /> },
     { id: 'rules', label: 'Transaction Rules', icon: <Zap size={18} /> },
@@ -71,9 +74,10 @@ export const Settings: React.FC = () => {
     'Asia/Dubai'
   ];
 
-  const colors = [
-    '#3b82f6', '#22c55e', '#ef4444', '#f59e0b',
-    '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
+  const profileEmojis = [
+    '😊', '😎', '🤓', '🦊', '🐱', '🐶', '🦁', '🐼',
+    '🦄', '🐉', '🌟', '🔥', '💎', '🎯', '🚀', '💰',
+    '🌈', '🎨', '🎵', '🏆', '⚡', '🍀', '🌺', '🦋',
   ];
 
   // Load user data on mount
@@ -83,6 +87,7 @@ export const Settings: React.FC = () => {
         name: user.name || '',
         email: user.email || '',
         userColor: user.user_color || '#3b82f6',
+        profileEmoji: user.profile_emoji || '😊',
         timezone: user.timezone || 'UTC',
         currency: user.default_currency_code || 'USD'
       });
@@ -98,6 +103,7 @@ export const Settings: React.FC = () => {
       await userService.updateProfile({
         name: profileData.name,
         user_color: profileData.userColor,
+        profile_emoji: profileData.profileEmoji,
         timezone: profileData.timezone,
         default_currency_code: profileData.currency as any,
       });
@@ -108,6 +114,7 @@ export const Settings: React.FC = () => {
           ...user!,
           name: profileData.name,
           user_color: profileData.userColor,
+          profile_emoji: profileData.profileEmoji,
           timezone: profileData.timezone,
           default_currency_code: profileData.currency as any,
         }
@@ -341,27 +348,49 @@ export const Settings: React.FC = () => {
 
                   <div style={{ marginBottom: '24px' }}>
                     <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                      User Color
+                      Profile Emoji
                     </label>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      {colors.map((color) => (
+                    <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '12px' }}>
+                      Pick an emoji to use as your profile picture
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                      <div style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '16px',
+                        background: 'rgba(21, 128, 61, 0.15)',
+                        border: '2px solid rgba(21, 128, 61, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '36px',
+                        lineHeight: 1
+                      }}>
+                        {profileData.profileEmoji}
+                      </div>
+                      <span style={{ color: '#94a3b8', fontSize: '14px' }}>Current emoji</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px' }}>
+                      {profileEmojis.map((emoji) => (
                         <button
-                          key={color}
-                          onClick={() => setProfileData({...profileData, userColor: color})}
+                          key={emoji}
+                          onClick={() => setProfileData({...profileData, profileEmoji: emoji})}
                           style={{
-                            width: '40px',
-                            height: '40px',
-                            background: color,
-                            border: profileData.userColor === color ? '2px solid white' : '1px solid rgba(255, 255, 255, 0.2)',
-                            borderRadius: '8px',
+                            width: '44px',
+                            height: '44px',
+                            fontSize: '24px',
+                            lineHeight: 1,
+                            background: profileData.profileEmoji === emoji ? 'rgba(21, 128, 61, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                            border: profileData.profileEmoji === emoji ? '2px solid #15803d' : '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '10px',
                             cursor: 'pointer',
-                            position: 'relative',
-                            transition: 'all 0.3s'
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
                           }}
                         >
-                          {profileData.userColor === color && (
-                            <Check size={20} color="white" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
-                          )}
+                          {emoji}
                         </button>
                       ))}
                     </div>
@@ -632,6 +661,10 @@ export const Settings: React.FC = () => {
                 </div>
               )}
 
+              {activeTab === 'household' && (
+                <TeamManagement />
+              )}
+
               {activeTab === 'integrations' && (
                 <div>
                   <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>
@@ -856,7 +889,7 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'about' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>About {branding.appName}</h2>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>About finPal</h2>
 
                   <div style={{ marginBottom: '24px', padding: '24px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
@@ -866,7 +899,7 @@ export const Settings: React.FC = () => {
                         style={{ height: '64px', width: 'auto' }}
                       />
                       <div>
-                        <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>{branding.appName}</h3>
+                        <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>finPal</h3>
                         <p style={{ color: '#94a3b8', fontSize: '14px' }}>Version 1.0.0</p>
                       </div>
                     </div>
@@ -900,7 +933,7 @@ export const Settings: React.FC = () => {
                       <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>Part of {branding.parentBrand}</h3>
                     </div>
                     <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
-                      {branding.appName} is part of the {branding.parentBrand} ecosystem - a suite of privacy-focused
+                      finPal is part of the {branding.parentBrand} ecosystem - a suite of privacy-focused
                       productivity tools designed to help you manage your digital life.
                     </p>
                     <p style={{ color: '#64748b', fontSize: '13px', fontStyle: 'italic' }}>
