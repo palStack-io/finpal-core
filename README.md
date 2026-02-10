@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="200" height="200" alt="finPal" src="https://github.com/user-attachments/assets/YOUR-FINPAL-LOGO-ID" />
+  <img width="200" height="200" alt="finPal" src="https://github.com/user-attachments/assets/0f4854c2-c48e-4e91-91b7-69db27bb68ef" />
 
   <h1>finPal</h1>
   <h3>Take control of your money</h3>
@@ -48,14 +48,14 @@
 <div align="center">
   <p><em>Add your screenshots here showing:</em></p>
   <ul align="left" style="display: inline-block; text-align: left;">
-    <li>Dashboard with budget overview and spending trends</li>
-    <li>Transaction categorization and filtering</li>
-    <li>Bill splitting with groups</li>
-    <li>Investment portfolio tracking</li>
+    <img width="1492" height="756" alt="Screenshot 2026-02-10 at 7 04 09 AM" src="https://github.com/user-attachments/assets/461d7c3c-fc45-46bd-9572-6f90541f2a16" />
+    <img width="1492" height="756" alt="Screenshot 2026-02-10 at 7 04 24 AM" src="https://github.com/user-attachments/assets/97884858-a9d3-4ba3-bd63-7a0854b172ba" />
+    <img width="1492" height="756" alt="Screenshot 2026-02-10 at 7 04 30 AM" src="https://github.com/user-attachments/assets/e8546d18-5391-42d0-a206-1236cc2ee02c" />
+    <img width="1492" height="756" alt="Screenshot 2026-02-10 at 7 04 55 AM" src="https://github.com/user-attachments/assets/5cf99571-a41d-4e8e-80fa-53e1c2f6ab4a" />
   </ul>
 </div>
 
-> **Note:** Screenshots coming soon! Check [finpal.palstack.io](https://finpal.palstack.io) for live demo.
+> **Note:** Check [finpal.palstack.io](https://finpal.palstack.io) for live demo.
 
 ---
 
