@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
@@ -138,8 +137,7 @@ export const Analytics: React.FC = () => {
   if (loading) {
     return (
       <>
-        <Navigation />
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+        <div style={{ minHeight: '100vh', padding: '24px' }}>
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <div style={{
               width: '48px',
@@ -150,7 +148,7 @@ export const Analytics: React.FC = () => {
               animation: 'spin 1s linear infinite',
               margin: '0 auto'
             }} />
-            <p style={{ color: '#94a3b8', marginTop: '16px' }}>Loading analytics...</p>
+            <p style={{ color: 'var(--text-secondary)', marginTop: '16px' }}>Loading analytics...</p>
           </div>
         </div>
       </>
@@ -167,8 +165,7 @@ export const Analytics: React.FC = () => {
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{
@@ -182,13 +179,13 @@ export const Analytics: React.FC = () => {
           <div>
             <h1 style={{
               fontSize: '32px',
-              fontWeight: '700',
-              color: 'white',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
               marginBottom: '8px'
             }}>
               Analytics Dashboard
             </h1>
-            <p style={{ color: '#94a3b8', fontSize: '15px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
               Comprehensive insights into your financial health
             </p>
           </div>
@@ -203,7 +200,7 @@ export const Analytics: React.FC = () => {
                     background: timeRange === range ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 'transparent',
                     border: timeRange === range ? 'none' : '1px solid rgba(139, 92, 246, 0.3)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     fontWeight: '500',
                     cursor: 'pointer',
@@ -221,7 +218,7 @@ export const Analytics: React.FC = () => {
                 background: 'transparent',
                 border: '1px solid rgba(139, 92, 246, 0.3)',
                 borderRadius: '8px',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 fontWeight: '500',
                 cursor: 'pointer',
@@ -242,7 +239,7 @@ export const Analytics: React.FC = () => {
           display: 'flex',
           gap: '8px',
           marginBottom: '32px',
-          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+          borderBottom: '1px solid var(--border-light)',
           paddingBottom: '4px'
         }}>
           {tabs.map(tab => (
@@ -254,7 +251,7 @@ export const Analytics: React.FC = () => {
                 background: activeTab === tab.id ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
                 border: 'none',
                 borderBottom: activeTab === tab.id ? '2px solid #8b5cf6' : '2px solid transparent',
-                color: activeTab === tab.id ? '#8b5cf6' : '#94a3b8',
+                color: activeTab === tab.id ? '#8b5cf6' : 'var(--text-secondary)',
                 fontSize: '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -324,13 +321,13 @@ export const Analytics: React.FC = () => {
               <ChartCard title="Income vs Expenses" subtitle="Last 6 months">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={cashFlowMonthly}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis dataKey="month" stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                    <XAxis dataKey="month" stroke="var(--text-secondary)" />
+                    <YAxis stroke="var(--text-secondary)" />
                     <Tooltip
                       contentStyle={{
-                        background: '#1e293b',
-                        border: '1px solid rgba(148, 163, 184, 0.2)',
+                        background: 'var(--tooltip-bg)',
+                        border: '1px solid var(--tooltip-border)',
                         borderRadius: '8px'
                       }}
                     />
@@ -364,8 +361,8 @@ export const Analytics: React.FC = () => {
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <div style={{ background: '#1e293b', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', padding: '12px' }}>
-                                  <p style={{ color: 'white', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
+                                <div style={{ background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' }}>
+                                  <p style={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
                                   <p style={{ color: payload[0].payload.color, margin: 0 }}>
                                     {branding.currencySymbol}{payload[0].value.toLocaleString()} ({payload[0].payload.percentage.toFixed(1)}%)
                                   </p>
@@ -382,18 +379,18 @@ export const Analytics: React.FC = () => {
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                             <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }}></div>
-                            <span style={{ color: '#94a3b8', fontSize: '14px' }}>{cat.name || 'Unknown'}</span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{cat.name || 'Unknown'}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
-                            <span style={{ color: '#64748b', fontSize: '13px' }}>({cat.percentage.toFixed(1)}%)</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>({cat.percentage.toFixed(1)}%)</span>
                           </div>
                         </div>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No spending data</div>
+                  <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' }}>No spending data</div>
                 )}
               </ChartCard>
             </div>
@@ -452,13 +449,13 @@ export const Analytics: React.FC = () => {
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                  <XAxis dataKey="month" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                  <XAxis dataKey="month" stroke="var(--text-secondary)" />
+                  <YAxis stroke="var(--text-secondary)" />
                   <Tooltip
                     contentStyle={{
-                      background: '#1e293b',
-                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      background: 'var(--tooltip-bg)',
+                      border: '1px solid var(--tooltip-border)',
                       borderRadius: '8px'
                     }}
                   />
@@ -503,8 +500,8 @@ export const Analytics: React.FC = () => {
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <div style={{ background: '#1e293b', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', padding: '12px' }}>
-                                  <p style={{ color: 'white', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
+                                <div style={{ background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' }}>
+                                  <p style={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
                                   <p style={{ color: payload[0].payload.color, margin: 0 }}>
                                     {branding.currencySymbol}{payload[0].value.toLocaleString()} ({payload[0].payload.percentage.toFixed(1)}%)
                                   </p>
@@ -521,18 +518,18 @@ export const Analytics: React.FC = () => {
                         <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }}></div>
-                            <span style={{ color: '#94a3b8', fontSize: '13px' }}>{cat.name || 'Unknown'}</span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{cat.name || 'Unknown'}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ color: 'white', fontSize: '13px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
-                            <span style={{ color: '#64748b', fontSize: '13px', minWidth: '50px', textAlign: 'right' }}>{cat.percentage.toFixed(1)}%</span>
+                            <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '50px', textAlign: 'right' }}>{cat.percentage.toFixed(1)}%</span>
                           </div>
                         </div>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No spending data</div>
+                  <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' }}>No spending data</div>
                 )}
               </ChartCard>
 
@@ -555,8 +552,8 @@ export const Analytics: React.FC = () => {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        background: '#1e293b',
-                        border: '1px solid rgba(148, 163, 184, 0.2)',
+                        background: 'var(--tooltip-bg)',
+                        border: '1px solid var(--tooltip-border)',
                         borderRadius: '8px'
                       }}
                     />
@@ -567,17 +564,17 @@ export const Analytics: React.FC = () => {
 
             {/* Category Details */}
             <div style={{
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              border: '1px solid rgba(148, 163, 184, 0.1)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               padding: '24px'
             }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>
                 Category Breakdown
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {categorySpending.map((category, index) => (
-                  <div key={index} style={{ paddingBottom: '16px', borderBottom: '1px solid rgba(148, 163, 184, 0.1)' }}>
+                  <div key={index} style={{ paddingBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -591,18 +588,18 @@ export const Analytics: React.FC = () => {
                           borderRadius: '50%',
                           background: category.color
                         }} />
-                        <span style={{ color: 'white', fontWeight: '500' }}>{category.name || 'Unknown Category'}</span>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{category.name || 'Unknown Category'}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ color: 'white', fontWeight: '600', fontSize: '16px' }}>
+                        <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
                           {branding.currencySymbol}{category.value.toLocaleString()}
                         </p>
-                        <p style={{ color: '#94a3b8', fontSize: '13px' }}>{category.percentage.toFixed(1)}%</p>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{category.percentage.toFixed(1)}%</p>
                       </div>
                     </div>
                     <div style={{
                       height: '8px',
-                      background: '#1e293b',
+                      background: 'var(--progress-track)',
                       borderRadius: '4px',
                       overflow: 'hidden'
                     }}>
@@ -665,13 +662,13 @@ export const Analytics: React.FC = () => {
                       <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                  <XAxis dataKey="month" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                  <XAxis dataKey="month" stroke="var(--text-secondary)" />
+                  <YAxis stroke="var(--text-secondary)" />
                   <Tooltip
                     contentStyle={{
-                      background: '#1e293b',
-                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      background: 'var(--tooltip-bg)',
+                      border: '1px solid var(--tooltip-border)',
                       borderRadius: '8px'
                     }}
                   />
@@ -685,13 +682,13 @@ export const Analytics: React.FC = () => {
 
             {/* Financial Insights */}
             <div style={{
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              border: '1px solid rgba(148, 163, 184, 0.1)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               padding: '24px',
               marginTop: '24px'
             }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
                 Financial Health Insights
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -725,18 +722,18 @@ export const Analytics: React.FC = () => {
           <div>
             {/* Header Section */}
             <div style={{
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              border: '1px solid rgba(148, 163, 184, 0.1)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               padding: '32px',
               marginBottom: '24px',
               textAlign: 'center'
             }}>
               <CreditCard size={48} color="#8b5cf6" style={{ margin: '0 auto 16px' }} />
-              <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
                 Maximize Every Dollar Spent
               </h2>
-              <p style={{ color: '#94a3b8', fontSize: '16px', lineHeight: '1.6', maxWidth: '800px', margin: '0 auto' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '16px', lineHeight: '1.6', maxWidth: '800px', margin: '0 auto' }}>
                 Automatically track credit card rewards utilization and guide you to optimal card usage based on category spending limits, rotating bonuses, annual caps, and sign-up bonus progress.
               </p>
             </div>
@@ -749,65 +746,65 @@ export const Analytics: React.FC = () => {
               marginBottom: '32px'
             }}>
               <div style={{
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '16px',
                 padding: '24px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <Target size={24} color="#10b981" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>Category Limits</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Category Limits</h3>
                 </div>
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
                   Track spending limits for category bonuses like BofA's 3% on gas up to $2,500/quarter or Amex Gold's 4x points up to $25k on groceries.
                 </p>
               </div>
 
               <div style={{
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '16px',
                 padding: '24px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <Activity size={24} color="#3b82f6" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>Rotating Bonuses</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Rotating Bonuses</h3>
                 </div>
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
                   Stay on top of quarterly rotating categories like Chase Freedom's 5% bonuses and get reminders to activate them.
                 </p>
               </div>
 
               <div style={{
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '16px',
                 padding: '24px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <TrendingUp size={24} color="#f59e0b" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>SUB Progress</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>SUB Progress</h3>
                 </div>
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
                   Monitor your progress toward sign-up bonus requirements and get alerts when you're close to hitting minimum spend thresholds.
                 </p>
               </div>
 
               <div style={{
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '16px',
                 padding: '24px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <Wallet size={24} color="#8b5cf6" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>Optimal Card Guide</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Optimal Card Guide</h3>
                 </div>
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
                   Get real-time recommendations on which card to use for each transaction to maximize your rewards earnings.
                 </p>
               </div>
@@ -821,10 +818,10 @@ export const Analytics: React.FC = () => {
               padding: '24px',
               textAlign: 'center'
             }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '8px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
                 Coming Soon
               </h3>
-              <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                 This feature is currently in development. Stay tuned for updates!
               </p>
             </div>
@@ -847,14 +844,15 @@ const MetricCard: React.FC<{
   color: string;
 }> = ({ title, value, change, isPositive, icon, color }) => (
   <div style={{
-    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-    border: '1px solid rgba(148, 163, 184, 0.1)',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-light)',
     borderRadius: '12px',
     padding: '24px',
     position: 'relative',
     overflow: 'hidden',
     transition: 'transform 0.2s, border-color 0.2s',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    boxShadow: 'var(--card-shadow)'
   }}>
     <div style={{ position: 'relative', zIndex: 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -866,14 +864,14 @@ const MetricCard: React.FC<{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'white'
+          color: 'var(--text-primary)'
         }}>
           {icon}
         </div>
         {isPositive ? <ArrowUpRight size={20} color={color} /> : <ArrowDownRight size={20} color={color} />}
       </div>
-      <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '4px' }}>{title}</p>
-      <p style={{ fontSize: '28px', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '4px' }}>{title}</p>
+      <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>
         {value}
       </p>
       <p style={{ color: isPositive ? '#10b981' : '#ef4444', fontSize: '13px' }}>{change} vs last period</p>
@@ -887,17 +885,18 @@ const ChartCard: React.FC<{
   children: React.ReactNode;
 }> = ({ title, subtitle, children }) => (
   <div style={{
-    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-    border: '1px solid rgba(148, 163, 184, 0.1)',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-light)',
     borderRadius: '12px',
-    padding: '24px'
+    padding: '24px',
+    boxShadow: 'var(--card-shadow)'
   }}>
     <div style={{ marginBottom: '20px' }}>
-      <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '4px' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
         {title}
       </h2>
       {subtitle && (
-        <p style={{ color: '#94a3b8', fontSize: '13px' }}>{subtitle}</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{subtitle}</p>
       )}
     </div>
     {children}
@@ -926,7 +925,7 @@ const HealthMetricCard: React.FC<{
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
         {status === 'good' && <CheckCircle2 size={20} color={colors[status].bg} />}
         {status !== 'good' && <AlertCircle size={20} color={colors[status].bg} />}
-        <h3 style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>{title}</h3>
+        <h3 style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px' }}>{title}</h3>
       </div>
       <p style={{
         fontSize: '32px',
@@ -936,7 +935,7 @@ const HealthMetricCard: React.FC<{
       }}>
         {value}
       </p>
-      <p style={{ color: '#94a3b8', fontSize: '13px' }}>{description}</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{description}</p>
     </div>
   );
 };
@@ -956,6 +955,6 @@ const InsightItem: React.FC<{
     borderRadius: '8px'
   }}>
     {icon}
-    <p style={{ color: '#e2e8f0', fontSize: '14px' }}>{text}</p>
+    <p style={{ color: 'var(--text-primary)', fontSize: '14px' }}>{text}</p>
   </div>
 );

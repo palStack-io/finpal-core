@@ -177,17 +177,17 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '12px 16px',
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)',
     borderRadius: '8px',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     outline: 'none'
   };
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     fontWeight: '600',
     marginBottom: '8px'
@@ -200,7 +200,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.7)',
+      background: 'var(--overlay-bg)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -208,23 +208,23 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       padding: '20px'
     }}>
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--bg-card)',
         borderRadius: '16px',
         maxWidth: '600px',
         width: '100%',
         maxHeight: '90vh',
         overflow: 'auto',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
+        border: '1px solid var(--border-light)'
       }}>
         {/* Header */}
         <div style={{
           padding: '24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          borderBottom: '1px solid var(--border-light)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', margin: 0 }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Edit Transaction
           </h2>
           <button
@@ -232,7 +232,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             style={{
               background: 'none',
               border: 'none',
-              color: '#94a3b8',
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
               padding: '8px'
             }}
@@ -273,23 +273,23 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <Sparkles size={24} style={{ color: '#fbbf24' }} />
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
                   Create a Rule?
                 </h3>
               </div>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '16px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
                 Would you like to automatically apply these changes to similar transactions in the future?
               </p>
               <div style={{
-                background: 'rgba(15, 23, 42, 0.5)',
+                background: 'var(--input-bg)',
                 padding: '12px',
                 borderRadius: '8px',
                 marginBottom: '16px'
               }}>
-                <p style={{ color: '#e2e8f0', fontSize: '13px', margin: 0 }}>
+                <p style={{ color: 'var(--text-primary)', fontSize: '13px', margin: 0 }}>
                   <strong>Pattern:</strong> "{formData.description}"
                 </p>
-                <p style={{ color: '#e2e8f0', fontSize: '13px', margin: '8px 0 0 0' }}>
+                <p style={{ color: 'var(--text-primary)', fontSize: '13px', margin: '8px 0 0 0' }}>
                   <strong>Auto-assign:</strong> {categories.find(c => c.id.toString() === formData.category_id)?.name}
                   {formData.account_id && ` → ${accounts.find(a => a.id.toString() === formData.account_id)?.name}`}
                 </p>
@@ -301,10 +301,10 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: 'rgba(71, 85, 105, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--btn-secondary-bg)',
+                    border: '1px solid var(--btn-secondary-border)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     fontWeight: '600',
                     cursor: isCreatingRule ? 'not-allowed' : 'pointer'
@@ -455,10 +455,10 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                   style={{
                     flex: 1,
                     padding: '14px 24px',
-                    background: 'rgba(71, 85, 105, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--btn-secondary-bg)',
+                    border: '1px solid var(--btn-secondary-border)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '15px',
                     fontWeight: '600',
                     cursor: isSubmitting ? 'not-allowed' : 'pointer'

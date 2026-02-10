@@ -104,7 +104,7 @@ export const TransactionRules: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
         Loading rules...
       </div>
     );
@@ -115,11 +115,11 @@ export const TransactionRules: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Zap size={24} style={{ color: '#fbbf24' }} />
             Transaction Rules
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
             Automatically categorize and organize transactions based on patterns
           </p>
         </div>
@@ -135,7 +135,7 @@ export const TransactionRules: React.FC = () => {
               background: applyingRules ? 'rgba(251, 191, 36, 0.3)' : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
               border: '1px solid rgba(251, 191, 36, 0.5)',
               borderRadius: '8px',
-              color: 'white',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               fontWeight: '600',
               cursor: applyingRules || rules.length === 0 ? 'not-allowed' : 'pointer',
@@ -166,7 +166,7 @@ export const TransactionRules: React.FC = () => {
               background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
               border: '1px solid rgba(21, 128, 61, 0.5)',
               borderRadius: '8px',
-              color: 'white',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -206,36 +206,36 @@ export const TransactionRules: React.FC = () => {
       {/* Stats Dashboard */}
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ padding: '20px', background: 'rgba(17, 24, 39, 0.6)', borderRadius: '12px', border: '1px solid rgba(134, 239, 172, 0.2)' }}>
+          <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(134, 239, 172, 0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
               <BarChart3 size={20} style={{ color: '#86efac' }} />
-              <h3 style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>Total Rules</h3>
+              <h3 style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>Total Rules</h3>
             </div>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'white', margin: 0 }}>{stats.total_rules}</p>
+            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{stats.total_rules}</p>
           </div>
-          <div style={{ padding: '20px', background: 'rgba(17, 24, 39, 0.6)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+          <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
               <Zap size={20} style={{ color: '#fbbf24' }} />
-              <h3 style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>Active Rules</h3>
+              <h3 style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>Active Rules</h3>
             </div>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'white', margin: 0 }}>{stats.active_rules}</p>
+            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{stats.active_rules}</p>
           </div>
-          <div style={{ padding: '20px', background: 'rgba(17, 24, 39, 0.6)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+          <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
               <Check size={20} style={{ color: '#3b82f6' }} />
-              <h3 style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>Total Matches</h3>
+              <h3 style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>Total Matches</h3>
             </div>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'white', margin: 0 }}>{stats.total_matches}</p>
+            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{stats.total_matches}</p>
           </div>
         </div>
       )}
 
       {/* Rules List */}
       {rules.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(17, 24, 39, 0.6)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <Zap size={48} style={{ color: '#64748b', margin: '0 auto 16px', opacity: 0.5 }} />
-          <p style={{ fontSize: '18px', marginBottom: '8px', color: 'white' }}>No rules yet</p>
-          <p style={{ fontSize: '14px', color: '#94a3b8' }}>Create your first rule to automatically organize transactions</p>
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+          <Zap size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 16px', opacity: 0.5 }} />
+          <p style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-primary)' }}>No rules yet</p>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Create your first rule to automatically organize transactions</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -243,9 +243,9 @@ export const TransactionRules: React.FC = () => {
             <div
               key={rule.id}
               style={{
-                background: 'rgba(17, 24, 39, 0.6)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(12px)',
-                border: `1px solid ${rule.active ? 'rgba(134, 239, 172, 0.2)' : 'rgba(255, 255, 255, 0.1)'}`,
+                border: `1px solid ${rule.active ? 'rgba(134, 239, 172, 0.2)' : 'var(--border-light)'}`,
                 borderRadius: '12px',
                 padding: '20px',
                 transition: 'all 0.3s',
@@ -256,7 +256,7 @@ export const TransactionRules: React.FC = () => {
                 <div style={{ flex: 1 }}>
                   {/* Rule Name and Status */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', margin: 0 }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>
                       {rule.name}
                     </h3>
                     {rule.active ? (
@@ -264,7 +264,7 @@ export const TransactionRules: React.FC = () => {
                         Active
                       </span>
                     ) : (
-                      <span style={{ padding: '4px 12px', background: 'rgba(100, 116, 139, 0.2)', border: '1px solid rgba(100, 116, 139, 0.3)', borderRadius: '12px', fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                      <span style={{ padding: '4px 12px', background: 'rgba(100, 116, 139, 0.2)', border: '1px solid rgba(100, 116, 139, 0.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>
                         Inactive
                       </span>
                     )}
@@ -272,14 +272,14 @@ export const TransactionRules: React.FC = () => {
 
                   {/* Pattern Info */}
                   <div style={{ marginBottom: '16px' }}>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>
                       <strong>Pattern:</strong> "{rule.pattern}" {rule.is_regex && '(regex)'} {!rule.case_sensitive && '(case insensitive)'}
                     </p>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>
                       <strong>Field:</strong> {rule.pattern_field}
                     </p>
                     {(rule.amount_min !== undefined || rule.amount_max !== undefined) && (
-                      <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>
                         <strong>Amount:</strong>{' '}
                         {rule.amount_min !== undefined && `Min: $${rule.amount_min}`}
                         {rule.amount_min !== undefined && rule.amount_max !== undefined && ' - '}
@@ -287,7 +287,7 @@ export const TransactionRules: React.FC = () => {
                       </p>
                     )}
                     {rule.transaction_type_filter && (
-                      <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                         <strong>Type Filter:</strong> {rule.transaction_type_filter}
                       </p>
                     )}
@@ -318,7 +318,7 @@ export const TransactionRules: React.FC = () => {
                   </div>
 
                   {/* Stats */}
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#64748b' }}>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
                     <span>Matched: {rule.match_count} times</span>
                     <span>Priority: {rule.priority}</span>
                     {rule.last_matched && <span>Last matched: {new Date(rule.last_matched).toLocaleDateString()}</span>}
@@ -492,10 +492,10 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '12px 16px',
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--border-light)',
     borderRadius: '8px',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     outline: 'none',
     transition: 'all 0.3s'
@@ -503,7 +503,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     fontWeight: '600',
     marginBottom: '8px'
@@ -537,12 +537,12 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -559,12 +559,12 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -584,7 +584,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       </div>
 
       <div style={{ display: 'flex', gap: '16px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>
           <input
             type="checkbox"
             name="is_regex"
@@ -595,7 +595,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
           />
           Use Regular Expression
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>
           <input
             type="checkbox"
             name="case_sensitive"
@@ -608,8 +608,8 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
         </label>
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '20px' }}>
-        <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '16px' }}>Advanced Matching</h3>
+      <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+        <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', marginBottom: '16px' }}>Advanced Matching</h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div>
@@ -624,12 +624,12 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               disabled={isSubmitting}
               style={inputStyle}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-                e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+                e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+                e.currentTarget.style.background = 'var(--input-bg-focus)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+                e.currentTarget.style.borderColor = 'var(--input-border)';
+                e.currentTarget.style.background = 'var(--input-bg)';
               }}
             />
           </div>
@@ -646,12 +646,12 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               disabled={isSubmitting}
               style={inputStyle}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-                e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+                e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+                e.currentTarget.style.background = 'var(--input-bg-focus)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+                e.currentTarget.style.borderColor = 'var(--input-border)';
+                e.currentTarget.style.background = 'var(--input-bg)';
               }}
             />
           </div>
@@ -674,8 +674,8 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '20px' }}>
-        <h3 style={{ color: 'white', fontSize: '16px', marginBottom: '16px' }}>Actions to Apply</h3>
+      <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+        <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', marginBottom: '16px' }}>Actions to Apply</h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
@@ -738,7 +738,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
             />
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>
             <input
               type="checkbox"
               name="active"
@@ -761,9 +761,9 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
             flex: 1,
             padding: '14px 24px',
             background: 'rgba(71, 85, 105, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid var(--border-light)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '15px',
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',
@@ -782,7 +782,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
             background: isSubmitting ? 'rgba(21, 128, 61, 0.5)' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
             border: '1px solid rgba(21, 128, 61, 0.5)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '15px',
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',

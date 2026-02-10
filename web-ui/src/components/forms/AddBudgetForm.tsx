@@ -60,10 +60,10 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '12px 16px',
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)',
     borderRadius: '8px',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     outline: 'none',
     transition: 'all 0.3s'
@@ -71,7 +71,7 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     fontWeight: '600',
     marginBottom: '8px'
@@ -137,12 +137,12 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -165,12 +165,12 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -190,12 +190,12 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -216,20 +216,20 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
             cursor: 'pointer'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         >
-          <option value="daily" style={{ background: '#0f172a' }}>Daily</option>
-          <option value="weekly" style={{ background: '#0f172a' }}>Weekly</option>
-          <option value="monthly" style={{ background: '#0f172a' }}>Monthly</option>
-          <option value="quarterly" style={{ background: '#0f172a' }}>Quarterly</option>
-          <option value="yearly" style={{ background: '#0f172a' }}>Yearly</option>
-          <option value="custom" style={{ background: '#0f172a' }}>Custom</option>
+          <option value="daily" style={{ background: 'var(--bg-primary)' }}>Daily</option>
+          <option value="weekly" style={{ background: 'var(--bg-primary)' }}>Weekly</option>
+          <option value="monthly" style={{ background: 'var(--bg-primary)' }}>Monthly</option>
+          <option value="quarterly" style={{ background: 'var(--bg-primary)' }}>Quarterly</option>
+          <option value="yearly" style={{ background: 'var(--bg-primary)' }}>Yearly</option>
+          <option value="custom" style={{ background: 'var(--bg-primary)' }}>Custom</option>
         </select>
       </div>
 
@@ -244,12 +244,12 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -266,12 +266,12 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
             disabled={isSubmitting}
             style={inputStyle}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-              e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+              e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+              e.currentTarget.style.background = 'var(--input-bg-focus)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+              e.currentTarget.style.borderColor = 'var(--input-border)';
+              e.currentTarget.style.background = 'var(--input-bg)';
             }}
           />
         </div>
@@ -305,10 +305,10 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
           style={{
             flex: 1,
             padding: '14px 24px',
-            background: 'rgba(71, 85, 105, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--btn-secondary-bg)',
+            border: '1px solid var(--btn-secondary-border)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '15px',
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',
@@ -317,12 +317,12 @@ export const AddBudgetForm: React.FC<AddBudgetFormProps> = ({ onSuccess, onCance
           }}
           onMouseEnter={(e) => {
             if (!isSubmitting) {
-              e.currentTarget.style.background = 'rgba(71, 85, 105, 0.5)';
+              e.currentTarget.style.background = 'var(--surface-hover)';
             }
           }}
           onMouseLeave={(e) => {
             if (!isSubmitting) {
-              e.currentTarget.style.background = 'rgba(71, 85, 105, 0.3)';
+              e.currentTarget.style.background = 'var(--btn-secondary-bg)';
             }
           }}
         >

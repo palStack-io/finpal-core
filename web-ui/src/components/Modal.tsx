@@ -43,7 +43,7 @@ export const Modal: React.FC<ModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: 'var(--overlay-bg)',
         backdropFilter: 'blur(4px)',
         zIndex: 10000,
         display: 'flex',
@@ -58,10 +58,10 @@ export const Modal: React.FC<ModalProps> = ({
           width: '100%',
           maxWidth: maxWidth,
           maxHeight: '90vh',
-          backgroundColor: '#1e293b',
+          backgroundColor: 'var(--bg-card)',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          border: '1px solid var(--border-medium)',
+          boxShadow: 'var(--card-shadow)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -72,22 +72,19 @@ export const Modal: React.FC<ModalProps> = ({
         <div
           style={{
             padding: '24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid var(--border-light)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(17, 24, 39, 0.6)',
+            background: 'var(--bg-secondary)',
             flexShrink: 0
           }}
         >
           <h2
             style={{
               fontSize: '24px',
-              fontWeight: 'bold',
-              background: 'linear-gradient(to right, #86efac, #fbbf24)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              color: 'transparent',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
               margin: 0
             }}
           >

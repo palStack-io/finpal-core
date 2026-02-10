@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Edit2, Trash2, RefreshCw, Eye, EyeOff, MoreVertical, DollarSign, Upload } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { useToast } from '../contexts/ToastContext';
-import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { SlidePanel } from '../components/SlidePanel';
@@ -115,41 +114,40 @@ export const Accounts = () => {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'white', fontSize: '18px' }}>Loading accounts...</div>
+      <div style={{ minHeight: '100vh', background: `linear-gradient(to bottom, var(--bg-primary), var(--bg-secondary))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--text-primary)', fontSize: '18px' }}>Loading accounts...</div>
       </div>
     );
   }
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+              <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
                 Accounts
               </h1>
-              <p style={{ color: '#94a3b8', fontSize: '14px' }}>Manage all your financial accounts in one place</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Manage all your financial accounts in one place</p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={() => setShowCSVImport(true)}
-                style={{ padding: '10px 16px', background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                style={{ padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--border-light)'}
               >
                 <Upload size={16} />
                 Import CSV
               </button>
               <button
                 onClick={handleSyncAll}
-                style={{ padding: '10px 16px', background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                style={{ padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--border-light)'}
               >
                 <RefreshCw size={16} /> Sync All
               </button>
@@ -167,11 +165,11 @@ export const Accounts = () => {
 
         {/* Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+          <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
               <div>
-                <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Net Worth</p>
-                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Net Worth</p>
+                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                   {showBalances ? formatCurrency(totalBalance) : '••••••'}
                 </h3>
               </div>
@@ -185,11 +183,11 @@ export const Accounts = () => {
             </div>
           </div>
 
-          <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+          <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
               <div>
-                <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Total Assets</p>
-                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Assets</p>
+                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                   {showBalances ? formatCurrency(totalAssets) : '••••••'}
                 </h3>
               </div>
@@ -198,15 +196,15 @@ export const Accounts = () => {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#94a3b8', fontSize: '14px' }}>{accounts.filter(a => a.balance > 0).length} accounts</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{accounts.filter(a => a.balance > 0).length} accounts</span>
             </div>
           </div>
 
-          <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+          <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
               <div>
-                <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Total Liabilities</p>
-                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Liabilities</p>
+                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                   {showBalances ? formatCurrency(totalLiabilities) : '••••••'}
                 </h3>
               </div>
@@ -215,14 +213,14 @@ export const Accounts = () => {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#94a3b8', fontSize: '14px' }}>{accounts.filter(a => a.balance < 0).length} accounts</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{accounts.filter(a => a.balance < 0).length} accounts</span>
             </div>
           </div>
         </div>
 
         {/* Accounts List */}
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>All Accounts</h2>
+        <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>All Accounts</h2>
 
           {accounts.length > 0 ? (
             <div style={{ display: 'grid', gap: '16px' }}>
@@ -230,20 +228,20 @@ export const Accounts = () => {
                 <div
                   key={account.id}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--surface-hover)',
+                    border: '1px solid var(--border-light)',
                     borderRadius: '12px',
                     padding: '20px',
                     cursor: 'pointer',
                     transition: 'all 0.3s'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.background = 'var(--border-light)';
                     e.currentTarget.style.borderColor = account.color;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.background = 'var(--surface-hover)';
+                    e.currentTarget.style.borderColor = 'var(--border-light)';
                   }}
                   onClick={() => {
                     setEditingAccount(account);
@@ -258,23 +256,23 @@ export const Accounts = () => {
 
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-                          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>{account.name}</h3>
+                          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{account.name}</h3>
                           <span style={{
                             padding: '2px 8px',
-                            background: 'rgba(255, 255, 255, 0.1)',
+                            background: 'var(--border-light)',
                             borderRadius: '6px',
                             fontSize: '11px',
-                            color: '#94a3b8',
+                            color: 'var(--text-secondary)',
                             textTransform: 'capitalize'
                           }}>
                             {account.type}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
                             {account.institution} • {account.accountNumber}
                           </p>
-                          <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
                             Last synced: {account.lastSync}
                           </p>
                         </div>
@@ -285,7 +283,7 @@ export const Accounts = () => {
                       {/* Credit Card Specific Info */}
                       {account.type === 'credit' && account.creditLimit && (
                         <div style={{ textAlign: 'right' }}>
-                          <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Available Credit</p>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Available Credit</p>
                           <p style={{ color: '#22c55e', fontSize: '16px', fontWeight: '600' }}>
                             {showBalances ? formatCurrency(account.availableCredit) : '••••••'}
                           </p>
@@ -294,7 +292,7 @@ export const Accounts = () => {
 
                       {/* Balance */}
                       <div style={{ textAlign: 'right', minWidth: '150px' }}>
-                        <p style={{ fontSize: '24px', fontWeight: '700', color: account.balance < 0 ? '#ef4444' : 'white', marginBottom: '4px' }}>
+                        <p style={{ fontSize: '24px', fontWeight: '700', color: account.balance < 0 ? '#ef4444' : 'var(--text-primary)', marginBottom: '4px' }}>
                           {showBalances ? (
                             <>
                               {account.balance < 0 && '-'}{formatCurrency(account.balance)}
@@ -329,18 +327,18 @@ export const Accounts = () => {
                           }}
                           style={{
                             padding: '8px',
-                            background: 'rgba(255, 255, 255, 0.1)',
+                            background: 'var(--border-light)',
                             border: 'none',
                             borderRadius: '6px',
-                            color: 'white',
+                            color: 'var(--text-primary)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             transition: 'all 0.3s'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border-medium)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--border-light)'}
                         >
                           <Edit2 size={16} />
                         </button>
@@ -376,7 +374,7 @@ export const Accounts = () => {
               ))}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
               <Wallet size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
               <p style={{ fontSize: '18px', marginBottom: '8px' }}>No accounts yet</p>
               <p style={{ fontSize: '14px' }}>Add your first account to start tracking your finances</p>
@@ -437,7 +435,7 @@ export const Accounts = () => {
         />
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '13px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
+          <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
             Part of {branding.parentBrand} ecosystem
           </div>
       </div>

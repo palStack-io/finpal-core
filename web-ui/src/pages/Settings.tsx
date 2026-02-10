@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home } from 'lucide-react';
-import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { TransactionRules } from '../components/TransactionRules';
@@ -230,18 +229,17 @@ export const Settings: React.FC = () => {
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
               Settings
             </h1>
-            <p style={{ color: '#94a3b8', fontSize: '14px' }}>Manage your account preferences and settings</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Manage your account preferences and settings</p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '24px' }}>
-            <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '16px', height: 'fit-content' }}>
+            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '16px', height: 'fit-content' }}>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -252,7 +250,7 @@ export const Settings: React.FC = () => {
                     background: activeTab === tab.id ? 'rgba(21, 128, 61, 0.2)' : 'transparent',
                     border: activeTab === tab.id ? '1px solid rgba(21, 128, 61, 0.3)' : '1px solid transparent',
                     borderRadius: '8px',
-                    color: activeTab === tab.id ? '#86efac' : '#94a3b8',
+                    color: activeTab === tab.id ? '#86efac' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -265,7 +263,7 @@ export const Settings: React.FC = () => {
                   }}
                   onMouseEnter={(e) => {
                     if (activeTab !== tab.id) {
-                      (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.05)';
+                      (e.target as HTMLButtonElement).style.background = 'var(--surface-hover)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -280,10 +278,10 @@ export const Settings: React.FC = () => {
               ))}
             </div>
 
-            <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '32px' }}>
+            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '32px' }}>
               {activeTab === 'profile' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>Profile Information</h2>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Profile Information</h2>
 
                   {/* Error Message */}
                   {saveError && (
@@ -303,7 +301,7 @@ export const Settings: React.FC = () => {
                   )}
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Full Name
                     </label>
                     <input
@@ -313,10 +311,10 @@ export const Settings: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         outline: 'none'
                       }}
@@ -324,7 +322,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Email Address
                     </label>
                     <input
@@ -334,23 +332,23 @@ export const Settings: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: '#64748b',
+                        color: 'var(--text-muted)',
                         fontSize: '14px',
                         outline: 'none',
                         cursor: 'not-allowed'
                       }}
                     />
-                    <p style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>Email cannot be changed</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>Email cannot be changed</p>
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Profile Emoji
                     </label>
-                    <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '12px' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '12px' }}>
                       Pick an emoji to use as your profile picture
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
@@ -368,7 +366,7 @@ export const Settings: React.FC = () => {
                       }}>
                         {profileData.profileEmoji}
                       </div>
-                      <span style={{ color: '#94a3b8', fontSize: '14px' }}>Current emoji</span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current emoji</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px' }}>
                       {profileEmojis.map((emoji) => (
@@ -380,8 +378,8 @@ export const Settings: React.FC = () => {
                             height: '44px',
                             fontSize: '24px',
                             lineHeight: 1,
-                            background: profileData.profileEmoji === emoji ? 'rgba(21, 128, 61, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                            border: profileData.profileEmoji === emoji ? '2px solid #15803d' : '1px solid rgba(255, 255, 255, 0.1)',
+                            background: profileData.profileEmoji === emoji ? 'rgba(21, 128, 61, 0.2)' : 'var(--surface-hover)',
+                            border: profileData.profileEmoji === emoji ? '2px solid #15803d' : '1px solid var(--border-light)',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -397,7 +395,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Default Currency
                     </label>
                     <select
@@ -406,23 +404,23 @@ export const Settings: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         outline: 'none',
                         cursor: 'pointer'
                       }}
                     >
                       {currencies.map((curr) => (
-                        <option key={curr} value={curr} style={{ background: '#1e293b' }}>{curr}</option>
+                        <option key={curr} value={curr} style={{ background: 'var(--bg-secondary)' }}>{curr}</option>
                       ))}
                     </select>
                   </div>
 
                   <div style={{ marginBottom: '32px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Timezone
                     </label>
                     <select
@@ -431,17 +429,17 @@ export const Settings: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         outline: 'none',
                         cursor: 'pointer'
                       }}
                     >
                       {timezones.map((tz) => (
-                        <option key={tz} value={tz} style={{ background: '#1e293b' }}>{tz}</option>
+                        <option key={tz} value={tz} style={{ background: 'var(--bg-secondary)' }}>{tz}</option>
                       ))}
                     </select>
                   </div>
@@ -481,7 +479,7 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'security' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>Security Settings</h2>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Security Settings</h2>
 
                   {/* Error Message */}
                   {saveError && (
@@ -518,7 +516,7 @@ export const Settings: React.FC = () => {
                   )}
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Current Password
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -530,10 +528,10 @@ export const Settings: React.FC = () => {
                         style={{
                           width: '100%',
                           padding: '12px 44px 12px 12px',
-                          background: 'rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          background: 'var(--input-bg)',
+                          border: '1px solid var(--input-border)',
                           borderRadius: '8px',
-                          color: 'white',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none'
                         }}
@@ -560,7 +558,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       New Password
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -572,10 +570,10 @@ export const Settings: React.FC = () => {
                         style={{
                           width: '100%',
                           padding: '12px 44px 12px 12px',
-                          background: 'rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          background: 'var(--input-bg)',
+                          border: '1px solid var(--input-border)',
                           borderRadius: '8px',
-                          color: 'white',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none'
                         }}
@@ -602,7 +600,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '32px' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Confirm New Password
                     </label>
                     <input
@@ -613,10 +611,10 @@ export const Settings: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         outline: 'none'
                       }}
@@ -649,7 +647,7 @@ export const Settings: React.FC = () => {
                       <Shield size={20} color="#3b82f6" style={{ flexShrink: 0 }} />
                       <div>
                         <p style={{ color: '#3b82f6', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>Password Requirements</p>
-                        <ul style={{ color: '#94a3b8', fontSize: '13px', lineHeight: '1.6', margin: 0, paddingLeft: '20px' }}>
+                        <ul style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', margin: 0, paddingLeft: '20px' }}>
                           <li>At least 8 characters long</li>
                           <li>Contains uppercase and lowercase letters</li>
                           <li>Includes at least one number</li>
@@ -667,16 +665,16 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'integrations' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>
                     Integrations
                   </h2>
 
                   {/* SimpleFin */}
                   <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
                       SimpleFin
                     </h3>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '16px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
                       Connect your bank accounts automatically with SimpleFin. Import transactions and keep your accounts in sync.
                     </p>
                     <SimpleFinSettings />
@@ -684,10 +682,10 @@ export const Settings: React.FC = () => {
 
                   {/* Investment Tracking */}
                   <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
                       Investment Tracking
                     </h3>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '16px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
                       Track your stocks, ETFs, and other investments. Monitor portfolio performance and get real-time quotes.
                     </p>
                     <InvestmentSettings />
@@ -709,13 +707,13 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'notifications' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>Notification Preferences</h2>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Notification Preferences</h2>
 
                   {Object.entries(notificationSettings).map(([key, value]) => (
                     <div key={key} style={{
                       padding: '16px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'var(--surface-hover)',
+                      border: '1px solid var(--border-light)',
                       borderRadius: '8px',
                       marginBottom: '12px',
                       display: 'flex',
@@ -723,10 +721,10 @@ export const Settings: React.FC = () => {
                       alignItems: 'center'
                     }}>
                       <div>
-                        <p style={{ color: 'white', fontWeight: '500', fontSize: '14px', marginBottom: '4px' }}>
+                        <p style={{ color: 'var(--text-primary)', fontWeight: '500', fontSize: '14px', marginBottom: '4px' }}>
                           {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                         </p>
-                        <p style={{ color: '#64748b', fontSize: '12px' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                           {key === 'budgetAlerts' && 'Get notified when you approach budget limits'}
                           {key === 'monthlyReports' && 'Receive monthly spending summaries via email'}
                           {key === 'transactionNotifications' && 'Alert for every new transaction'}
@@ -747,7 +745,7 @@ export const Settings: React.FC = () => {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          background: value ? '#15803d' : 'rgba(255, 255, 255, 0.2)',
+                          background: value ? '#15803d' : 'var(--border-medium)',
                           borderRadius: '24px',
                           transition: '0.3s'
                         }}>
@@ -803,19 +801,19 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'preferences' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>App Preferences</h2>
-                  <p style={{ color: '#94a3b8', fontSize: '14px' }}>Customize your app experience</p>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>App Preferences</h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Customize your app experience</p>
 
-                  <div style={{ marginTop: '24px', padding: '20px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ marginTop: '24px', padding: '20px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px', textAlign: 'center' }}>
                     <Palette size={48} color="#64748b" style={{ margin: '0 auto 16px' }} />
-                    <p style={{ color: '#64748b' }}>Additional preferences coming soon</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Additional preferences coming soon</p>
                   </div>
                 </div>
               )}
 
               {activeTab === 'data' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>Data & Privacy</h2>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Data & Privacy</h2>
 
                   {/* Error Message */}
                   {saveError && (
@@ -834,18 +832,18 @@ export const Settings: React.FC = () => {
                     </div>
                   )}
 
-                  <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px' }}>
-                    <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Export Your Data</h3>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '12px' }}>Download all your financial data in JSON format</p>
+                  <div style={{ marginBottom: '24px', padding: '16px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
+                    <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Export Your Data</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '12px' }}>Download all your financial data in JSON format</p>
                     <button
                       onClick={handleExportData}
                       disabled={isExporting}
                       style={{
                         padding: '10px 20px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'var(--btn-secondary-bg)',
+                        border: '1px solid var(--btn-secondary-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--btn-secondary-text)',
                         fontSize: '14px',
                         cursor: isExporting ? 'not-allowed' : 'pointer',
                         transition: 'all 0.3s',
@@ -889,9 +887,9 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'about' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>About finPal</h2>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>About finPal</h2>
 
-                  <div style={{ marginBottom: '24px', padding: '24px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px' }}>
+                  <div style={{ marginBottom: '24px', padding: '24px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
                       <img
                         src="/finPal.png"
@@ -899,19 +897,19 @@ export const Settings: React.FC = () => {
                         style={{ height: '64px', width: 'auto' }}
                       />
                       <div>
-                        <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>finPal</h3>
-                        <p style={{ color: '#94a3b8', fontSize: '14px' }}>Version 1.0.0</p>
+                        <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>finPal</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Version 1.0.0</p>
                       </div>
                     </div>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
                       A modern, privacy-first personal finance management application. Track expenses, manage budgets,
                       split bills with friends, and gain insights into your spending habits.
                     </p>
                   </div>
 
-                  <div style={{ marginBottom: '24px', padding: '20px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px' }}>
-                    <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Features</h3>
-                    <ul style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '2', paddingLeft: '20px', margin: 0 }}>
+                  <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '12px' }}>
+                    <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Features</h3>
+                    <ul style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '2', paddingLeft: '20px', margin: 0 }}>
                       <li>Multi-currency expense tracking</li>
                       <li>Smart auto-categorization with custom rules</li>
                       <li>Budget management with rollover support</li>
@@ -923,23 +921,23 @@ export const Settings: React.FC = () => {
                     </ul>
                   </div>
 
-                  <div style={{ padding: '20px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px' }}>
+                  <div style={{ padding: '20px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                       <img
                         src="/palStack.png"
                         alt="palStack"
                         style={{ height: '32px', width: 'auto' }}
                       />
-                      <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>Part of {branding.parentBrand}</h3>
+                      <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>Part of {branding.parentBrand}</h3>
                     </div>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
                       finPal is part of the {branding.parentBrand} ecosystem - a suite of privacy-focused
                       productivity tools designed to help you manage your digital life.
                     </p>
-                    <p style={{ color: '#64748b', fontSize: '13px', fontStyle: 'italic' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
                       "That's what pals do – they show up and help with the everyday stuff."
                     </p>
-                    <p style={{ color: '#64748b', fontSize: '12px', marginTop: '16px' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '16px' }}>
                       © {new Date().getFullYear()} {branding.parentBrand}. All rights reserved.
                     </p>
                   </div>
@@ -949,9 +947,9 @@ export const Settings: React.FC = () => {
           </div>
 
           {/* Footer */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
             <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
-            <p style={{ color: '#64748b', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
           </div>
         </div>
       </div>
@@ -964,14 +962,14 @@ export const Settings: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
+          background: 'var(--overlay-bg)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
           <div style={{
-            background: '#1e293b',
+            background: 'var(--bg-secondary)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
             borderRadius: '16px',
             padding: '32px',
@@ -989,7 +987,7 @@ export const Settings: React.FC = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#94a3b8',
+                  color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   padding: '4px'
                 }}
@@ -1028,7 +1026,7 @@ export const Settings: React.FC = () => {
             )}
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                 Enter your password to confirm
               </label>
               <input
@@ -1039,10 +1037,10 @@ export const Settings: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none'
                 }}
@@ -1059,10 +1057,10 @@ export const Settings: React.FC = () => {
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'var(--btn-secondary-bg)',
+                  border: '1px solid var(--btn-secondary-border)',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: 'var(--btn-secondary-text)',
                   fontSize: '14px',
                   cursor: 'pointer',
                   fontWeight: '500'

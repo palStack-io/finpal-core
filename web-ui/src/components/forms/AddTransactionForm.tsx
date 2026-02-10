@@ -148,10 +148,10 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '12px 16px',
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)',
     borderRadius: '8px',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     outline: 'none',
     transition: 'all 0.3s'
@@ -159,7 +159,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     fontWeight: '600',
     marginBottom: '8px'
@@ -167,7 +167,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
 
   if (loadingData) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
         Loading form data...
       </div>
     );
@@ -227,10 +227,10 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             style={{
               flex: 1,
               padding: '10px',
-              background: formData.type === 'expense' ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'rgba(15, 23, 42, 0.5)',
-              border: `1px solid ${formData.type === 'expense' ? 'rgba(220, 38, 38, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
+              background: formData.type === 'expense' ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'var(--input-bg)',
+              border: `1px solid ${formData.type === 'expense' ? 'rgba(220, 38, 38, 0.5)' : 'var(--input-border)'}`,
               borderRadius: '8px',
-              color: 'white',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -245,10 +245,10 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             style={{
               flex: 1,
               padding: '10px',
-              background: formData.type === 'income' ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : 'rgba(15, 23, 42, 0.5)',
-              border: `1px solid ${formData.type === 'income' ? 'rgba(21, 128, 61, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
+              background: formData.type === 'income' ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : 'var(--input-bg)',
+              border: `1px solid ${formData.type === 'income' ? 'rgba(21, 128, 61, 0.5)' : 'var(--input-border)'}`,
               borderRadius: '8px',
-              color: 'white',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -263,10 +263,10 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             style={{
               flex: 1,
               padding: '10px',
-              background: formData.type === 'transfer' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'rgba(15, 23, 42, 0.5)',
-              border: `1px solid ${formData.type === 'transfer' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
+              background: formData.type === 'transfer' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'var(--input-bg)',
+              border: `1px solid ${formData.type === 'transfer' ? 'rgba(59, 130, 246, 0.5)' : 'var(--input-border)'}`,
               borderRadius: '8px',
-              color: 'white',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -294,12 +294,12 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -322,12 +322,12 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -346,12 +346,12 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -372,17 +372,17 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             cursor: 'pointer'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         >
-          <option value="" style={{ background: '#0f172a' }}>Select a category (optional)</option>
+          <option value="" style={{ background: 'var(--bg-primary)' }}>Select a category (optional)</option>
           {categories.map(category => (
-            <option key={category.id} value={category.id} style={{ background: '#0f172a' }}>
+            <option key={category.id} value={category.id} style={{ background: 'var(--bg-primary)' }}>
               {category.name}
             </option>
           ))}
@@ -406,19 +406,19 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             cursor: 'pointer'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         >
-          <option value="" style={{ background: '#0f172a' }}>
+          <option value="" style={{ background: 'var(--bg-primary)' }}>
             {formData.type === 'transfer' ? 'Select source account' : 'Select an account (optional)'}
           </option>
           {accounts.map(account => (
-            <option key={account.id} value={account.id} style={{ background: '#0f172a' }}>
+            <option key={account.id} value={account.id} style={{ background: 'var(--bg-primary)' }}>
               {account.name} ({account.currency_code || 'USD'})
             </option>
           ))}
@@ -444,23 +444,23 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-              e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+              e.currentTarget.style.background = 'var(--input-bg-focus)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+              e.currentTarget.style.borderColor = 'var(--input-border)';
+              e.currentTarget.style.background = 'var(--input-bg)';
             }}
           >
-            <option value="" style={{ background: '#0f172a' }}>Select destination account</option>
+            <option value="" style={{ background: 'var(--bg-primary)' }}>Select destination account</option>
             {accounts
               .filter(account => account.id.toString() !== formData.account_id)
               .map(account => (
-                <option key={account.id} value={account.id} style={{ background: '#0f172a' }}>
+                <option key={account.id} value={account.id} style={{ background: 'var(--bg-primary)' }}>
                   {account.name} ({account.currency_code || 'USD'})
                 </option>
               ))}
           </select>
-          <p style={{ color: '#64748b', fontSize: '12px', marginTop: '8px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
             Transfer money from one account to another
           </p>
         </div>
@@ -482,17 +482,17 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             cursor: 'pointer'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         >
-          <option value="" style={{ background: '#0f172a' }}>No group (personal expense)</option>
+          <option value="" style={{ background: 'var(--bg-primary)' }}>No group (personal expense)</option>
           {groups.map(group => (
-            <option key={group.id} value={group.id} style={{ background: '#0f172a' }}>
+            <option key={group.id} value={group.id} style={{ background: 'var(--bg-primary)' }}>
               {group.name} ({group.members.length} members)
             </option>
           ))}
@@ -513,20 +513,20 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
               cursor: 'pointer'
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-              e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+              e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+              e.currentTarget.style.background = 'var(--input-bg-focus)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+              e.currentTarget.style.borderColor = 'var(--input-border)';
+              e.currentTarget.style.background = 'var(--input-bg)';
             }}
           >
-            <option value="equal" style={{ background: '#0f172a' }}>Split Equally</option>
-            <option value="percentage" style={{ background: '#0f172a' }}>By Percentage</option>
-            <option value="custom" style={{ background: '#0f172a' }}>Custom Amounts</option>
-            <option value="shares" style={{ background: '#0f172a' }}>By Shares</option>
+            <option value="equal" style={{ background: 'var(--bg-primary)' }}>Split Equally</option>
+            <option value="percentage" style={{ background: 'var(--bg-primary)' }}>By Percentage</option>
+            <option value="custom" style={{ background: 'var(--bg-primary)' }}>Custom Amounts</option>
+            <option value="shares" style={{ background: 'var(--bg-primary)' }}>By Shares</option>
           </select>
-          <p style={{ color: '#64748b', fontSize: '12px', marginTop: '8px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
             {formData.split_method === 'equal' && 'Expense will be split equally among all group members'}
             {formData.split_method === 'percentage' && 'Specify percentage for each member'}
             {formData.split_method === 'custom' && 'Specify exact amount for each member'}
@@ -551,15 +551,15 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                 disabled={isSubmitting}
                 style={inputStyle}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+                  e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+                  e.currentTarget.style.background = 'var(--input-bg-focus)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+                  e.currentTarget.style.borderColor = 'var(--input-border)';
+                  e.currentTarget.style.background = 'var(--input-bg)';
                 }}
               />
-              <p style={{ color: '#64748b', fontSize: '12px', marginTop: '8px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
                 {formData.split_method === 'percentage'
                   ? 'Enter the percentage you want to pay (other members split the rest)'
                   : 'Enter number of shares (e.g., if you enter 2 and others have 1, you pay double)'}
@@ -581,15 +581,15 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                 disabled={isSubmitting}
                 style={inputStyle}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+                  e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+                  e.currentTarget.style.background = 'var(--input-bg-focus)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+                  e.currentTarget.style.borderColor = 'var(--input-border)';
+                  e.currentTarget.style.background = 'var(--input-bg)';
                 }}
               />
-              <p style={{ color: '#64748b', fontSize: '12px', marginTop: '8px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
                 Enter the exact amount you want to pay (other members split the rest)
               </p>
             </div>
@@ -628,8 +628,8 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                   display: 'flex',
                   gap: '8px',
                   padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
                   borderRadius: '8px'
                 }}>
                   <select
@@ -676,7 +676,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                   </button>
                 </div>
               ))}
-              <p style={{ color: '#64748b', fontSize: '12px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                 Total split: ${categorySplits.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toFixed(2)}
                 {formData.amount && ` / $${parseFloat(formData.amount).toFixed(2)}`}
               </p>
@@ -701,12 +701,12 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             fontFamily: 'inherit'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -721,9 +721,9 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
             flex: 1,
             padding: '14px 24px',
             background: 'rgba(71, 85, 105, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid var(--border-light)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '15px',
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',

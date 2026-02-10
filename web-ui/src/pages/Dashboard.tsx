@@ -6,7 +6,6 @@ import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
 import { budgetService } from '../services/budgetService';
 import { useToast } from '../contexts/ToastContext';
-import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 
@@ -242,8 +241,8 @@ export const Dashboard = () => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div style={{ background: '#1e293b', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', padding: '12px' }}>
-          <p style={{ color: 'white', marginBottom: '8px', fontWeight: '600' }}>{label}</p>
+        <div style={{ background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' }}>
+          <p style={{ color: 'var(--text-primary)', marginBottom: '8px', fontWeight: '600' }}>{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color, marginBottom: '4px' }}>
               {entry.name}: {formatCurrency(entry.value)}
@@ -285,36 +284,30 @@ export const Dashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #0f172a, #1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'white', fontSize: '18px' }}>Loading dashboard...</div>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--text-primary)', fontSize: '18px' }}>Loading dashboard...</div>
       </div>
     );
   }
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <img src="/finPal.png" alt="finPal" style={{ height: '48px', width: 'auto' }} />
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '4px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              {branding.internalName}
-            </h1>
-            <p style={{ color: '#94a3b8', fontSize: '14px' }}>Welcome back! Here's your financial overview.</p>
-          </div>
-        </div>
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-primary)' }}>
+          Dashboard
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Welcome Back!</p>
       </div>
 
       {/* Top Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Net Worth</p>
-              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>{formatCurrency(netWorth)}</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Net Worth</p>
+              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(netWorth)}</h3>
             </div>
             <div style={{ width: '48px', height: '48px', background: 'rgba(34, 197, 94, 0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Wallet size={24} color="#22c55e" />
@@ -326,26 +319,26 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Monthly Income</p>
-              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>{formatCurrency(monthlyIncome)}</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Monthly Income</p>
+              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(monthlyIncome)}</h3>
             </div>
             <div style={{ width: '48px', height: '48px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TrendingUp size={24} color="#3b82f6" />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#94a3b8', fontSize: '14px' }}>Current month earnings</span>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current month earnings</span>
           </div>
         </div>
 
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Monthly Expenses</p>
-              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>{formatCurrency(monthlyExpenses)}</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Monthly Expenses</p>
+              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(monthlyExpenses)}</h3>
             </div>
             <div style={{ width: '48px', height: '48px', background: 'rgba(239, 68, 68, 0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TrendingDown size={24} color="#ef4444" />
@@ -357,18 +350,18 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Savings Rate</p>
-              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>{savingsRate.toFixed(1)}%</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Savings Rate</p>
+              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{savingsRate.toFixed(1)}%</h3>
             </div>
             <div style={{ width: '48px', height: '48px', background: 'rgba(251, 191, 36, 0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <PiggyBank size={24} color="#fbbf24" />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#94a3b8', fontSize: '14px' }}>Great job saving!</span>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Great job saving!</span>
           </div>
         </div>
       </div>
@@ -376,10 +369,10 @@ export const Dashboard = () => {
       {/* Main Content Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
         {/* Cash Flow Chart */}
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white' }}>Cash Flow</h3>
-            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>Cash Flow</h3>
+            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} style={{ padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>
               <option value="week">Last 7 days</option>
               <option value="month">Last 30 days</option>
               <option value="year">Last year</option>
@@ -387,9 +380,9 @@ export const Dashboard = () => {
           </div>
           <ResponsiveContainer width="100%" height={280} key={`cashflow-${timeRange}`}>
             <BarChart data={cashFlowData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-              <XAxis dataKey="month" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+              <XAxis dataKey="month" stroke="var(--text-secondary)" />
+              <YAxis stroke="var(--text-secondary)" />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
               <Bar dataKey="income" fill="#22c55e" radius={[8, 8, 0, 0]} />
@@ -399,8 +392,8 @@ export const Dashboard = () => {
         </div>
 
         {/* Spending by Category */}
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>Spending by Category</h3>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Spending by Category</h3>
           {categoryData.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={200}>
@@ -422,8 +415,8 @@ export const Dashboard = () => {
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
-                          <div style={{ background: '#1e293b', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', padding: '12px' }}>
-                            <p style={{ color: 'white', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
+                          <div style={{ background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' }}>
+                            <p style={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
                             <p style={{ color: payload[0].payload.color, margin: 0 }}>
                               {formatCurrency(payload[0].value)}
                             </p>
@@ -440,15 +433,15 @@ export const Dashboard = () => {
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }}></div>
-                      <span style={{ color: '#94a3b8', fontSize: '14px' }}>{cat.name}</span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{cat.name}</span>
                     </div>
-                    <span style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>{formatCurrency(cat.value)}</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{formatCurrency(cat.value)}</span>
                   </div>
                 ))}
               </div>
             </>
           ) : (
-            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No spending data</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' }}>No spending data</div>
           )}
         </div>
       </div>
@@ -456,8 +449,8 @@ export const Dashboard = () => {
       {/* Budgets and Accounts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
         {/* Budget Progress */}
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '20px' }}>Budget Progress</h3>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '20px' }}>Budget Progress</h3>
           {budgets.length > 0 ? budgets.map((budget, idx) => (
             <div
               key={idx}
@@ -467,12 +460,12 @@ export const Dashboard = () => {
               onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{budget.category}</span>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>
+                <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500' }}>{budget.category}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                   {formatCurrency(budget.spent)} of {formatCurrency(budget.budget)}
                 </span>
               </div>
-              <div style={{ width: '100%', height: '8px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '8px', background: 'var(--progress-track)', borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{
                   width: `${getBudgetPercentage(budget.spent, budget.budget)}%`,
                   height: '100%',
@@ -483,24 +476,24 @@ export const Dashboard = () => {
               </div>
             </div>
           )) : (
-            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px 0' }}>No budgets set</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0' }}>No budgets set</div>
           )}
         </div>
 
         {/* Accounts Summary */}
-        <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '20px' }}>Accounts</h3>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '20px' }}>Accounts</h3>
           {accounts.length > 0 ? accounts.map((account, idx) => (
             <div
               key={idx}
               onClick={() => window.location.href = '/accounts'}
-              style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+              style={{ padding: '16px', background: 'var(--surface-hover)', borderRadius: '12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.background = 'var(--table-row-hover)';
                 e.currentTarget.style.transform = 'translateX(4px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.background = 'var(--surface-hover)';
                 e.currentTarget.style.transform = 'translateX(0)';
               }}
             >
@@ -512,12 +505,12 @@ export const Dashboard = () => {
                   {account.type !== 'checking' && account.type !== 'savings' && account.type !== 'credit' && <Wallet size={20} color="#3b82f6" />}
                 </div>
                 <div>
-                  <p style={{ color: 'white', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>{account.name}</p>
-                  <p style={{ color: '#94a3b8', fontSize: '12px', textTransform: 'capitalize' }}>{account.type}</p>
+                  <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>{account.name}</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'capitalize' }}>{account.type}</p>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{formatCurrency(Math.abs(account.balance))}</p>
+                <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{formatCurrency(Math.abs(account.balance))}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
                   {account.trend > 0 ? <TrendingUp size={14} color="#22c55e" /> : <TrendingDown size={14} color="#ef4444" />}
                   <span style={{ color: account.trend > 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}>
@@ -527,27 +520,27 @@ export const Dashboard = () => {
               </div>
             </div>
           )) : (
-            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px 0' }}>No accounts found</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0' }}>No accounts found</div>
           )}
         </div>
       </div>
 
       {/* Monthly Expense Aggregation */}
-      <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
         <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white' }}>Monthly Expense Breakdown</h3>
-          <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>View expenses grouped by month, category, and account</p>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>Monthly Expense Breakdown</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>View expenses grouped by month, category, and account</p>
         </div>
         {monthlyAggregation.length > 0 ? (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.1)' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '14px', minWidth: '100px' }}>Month</th>
-                  <th style={{ padding: '12px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '14px', minWidth: '120px' }}>Total</th>
-                  <th style={{ padding: '12px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '14px', minWidth: '200px' }}>Categories</th>
-                  <th style={{ padding: '12px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '14px', minWidth: '200px' }}>Accounts</th>
-                  <th style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '14px', minWidth: '100px' }}>Details</th>
+                <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
+                  <th style={{ padding: '12px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: '600', fontSize: '14px', minWidth: '100px' }}>Month</th>
+                  <th style={{ padding: '12px', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: '600', fontSize: '14px', minWidth: '120px' }}>Total</th>
+                  <th style={{ padding: '12px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: '600', fontSize: '14px', minWidth: '200px' }}>Categories</th>
+                  <th style={{ padding: '12px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: '600', fontSize: '14px', minWidth: '200px' }}>Accounts</th>
+                  <th style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '600', fontSize: '14px', minWidth: '100px' }}>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -558,8 +551,8 @@ export const Dashboard = () => {
 
                   return (
                     <React.Fragment key={month.month}>
-                      <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                        <td style={{ padding: '16px 12px', color: 'white', fontWeight: '600', fontSize: '14px', verticalAlign: 'top' }}>
+                      <tr style={{ borderBottom: '1px solid var(--surface-hover)' }}>
+                        <td style={{ padding: '16px 12px', color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', verticalAlign: 'top' }}>
                           {month.month}
                         </td>
                         <td style={{ padding: '16px 12px', textAlign: 'right', color: '#ef4444', fontWeight: '700', fontSize: '16px', verticalAlign: 'top' }}>
@@ -608,10 +601,10 @@ export const Dashboard = () => {
                             onClick={() => toggleMonth(month.month)}
                             style={{
                               padding: '6px 12px',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              background: 'var(--surface-hover)',
+                              border: '1px solid var(--border-medium)',
                               borderRadius: '6px',
-                              color: 'white',
+                              color: 'var(--text-primary)',
                               cursor: 'pointer',
                               fontSize: '12px',
                               display: 'inline-flex',
@@ -619,8 +612,8 @@ export const Dashboard = () => {
                               gap: '6px',
                               transition: 'all 0.2s'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--table-row-hover)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
                           >
                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             {isExpanded ? 'Hide' : 'Show'} ({month.transactions.length})
@@ -629,33 +622,33 @@ export const Dashboard = () => {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={5} style={{ padding: '0', background: 'rgba(0, 0, 0, 0.3)' }}>
-                            <div style={{ padding: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                              <h5 style={{ fontSize: '13px', fontWeight: '600', color: '#94a3b8', marginBottom: '12px' }}>
+                          <td colSpan={5} style={{ padding: '0', background: 'var(--bg-primary)' }}>
+                            <div style={{ padding: '16px', borderTop: '1px solid var(--border-light)' }}>
+                              <h5 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                                 Individual Transactions ({month.transactions.length})
                               </h5>
                               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                   <thead>
-                                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                                      <th style={{ padding: '8px', textAlign: 'left', color: '#64748b', fontSize: '12px', fontWeight: '500' }}>Date</th>
-                                      <th style={{ padding: '8px', textAlign: 'left', color: '#64748b', fontSize: '12px', fontWeight: '500' }}>Description</th>
-                                      <th style={{ padding: '8px', textAlign: 'left', color: '#64748b', fontSize: '12px', fontWeight: '500' }}>Category</th>
-                                      <th style={{ padding: '8px', textAlign: 'left', color: '#64748b', fontSize: '12px', fontWeight: '500' }}>Account</th>
-                                      <th style={{ padding: '8px', textAlign: 'right', color: '#64748b', fontSize: '12px', fontWeight: '500' }}>Amount</th>
+                                    <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                      <th style={{ padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' }}>Date</th>
+                                      <th style={{ padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' }}>Description</th>
+                                      <th style={{ padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' }}>Category</th>
+                                      <th style={{ padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' }}>Account</th>
+                                      <th style={{ padding: '8px', textAlign: 'right', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' }}>Amount</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {month.transactions.map((txn: any) => (
-                                      <tr key={txn.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                                        <td style={{ padding: '8px', color: '#94a3b8', fontSize: '12px' }}>
+                                      <tr key={txn.id} style={{ borderBottom: '1px solid var(--surface-hover)' }}>
+                                        <td style={{ padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' }}>
                                           {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                         </td>
-                                        <td style={{ padding: '8px', color: 'white', fontSize: '13px' }}>{txn.description}</td>
-                                        <td style={{ padding: '8px', color: '#94a3b8', fontSize: '12px' }}>
+                                        <td style={{ padding: '8px', color: 'var(--text-primary)', fontSize: '13px' }}>{txn.description}</td>
+                                        <td style={{ padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' }}>
                                           {txn.category?.name || txn.category || 'Uncategorized'}
                                         </td>
-                                        <td style={{ padding: '8px', color: '#94a3b8', fontSize: '12px' }}>
+                                        <td style={{ padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' }}>
                                           {txn.account?.name || txn.account || 'Unknown'}
                                         </td>
                                         <td style={{ padding: '8px', textAlign: 'right', color: '#ef4444', fontWeight: '600', fontSize: '13px' }}>
@@ -675,23 +668,23 @@ export const Dashboard = () => {
                 })}
               </tbody>
             </table>
-            <button onClick={() => window.location.href = '/transactions'} style={{ marginTop: '16px', width: '100%', padding: '12px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '14px', transition: 'all 0.3s' }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+            <button onClick={() => window.location.href = '/transactions'} style={{ marginTop: '16px', width: '100%', padding: '12px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '14px', transition: 'all 0.3s' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--table-row-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
             >
               View All Transactions
             </button>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No expense data found</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' }}>No expense data found</div>
         )}
       </div>
     </div>
 
     {/* Footer */}
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
       <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
-      <p style={{ color: '#64748b', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
     </div>
     </>
   );

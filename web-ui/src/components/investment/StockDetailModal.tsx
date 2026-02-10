@@ -138,7 +138,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'var(--overlay-bg)',
           backdropFilter: 'blur(4px)',
           zIndex: 999,
           animation: 'fadeIn 0.3s ease-out'
@@ -155,7 +155,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
           width: '90%',
           maxWidth: '900px',
           maxHeight: '90vh',
-          background: 'linear-gradient(to bottom, #0f172a, #1e293b)',
+          background: 'var(--bg-secondary)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           zIndex: 1000,
           borderRadius: '16px',
@@ -174,7 +174,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(17, 24, 39, 0.8)',
+            background: 'var(--bg-card)',
             backdropFilter: 'blur(12px)'
           }}
         >
@@ -183,11 +183,8 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
               <h2
                 style={{
                   fontSize: '32px',
-                  fontWeight: 'bold',
-                  background: 'linear-gradient(to right, #86efac, #fbbf24)',
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                  color: 'transparent',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
                   margin: 0
                 }}
               >
@@ -210,9 +207,9 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                 </span>
               </div>
             </div>
-            <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>{holding.name}</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '16px', margin: 0 }}>{holding.name}</p>
             {holding.sector && (
-              <p style={{ color: '#64748b', fontSize: '14px', margin: '4px 0 0 0' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '4px 0 0 0' }}>
                 {holding.sector} • {holding.industry}
               </p>
             )}
@@ -296,7 +293,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                     e.currentTarget.style.transform = 'scale(1)';
                   }}
                 >
-                  <X size={20} style={{ color: '#94a3b8' }} />
+                  <X size={20} style={{ color: 'var(--text-secondary)' }} />
                 </button>
               </>
             )}
@@ -342,7 +339,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             <div
               style={{
                 padding: '20px',
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px'
@@ -350,9 +347,9 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <DollarSign size={16} style={{ color: '#fbbf24' }} />
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Current Price</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current Price</span>
               </div>
-              <div style={{ color: 'white', fontSize: '24px', fontWeight: '700' }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' }}>
                 {formatCurrency(holding.current_price)}
               </div>
               <div style={{ color: dayChange >= 0 ? '#22c55e' : '#ef4444', fontSize: '14px', marginTop: '4px' }}>
@@ -364,7 +361,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             <div
               style={{
                 padding: '20px',
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px'
@@ -372,7 +369,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <Calendar size={16} style={{ color: '#3b82f6' }} />
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Purchase Price</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Purchase Price</span>
               </div>
               {isEditing ? (
                 <input
@@ -383,10 +380,10 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
+                    background: 'var(--input-bg)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '24px',
                     fontWeight: '700',
                     outline: 'none'
@@ -395,11 +392,11 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)'; }}
                 />
               ) : (
-                <div style={{ color: 'white', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' }}>
                   {formatCurrency(purchasePrice)}
                 </div>
               )}
-              <div style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
                 {formatDate(holding.purchase_date)}
               </div>
             </div>
@@ -408,7 +405,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             <div
               style={{
                 padding: '20px',
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px'
@@ -416,7 +413,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <Briefcase size={16} style={{ color: '#a855f7' }} />
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Shares Owned</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Shares Owned</span>
               </div>
               {isEditing ? (
                 <input
@@ -427,10 +424,10 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
+                    background: 'var(--input-bg)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '24px',
                     fontWeight: '700',
                     outline: 'none'
@@ -439,11 +436,11 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)'; }}
                 />
               ) : (
-                <div style={{ color: 'white', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' }}>
                   {shares.toFixed(2)}
                 </div>
               )}
-              <div style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
                 shares
               </div>
             </div>
@@ -453,38 +450,38 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
           <div
             style={{
               padding: '24px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '12px',
               marginBottom: '24px'
             }}
           >
-            <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Activity size={20} style={{ color: '#fbbf24' }} />
               Position Summary
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Cost Basis</div>
-                <div style={{ color: 'white', fontSize: '20px', fontWeight: '600' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Cost Basis</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600' }}>
                   {formatCurrency(costBasis)}
                 </div>
               </div>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Market Value</div>
-                <div style={{ color: 'white', fontSize: '20px', fontWeight: '600' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Market Value</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600' }}>
                   {formatCurrency(marketValue)}
                 </div>
               </div>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Total Gain/Loss</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Total Gain/Loss</div>
                 <div style={{ color: totalGain >= 0 ? '#22c55e' : '#ef4444', fontSize: '20px', fontWeight: '600' }}>
                   {formatCurrency(totalGain)}
                 </div>
               </div>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Return</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Return</div>
                 <div style={{ color: gainPercent >= 0 ? '#22c55e' : '#ef4444', fontSize: '20px', fontWeight: '600' }}>
                   {formatPercent(gainPercent)}
                 </div>
@@ -497,77 +494,77 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             <div
               style={{
                 padding: '24px',
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px',
                 marginBottom: '24px'
               }}
             >
-              <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+              <h3 style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
                 Market Information
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
                 {quoteData.market_cap && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Market Cap</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Market Cap</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {quoteData.market_cap}
                     </div>
                   </div>
                 )}
                 {quoteData.pe_ratio && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>P/E Ratio</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>P/E Ratio</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {quoteData.pe_ratio}
                     </div>
                   </div>
                 )}
                 {quoteData.dividend_yield && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Dividend Yield</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Dividend Yield</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {quoteData.dividend_yield}%
                     </div>
                   </div>
                 )}
                 {quoteData.day_high && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Day High</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Day High</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {formatCurrency(quoteData.day_high)}
                     </div>
                   </div>
                 )}
                 {quoteData.day_low && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Day Low</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Day Low</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {formatCurrency(quoteData.day_low)}
                     </div>
                   </div>
                 )}
                 {quoteData.week_52_high && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>52-Week High</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>52-Week High</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {formatCurrency(quoteData.week_52_high)}
                     </div>
                   </div>
                 )}
                 {quoteData.week_52_low && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>52-Week Low</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>52-Week Low</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {formatCurrency(quoteData.week_52_low)}
                     </div>
                   </div>
                 )}
                 {quoteData.volume && (
                   <div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Volume</div>
-                    <div style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Volume</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
                       {new Intl.NumberFormat('en-US', { notation: 'compact' }).format(quoteData.volume)}
                     </div>
                   </div>
@@ -581,13 +578,13 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             <div
               style={{
                 padding: '20px',
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px'
               }}
             >
-              <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Notes</h3>
+              <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Notes</h3>
               {isEditing ? (
                 <textarea
                   value={editData.notes}
@@ -597,10 +594,10 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
+                    background: 'var(--input-bg)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '8px',
-                    color: '#94a3b8',
+                    color: 'var(--text-secondary)',
                     fontSize: '14px',
                     lineHeight: '1.6',
                     outline: 'none',
@@ -611,7 +608,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)'; }}
                 />
               ) : (
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
                   {holding.notes}
                 </p>
               )}

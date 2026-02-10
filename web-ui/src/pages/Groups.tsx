@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Users, DollarSign, ArrowRight, X, Search, Mail } from 'lucide-react';
-import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { groupService, type Group } from '../services/groupService';
@@ -113,7 +112,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
-      <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>
+      <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>
         Create New Group
       </h2>
 
@@ -146,7 +145,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
       )}
 
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
           Group Name *
         </label>
         <input
@@ -159,10 +158,10 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           style={{
             width: '100%',
             padding: '12px',
-            background: 'rgba(0, 0, 0, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--border-light)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '14px',
             outline: 'none'
           }}
@@ -170,7 +169,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
       </div>
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
           Description (optional)
         </label>
         <textarea
@@ -182,10 +181,10 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           style={{
             width: '100%',
             padding: '12px',
-            background: 'rgba(0, 0, 0, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--border-light)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '14px',
             outline: 'none',
             resize: 'vertical'
@@ -194,10 +193,10 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
       </div>
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
           Default Split Method
         </label>
-        <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '12px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '12px' }}>
           How should expenses be split by default in this group?
         </p>
         <select
@@ -207,19 +206,19 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           style={{
             width: '100%',
             padding: '12px',
-            background: 'rgba(0, 0, 0, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--border-light)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '14px',
             outline: 'none',
             cursor: 'pointer'
           }}
         >
-          <option value="equal" style={{ background: '#1e293b' }}>Equal - Split evenly among all members</option>
-          <option value="percentage" style={{ background: '#1e293b' }}>Percentage - Split by percentage</option>
-          <option value="custom" style={{ background: '#1e293b' }}>Custom - Specify amounts per person</option>
-          <option value="shares" style={{ background: '#1e293b' }}>Shares - Split by shares/units</option>
+          <option value="equal" style={{ background: 'var(--bg-secondary)' }}>Equal - Split evenly among all members</option>
+          <option value="percentage" style={{ background: 'var(--bg-secondary)' }}>Percentage - Split by percentage</option>
+          <option value="custom" style={{ background: 'var(--bg-secondary)' }}>Custom - Specify amounts per person</option>
+          <option value="shares" style={{ background: 'var(--bg-secondary)' }}>Shares - Split by shares/units</option>
         </select>
 
         {/* Custom Split Values */}
@@ -230,7 +229,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
             </p>
             {formData.memberEmails.filter(email => email.trim()).map((email, index) => (
               <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px', flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {email || `Member ${index + 1}`}
                 </span>
                 <input
@@ -243,10 +242,10 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
                   style={{
                     width: '120px',
                     padding: '8px 12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border-light)',
                     borderRadius: '6px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '13px',
                     outline: 'none'
                   }}
@@ -254,7 +253,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
               </div>
             ))}
             {formData.memberEmails.filter(email => email.trim()).length === 0 && (
-              <p style={{ color: '#64748b', fontSize: '12px', fontStyle: 'italic' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>
                 Add members above to specify custom split amounts
               </p>
             )}
@@ -269,7 +268,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
             </p>
             {formData.memberEmails.filter(email => email.trim()).map((email, index) => (
               <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px', flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {email || `Member ${index + 1}`}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -284,20 +283,20 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
                     style={{
                       width: '80px',
                       padding: '8px 12px',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'var(--input-bg)',
+                      border: '1px solid var(--border-light)',
                       borderRadius: '6px',
-                      color: 'white',
+                      color: 'var(--text-primary)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
                   />
-                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>%</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>%</span>
                 </div>
               </div>
             ))}
             {formData.memberEmails.filter(email => email.trim()).length === 0 && (
-              <p style={{ color: '#64748b', fontSize: '12px', fontStyle: 'italic' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>
                 Add members above to specify percentage splits
               </p>
             )}
@@ -312,7 +311,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
             </p>
             {formData.memberEmails.filter(email => email.trim()).map((email, index) => (
               <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px', flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {email || `Member ${index + 1}`}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -326,20 +325,20 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
                     style={{
                       width: '80px',
                       padding: '8px 12px',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'var(--input-bg)',
+                      border: '1px solid var(--border-light)',
                       borderRadius: '6px',
-                      color: 'white',
+                      color: 'var(--text-primary)',
                       fontSize: '13px',
                       outline: 'none'
                     }}
                   />
-                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>shares</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>shares</span>
                 </div>
               </div>
             ))}
             {formData.memberEmails.filter(email => email.trim()).length === 0 && (
-              <p style={{ color: '#64748b', fontSize: '12px', fontStyle: 'italic' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>
                 Add members above to specify share amounts
               </p>
             )}
@@ -360,25 +359,25 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
               accentColor: '#3b82f6'
             }}
           />
-          <span style={{ color: '#94a3b8', fontSize: '14px' }}>Auto-include all members in expenses</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Auto-include all members in expenses</span>
         </label>
-        <p style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', marginLeft: '32px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px', marginLeft: '32px' }}>
           Automatically include all group members when creating an expense
         </p>
       </div>
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
           Invite Members (optional)
         </label>
-        <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '12px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '12px' }}>
           You can add members now or invite them later
         </p>
 
         {formData.memberEmails.map((email, index) => (
           <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <Mail size={18} color="#64748b" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <Mail size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="email"
                 value={email}
@@ -387,10 +386,10 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
                 style={{
                   width: '100%',
                   padding: '12px 12px 12px 40px',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none'
                 }}
@@ -422,10 +421,10 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           onClick={handleAddEmail}
           style={{
             padding: '10px 16px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px dashed rgba(255, 255, 255, 0.2)',
+            background: 'var(--surface-hover)',
+            border: '1px dashed var(--border-medium)',
             borderRadius: '8px',
-            color: '#94a3b8',
+            color: 'var(--text-secondary)',
             fontSize: '14px',
             cursor: 'pointer',
             display: 'flex',
@@ -441,7 +440,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+      <div style={{ display: 'flex', gap: '12px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
         <button
           type="submit"
           style={{
@@ -450,7 +449,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
             background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
             border: 'none',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -464,10 +463,10 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           onClick={onCancel}
           style={{
             padding: '12px 24px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'var(--border-light)',
+            border: '1px solid var(--border-medium)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -537,19 +536,18 @@ export const Groups: React.FC = () => {
   if (loading) {
     return (
       <>
-        <Navigation />
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+        <div style={{ minHeight: '100vh', padding: '24px' }}>
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <div style={{
               width: '40px',
               height: '40px',
-              border: '3px solid rgba(255, 255, 255, 0.1)',
+              border: '3px solid var(--border-light)',
               borderTop: '3px solid #22c55e',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               margin: '0 auto'
             }} />
-            <p style={{ color: '#94a3b8', marginTop: '16px' }}>Loading groups...</p>
+            <p style={{ color: 'var(--text-secondary)', marginTop: '16px' }}>Loading groups...</p>
           </div>
         </div>
       </>
@@ -558,17 +556,16 @@ export const Groups: React.FC = () => {
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+                <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
                   Groups
                 </h1>
-                <p style={{ color: '#94a3b8', fontSize: '14px' }}>Split expenses and track shared costs with friends</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Split expenses and track shared costs with friends</p>
               </div>
               <button
                 onClick={handleCreateGroup}
@@ -577,7 +574,7 @@ export const Groups: React.FC = () => {
                   background: '#15803d',
                   border: 'none',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   cursor: 'pointer',
                   fontWeight: '600',
                   display: 'flex',
@@ -597,9 +594,9 @@ export const Groups: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
             <div style={{
               padding: '20px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -614,16 +611,16 @@ export const Groups: React.FC = () => {
                 }}>
                   <Users size={20} color="#3b82f6" />
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Active Groups</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Active Groups</span>
               </div>
-              <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>{groups.length}</p>
+              <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{groups.length}</p>
             </div>
 
             <div style={{
               padding: '20px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -638,16 +635,16 @@ export const Groups: React.FC = () => {
                 }}>
                   <DollarSign size={20} color="#22c55e" />
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>You Are Owed</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>You Are Owed</span>
               </div>
               <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#22c55e' }}>{branding.currencySymbol}{totalOwed.toFixed(2)}</p>
             </div>
 
             <div style={{
               padding: '20px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -662,7 +659,7 @@ export const Groups: React.FC = () => {
                 }}>
                   <DollarSign size={20} color="#ef4444" />
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>You Owe</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>You Owe</span>
               </div>
               <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#ef4444' }}>{branding.currencySymbol}{totalOwe.toFixed(2)}</p>
             </div>
@@ -671,7 +668,7 @@ export const Groups: React.FC = () => {
           {/* Search */}
           <div style={{ marginBottom: '24px' }}>
             <div style={{ position: 'relative' }}>
-              <Search size={20} color="#64748b" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <Search size={20} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="text"
                 placeholder="Search groups..."
@@ -680,10 +677,10 @@ export const Groups: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '12px 12px 12px 44px',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none'
                 }}
@@ -704,7 +701,7 @@ export const Groups: React.FC = () => {
                     alignItems: 'center'
                   }}
                 >
-                  <X size={20} color="#64748b" />
+                  <X size={20} color="var(--text-muted)" />
                 </button>
               )}
             </div>
@@ -714,19 +711,19 @@ export const Groups: React.FC = () => {
           {filteredGroups.length === 0 ? (
             <div style={{
               padding: '60px 20px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               textAlign: 'center'
             }}>
-              <Users size={64} color="#64748b" style={{ margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '8px' }}>
+              <Users size={64} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
                 {searchTerm ? 'No groups match your search' : 'No groups yet'}
               </h3>
               {!searchTerm && (
                 <>
-                  <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '20px' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
                     Create a group to start splitting expenses with friends and family
                   </p>
                   <button
@@ -736,7 +733,7 @@ export const Groups: React.FC = () => {
                       background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                       border: 'none',
                       borderRadius: '8px',
-                      color: 'white',
+                      color: 'var(--text-primary)',
                       fontSize: '14px',
                       fontWeight: '600',
                       cursor: 'pointer',
@@ -758,9 +755,9 @@ export const Groups: React.FC = () => {
                   key={group.id}
                   onClick={() => handleGroupClick(group.id)}
                   style={{
-                    background: 'rgba(17, 24, 39, 0.8)',
+                    background: 'var(--bg-card)',
                     backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: '1px solid var(--border-light)',
                     borderRadius: '16px',
                     padding: '24px',
                     cursor: 'pointer',
@@ -771,7 +768,7 @@ export const Groups: React.FC = () => {
                     e.currentTarget.style.transform = 'translateY(-4px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'var(--border-light)';
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
@@ -787,34 +784,34 @@ export const Groups: React.FC = () => {
                         justifyContent: 'center',
                         fontSize: '24px',
                         fontWeight: 'bold',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
                       }}>
                         {group.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '4px' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
                           {group.name}
                         </h3>
-                        <p style={{ color: '#94a3b8', fontSize: '13px' }}>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                           {group.description || 'No description'}
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={20} color="#64748b" />
+                    <ArrowRight size={20} color="var(--text-muted)" />
                   </div>
 
-                  <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Users size={16} color="#64748b" />
-                        <span style={{ color: '#94a3b8', fontSize: '14px' }}>
+                        <Users size={16} color="var(--text-muted)" />
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                           {group.members?.length || 0} members
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <DollarSign size={16} color="#64748b" />
-                        <span style={{ color: '#94a3b8', fontSize: '14px' }}>View balances</span>
+                        <DollarSign size={16} color="var(--text-muted)" />
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>View balances</span>
                       </div>
                     </div>
 
@@ -840,13 +837,13 @@ export const Groups: React.FC = () => {
           {/* How It Works */}
           <div style={{
             marginTop: '32px',
-            background: 'rgba(17, 24, 39, 0.8)',
+            background: 'var(--bg-card)',
             backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid var(--border-light)',
             borderRadius: '16px',
             padding: '32px'
           }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>
               How Group Expenses Work
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
@@ -861,13 +858,13 @@ export const Groups: React.FC = () => {
                   justifyContent: 'center',
                   fontSize: '28px',
                   fontWeight: 'bold',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   margin: '0 auto 16px'
                 }}>
                   1
                 </div>
-                <h3 style={{ color: 'white', fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>Create a Group</h3>
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.5' }}>
+                <h3 style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>Create a Group</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.5' }}>
                   Add friends, roommates, or travel companions to your group
                 </p>
               </div>
@@ -883,15 +880,15 @@ export const Groups: React.FC = () => {
                   justifyContent: 'center',
                   fontSize: '28px',
                   fontWeight: 'bold',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   margin: '0 auto 16px'
                 }}>
                   2
                 </div>
-                <h3 style={{ color: 'white', fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
+                <h3 style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
                   Add Shared Expenses
                 </h3>
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.5' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.5' }}>
                   Track who paid and how to split each expense
                 </p>
               </div>
@@ -907,15 +904,15 @@ export const Groups: React.FC = () => {
                   justifyContent: 'center',
                   fontSize: '28px',
                   fontWeight: 'bold',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   margin: '0 auto 16px'
                 }}>
                   3
                 </div>
-                <h3 style={{ color: 'white', fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
+                <h3 style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
                   Settle Up
                 </h3>
-                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.5' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.5' }}>
                   See who owes whom and record payments when settled
                 </p>
               </div>
@@ -923,7 +920,7 @@ export const Groups: React.FC = () => {
           </div>
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '13px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
+          <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
             Part of {branding.parentBrand} ecosystem
           </div>
         </div>

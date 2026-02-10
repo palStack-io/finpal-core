@@ -99,10 +99,10 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '12px 16px',
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)',
     borderRadius: '8px',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     outline: 'none',
     transition: 'all 0.3s'
@@ -110,7 +110,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     fontWeight: '600',
     marginBottom: '8px'
@@ -176,12 +176,12 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -199,21 +199,21 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             cursor: 'pointer'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         >
-          <option value="checking" style={{ background: '#0f172a' }}>Checking Account</option>
-          <option value="savings" style={{ background: '#0f172a' }}>Savings Account</option>
-          <option value="credit" style={{ background: '#0f172a' }}>Credit Card</option>
-          <option value="cash" style={{ background: '#0f172a' }}>Cash</option>
-          <option value="investment" style={{ background: '#0f172a' }}>Investment</option>
-          <option value="loan" style={{ background: '#0f172a' }}>Loan</option>
-          <option value="other" style={{ background: '#0f172a' }}>Other</option>
+          <option value="checking" style={{ background: 'var(--bg-primary)' }}>Checking Account</option>
+          <option value="savings" style={{ background: 'var(--bg-primary)' }}>Savings Account</option>
+          <option value="credit" style={{ background: 'var(--bg-primary)' }}>Credit Card</option>
+          <option value="cash" style={{ background: 'var(--bg-primary)' }}>Cash</option>
+          <option value="investment" style={{ background: 'var(--bg-primary)' }}>Investment</option>
+          <option value="loan" style={{ background: 'var(--bg-primary)' }}>Loan</option>
+          <option value="other" style={{ background: 'var(--bg-primary)' }}>Other</option>
         </select>
       </div>
 
@@ -234,12 +234,12 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           disabled={isSubmitting}
           style={inputStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -257,20 +257,20 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             cursor: 'pointer'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         >
-          <option value="USD" style={{ background: '#0f172a' }}>USD ($)</option>
-          <option value="EUR" style={{ background: '#0f172a' }}>EUR (€)</option>
-          <option value="GBP" style={{ background: '#0f172a' }}>GBP (£)</option>
-          <option value="INR" style={{ background: '#0f172a' }}>INR (₹)</option>
-          <option value="CAD" style={{ background: '#0f172a' }}>CAD (C$)</option>
-          <option value="AUD" style={{ background: '#0f172a' }}>AUD (A$)</option>
+          <option value="USD" style={{ background: 'var(--bg-primary)' }}>USD ($)</option>
+          <option value="EUR" style={{ background: 'var(--bg-primary)' }}>EUR (€)</option>
+          <option value="GBP" style={{ background: 'var(--bg-primary)' }}>GBP (£)</option>
+          <option value="INR" style={{ background: 'var(--bg-primary)' }}>INR (₹)</option>
+          <option value="CAD" style={{ background: 'var(--bg-primary)' }}>CAD (C$)</option>
+          <option value="AUD" style={{ background: 'var(--bg-primary)' }}>AUD (A$)</option>
         </select>
       </div>
 
@@ -290,7 +290,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
               style={{
                 padding: '12px',
                 background: color.value,
-                border: formData.color === color.value ? '3px solid white' : '1px solid rgba(255, 255, 255, 0.2)',
+                border: formData.color === color.value ? '3px solid white' : '1px solid var(--border-medium)',
                 borderRadius: '8px',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 transition: 'all 0.3s',
@@ -335,12 +335,12 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             fontFamily: 'inherit'
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+            e.currentTarget.style.background = 'var(--input-bg-focus)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'var(--input-border)';
+            e.currentTarget.style.background = 'var(--input-bg)';
           }}
         />
       </div>
@@ -355,9 +355,9 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             flex: 1,
             padding: '14px 24px',
             background: 'rgba(71, 85, 105, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid var(--border-light)',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '15px',
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',

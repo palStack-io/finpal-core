@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Navigation } from '../components/Navigation';
 import {
   LineChart,
   TrendingUp,
@@ -158,25 +157,24 @@ export const Investments: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'white', fontSize: '18px' }}>Loading investment data...</div>
+      <div style={{ minHeight: '100vh', background: `linear-gradient(to bottom, var(--bg-primary), var(--bg-secondary))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--text-primary)', fontSize: '18px' }}>Loading investment data...</div>
       </div>
     );
   }
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+                <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
                   Investments
                 </h1>
-                <p style={{ color: '#94a3b8', fontSize: '14px' }}>Track and manage your investment portfolio</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Track and manage your investment portfolio</p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
@@ -186,7 +184,7 @@ export const Investments: React.FC = () => {
                     background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                     border: 'none',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -237,18 +235,18 @@ export const Investments: React.FC = () => {
             {/* Total Value */}
             <div style={{
               padding: '24px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(21, 128, 61, 0.2)', borderRadius: '8px' }}>
                   <DollarSign size={20} style={{ color: '#15803d' }} />
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Total Value</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Total Value</span>
               </div>
-              <div style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' }}>
                 {formatCurrency(stats.totalValue)}
               </div>
             </div>
@@ -256,9 +254,9 @@ export const Investments: React.FC = () => {
             {/* Total Gain/Loss */}
             <div style={{
               padding: '24px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
@@ -273,7 +271,7 @@ export const Investments: React.FC = () => {
                     <TrendingDown size={20} style={{ color: '#ef4444' }} />
                   )}
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Total Gain/Loss</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Total Gain/Loss</span>
               </div>
               <div style={{
                 color: stats.totalGain >= 0 ? '#22c55e' : '#ef4444',
@@ -294,18 +292,18 @@ export const Investments: React.FC = () => {
             {/* Total Cost */}
             <div style={{
               padding: '24px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(251, 191, 36, 0.2)', borderRadius: '8px' }}>
                   <Package size={20} style={{ color: '#fbbf24' }} />
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Total Cost</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Total Cost</span>
               </div>
-              <div style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' }}>
                 {formatCurrency(stats.totalCost)}
               </div>
             </div>
@@ -313,18 +311,18 @@ export const Investments: React.FC = () => {
             {/* Holdings Count */}
             <div style={{
               padding: '24px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
                   <BarChart3 size={20} style={{ color: '#3b82f6' }} />
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: '14px' }}>Holdings</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Holdings</span>
               </div>
-              <div style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' }}>
                 {stats.holdingsCount}
               </div>
             </div>
@@ -333,14 +331,14 @@ export const Investments: React.FC = () => {
           {/* Holdings Table */}
           {holdings.length > 0 ? (
             <div style={{
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               overflow: 'hidden'
             }}>
-              <div style={{ padding: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <h2 style={{ color: 'white', fontSize: '20px', fontWeight: '600' }}>
+              <div style={{ padding: '20px', borderBottom: '1px solid var(--border-light)' }}>
+                <h2 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600' }}>
                   Your Holdings
                 </h2>
               </div>
@@ -348,14 +346,14 @@ export const Investments: React.FC = () => {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Symbol</th>
-                      <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Name</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Shares</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Avg Cost</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Current Price</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Market Value</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Gain/Loss</th>
+                    <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Symbol</th>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Name</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Shares</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Avg Cost</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Current Price</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Market Value</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Gain/Loss</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -370,38 +368,38 @@ export const Investments: React.FC = () => {
                           key={holding.id}
                           onClick={() => setSelectedHolding(holding)}
                           style={{
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            borderBottom: '1px solid var(--surface-hover)',
                             transition: 'background 0.2s',
                             cursor: 'pointer'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--table-row-hover)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
                           <td style={{ padding: '16px' }}>
-                            <span style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>{holding.symbol}</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px' }}>{holding.symbol}</span>
                           </td>
                           <td style={{ padding: '16px' }}>
                             <div>
-                              <div style={{ color: 'white', fontSize: '14px' }}>
+                              <div style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
                                 {holding.name || holding.symbol}
                               </div>
                               {holding.sector && (
-                                <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '2px' }}>
                                   {holding.sector}
                                 </div>
                               )}
                             </div>
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'right', color: 'white', fontSize: '14px' }}>
+                          <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' }}>
                             {holding.shares.toFixed(2)}
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'right', color: 'white', fontSize: '14px' }}>
+                          <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' }}>
                             {formatCurrency(holding.purchase_price)}
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'right', color: 'white', fontSize: '14px' }}>
+                          <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' }}>
                             {formatCurrency(holding.current_price)}
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'right', color: 'white', fontSize: '14px', fontWeight: '600' }}>
+                          <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px', fontWeight: '600' }}>
                             {formatCurrency(marketValue)}
                           </td>
                           <td style={{ padding: '16px', textAlign: 'right' }}>
@@ -422,9 +420,9 @@ export const Investments: React.FC = () => {
           ) : (
             <div style={{
               padding: '64px 24px',
-              background: 'rgba(17, 24, 39, 0.8)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               textAlign: 'center'
             }}>
@@ -437,10 +435,10 @@ export const Investments: React.FC = () => {
               }}>
                 <LineChart size={32} style={{ color: '#15803d' }} />
               </div>
-              <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
+              <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
                 No Holdings Yet
               </h3>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '24px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
                 Start tracking your investments by adding your first holding
               </p>
               <button
@@ -453,7 +451,7 @@ export const Investments: React.FC = () => {
                   background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                   border: 'none',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',

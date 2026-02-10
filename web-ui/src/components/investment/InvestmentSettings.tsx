@@ -81,7 +81,7 @@ export const InvestmentSettings: React.FC = () => {
             <p style={{ color: '#fbbf24', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
               Investment Tracking Not Available
             </p>
-            <p style={{ color: '#94a3b8', fontSize: '13px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
               Investment tracking has been disabled by the administrator.
             </p>
           </div>
@@ -129,8 +129,8 @@ export const InvestmentSettings: React.FC = () => {
       {/* Enable/Disable Toggle */}
       <div style={{
         padding: '16px',
-        background: 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        background: 'var(--surface-hover)',
+        border: '1px solid var(--border-light)',
         borderRadius: '8px',
         marginBottom: '20px',
         display: 'flex',
@@ -138,10 +138,10 @@ export const InvestmentSettings: React.FC = () => {
         alignItems: 'center'
       }}>
         <div>
-          <p style={{ color: 'white', fontWeight: '500', fontSize: '14px', marginBottom: '4px' }}>
+          <p style={{ color: 'var(--text-primary)', fontWeight: '500', fontSize: '14px', marginBottom: '4px' }}>
             Enable Investment Tracking
           </p>
-          <p style={{ color: '#64748b', fontSize: '12px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
             Track stocks, ETFs, and other investments in your portfolio
           </p>
         </div>
@@ -160,7 +160,7 @@ export const InvestmentSettings: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: isEnabled ? '#15803d' : 'rgba(255, 255, 255, 0.2)',
+            background: isEnabled ? '#15803d' : 'var(--surface-active)',
             borderRadius: '24px',
             transition: '0.3s',
             opacity: isLoading ? 0.5 : 1
@@ -183,11 +183,11 @@ export const InvestmentSettings: React.FC = () => {
       {/* FMP API Key Section */}
       <div style={{
         padding: '20px',
-        background: 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        background: 'var(--surface-hover)',
+        border: '1px solid var(--border-light)',
         borderRadius: '8px'
       }}>
-        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h4 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Key size={18} />
           Financial Modeling Prep API Key
         </h4>
@@ -215,7 +215,7 @@ export const InvestmentSettings: React.FC = () => {
 
         <form onSubmit={(e) => { e.preventDefault(); handleSaveApiKey(); }}>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
               FMP API Key (Optional)
             </label>
             <input
@@ -230,10 +230,10 @@ export const InvestmentSettings: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '8px',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -245,9 +245,9 @@ export const InvestmentSettings: React.FC = () => {
                 marginTop: '8px',
                 padding: '6px 12px',
                 background: 'transparent',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                border: '1px solid var(--border-medium)',
                 borderRadius: '6px',
-                color: '#94a3b8',
+                color: 'var(--text-secondary)',
                 fontSize: '12px',
                 cursor: 'pointer'
               }}
@@ -265,7 +265,7 @@ export const InvestmentSettings: React.FC = () => {
               background: isLoading ? '#166534' : '#15803d',
               border: 'none',
               borderRadius: '8px',
-              color: 'white',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               fontWeight: '600',
               cursor: isLoading ? 'not-allowed' : 'pointer',

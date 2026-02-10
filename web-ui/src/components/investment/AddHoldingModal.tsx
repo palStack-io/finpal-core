@@ -136,6 +136,25 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
 
   if (!isOpen) return null;
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)',
+    borderRadius: '8px',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
+    outline: 'none'
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    color: 'var(--text-secondary)',
+    fontSize: '14px',
+    fontWeight: '500',
+    marginBottom: '8px'
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -143,7 +162,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.7)',
+      background: 'var(--overlay-bg)',
       backdropFilter: 'blur(4px)',
       display: 'flex',
       alignItems: 'center',
@@ -152,9 +171,8 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
       padding: '20px'
     }}>
       <div style={{
-        background: 'rgba(17, 24, 39, 0.95)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-light)',
         borderRadius: '16px',
         maxWidth: '600px',
         width: '100%',
@@ -164,18 +182,18 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
         {/* Header */}
         <div style={{
           padding: '24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          borderBottom: '1px solid var(--border-light)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <h2 style={{ color: 'white', fontSize: '24px', fontWeight: '700', margin: 0 }}>
+          <h2 style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700', margin: 0 }}>
             Add New Holding
           </h2>
           <button
             onClick={handleClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: 'var(--surface-hover)',
               border: 'none',
               borderRadius: '8px',
               padding: '8px',
@@ -185,10 +203,10 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
               justifyContent: 'center',
               transition: 'background 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-active)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
           >
-            <X size={20} style={{ color: 'white' }} />
+            <X size={20} style={{ color: 'var(--text-primary)' }} />
           </button>
         </div>
 
@@ -215,13 +233,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
           {step === 'search' && (
             <div>
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  color: '#94a3b8',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
+                <label style={labelStyle}>
                   Stock Symbol
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -233,14 +245,9 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                     placeholder="e.g., AAPL, MSFT, GOOGL"
                     disabled={isSearching}
                     style={{
-                      width: '100%',
+                      ...inputStyle,
                       padding: '12px 40px 12px 12px',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '16px',
-                      outline: 'none'
+                      fontSize: '16px'
                     }}
                   />
                   <Search
@@ -250,7 +257,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                       right: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#64748b'
+                      color: 'var(--text-muted)'
                     }}
                   />
                 </div>
@@ -278,7 +285,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
               <div style={{
                 textAlign: 'center',
                 margin: '16px 0',
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 fontSize: '14px'
               }}>
                 or
@@ -297,10 +304,10 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'var(--btn-secondary-bg)',
+                  border: '1px solid var(--btn-secondary-border)',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   fontSize: '16px',
                   fontWeight: '500',
                   cursor: isSearching || !symbol.trim() ? 'not-allowed' : 'pointer',
@@ -326,10 +333,10 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                   <TrendingUp size={24} style={{ color: '#15803d' }} />
                   <div>
-                    <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '700', margin: 0 }}>
+                    <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '700', margin: 0 }}>
                       {stockData.symbol}
                     </h3>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
                       {stockData.name}
                     </p>
                   </div>
@@ -343,31 +350,19 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
 
               {/* Portfolio Selection */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  color: '#94a3b8',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
+                <label style={labelStyle}>
                   Portfolio
                 </label>
                 <select
                   value={portfolioId || ''}
                   onChange={(e) => setPortfolioId(parseInt(e.target.value))}
                   style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    outline: 'none'
+                    ...inputStyle,
+                    cursor: 'pointer'
                   }}
                 >
                   {portfolios.map(p => (
-                    <option key={p.id} value={p.id} style={{ background: '#1e293b' }}>
+                    <option key={p.id} value={p.id} style={{ background: 'var(--bg-primary)' }}>
                       {p.name}
                     </option>
                   ))}
@@ -376,13 +371,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
 
               {/* Shares */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  color: '#94a3b8',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
+                <label style={labelStyle}>
                   Number of Shares
                 </label>
                 <input
@@ -392,28 +381,13 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
+                  style={inputStyle}
                 />
               </div>
 
               {/* Purchase Price */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  color: '#94a3b8',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
+                <label style={labelStyle}>
                   Purchase Price per Share ($)
                 </label>
                 <input
@@ -423,56 +397,26 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
+                  style={inputStyle}
                 />
               </div>
 
               {/* Purchase Date */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  color: '#94a3b8',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
+                <label style={labelStyle}>
                   Purchase Date
                 </label>
                 <input
                   type="date"
                   value={purchaseDate}
                   onChange={(e) => setPurchaseDate(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
+                  style={inputStyle}
                 />
               </div>
 
               {/* Notes */}
               <div style={{ marginBottom: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  color: '#94a3b8',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
+                <label style={labelStyle}>
                   Notes (Optional)
                 </label>
                 <textarea
@@ -481,14 +425,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   placeholder="Add any notes about this investment..."
                   rows={3}
                   style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    outline: 'none',
+                    ...inputStyle,
                     resize: 'vertical'
                   }}
                 />
@@ -502,10 +439,10 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: 'var(--btn-secondary-bg)',
+                    border: '1px solid var(--btn-secondary-border)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     fontWeight: '600',
                     cursor: isSaving ? 'not-allowed' : 'pointer',

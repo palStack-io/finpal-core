@@ -54,7 +54,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: 'var(--overlay-bg)',
           backdropFilter: 'blur(4px)',
           zIndex: 999,
           animation: 'fadeIn 0.3s ease-out'
@@ -70,34 +70,31 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           bottom: 0,
           width: width,
           maxWidth: '100vw',
-          background: 'linear-gradient(to bottom, #0f172a, #1e293b)',
-          boxShadow: '-8px 0 24px rgba(0, 0, 0, 0.5)',
+          background: 'var(--bg-secondary)',
+          boxShadow: 'var(--card-shadow)',
           zIndex: 1000,
           display: 'flex',
           flexDirection: 'column',
           animation: 'slideIn 0.3s ease-out',
-          borderLeft: '1px solid rgba(255, 255, 255, 0.1)'
+          borderLeft: '1px solid var(--border-light)'
         }}
       >
         {/* Header */}
         <div
           style={{
             padding: '24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid var(--border-light)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(17, 24, 39, 0.6)'
+            background: 'var(--bg-card)'
           }}
         >
           <h2
             style={{
               fontSize: '24px',
-              fontWeight: 'bold',
-              background: 'linear-gradient(to right, #86efac, #fbbf24)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              color: 'transparent',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
               margin: 0
             }}
           >

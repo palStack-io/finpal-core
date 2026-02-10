@@ -112,10 +112,10 @@ export const RecurringTransactions: React.FC = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'white', marginBottom: '8px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
             Recurring Transactions
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
             Manage automatic recurring transactions and detect patterns
           </p>
         </div>
@@ -187,11 +187,11 @@ export const RecurringTransactions: React.FC = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <Sparkles size={24} style={{ color: '#fbbf24' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
               Detected Patterns ({patterns.length})
             </h3>
           </div>
-          <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '16px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
             We found these recurring transaction patterns. Create automatic recurring transactions or ignore them.
           </p>
 
@@ -199,7 +199,7 @@ export const RecurringTransactions: React.FC = () => {
             <div
               key={index}
               style={{
-                background: 'rgba(0, 0, 0, 0.3)',
+                background: 'var(--input-bg)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px',
                 padding: '16px',
@@ -208,20 +208,20 @@ export const RecurringTransactions: React.FC = () => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                  <h4 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
                     {pattern.description}
                   </h4>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                       Amount: <strong style={{ color: '#86efac' }}>${pattern.amount.toFixed(2)}</strong>
                     </span>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                       Frequency: <strong style={{ color: '#86efac' }}>{getFrequencyLabel(pattern.frequency)}</strong>
                     </span>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                       Occurrences: <strong style={{ color: '#86efac' }}>{pattern.occurrences}</strong>
                     </span>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                       Confidence: <strong style={{ color: '#86efac' }}>{(pattern.confidence * 100).toFixed(0)}%</strong>
                     </span>
                   </div>
@@ -236,7 +236,7 @@ export const RecurringTransactions: React.FC = () => {
                     background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                     border: '1px solid rgba(21, 128, 61, 0.5)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer'
@@ -252,7 +252,7 @@ export const RecurringTransactions: React.FC = () => {
                     background: 'rgba(71, 85, 105, 0.3)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer'
@@ -268,22 +268,22 @@ export const RecurringTransactions: React.FC = () => {
 
       {/* Recurring Transactions List */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
           Loading recurring transactions...
         </div>
       ) : recurring.length === 0 ? (
         <div style={{
           textAlign: 'center',
           padding: '60px 20px',
-          background: 'rgba(255, 255, 255, 0.05)',
+          background: 'var(--surface-hover)',
           borderRadius: '12px',
           border: '1px dashed rgba(255, 255, 255, 0.2)'
         }}>
           <Repeat size={48} color="#64748b" style={{ margin: '0 auto 16px' }} />
-          <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '8px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '8px' }}>
             No recurring transactions yet
           </p>
-          <p style={{ color: '#64748b', fontSize: '14px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
             Click "Detect Patterns" to find recurring transactions automatically
           </p>
         </div>
@@ -293,7 +293,7 @@ export const RecurringTransactions: React.FC = () => {
             <div
               key={item.id}
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'var(--surface-hover)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px',
                 padding: '16px',
@@ -306,7 +306,7 @@ export const RecurringTransactions: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                   <Repeat size={20} style={{ color: item.active ? '#86efac' : '#64748b' }} />
-                  <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                  <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', margin: 0 }}>
                     {item.description}
                   </h3>
                   {!item.active && (
@@ -315,7 +315,7 @@ export const RecurringTransactions: React.FC = () => {
                       background: 'rgba(100, 116, 139, 0.3)',
                       border: '1px solid rgba(100, 116, 139, 0.5)',
                       borderRadius: '4px',
-                      color: '#94a3b8',
+                      color: 'var(--text-secondary)',
                       fontSize: '11px',
                       fontWeight: '600'
                     }}>
@@ -324,13 +324,13 @@ export const RecurringTransactions: React.FC = () => {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                     Amount: <strong style={{ color: '#86efac' }}>${item.amount.toFixed(2)}</strong>
                   </span>
-                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                     Frequency: <strong style={{ color: '#86efac' }}>{getFrequencyLabel(item.frequency)}</strong>
                   </span>
-                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                     Type: <strong style={{ color: '#86efac' }}>{item.transaction_type}</strong>
                   </span>
                 </div>

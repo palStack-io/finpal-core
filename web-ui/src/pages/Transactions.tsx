@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Navigation } from '../components/Navigation';
 import { Search, Plus, ArrowUpRight, ArrowDownRight, Filter, Calendar, Edit, Trash2, Loader } from 'lucide-react';
 import { transactionsApi, Transaction } from '../services/api/transactions';
 import { useAuthStore } from '../store/authStore';
@@ -84,16 +83,15 @@ export const Transactions: React.FC = () => {
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', background: 'linear-gradient(to right, #86efac, #fbbf24)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+              <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
                 Transactions
               </h1>
-              <p style={{ color: '#94a3b8', fontSize: '14px' }}>Track all your income and expenses</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Track all your income and expenses</p>
             </div>
             <button
               onClick={() => setIsAddPanelOpen(true)}
@@ -105,7 +103,7 @@ export const Transactions: React.FC = () => {
                 background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                 border: '1px solid rgba(21, 128, 61, 0.5)',
                 borderRadius: '8px',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -146,7 +144,7 @@ export const Transactions: React.FC = () => {
             {/* Total Income */}
             <div
               style={{
-                background: 'rgba(17, 24, 39, 0.6)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(134, 239, 172, 0.2)',
                 borderRadius: '12px',
@@ -165,7 +163,7 @@ export const Transactions: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '500' }}>Total Income</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>Total Income</span>
                 <div style={{ background: 'rgba(134, 239, 172, 0.2)', padding: '8px', borderRadius: '8px' }}>
                   <ArrowUpRight size={20} style={{ color: '#86efac' }} />
                 </div>
@@ -178,7 +176,7 @@ export const Transactions: React.FC = () => {
             {/* Total Expenses */}
             <div
               style={{
-                background: 'rgba(17, 24, 39, 0.6)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(239, 68, 68, 0.2)',
                 borderRadius: '12px',
@@ -197,7 +195,7 @@ export const Transactions: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '500' }}>Total Expenses</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>Total Expenses</span>
                 <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
                   <ArrowDownRight size={20} style={{ color: '#ef4444' }} />
                 </div>
@@ -210,7 +208,7 @@ export const Transactions: React.FC = () => {
             {/* Net Balance */}
             <div
               style={{
-                background: 'rgba(17, 24, 39, 0.6)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(251, 191, 36, 0.2)',
                 borderRadius: '12px',
@@ -229,7 +227,7 @@ export const Transactions: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '500' }}>Net Balance</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>Net Balance</span>
                 <div style={{ background: 'rgba(251, 191, 36, 0.2)', padding: '8px', borderRadius: '8px' }}>
                   <Calendar size={20} style={{ color: '#fbbf24' }} />
                 </div>
@@ -243,9 +241,9 @@ export const Transactions: React.FC = () => {
           {/* Filters and Search */}
           <div
             style={{
-              background: 'rgba(17, 24, 39, 0.6)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               padding: '24px',
               marginBottom: '24px'
@@ -253,7 +251,7 @@ export const Transactions: React.FC = () => {
           >
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
               <div style={{ flex: '1', minWidth: '250px', position: 'relative' }}>
-                <Search size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                <Search size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                   type="text"
                   placeholder="Search transactions..."
@@ -262,21 +260,19 @@ export const Transactions: React.FC = () => {
                   style={{
                     width: '100%',
                     padding: '12px 12px 12px 44px',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--input-border)',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.3s'
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.5)';
-                    e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                    e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
+                    e.currentTarget.style.borderColor = 'var(--input-border)';
                   }}
                 />
               </div>
@@ -287,10 +283,10 @@ export const Transactions: React.FC = () => {
                     onClick={() => setFilterType(type)}
                     style={{
                       padding: '12px 24px',
-                      background: filterType === type ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : 'rgba(255, 255, 255, 0.05)',
-                      border: `1px solid ${filterType === type ? 'rgba(21, 128, 61, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
+                      background: filterType === type ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : 'var(--surface-hover)',
+                      border: `1px solid ${filterType === type ? 'rgba(21, 128, 61, 0.5)' : 'var(--border-light)'}`,
                       borderRadius: '8px',
-                      color: filterType === type ? 'white' : '#94a3b8',
+                      color: filterType === type ? 'var(--text-primary)' : 'var(--text-secondary)',
                       fontSize: '14px',
                       fontWeight: '600',
                       cursor: 'pointer',
@@ -298,14 +294,14 @@ export const Transactions: React.FC = () => {
                     }}
                     onMouseEnter={(e) => {
                       if (filterType !== type) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.background = 'var(--border-light)';
+                        e.currentTarget.style.color = 'var(--text-primary)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (filterType !== type) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.background = 'var(--surface-hover)';
+                        e.currentTarget.style.color = 'var(--text-secondary)';
                       }
                     }}
                   >
@@ -319,15 +315,15 @@ export const Transactions: React.FC = () => {
           {/* Transactions List */}
           <div
             style={{
-              background: 'rgba(17, 24, 39, 0.6)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--border-light)',
               borderRadius: '12px',
               padding: '24px'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
                 All Transactions ({filteredTransactions.length})
               </h2>
               <button
@@ -336,21 +332,21 @@ export const Transactions: React.FC = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '8px 16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--border-light)',
                   borderRadius: '8px',
-                  color: '#94a3b8',
+                  color: 'var(--text-secondary)',
                   fontSize: '14px',
                   cursor: 'pointer',
                   transition: 'all 0.3s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.background = 'var(--border-light)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.color = '#94a3b8';
+                  e.currentTarget.style.background = 'var(--surface-hover)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
                 }}
               >
                 <Filter size={18} />
@@ -361,7 +357,7 @@ export const Transactions: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {filteredTransactions.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                  <p style={{ color: '#64748b', fontSize: '14px' }}>No transactions found</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No transactions found</p>
                 </div>
               ) : (
                 filteredTransactions.map((transaction) => (
@@ -373,20 +369,20 @@ export const Transactions: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '16px',
-                      background: 'rgba(15, 23, 42, 0.4)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      background: 'var(--surface-hover)',
+                      border: '1px solid var(--border-light)',
                       borderRadius: '8px',
                       transition: 'all 0.3s',
                       cursor: 'pointer'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.6)';
+                      e.currentTarget.style.background = 'var(--table-row-hover)';
                       e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.3)';
                       e.currentTarget.style.transform = 'translateX(4px)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.4)';
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.background = 'var(--surface-hover)';
+                      e.currentTarget.style.borderColor = 'var(--border-light)';
                       e.currentTarget.style.transform = 'translateX(0)';
                     }}
                   >
@@ -410,21 +406,21 @@ export const Transactions: React.FC = () => {
                         )}
                       </div>
                       <div>
-                        <p style={{ color: 'white', fontWeight: '600', fontSize: '15px', marginBottom: '4px' }}>
+                        <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px', marginBottom: '4px' }}>
                           {transaction.description || transaction.name}
                         </p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ color: '#64748b', fontSize: '13px' }}>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                             {new Date(transaction.date).toLocaleDateString()}
                           </span>
-                          <span style={{ color: '#334155' }}>•</span>
-                          <span style={{ color: '#64748b', fontSize: '13px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>•</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                             {transaction.category?.name || 'Uncategorized'}
                           </span>
                           {transaction.account?.name && (
                             <>
-                              <span style={{ color: '#334155' }}>•</span>
-                              <span style={{ color: '#64748b', fontSize: '13px' }}>
+                              <span style={{ color: 'var(--text-muted)' }}>•</span>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                                 {transaction.account.name}
                               </span>
                             </>
@@ -437,7 +433,7 @@ export const Transactions: React.FC = () => {
                         style={{
                           fontSize: '18px',
                           fontWeight: 'bold',
-                          color: transaction.transaction_type === 'income' ? '#86efac' : transaction.transaction_type === 'transfer' ? '#3b82f6' : 'white'
+                          color: transaction.transaction_type === 'income' ? '#86efac' : transaction.transaction_type === 'transfer' ? '#3b82f6' : 'var(--text-primary)'
                         }}
                       >
                         {transaction.transaction_type === 'income' && '+'}
@@ -506,7 +502,7 @@ export const Transactions: React.FC = () => {
           )}
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '13px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '40px' }}>
+          <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
             Part of {branding.parentBrand} ecosystem
           </div>
         </div>

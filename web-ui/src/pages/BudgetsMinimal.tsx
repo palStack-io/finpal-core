@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, ChevronDown, ChevronUp, Edit2, Trash2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { budgetService, type Budget } from '../services/budgetService';
@@ -108,7 +107,7 @@ const BudgetsMinimal = () => {
         return {
           ...budget,
           category_name: category?.name || 'Uncategorized',
-          category_icon: category?.icon || '📦',
+          category_icon: category?.icon || '',
           category_color: category?.color || '#6366f1',
           transactions: budgetTransactions,
         };
@@ -283,17 +282,14 @@ const BudgetsMinimal = () => {
   if (loading) {
     return (
       <>
-        <Navigation />
         <div style={{
           minHeight: '100vh',
-          background: 'linear-gradient(to bottom, #0f172a, #1e293b)',
           padding: '24px',
-          paddingLeft: '80px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <div style={{ color: 'white', fontSize: '18px' }}>Loading budgets...</div>
+          <div style={{ color: 'var(--text-primary)', fontSize: '18px' }}>Loading budgets...</div>
         </div>
       </>
     );
@@ -301,8 +297,7 @@ const BudgetsMinimal = () => {
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
 
           {/* Simple Header */}
@@ -310,16 +305,13 @@ const BudgetsMinimal = () => {
             <div>
               <h1 style={{
                 fontSize: '32px',
-                fontWeight: 'bold',
+                fontWeight: 700,
                 marginBottom: '8px',
-                background: 'linear-gradient(to right, #86efac, #fbbf24)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent'
+                color: 'var(--text-primary)'
               }}>
                 Budgets
               </h1>
-              <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
                 Track your spending against your budgets
               </p>
             </div>
@@ -329,8 +321,8 @@ const BudgetsMinimal = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: 'rgba(17, 24, 39, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '8px',
                 padding: '6px 12px'
               }}>
@@ -340,7 +332,7 @@ const BudgetsMinimal = () => {
                     padding: '4px',
                     background: 'transparent',
                     border: 'none',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -355,7 +347,7 @@ const BudgetsMinimal = () => {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '140px', justifyContent: 'center' }}>
                   <Calendar size={14} color="#86efac" />
-                  <span style={{ fontSize: '13px', fontWeight: '500', color: 'white' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)' }}>
                     {formatMonthYear(selectedMonth)}
                   </span>
                 </div>
@@ -366,7 +358,7 @@ const BudgetsMinimal = () => {
                     padding: '4px',
                     background: 'transparent',
                     border: 'none',
-                    color: 'white',
+                    color: 'var(--text-primary)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -408,7 +400,7 @@ const BudgetsMinimal = () => {
                   background: '#15803d',
                   border: 'none',
                   borderRadius: '10px',
-                  color: 'white',
+                  color: 'var(--text-primary)',
                   fontWeight: '600',
                   cursor: 'pointer',
                   display: 'flex',
@@ -427,17 +419,17 @@ const BudgetsMinimal = () => {
 
           {/* Top Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-            <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Total Budgeted</p>
-              <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: 'white' }}>{formatCurrency(totalBudgeted)}</h3>
-              <p style={{ color: '#64748b', fontSize: '13px' }}>Across {budgets.length} categories</p>
+            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Budgeted</p>
+              <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(totalBudgeted)}</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Across {budgets.length} categories</p>
             </div>
 
-            <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Total Spent</p>
-              <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: 'white' }}>{formatCurrency(totalSpent)}</h3>
+            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Spent</p>
+              <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(totalSpent)}</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{
                     width: `${Math.min((totalSpent/totalBudgeted)*100, 100)}%`,
                     height: '100%',
@@ -456,16 +448,16 @@ const BudgetsMinimal = () => {
               </div>
             </div>
 
-            <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Remaining</p>
+            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Remaining</p>
               <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: totalRemaining >= 0 ? '#22c55e' : '#ef4444' }}>
                 {formatCurrency(Math.abs(totalRemaining))}
               </h3>
-              <p style={{ color: '#64748b', fontSize: '13px' }}>{daysLeftInMonth()} days left this month</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{daysLeftInMonth()} days left this month</p>
             </div>
 
-            <div style={{ background: 'rgba(17, 24, 39, 0.8)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>Budget Health</p>
+            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Budget Health</p>
               <div style={{ marginTop: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
                   <span style={{ color: '#22c55e' }}>{budgets.filter(b => b.percentage < 80).length} On Track</span>
@@ -484,14 +476,14 @@ const BudgetsMinimal = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {budgets.length === 0 ? (
               <div style={{
-                background: 'rgba(17, 24, 39, 0.8)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '16px',
                 padding: '48px',
                 textAlign: 'center'
               }}>
-                <p style={{ color: '#94a3b8', fontSize: '16px' }}>No budgets yet. Create your first budget to start tracking!</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>No budgets yet. Create your first budget to start tracking!</p>
               </div>
             ) : (
               budgets.map((budget) => {
@@ -504,9 +496,9 @@ const BudgetsMinimal = () => {
                   <div
                     key={budget.id}
                     style={{
-                      background: 'rgba(17, 24, 39, 0.8)',
+                      background: 'var(--bg-card)',
                       backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      border: '1px solid var(--border-light)',
                       borderRadius: '16px',
                       overflow: 'hidden',
                       transition: 'all 0.3s'
@@ -521,7 +513,7 @@ const BudgetsMinimal = () => {
                       }}
                       onClick={() => handleExpandBudget(budget.id)}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.background = 'var(--surface-hover)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
@@ -536,7 +528,7 @@ const BudgetsMinimal = () => {
                         {/* Category & Progress */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', margin: 0 }}>
+                            <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
                               {budget.category_name}
                             </h3>
                             {isOver && (
@@ -561,10 +553,10 @@ const BudgetsMinimal = () => {
                               style={{
                                 marginLeft: 'auto',
                                 padding: '6px',
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                background: 'var(--border-light)',
+                                border: '1px solid var(--border-medium)',
                                 borderRadius: '6px',
-                                color: 'white',
+                                color: 'var(--text-primary)',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -572,10 +564,10 @@ const BudgetsMinimal = () => {
                                 transition: 'all 0.2s'
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                                e.currentTarget.style.background = 'var(--border-medium)';
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.background = 'var(--border-light)';
                               }}
                             >
                               <Edit2 size={16} />
@@ -587,7 +579,7 @@ const BudgetsMinimal = () => {
                             <div style={{
                               width: '100%',
                               height: '8px',
-                              background: 'rgba(255, 255, 255, 0.1)',
+                              background: 'var(--progress-track)',
                               borderRadius: '4px',
                               overflow: 'hidden'
                             }}>
@@ -607,8 +599,8 @@ const BudgetsMinimal = () => {
 
                           {/* Spent / Budget */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-                              <span style={{ color: 'white', fontWeight: '600', fontSize: '16px' }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
+                              <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
                                 {formatCurrency(budget.spent)}
                               </span>
                               {' '}of {formatCurrency(budget.amount)}
@@ -628,7 +620,7 @@ const BudgetsMinimal = () => {
                         </div>
 
                         {/* Expand Icon */}
-                        <div style={{ flexShrink: 0, color: '#64748b' }}>
+                        <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
                           {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                         </div>
                       </div>
@@ -638,7 +630,7 @@ const BudgetsMinimal = () => {
                     {isExpanded && (
                       <div style={{
                         padding: '0 24px 24px 24px',
-                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderTop: '1px solid var(--border-light)',
                         paddingTop: '16px'
                       }}>
                         {budget.transactions && budget.transactions.length > 0 ? (
@@ -648,8 +640,8 @@ const BudgetsMinimal = () => {
                                 key={txn.id}
                                 style={{
                                   padding: '14px 16px',
-                                  background: 'rgba(255, 255, 255, 0.03)',
-                                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                                  background: 'var(--surface-hover)',
+                                  border: '1px solid var(--border-light)',
                                   borderRadius: '10px',
                                   display: 'flex',
                                   justifyContent: 'space-between',
@@ -662,35 +654,35 @@ const BudgetsMinimal = () => {
                                   handleTransactionClick(txn);
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                                  e.currentTarget.style.background = 'var(--border-light)';
                                   e.currentTarget.style.borderColor = `${budget.category_color}60`;
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                                  e.currentTarget.style.background = 'var(--surface-hover)';
+                                  e.currentTarget.style.borderColor = 'var(--border-light)';
                                 }}
                               >
                                 <div style={{ flex: 1 }}>
-                                  <p style={{ color: 'white', fontSize: '15px', fontWeight: '500', margin: 0, marginBottom: '4px' }}>
+                                  <p style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '500', margin: 0, marginBottom: '4px' }}>
                                     {txn.description || txn.name || 'Unnamed Transaction'}
                                   </p>
-                                  <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
+                                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
                                     {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                   </p>
                                 </div>
-                                <p style={{ fontSize: '16px', fontWeight: '600', color: 'white', margin: 0 }}>
+                                <p style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
                                   {formatCurrency(txn.amount)}
                                 </p>
                               </div>
                             ))}
                             {budget.transactions.length > 10 && (
-                              <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', marginTop: '8px' }}>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '8px' }}>
                                 Showing 10 of {budget.transactions.length} transactions
                               </p>
                             )}
                           </div>
                         ) : (
-                          <p style={{ color: '#64748b', fontSize: '14px', textAlign: 'center', padding: '16px' }}>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '16px' }}>
                             No transactions yet in this category
                           </p>
                         )}
@@ -725,7 +717,7 @@ const BudgetsMinimal = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Category *
                     </label>
                     <select
@@ -735,18 +727,18 @@ const BudgetsMinimal = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         fontSize: '15px',
                         outline: 'none',
                         cursor: 'pointer'
                       }}
                     >
-                      <option value="" style={{ background: '#1e293b' }}>Select a category</option>
+                      <option value="" style={{ background: 'var(--bg-secondary)' }}>Select a category</option>
                       {categories.filter(cat => !cat.parent_id).map(cat => (
-                        <option key={cat.id} value={cat.id} style={{ background: '#1e293b' }}>
+                        <option key={cat.id} value={cat.id} style={{ background: 'var(--bg-secondary)' }}>
                           {cat.icon} {cat.name}
                         </option>
                       ))}
@@ -754,7 +746,7 @@ const BudgetsMinimal = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Budget Amount *
                     </label>
                     <input
@@ -768,10 +760,10 @@ const BudgetsMinimal = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         fontSize: '15px',
                         outline: 'none'
                       }}
@@ -779,7 +771,7 @@ const BudgetsMinimal = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Period *
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
@@ -790,10 +782,10 @@ const BudgetsMinimal = () => {
                           onClick={() => setBudgetFormData(prev => ({ ...prev, period: period as 'weekly' | 'monthly' | 'yearly' }))}
                           style={{
                             padding: '12px',
-                            background: budgetFormData.period === period ? 'rgba(34, 197, 94, 0.2)' : 'rgba(0, 0, 0, 0.3)',
-                            border: `1px solid ${budgetFormData.period === period ? 'rgba(34, 197, 94, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+                            background: budgetFormData.period === period ? 'rgba(34, 197, 94, 0.2)' : 'var(--input-bg)',
+                            border: `1px solid ${budgetFormData.period === period ? 'rgba(34, 197, 94, 0.4)' : 'var(--input-border)'}`,
                             borderRadius: '8px',
-                            color: budgetFormData.period === period ? '#22c55e' : 'white',
+                            color: budgetFormData.period === period ? '#22c55e' : 'var(--text-primary)',
                             fontSize: '14px',
                             cursor: 'pointer',
                             fontWeight: '500',
@@ -807,7 +799,7 @@ const BudgetsMinimal = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
                       Start Date *
                     </label>
                     <input
@@ -818,10 +810,10 @@ const BudgetsMinimal = () => {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
                         borderRadius: '8px',
-                        color: 'white',
+                        color: 'var(--text-primary)',
                         fontSize: '15px',
                         outline: 'none'
                       }}
@@ -834,8 +826,8 @@ const BudgetsMinimal = () => {
                     alignItems: 'center',
                     gap: '12px',
                     padding: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--input-border)',
                     borderRadius: '8px'
                   }}>
                     <input
@@ -853,7 +845,7 @@ const BudgetsMinimal = () => {
                     <label
                       htmlFor="rollover"
                       style={{
-                        color: '#94a3b8',
+                        color: 'var(--text-secondary)',
                         fontSize: '14px',
                         fontWeight: '500',
                         cursor: 'pointer',
@@ -895,10 +887,10 @@ const BudgetsMinimal = () => {
                     style={{
                       flex: 1,
                       padding: '14px',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      background: 'var(--border-light)',
+                      border: '1px solid var(--border-medium)',
                       borderRadius: '8px',
-                      color: 'white',
+                      color: 'var(--text-primary)',
                       fontSize: '15px',
                       fontWeight: '600',
                       cursor: 'pointer'
@@ -914,7 +906,7 @@ const BudgetsMinimal = () => {
                       background: '#15803d',
                       border: 'none',
                       borderRadius: '8px',
-                      color: 'white',
+                      color: 'var(--text-primary)',
                       fontSize: '15px',
                       fontWeight: '600',
                       cursor: 'pointer'

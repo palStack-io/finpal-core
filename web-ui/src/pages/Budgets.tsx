@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Target, TrendingUp, AlertCircle, Edit2, Trash2, Calendar, X, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Navigation } from '../components/Navigation';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { budgetService, type Budget } from '../services/budgetService';
@@ -543,8 +542,7 @@ export const Budgets: React.FC = () => {
   if (loading) {
     return (
       <>
-        <Navigation />
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+        <div style={{ minHeight: '100vh', padding: '24px' }}>
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <div style={{
               width: '40px',
@@ -564,8 +562,7 @@ export const Budgets: React.FC = () => {
 
   return (
     <>
-      <Navigation />
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #0f172a, #1e293b)', padding: '24px', paddingLeft: '80px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>

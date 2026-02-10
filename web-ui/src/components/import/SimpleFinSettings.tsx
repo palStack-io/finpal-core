@@ -128,7 +128,7 @@ export const SimpleFinSettings: React.FC = () => {
             <p style={{ color: '#fbbf24', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
               SimpleFin Not Available
             </p>
-            <p style={{ color: '#94a3b8', fontSize: '13px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
               SimpleFin integration has been disabled by the administrator.
             </p>
           </div>
@@ -176,17 +176,17 @@ export const SimpleFinSettings: React.FC = () => {
       {/* Connection Status */}
       <div style={{
         padding: '20px',
-        background: 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        background: 'var(--surface-hover)',
+        border: '1px solid var(--border-light)',
         borderRadius: '8px',
         marginBottom: '20px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+            <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
               Connection Status
             </h3>
-            <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
               {isConnected ? `Connected • ${accountCount} account(s)` : 'Not connected'}
             </p>
           </div>
@@ -204,7 +204,7 @@ export const SimpleFinSettings: React.FC = () => {
         </div>
 
         {lastSync && (
-          <p style={{ color: '#64748b', fontSize: '13px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
             Last synced: {new Date(lastSync).toLocaleString()}
           </p>
         )}
@@ -214,8 +214,8 @@ export const SimpleFinSettings: React.FC = () => {
       {isConnected && (
         <div style={{
           padding: '16px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          background: 'var(--surface-hover)',
+          border: '1px solid var(--border-light)',
           borderRadius: '8px',
           marginBottom: '20px',
           display: 'flex',
@@ -223,10 +223,10 @@ export const SimpleFinSettings: React.FC = () => {
           alignItems: 'center'
         }}>
           <div>
-            <p style={{ color: 'white', fontWeight: '500', fontSize: '14px', marginBottom: '4px' }}>
+            <p style={{ color: 'var(--text-primary)', fontWeight: '500', fontSize: '14px', marginBottom: '4px' }}>
               Enable SimpleFin Sync
             </p>
-            <p style={{ color: '#64748b', fontSize: '12px' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
               Automatically sync transactions from connected accounts
             </p>
           </div>
@@ -245,7 +245,7 @@ export const SimpleFinSettings: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              background: isEnabled ? '#15803d' : 'rgba(255, 255, 255, 0.2)',
+              background: isEnabled ? '#15803d' : 'var(--surface-active)',
               borderRadius: '24px',
               transition: '0.3s',
               opacity: isLoading ? 0.5 : 1
@@ -276,7 +276,7 @@ export const SimpleFinSettings: React.FC = () => {
             background: '#15803d',
             border: 'none',
             borderRadius: '8px',
-            color: 'white',
+            color: 'var(--text-primary)',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -298,11 +298,11 @@ export const SimpleFinSettings: React.FC = () => {
       {!isConnected && showConnectForm && (
         <div style={{
           padding: '20px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          background: 'var(--surface-hover)',
+          border: '1px solid var(--border-light)',
           borderRadius: '8px'
         }}>
-          <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
+          <h4 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
             Connect SimpleFin
           </h4>
 
@@ -327,7 +327,7 @@ export const SimpleFinSettings: React.FC = () => {
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', color: '#94a3b8', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
               SimpleFin Access URL
             </label>
             <input
@@ -342,10 +342,10 @@ export const SimpleFinSettings: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--input-border)',
                 borderRadius: '8px',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -363,10 +363,10 @@ export const SimpleFinSettings: React.FC = () => {
               style={{
                 flex: 1,
                 padding: '12px',
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'var(--btn-secondary-bg)',
+                border: '1px solid var(--btn-secondary-border)',
                 borderRadius: '8px',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 fontWeight: '600',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -384,7 +384,7 @@ export const SimpleFinSettings: React.FC = () => {
                 background: (isLoading || !accessUrl.trim()) ? '#166534' : '#15803d',
                 border: 'none',
                 borderRadius: '8px',
-                color: 'white',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 fontWeight: '600',
                 cursor: (isLoading || !accessUrl.trim()) ? 'not-allowed' : 'pointer',
