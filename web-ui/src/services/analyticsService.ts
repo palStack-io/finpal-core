@@ -33,6 +33,9 @@ export interface MonthlyComparison {
   income: number;
   expenses: number;
   net: number;
+  income_change_pct: number;
+  expenses_change_pct: number;
+  net_change_pct: number;
 }
 
 export interface DashboardData {
@@ -176,9 +179,9 @@ export const analyticsService = {
 
     const response = await api.get<{
       success: boolean;
-      comparison: MonthlyComparison[];
+      data: MonthlyComparison[];
     }>(`/api/v1/analytics/monthly-comparison?${params.toString()}`);
-    return response.data.comparison;
+    return response.data.data;
   },
 
   /**

@@ -556,6 +556,61 @@ class AnalyticsService:
 
         return monthly_data
 
+    def get_monthly_comparison(self, user_id, months=6):
+        """Get month-over-month comparison with percentage changes"""
+        # Get cashflow data (already calculates monthly income/expenses)
+        cashflow = self.get_cashflow_data(user_id, months)
+
+        result = []
+        for i, month_data in enumerate(cashflow):
+            comparison = {
+                'month': month_data['month'],
+                'income': month_data['income'],
+                'expenses': month_data['expenses'],
+                'net': month_data['savings'],
+                'income_change_pct': 0.0,
+                'expenses_change_pct': 0.0,
+                'net_change_pct': 0.0,
+            }
+
+            # Calculate % change vs previous month
+            if i > 0:
+                prev = cashflow[i - 1]
+
+                # Income change %
+                if prev['income'] > 0:
+                    comparison['income_change_pct'] = round(
+                        ((month_data['income'] - prev['income']) / prev['income']) * 100, 1
+                    )
+                elif month_data['income'] > 0:
+                    # Previous was 0, current has income = infinite growth, cap at 100%
+                    comparison['income_change_pct'] = 100.0
+
+                # Expenses change %
+                if prev['expenses'] > 0:
+                    comparison['expenses_change_pct'] = round(
+                        ((month_data['expenses'] - prev['expenses']) / prev['expenses']) * 100, 1
+                    )
+                elif month_data['expenses'] > 0:
+                    # Previous was 0, current has expenses
+                    comparison['expenses_change_pct'] = 100.0
+
+                # Net change % (more complex due to positive/negative values)
+                prev_savings = prev['savings']
+                curr_savings = month_data['savings']
+
+                if prev_savings != 0:
+                    comparison['net_change_pct'] = round(
+                        ((curr_savings - prev_savings) / abs(prev_savings)) * 100, 1
+                    )
+                elif curr_savings != 0:
+                    # Previous was 0, use simplified comparison
+                    comparison['net_change_pct'] = 100.0 if curr_savings > 0 else -100.0
+
+            result.append(comparison)
+
+        return result
+
     def get_financial_health(self, user_id):
         """Calculate financial health metrics"""
         from datetime import datetime

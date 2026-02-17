@@ -289,3 +289,33 @@ class NetWorth(Resource):
                 'success': False,
                 'error': str(e)
             }, 500
+
+
+@ns.route('/monthly-comparison')
+class MonthlyComparison(Resource):
+    @ns.doc('get_monthly_comparison', security='Bearer')
+    @jwt_required()
+    def get(self):
+        """Get month-over-month comparison with percentage changes"""
+        from flask import request
+        current_user_id = get_jwt_identity()
+
+        try:
+            # Get months parameter (default to 6)
+            months = request.args.get('months', default=6, type=int)
+
+            # Get comparison data from service
+            comparison_data = analytics_service.get_monthly_comparison(current_user_id, months)
+
+            return {
+                'success': True,
+                'data': comparison_data
+            }, 200
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'error': str(e)
+            }, 500
