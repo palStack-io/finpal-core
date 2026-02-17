@@ -86,7 +86,7 @@ class BudgetSchema(Schema):
     user_id = fields.Str(dump_only=True)
     start_date = fields.Date()
     end_date = fields.Date(allow_none=True)
-    is_active = fields.Bool()
+    is_active = fields.Bool(attribute='active')
     created_at = fields.DateTime(dump_only=True)
 
     # Nested category
