@@ -32,16 +32,21 @@ class AccountList(Resource):
         from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all accounts for the household
-        accounts = Account.query.filter(Account.user_id.in_(get_all_user_ids())).all()
+        try:
+            # Get all accounts for the household
+            accounts = Account.query.filter(Account.user_id.in_(get_all_user_ids())).all()
 
-        # Serialize
-        result = accounts_schema.dump(accounts)
+            # Serialize
+            result = accounts_schema.dump(accounts)
 
-        return {
-            'success': True,
-            'accounts': result
-        }, 200
+            return {
+                'success': True,
+                'accounts': result
+            }, 200
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {'success': False, 'error': str(e)}, 500
 
     @ns.doc('create_account', security='Bearer')
     @ns.expect(account_model)

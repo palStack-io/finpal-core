@@ -31,16 +31,21 @@ class BudgetList(Resource):
         from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all budgets for the household
-        budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids())).all()
+        try:
+            # Get all budgets for the household
+            budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids())).all()
 
-        # Serialize
-        result = budgets_schema.dump(budgets)
+            # Serialize
+            result = budgets_schema.dump(budgets)
 
-        return {
-            'success': True,
-            'budgets': result
-        }, 200
+            return {
+                'success': True,
+                'budgets': result
+            }, 200
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {'success': False, 'error': str(e)}, 500
 
     @ns.doc('create_budget', security='Bearer')
     @ns.expect(budget_model)
