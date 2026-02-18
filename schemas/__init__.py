@@ -65,7 +65,6 @@ class AccountSchema(Schema):
     status = fields.Str()
     color = fields.Str()
     user_id = fields.Str(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
 
     # Calculated balance
     current_balance = fields.Method('get_current_balance', dump_only=True)
@@ -83,8 +82,7 @@ class BudgetSchema(Schema):
     period = fields.Str(required=True, validate=validate.OneOf(['monthly', 'weekly', 'yearly']))
     category_id = fields.Int(allow_none=True)
     user_id = fields.Str(dump_only=True)
-    start_date = fields.Date()
-    end_date = fields.Date(allow_none=True)
+    start_date = fields.DateTime()
     is_active = fields.Bool(attribute='active')
     created_at = fields.DateTime(dump_only=True)
 
