@@ -53,6 +53,22 @@ def create_app(config_name=None):
     app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 2592000  # 30 days
     jwt = JWTManager(app)
 
+    @jwt.unauthorized_loader
+    def unauthorized_response(reason):
+        return {'message': 'Missing or invalid authorization token', 'error': 'authorization_required'}, 401
+
+    @jwt.invalid_token_loader
+    def invalid_token_response(reason):
+        return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
+
+    @jwt.expired_token_loader
+    def expired_token_response(jwt_header, jwt_payload):
+        return {'message': 'Token has expired', 'error': 'token_expired'}, 401
+
+    @jwt.revoked_token_loader
+    def revoked_token_response(jwt_header, jwt_payload):
+        return {'message': 'Token has been revoked', 'error': 'token_revoked'}, 401
+
     # Configure CORS for React Native and web frontend
     CORS(app, resources={
         r"/api/*": {
