@@ -60,7 +60,7 @@ class Expense(db.Model):
         # Get the user who paid
         payer = User.query.filter_by(id=self.paid_by).first()
         payer_name = payer.name if payer else "Unknown"
-        payer_email = payer.id
+        payer_email = payer.id if payer else (self.paid_by or '')
         
         # Get all people this expense is split with
         split_with_ids = self.split_with.split(',') if self.split_with else []

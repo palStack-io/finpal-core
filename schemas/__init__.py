@@ -96,15 +96,24 @@ class BudgetSchema(Schema):
 
     def get_spent(self, obj):
         """Calculate spent amount"""
-        return obj.get_spent() if hasattr(obj, 'get_spent') else 0
+        try:
+            return obj.get_spent() if hasattr(obj, 'get_spent') else 0
+        except Exception:
+            return 0
 
     def get_remaining(self, obj):
         """Calculate remaining amount"""
-        return obj.get_remaining() if hasattr(obj, 'get_remaining') else obj.amount
+        try:
+            return obj.get_remaining() if hasattr(obj, 'get_remaining') else obj.amount
+        except Exception:
+            return obj.amount
 
     def get_percentage(self, obj):
         """Calculate percentage used"""
-        return obj.get_percentage() if hasattr(obj, 'get_percentage') else 0
+        try:
+            return obj.get_percentage() if hasattr(obj, 'get_percentage') else 0
+        except Exception:
+            return 0
 
 
 class GroupSchema(Schema):
