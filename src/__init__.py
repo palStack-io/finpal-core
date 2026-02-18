@@ -26,6 +26,10 @@ def create_app(config_name=None):
     # This fixes HTTPS redirect URLs when behind SSL-terminating proxies (Traefik, Caddy, etc.)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
+    # Disable strict slashes so /accounts and /accounts/ both work without 308 redirect
+    # (308 redirects cause HTTP clients to drop the Authorization header)
+    app.url_map.strict_slashes = False
+
     # Load configuration
     config = get_config()
     app.config.from_object(config)

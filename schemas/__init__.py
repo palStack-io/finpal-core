@@ -89,6 +89,10 @@ class BudgetSchema(Schema):
     # Nested category
     category = fields.Nested(CategorySchema, dump_only=True)
 
+    # Rollover fields
+    rollover = fields.Bool(load_default=False)
+    rollover_amount = fields.Float(dump_only=True, load_default=0.0)
+
     # Progress calculation
     spent = fields.Method('get_spent', dump_only=True)
     remaining = fields.Method('get_remaining', dump_only=True)

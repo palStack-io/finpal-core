@@ -99,7 +99,8 @@ class Login(Resource):
                 'email': user.id,  # id IS the email
                 'default_currency_code': user.default_currency_code,
                 'is_demo_user': is_demo,
-                'hasCompletedOnboarding': user.has_completed_onboarding
+                'hasCompletedOnboarding': user.has_completed_onboarding,
+                'profile_emoji': user.profile_emoji,
             }
         }
 
