@@ -5,6 +5,17 @@ Provides JSON API endpoints for web and mobile frontends
 
 from flask import Blueprint
 from flask_restx import Api
+from flask_jwt_extended.exceptions import (
+    NoAuthorizationError,
+    InvalidHeaderError,
+    JWTDecodeError,
+    WrongTokenError,
+    RevokedTokenError,
+    FreshTokenRequired,
+    UserLookupError,
+    UserClaimsVerificationError,
+)
+from jwt.exceptions import ExpiredSignatureError, DecodeError
 
 # Create main API blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -26,6 +37,40 @@ api = Api(
     },
     security='Bearer'
 )
+
+# Register JWT error handlers on the Flask-RESTX Api so they fire
+# before RESTX's generic 500 handler catches them.
+@api.errorhandler(NoAuthorizationError)
+def handle_no_authorization(error):
+    return {'message': 'Missing authorization token', 'error': 'authorization_required'}, 401
+
+@api.errorhandler(InvalidHeaderError)
+def handle_invalid_header(error):
+    return {'message': 'Invalid authorization header', 'error': 'invalid_header'}, 401
+
+@api.errorhandler(JWTDecodeError)
+def handle_decode_error(error):
+    return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
+
+@api.errorhandler(WrongTokenError)
+def handle_wrong_token(error):
+    return {'message': 'Wrong token type', 'error': 'wrong_token'}, 401
+
+@api.errorhandler(RevokedTokenError)
+def handle_revoked_token(error):
+    return {'message': 'Token has been revoked', 'error': 'token_revoked'}, 401
+
+@api.errorhandler(FreshTokenRequired)
+def handle_fresh_token_required(error):
+    return {'message': 'Fresh token required', 'error': 'fresh_token_required'}, 401
+
+@api.errorhandler(ExpiredSignatureError)
+def handle_expired_token(error):
+    return {'message': 'Token has expired', 'error': 'token_expired'}, 401
+
+@api.errorhandler(DecodeError)
+def handle_jwt_decode_error(error):
+    return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
 
 # Import and register namespaces (will be created next)
 from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo
