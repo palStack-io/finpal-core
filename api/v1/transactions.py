@@ -70,7 +70,11 @@ class TransactionList(Resource):
                 pass
 
         if category_id:
-            query = query.filter(Expense.category_id == category_id)
+            # Include parent category AND all its subcategories (one level deep)
+            from src.models.category import Category
+            subcategory_ids = [c.id for c in Category.query.filter_by(parent_id=category_id).all()]
+            all_category_ids = [category_id] + subcategory_ids
+            query = query.filter(Expense.category_id.in_(all_category_ids))
 
         if account_id:
             query = query.filter(Expense.account_id == account_id)

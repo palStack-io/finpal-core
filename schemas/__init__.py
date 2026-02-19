@@ -5,8 +5,8 @@ from marshmallow import Schema, fields, validate, post_load
 class UserSchema(Schema):
     """User serialization schema"""
     id = fields.Str(dump_only=True)
-    username = fields.Str(required=True)
-    email = fields.Email(required=True)
+    name = fields.Str()                    # Display name from User.name column
+    email = fields.Str(attribute='id')     # User uses email as primary key (id = email)
     default_currency_code = fields.Str()
     created_at = fields.DateTime(dump_only=True)
 
