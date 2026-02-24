@@ -1,6 +1,5 @@
 <div align="center">
-  <img width="200" height="200" alt="finPal" src="https://github.com/user-attachments/assets/YOUR-FINPAL-LOGO-ID" />
-
+  <img width="200" height="200" alt="finPal" src="https://github.com/user-attachments/assets/71f07412-00b1-4d17-b2c3-04f305fe456e" />
   <h1>finPal</h1>
   <h3>Take control of your money</h3>
 
