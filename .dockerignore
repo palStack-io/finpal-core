@@ -1,0 +1,72 @@
+# AI Assistant
+.claude/
+
+# Documentation
+docs/
+*.md
+README.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.test
+tests/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+venv/
+env/
+ENV/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Shell scripts
+*.sh
+
+# Test and check scripts
+test_*.py
+simplefin_*.py
+simplefin_*.json
+
+# Data files
+app.db
+*.sqlite3
+
+# Misc
+*.bak
+*.tmp
+*.temp
