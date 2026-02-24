@@ -87,8 +87,6 @@ Complete rewrite. Modern stack. All the features people kept asking for: budgeti
 
 Our ultimate goal is **debtFree**: a gamified debt payoff platform with financial literacy at its core. Think progress bars that actually motivate you. Achievements for paying off credit cards. Educational content that doesn't feel like homework. Community challenges that make debt reduction social and supportive.
 
-finPal is teaching us what people need for financial management. debtFree will take those lessons and laser-focus them on the debt crisis millions face. Financial literacy shouldn't be locked behind paywalls or boring textbooks—it should be built into the tools you use daily.
-
 **The Roadmap:**
 ```
 Dollar Dollar Bill Y'all (2023) - Roommate bill-splitting
@@ -100,11 +98,6 @@ debtFree (Future) - Gamified debt payoff + financial literacy
 
 finPal is where we learn. debtFree is where we focus that knowledge on helping people escape debt.
 
-**The Privacy Stand**
-Every mainstream money app wants your bank credentials, tracks every purchase, and monetizes your spending patterns. We built the opposite: a financial platform that respects your privacy because it literally can't access what it doesn't collect.
-
-**Learning Through Building**
-None of us came from fintech backgrounds. We learned secure financial data handling, bank APIs, multi-currency systems, and compliance stuff as we built. AI assistants (Claude, ChatGPT, Qwen) helped us learn faster, but every line gets human review.
 
 finPal is now part of **palStack**—our collection of privacy-first tools. From roommate debt tracking to complete financial management, all without selling your data.
 
@@ -129,24 +122,6 @@ finPal is now part of **palStack**—our collection of privacy-first tools. From
 
 *Why "Pal"? Because that's what these tools are—friendly helpers for the everyday stuff we all struggle with.*
 
----
-
-## 🚀 Hosting Options
-
-**Self-Host (Available Now)**
-Deploy finPal on your own infrastructure with our one-command setup. Full features, complete control, free forever.
-
-**Managed Hosting (Coming Soon!)**
-Don't want to manage servers? We're launching a managed hosting service where we handle everything:
-- ✅ Automatic updates and backups
-- ✅ 99.9% uptime guarantee
-- ✅ Professional support
-- ✅ Same features as self-hosted
-- ✅ Subscription-based pricing
-
-**Stay updated:** [palstack.io](https://palstack.io) | Email: palstack4u@gmail.com
-
----
 
 ## What finPal Does
 
@@ -401,6 +376,21 @@ React Native app with Expo SDK 51:
 - **Quick expense entry** with camera receipt scan (planned)
 
 **Status:** Backend and web UI ready, mobile app in active development.
+---
+## 🚀 Hosting Options
+
+**Self-Host (Available Now)**
+Deploy finPal on your own infrastructure with our one-command setup. Full features, complete control, free forever.
+
+**Managed Hosting (Coming Soon!)**
+Don't want to manage servers? We're launching a managed hosting service where we handle everything:
+- ✅ Automatic updates and backups
+- ✅ 99.9% uptime guarantee
+- ✅ Professional support
+- ✅ Same features as self-hosted
+- ✅ Subscription-based pricing
+
+**Stay updated:** [palstack.io](https://palstack.io) | Email: support@palstack.io
 
 ---
 
@@ -418,8 +408,7 @@ React Native app with Expo SDK 51:
 - [x] OIDC/SSO authentication
 
 **In Progress:**
-- [ ] Mobile apps (React Native + Expo)
-- [ ] GoCardless integration (European banks)
+- [x] Mobile apps (React Native + Expo)
 - [ ] Progressive Web App (PWA) support
 
 **finPal Near-Term:**
@@ -430,41 +419,9 @@ React Native app with Expo SDK 51:
 - [ ] Advanced reporting and exports
 - [ ] Managed hosting service
 
-**The Ultimate Vision: debtFree**
-
-finPal is our stepping stone to **debtFree**—a gamified debt payoff platform with financial literacy at its core:
-
-- 🎮 **Gamification**: Progress bars, achievements, milestones that motivate
-- 📚 **Financial Literacy**: Educational content built into the experience
-- 🏆 **Community Challenges**: Make debt reduction social and supportive
-- 📊 **Debt Payoff Strategies**: Snowball, avalanche, custom methods
-- 💪 **Motivation System**: Celebrate wins, learn from setbacks
-- 🎓 **Built-in Education**: Financial literacy without the boring textbooks
-
-finPal teaches us what works for financial management. debtFree will laser-focus that knowledge on helping people escape debt and build financial freedom.
-
 **palStack Vision:**
 Cross-Pal integration: grocery spending from pantryPal, home expenses from propertyPal, all feeding into finPal's budgets and debtFree's payoff strategies.
 
----
-
-## Why Self-Hosted?
-
-Because your financial data is nobody's business but yours. You shouldn't need:
-- Permission from a cloud service to see your own transactions
-- A subscription to track your own money
-- To trust a third party with your complete financial profile
-- Internet connectivity to check your budget
-
-Self-hosting means:
-- Complete privacy and control
-- No recurring costs
-- Works offline
-- Integrate with anything
-- Modify as needed
-- Your data never leaves your server
-
----
 
 ## Contributing
 
@@ -538,7 +495,7 @@ We believe in **both** open source **and** sustainable business:
 
 **Full License:** See [LICENSE](LICENSE) file for complete terms.
 
-**Questions?** Email palstack4u@gmail.com
+**Questions?** Email support@palstack.io
 
 ---
 
@@ -607,7 +564,7 @@ We're building sustainable tools that help people, not chasing unicorns. If we c
 
 **Get in Touch:**
 - 🌐 Website: [palstack.io](https://palstack.io)
-- 📧 Email: palstack4u@gmail.com
+- 📧 Email: support@palstack.io
 - 💻 GitHub: [@palStack-io](https://github.com/palStack-io)
 - 📦 Containers: [GitHub Packages](https://github.com/orgs/palStack-io/packages)
 - 📚 Docs: [finpal.palstack.io/docs](https://finpal.palstack.io/docs)
