@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="200" height="200" alt="finPal" src="https://github.com/user-attachments/assets/YOUR-FINPAL-LOGO-ID" />
+  <img width="200" height="200" alt="finPal" src="https://github.com/user-attachments/assets/5e128ab1-f8de-4847-ada2-28304524a194" />
 
   <h1>finPal</h1>
   <h3>Take control of your money</h3>
@@ -105,8 +105,6 @@ finPal is where we learn. debtFree is where we focus that knowledge on helping p
 **The Privacy Stand**
 Every mainstream money app wants your bank credentials, tracks every purchase, and monetizes your spending patterns. We built the opposite: a financial platform that respects your privacy because it literally can't access what it doesn't collect.
 
-**Learning Through Building**
-None of us came from fintech backgrounds. We learned secure financial data handling, bank APIs, multi-currency systems, and compliance stuff as we built. AI assistants (Claude, ChatGPT, Qwen) helped us learn faster, but every line gets human review.
 
 finPal is now part of **palStack**—our collection of privacy-first tools. From roommate debt tracking to complete financial management, all without selling your data.
 
