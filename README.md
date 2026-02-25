@@ -45,16 +45,18 @@
 ## Screenshots
 
 <div align="center">
-  <p><em>Add your screenshots here showing:</em></p>
-  <ul align="left" style="display: inline-block; text-align: left;">
-    <li>Dashboard with budget overview and spending trends</li>
-    <li>Transaction categorization and filtering</li>
-    <li>Bill splitting with groups</li>
-    <li>Investment portfolio tracking</li>
-  </ul>
+  
+  ### Dashboard & Transactions
+  <img width="45%" alt="Dashboard Overview" src="https://github.com/user-attachments/assets/30790957-48dd-4e85-bdca-a38dc03fe12c" />
+  <img width="45%" alt="Inventory Management" src="https://github.com/user-attachments/assets/360f46eb-626e-4a2b-8af7-730e6f1662ef" />
+  
+  ### Budget & Settings
+  <img width="45%" alt="Recipe Matching" src="https://github.com/user-attachments/assets/64958f83-bcff-4788-90c1-1f91467c6f1d" />
+  <img width="45%" alt="Pantry Insights" src="https://github.com/user-attachments/assets/468fbd0d-7e62-4fb6-9a28-34c2ef9f6f7e" />
+  
 </div>
 
-> **Note:** Screenshots coming soon! Check [finpal.palstack.io](https://finpal.palstack.io) for live demo.
+> **Note:** Check [finpal.palstack.io](https://finpal.palstack.io) for live demo.
 
 ---
 
