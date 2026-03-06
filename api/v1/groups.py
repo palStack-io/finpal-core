@@ -179,6 +179,7 @@ class GroupDetail(Resource):
             }, 400
 
     @ns.doc('delete_group', security='Bearer')
+    @jwt_required()
     def delete(self, id):
         """Delete a group (only creator can delete)"""
         current_user_id = get_jwt_identity()
@@ -253,12 +254,7 @@ class GroupBalances(Resource):
         if not group:
             return {'success': False, 'error': 'Group not found or access denied'}, 404
 
-        # Calculate balances (this would need implementation in the Group model)
-        # For now, return a placeholder
-        balances = []
-
-        if hasattr(group, 'calculate_balances'):
-            balances = group.calculate_balances()
+        balances = group.calculate_balances()
 
         return {
             'success': True,
