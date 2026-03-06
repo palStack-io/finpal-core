@@ -117,12 +117,13 @@ class Budget(db.Model):
         ).all()
         
         for cat_split in category_splits:
-            expense = Expense.query.get(cat_split.expense_id)
+            # Use the already-loaded relationship instead of re-querying
+            expense = cat_split.expense
             if not expense:
                 continue
-                
+
             splits = expense.calculate_splits()
-            
+
             if expense.paid_by == self.user_id and (not expense.split_with or self.user_id not in expense.split_with.split(',')):
                 if expense.amount > 0:
                     user_ratio = splits['payer']['amount'] / expense.amount
