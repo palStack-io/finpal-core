@@ -54,20 +54,32 @@ class Expense(db.Model):
     def is_expense(self):
         return self.transaction_type == 'expense' or self.transaction_type is None
 
-    def calculate_splits(self):
+    def calculate_splits(self, users_map=None):
+        """
+        Calculate who owes what for this expense.
+
+        Args:
+            users_map: Optional dict of {user_id: User} pre-fetched by the caller
+                       to avoid N+1 queries. When None, individual DB lookups are used.
+        """
         from src.models.user import User
-        
+
+        def _get_user(uid):
+            if users_map is not None:
+                return users_map.get(uid)
+            return User.query.filter_by(id=uid).first()
+
         # Get the user who paid
-        payer = User.query.filter_by(id=self.paid_by).first()
+        payer = _get_user(self.paid_by)
         payer_name = payer.name if payer else "Unknown"
         payer_email = payer.id if payer else (self.paid_by or '')
-        
+
         # Get all people this expense is split with
         split_with_ids = self.split_with.split(',') if self.split_with else []
         split_users = []
-        
+
         for user_id in split_with_ids:
-            user = User.query.filter_by(id=user_id.strip()).first()
+            user = _get_user(user_id.strip())
             if user:
                 split_users.append({
                     'id': user.id,
@@ -250,7 +262,29 @@ class CategorySplit(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200), nullable=True)
-    
+
     # Relationships
     expense = db.relationship('Expense', backref=db.backref('category_splits', cascade='all, delete-orphan'))
     category = db.relationship('Category', backref=db.backref('splits', lazy=True))
+
+
+# ---------------------------------------------------------------------------
+# pointsPal spend-tracking hook
+# Fires after every Expense INSERT. Uses the raw connection so it never
+# interferes with the caller's ORM session. Silently no-ops if pointsPal
+# is disabled or if the account has no card link.
+# ---------------------------------------------------------------------------
+
+import os as _os
+from sqlalchemy import event as _sa_event
+
+
+@_sa_event.listens_for(Expense, 'after_insert')
+def _pointspal_on_expense_insert(mapper, connection, target):
+    if _os.getenv('POINTSPAL_ENABLED', 'false').lower() != 'true':
+        return
+    try:
+        from src.modules.pointspal.simplefin_bridge import handle_new_transaction
+        handle_new_transaction(connection, target)
+    except Exception:
+        pass  # Never block the caller's transaction
