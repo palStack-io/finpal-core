@@ -26,12 +26,15 @@ class AnalyticsService:
         base_currency = get_base_currency(current_user)
         household_ids = get_all_user_ids()
 
-        # Fetch all expenses for the household
+        # Fetch household expenses for the current year + 1 month buffer.
+        # This bounds the query as transaction history grows.
+        dashboard_start = datetime(now.year, 1, 1) - timedelta(days=31)
         expenses = Expense.query.filter(
             or_(
                 Expense.user_id.in_(household_ids),
                 Expense.split_with.like(f'%{user_id}%')
-            )
+            ),
+            Expense.date >= dashboard_start
         ).order_by(Expense.date.desc()).all()
 
         users = User.query.all()
@@ -43,10 +46,13 @@ class AnalyticsService:
         except Exception as e:
             pass  # Silently fail if sync fails
 
-        # Pre-calculate expense splits to avoid repeated calculations in template
+        # Build a users map once to avoid N+1 inside calculate_splits
+        users_map = {u.id: u for u in users}
+
+        # Pre-calculate expense splits
         expense_splits = {}
         for expense in expenses:
-            expense_splits[expense.id] = expense.calculate_splits()
+            expense_splits[expense.id] = expense.calculate_splits(users_map=users_map)
 
         # Calculate monthly totals with contributors
         monthly_totals = {}
@@ -654,10 +660,8 @@ class AnalyticsService:
         else:
             liquidity_ratio = 5.0  # Very high liquidity if no debt
 
-        # Calculate investment return (placeholder - would need historical data)
-        # For now, use a reasonable default
-        investment_total = dashboard_data.get('investment_total', 0)
-        investment_return = 7.5  # Default 7.5% return
+        # Calculate actual weighted-average investment return from stored prices
+        investment_return = self._calculate_investment_return(user_id)
 
         return {
             'totalIncome': round(total_income, 2),
@@ -669,6 +673,36 @@ class AnalyticsService:
             'liquidityRatio': liquidity_ratio,
             'investmentReturn': investment_return
         }
+
+    def _calculate_investment_return(self, user_id) -> float:
+        """
+        Compute the user's weighted-average investment return (%) using stored
+        current_price and purchase_price values.
+
+        Weighting is by cost basis (shares × purchase_price) so larger positions
+        have more influence on the result.
+
+        Falls back to 7.5 if the user has no priced investments.
+        """
+        from src.models.investment import Portfolio, Investment
+
+        portfolios = Portfolio.query.filter_by(user_id=user_id).all()
+        total_cost = 0.0
+        total_current = 0.0
+
+        for portfolio in portfolios:
+            for inv in portfolio.investments:
+                if inv.purchase_price and inv.purchase_price > 0 \
+                        and inv.current_price and inv.current_price > 0:
+                    cost = inv.shares * inv.purchase_price
+                    current = inv.shares * inv.current_price
+                    total_cost += cost
+                    total_current += current
+
+        if total_cost > 0:
+            return round(((total_current - total_cost) / total_cost) * 100, 2)
+
+        return 7.5  # Fallback when no priced positions exist
 
     def get_networth_trend(self, user_id, months=12):
         """Get net worth trend over time"""
