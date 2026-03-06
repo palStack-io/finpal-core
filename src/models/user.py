@@ -90,6 +90,18 @@ class User(UserMixin, db.Model):
         self.email_verified = True
 
 
+class LoginEvent(db.Model):
+    __tablename__ = 'login_events'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(120), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45), nullable=True)   # max IPv6 length
+    user_agent = db.Column(db.String(500), nullable=True)
+    success = db.Column(db.Boolean, nullable=False, default=True)
+
+    user = db.relationship('User', backref=db.backref('login_events', lazy='dynamic', cascade='all, delete-orphan'))
+
+
 class UserApiSettings(db.Model):
     __tablename__ = 'user_api_settings'
     id = db.Column(db.Integer, primary_key=True)
@@ -104,21 +116,51 @@ class UserApiSettings(db.Model):
     # Relationship
     user = db.relationship('User', backref=db.backref('api_settings', uselist=False))
     
+    @staticmethod
+    def _get_fernet():
+        from cryptography.fernet import Fernet
+        from flask import current_app
+        import base64, hashlib
+        raw_key = current_app.config.get('ENCRYPTION_KEY')
+        if raw_key:
+            # Use explicit key — must be a valid Fernet key string
+            return Fernet(raw_key.encode() if isinstance(raw_key, str) else raw_key)
+        # Fallback: derive a 32-byte key from SECRET_KEY
+        secret = current_app.config['SECRET_KEY'].encode()
+        derived = hashlib.sha256(secret).digest()
+        return Fernet(base64.urlsafe_b64encode(derived))
+
     def set_api_key(self, api_key):
-        """Encrypt and store the API key"""
+        """Encrypt and store the API key using Fernet symmetric encryption."""
         if not api_key:
             self.fmp_api_key = None
             return
-            
-        # Simple encryption - in production use proper encryption
-        import base64
-        self.fmp_api_key = base64.b64encode(api_key.encode()).decode()
-        
+        f = self._get_fernet()
+        self.fmp_api_key = f.encrypt(api_key.encode()).decode()
+
     def get_api_key(self):
-        """Decrypt and return the API key"""
+        """Decrypt and return the API key."""
         if not self.fmp_api_key:
             return None
-            
-        # Simple decryption - in production use proper decryption
-        import base64
-        return base64.b64decode(self.fmp_api_key.encode()).decode()
+        try:
+            f = self._get_fernet()
+            return f.decrypt(self.fmp_api_key.encode()).decode()
+        except Exception:
+            # Handle legacy base64-encoded values that predate encryption
+            try:
+                import base64
+                return base64.b64decode(self.fmp_api_key.encode()).decode()
+            except Exception:
+                return None
+
+
+class RevokedToken(db.Model):
+    """JWT blocklist — stores revoked token JTIs so they cannot be reused."""
+    __tablename__ = 'revoked_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), nullable=False, unique=True, index=True)
+    revoked_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    @classmethod
+    def is_revoked(cls, jti):
+        return cls.query.filter_by(jti=jti).first() is not None

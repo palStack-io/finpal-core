@@ -13,6 +13,12 @@ class Config:
     """Base configuration"""
     # Secret key
     SECRET_KEY = os.getenv('SECRET_KEY', 'fallback_secret_key_change_in_production')
+
+    # Encryption key for sensitive fields (API keys, tokens).
+    # Must be a valid URL-safe base64-encoded 32-byte key.
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # If not set, derived from SECRET_KEY (less secure — set a dedicated key in production).
+    ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
@@ -53,6 +59,16 @@ class Config:
     DEMO_TIMEOUT_MINUTES = int(os.getenv('DEMO_TIMEOUT_MINUTES', 10))
     MAX_CONCURRENT_DEMO_SESSIONS = int(os.getenv('MAX_CONCURRENT_DEMO_SESSIONS', 10))
     
+    # pointsPal
+    POINTSPAL_ENABLED = os.getenv('POINTSPAL_ENABLED', 'False').lower() == 'true'
+    POINTSPAL_SYNC_URL = os.getenv(
+        'POINTSPAL_SYNC_URL',
+        'https://raw.githubusercontent.com/palStack-io/pointsPal/main/dist/programs.json'
+    )
+    POINTSPAL_SYNC_INTERVAL_HOURS = int(os.getenv('POINTSPAL_SYNC_INTERVAL_HOURS', 1))
+    POINTSPAL_AUTO_MATCH_THRESHOLD = float(os.getenv('POINTSPAL_AUTO_MATCH_THRESHOLD', 0.75))
+    POINTSPAL_AUTO_LINK_THRESHOLD = float(os.getenv('POINTSPAL_AUTO_LINK_THRESHOLD', 0.95))
+
     # Logging
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 
