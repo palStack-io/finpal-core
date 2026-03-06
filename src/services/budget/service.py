@@ -328,18 +328,20 @@ class BudgetService:
         Returns spending trends over time
         """
         from src.utils.household import get_all_user_ids
+        from dateutil.relativedelta import relativedelta
         budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids()), Budget.active == True).all()
+
+        today = datetime.utcnow()
 
         trends_data = []
         for budget in budgets:
-            # Get last 6 periods of data
             historical_data = []
-            for i in range(6):
-                # Calculate period dates for i periods ago
-                # This is simplified - actual implementation would need period-specific logic
-                spent = budget.calculate_spent_amount()
+            for i in range(5, -1, -1):
+                # i=5 is 5 months ago, i=0 is current month
+                period_date = today - relativedelta(months=i)
+                spent = budget.calculate_spent_amount(year=period_date.year, month=period_date.month)
                 historical_data.append({
-                    'period': i,
+                    'period': period_date.strftime('%Y-%m'),
                     'spent': spent,
                     'budget': budget.amount
                 })
@@ -371,9 +373,9 @@ class BudgetService:
                 total_spent += spent
 
                 status = budget.get_status()
-                if status == 'on_track':
+                if status == 'under' or status == 'approaching':
                     on_track_count += 1
-                elif status == 'over_budget':
+                elif status == 'over':
                     over_budget_count += 1
 
         return {
