@@ -5,8 +5,8 @@
   <h3>Take control of your money</h3>
 
   <p>
-    <a href="https://finpal.palstack.io"><strong>Try Demo →</strong></a> |
-    <a href="https://finpal.palstack.io/docs">Documentation</a> |
+    <a href="https://palstack.io/finpal"><strong>Try Demo →</strong></a> |
+    <a href="https://palstack.io/finpal/docs">Documentation</a> |
     <a href="https://palstack.io">More Tools</a>
   </p>
 </div>
@@ -28,7 +28,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Mobile%20Soon-blue)](https://github.com/palStack-io/finpal-core)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
 [![GHCR](https://img.shields.io/badge/GHCR-Containers-2496ED)](https://github.com/orgs/palStack-io/packages)
-[![Docs](https://img.shields.io/badge/Docs-finpal.palstack.io-orange)](https://finpal.palstack.io/docs)
+[![Docs](https://img.shields.io/badge/Docs-palstack.io/finpal-orange)](https://palstack.io/finpal/docs)
 
 **Part of [palStack](https://palstack.io)** - Privacy-first tools for everyday life
 
@@ -64,7 +64,7 @@
   </ul>
 </div>
 
-> **Note:** Screenshots coming soon! Check [finpal.palstack.io](https://finpal.palstack.io) for live demo.
+> **Note:** Screenshots coming soon! Check [palstack.io/finpal](https://palstack.io/finpal) for live demo.
 
 ---
 
@@ -126,7 +126,7 @@ finPal is now part of **palStack**—our collection of privacy-first tools. From
 - **[pantryPal](https://pantrypal.palstack.io)** - Never buy duplicate groceries again
 
 **Final Testing Stage:**
-- **[finPal](https://finpal.palstack.io)** - You're here! Complete financial management platform
+- **[finPal](https://palstack.io/finpal)** - You're here! Complete financial management platform
 
 **In Active Development:**
 - **[propertyPal](https://propertypal.palstack.io)** - Track home maintenance, warranties, documents, plus **petPal** (pet care) and **carPal** (vehicle maintenance)
@@ -262,7 +262,7 @@ docker-compose up -d
 5. Start tracking your finances!
 
 **📚 For comprehensive installation, configuration, and deployment guides, visit:**
-**[finpal.palstack.io/docs](https://finpal.palstack.io/docs)**
+**[palstack.io/finpal/docs](https://palstack.io/finpal/docs)**
 
 ### Prerequisites
 - Docker and Docker Compose installed
@@ -273,7 +273,7 @@ docker-compose up -d
 - (Optional) SMTP server for email notifications
 - (Optional) OAuth2 provider for OIDC/SSO
 
-**📚 Detailed setup guides available at [finpal.palstack.io/docs](https://finpal.palstack.io/docs)**
+**📚 Detailed setup guides available at [palstack.io/finpal/docs](https://palstack.io/finpal/docs)**
 
 **That's it!** Open http://localhost and create your account.
 
@@ -523,7 +523,7 @@ finPal is open source and welcomes contributions!
 - Ensure all tests pass and documentation is updated
 - Follow existing code patterns and style
 
-**📚 For detailed contribution guidelines, visit [finpal.palstack.io/docs](https://finpal.palstack.io/docs)**
+**📚 For detailed contribution guidelines, visit [palstack.io/finpal/docs](https://palstack.io/finpal/docs)**
 
 By contributing, you agree that your contributions will be licensed under AGPL-3.0.
 
@@ -567,7 +567,7 @@ Our managed hosting service will include **proprietary premium features**:
 - Available **only** via managed hosting subscription
 - **Not open source** (proprietary code)
 - Used to fund development of the free Core version
-- Coming soon at [finpal.palstack.io](https://finpal.palstack.io)
+- Coming soon at [palstack.io/finpal](https://palstack.io/finpal)
 
 ### Why Dual Licensing?
 
@@ -621,7 +621,7 @@ We're building sustainable tools that help people, not chasing unicorns. If we c
 - **[pantryPal](https://pantrypal.palstack.io)** - Food waste reduction | [Docs](https://pantrypal.palstack.io/docs) | [GitHub](https://github.com/palStack-io/pantrypal-core)
 
 **Final Testing:**
-- **[finPal](https://finpal.palstack.io)** - Personal finance tracking | [Docs](https://finpal.palstack.io/docs) | [GitHub](https://github.com/palStack-io/finpal-core)
+- **[finPal](https://palstack.io/finpal)** - Personal finance tracking | [Docs](https://palstack.io/finpal/docs) | [GitHub](https://github.com/palStack-io/finpal-core)
 
 **In Development:**
 - **[propertyPal](https://propertypal.palstack.io)** - Home, pet, and vehicle tracking | [GitHub](https://github.com/palStack-io/propertypal-core)
@@ -651,7 +651,7 @@ We're building sustainable tools that help people, not chasing unicorns. If we c
 - 📧 Email: palstack4u@gmail.com
 - 💻 GitHub: [@palStack-io](https://github.com/palStack-io)
 - 📦 Containers: [GitHub Packages](https://github.com/orgs/palStack-io/packages)
-- 📚 Docs: [finpal.palstack.io/docs](https://finpal.palstack.io/docs)
+- 📚 Docs: [palstack.io/finpal/docs](https://palstack.io/finpal/docs)
 
 **Join the Community:**
 
