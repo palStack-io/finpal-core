@@ -66,8 +66,11 @@ web-ui/coverage/
 # AI Assistant
 .claude/
 
-# Shell scripts (utility/deployment scripts, not part of codebase)
-*.sh
+# Shell scripts — root-level utility/deployment scripts only
+/*.sh
+# backup/ scripts must remain tracked
+!backup/entrypoint.sh
+!backup/backup-pg.sh
 
 # Test and check scripts
 test_*.py

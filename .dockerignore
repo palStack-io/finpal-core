@@ -57,8 +57,10 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Shell scripts
+# Shell scripts — exclude all except backup scripts (needed by backup/Dockerfile)
 *.sh
+!backup/entrypoint.sh
+!backup/backup-pg.sh
 
 # Test and check scripts
 test_*.py
