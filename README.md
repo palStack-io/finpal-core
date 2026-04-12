@@ -74,67 +74,43 @@
 
 ## The Story Behind finPal
 
-**finPal started as Dollar Dollar Bill Y'all** - and it started with two co-founders who happened to be married.
-You know the situation: one person covers dinner, the other handles the streaming subscriptions, someone remembers the grocery run and someone else forgets they owe for it. By month's end, even the most organized couples lose track. Spreadsheets get messy. "Did I already pay you for that?" becomes a recurring conversation. 
+**finPal started as Dollar Dollar Bill Y'all** - built by two co-founders (who happen to be married) to solve a very specific problem: by month's end, even organized couples lose track of who owes whom. Spreadsheets get messy. "Did I already pay you for that?" becomes a recurring conversation.
 
-And built **Dollar Dollar Bill Y'all**. Simple goal: track who owes whom, settle up, move on with life. No bank connections, no subscriptions, no data harvesting. Just math and fairness.
+So we built something simple: track who owes whom, settle up, move on. No bank connections, no subscriptions, no data harvesting. Just math and fairness.
 
-**Then it worked. Really well.**
+Then it worked. Friends started using it. Then their friends. People we'd never met were running it on their own servers.
 
-Friends started using it. Then those friends' friends. People we'd never met were running it on their servers to split bills with their roommates.
+The feature requests followed - budgets, investment tracking, bank sync, expense clubs. Each one made sense, so we kept building. Eventually we'd outgrown both the name and the architecture.
 
-And the feature requests kept coming:
-- "Can it track my budget too?"
-- "What about my investment portfolio?"
-- "SimpleFin for automatic bank sync?"
-- "Can we use this for our monthly dinner club expenses?"
+**Dollar Dollar Bill Y'all became finPal.** Complete rewrite, modern stack, all the features people asked for - while keeping what always mattered: privacy-first, self-hosted, no tracking.
 
-Each request made sense. Each solved a real problem. So we kept building.
+finPal is also the foundation for what's next: **debtFree** - a gamified debt payoff platform with financial literacy built in. finPal is where we learn what people need. debtFree is where we focus that on helping people get out of debt.
 
-The codebase grew. The vision expanded. We realized we'd outgrown both the name and the original architecture.
+### Roadmap
 
-**Dollar Dollar Bill Y'all evolved into finPal.**
-
-Complete rewrite. Modern stack. All the features people kept asking for: budgeting, investment tracking, bank sync, enhanced bill-splitting. We kept what worked (privacy-first, self-hosted, no tracking) and built everything else around it.
-
-**But finPal isn't the endgame—it's the foundation.**
-
-Our ultimate goal is **debtFree**: a gamified debt payoff platform with financial literacy at its core. Think progress bars that actually motivate you. Achievements for paying off credit cards. Educational content that doesn't feel like homework. Community challenges that make debt reduction social and supportive.
-
-finPal is teaching us what people need for financial management. debtFree will take those lessons and laser-focus them on the debt crisis millions face. Financial literacy shouldn't be locked behind paywalls or boring textbooks—it should be built into the tools you use daily.
-
-**The Roadmap:**
 ```
-Dollar Dollar Bill Y'all (2023) - Roommate bill-splitting
+Dollar Dollar Bill Y'all (2023) - bill splitting
     ↓
-finPal (2024-2025) - Complete financial management
+finPal (2024-2025) - full financial management
     ↓
-debtFree (Future) - Gamified debt payoff + financial literacy
+debtFree (future) - gamified debt payoff + financial literacy
 ```
 
-finPal is where we learn. debtFree is where we focus that knowledge on helping people escape debt.
+We didn't come from fintech. We learned as we built - bank APIs, multi-currency, secure data handling - with AI tools helping us move faster and human review on everything. finPal is part of **palStack**, our collection of privacy-first tools.
 
-**The Privacy Stand**
-Every mainstream money app wants your bank credentials, tracks every purchase, and monetizes your spending patterns. We built the opposite: a financial platform that respects your privacy because it literally can't access what it doesn't collect.
-
-**Learning Through Building**
-None of us came from fintech backgrounds. We learned secure financial data handling, bank APIs, multi-currency systems, and compliance stuff as we built. AI assistants (Claude, ChatGPT, Qwen) helped us learn faster, but every line gets human review.
-
-finPal is now part of **palStack**—our collection of privacy-first tools. From roommate debt tracking to complete financial management, all without selling your data.
-
-**Legacy Note:** The [original Dollar Dollar Bill Y'all repository](https://github.com/harung1993/dollardollar) is still there for anyone who just needs the simpler bill-splitting focus.
+> The original [Dollar Dollar Bill Y'all](#) repo is still available for anyone who just needs simple bill-splitting.
 
 ### The palStack Family
 
 **Production Ready:**
-- **[pantryPal](https://pantrypal.palstack.io)** - Never buy duplicate groceries again
+- **[pantryPal](https://palstack.io/pantrypal)** - Never buy duplicate groceries again
 
 **Final Testing Stage:**
 - **[finPal](https://palstack.io/finpal)** - You're here! Complete financial management platform
 
 **In Active Development:**
-- **[propertyPal](https://propertypal.palstack.io)** - Track home maintenance, warranties, documents, plus **petPal** (pet care) and **carPal** (vehicle maintenance)
-- **[clubPal](https://clubpal.palstack.io)** - Group coordination for dining, activities, and social clubs
+- **[propertyPal](https://palstack.io/propertypal)** - Track home maintenance, warranties, documents, plus **petPal** (pet care) and **carPal** (vehicle maintenance)
+- **[clubPal](https://palstack.io/clubpal)** - Group coordination for dining, activities, and social clubs
 
 **Future Vision:**
 - **debtFree** - Gamified debt payoff with financial literacy built in (finPal's ultimate evolution)
