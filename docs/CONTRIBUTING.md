@@ -1,5 +1,17 @@
 # Contributing to finPal
 
+> ## ⚠️ Public Contributions Paused
+>
+> We have temporarily paused public contributions while we assess how to responsibly handle pull requests that contain significant AI-generated code.
+>
+> **Why?** Like many teams, we actively use AI tools in our own development workflow. However, with only 2 active PR reviewers, we need to carefully think through how we evaluate AI-assisted contributions at scale — ensuring code quality, security, and long-term maintainability without creating unsustainable review burden.
+>
+> We're working on updated guidelines that reflect a world where AI is part of the dev process on both sides of a PR. We'll reopen public contributions once those are in place.
+>
+> In the meantime, feel free to open issues to report bugs or suggest features. Watch this repo for updates.
+
+---
+
 ## Development Setup
 1. Clone the repo: `git clone https://github.com/palStack-io/finpal-core.git`
 2. Copy environment: `cp .env.template .env`
@@ -14,7 +26,6 @@ flask db upgrade
 ```
 
 ## Running Tests
-
 See **[docs/testing.md](./testing.md)** for the full test guide.
 
 Quick start:
@@ -35,7 +46,6 @@ cd web-ui && npx vitest run
 - Follow existing code patterns and style
 
 ## License
-
 By contributing, you agree that your contributions will be licensed under AGPL-3.0.
 
-For detailed contribution guidelines, visit [finpal.palstack.io/docs](https://finpal.palstack.io/docs)
+For detailed contribution guidelines, visit [palstack.io/finpal/docs](https://palstack.io/finpal/docs)
