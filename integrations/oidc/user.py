@@ -39,6 +39,12 @@ def extend_user_model(db, User):
             
         # If user exists, update OIDC details if needed
         if user:
+            # Block if account is already linked to a different provider
+            if user.oidc_provider and user.oidc_provider != provider:
+                raise ValueError(
+                    f"This account is already linked to {user.oidc_provider}. "
+                    f"Please sign in with {user.oidc_provider} instead."
+                )
             # Link local account with OIDC if not already linked
             if not user.oidc_id:
                 user.oidc_id = oidc_data.get('sub')

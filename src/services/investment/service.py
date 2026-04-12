@@ -35,6 +35,44 @@ class InvestmentService:
             return False, f'Error: {str(e)}', None
 
     def update_prices(self, portfolio_id):
-        """Update investment prices from external API"""
-        # Would call FMP or Yahoo Finance integration
-        return True, 'Prices updated!'
+        """Fetch current prices from yfinance for every investment in the portfolio."""
+        from integrations.investments.yfinance import get_stock_data_with_fallback
+
+        portfolio = Portfolio.query.get(portfolio_id)
+        if not portfolio:
+            return False, 'Portfolio not found'
+
+        updated = 0
+        failed = []
+
+        for inv in portfolio.investments:
+            try:
+                data = get_stock_data_with_fallback(inv.symbol)
+                if data and data.get('price'):
+                    inv.current_price = float(data['price'])
+                    inv.last_update = datetime.utcnow()
+                    updated += 1
+                else:
+                    failed.append(inv.symbol)
+            except Exception as e:
+                failed.append(inv.symbol)
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return False, f'Commit failed: {str(e)}'
+
+        msg = f'Updated {updated} price(s)'
+        if failed:
+            msg += f'; failed: {", ".join(failed)}'
+        return True, msg
+
+    def update_all_user_prices(self, user_id):
+        """Update prices for all portfolios belonging to a user. Used by scheduler."""
+        portfolios = Portfolio.query.filter_by(user_id=user_id).all()
+        results = []
+        for portfolio in portfolios:
+            ok, msg = self.update_prices(portfolio.id)
+            results.append({'portfolio_id': portfolio.id, 'ok': ok, 'message': msg})
+        return results

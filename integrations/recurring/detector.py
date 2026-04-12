@@ -216,7 +216,7 @@ def create_recurring_expense_from_detection(user_id, candidate, start_date=None)
     Create a RecurringExpense from a detected candidate
     """
     from flask import current_app
-    from app import RecurringExpense
+    from src.models.recurring import RecurringExpense
     
     if start_date is None:
         start_date = datetime.now()

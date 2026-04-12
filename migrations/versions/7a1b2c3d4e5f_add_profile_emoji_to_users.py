@@ -17,8 +17,20 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('users', sa.Column('profile_emoji', sa.String(length=10), nullable=True))
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='users' AND column_name='profile_emoji'"
+    ))
+    if not result.fetchone():
+        op.add_column('users', sa.Column('profile_emoji', sa.String(length=10), nullable=True))
 
 
 def downgrade():
-    op.drop_column('users', 'profile_emoji')
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='users' AND column_name='profile_emoji'"
+    ))
+    if result.fetchone():
+        op.drop_column('users', 'profile_emoji')

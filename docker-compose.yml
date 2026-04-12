@@ -31,12 +31,7 @@ services:
         condition: service_healthy
     environment:
       # Database
-      - DATABASE_URL=postgresql://${DB_USER:-finpal}:${DB_PASSWORD}@db:5432/${DB_NAME:-finpal}
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME:-finpal}
-      - DB_USER=${DB_USER:-finpal}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - SQLALCHEMY_DATABASE_URI=postgresql://${DB_USER:-finpal}:${DB_PASSWORD}@db:5432/${DB_NAME:-finpal}
 
       # Flask
       - FLASK_APP=app.py
@@ -46,9 +41,8 @@ services:
       - DEVELOPMENT_MODE=False
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
 
-      # JWT
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
-      - JWT_ACCESS_TOKEN_EXPIRES=${JWT_ACCESS_TOKEN_EXPIRES:-86400}
+      # Encryption (for sensitive fields — generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
 
       # Application
       - DISABLE_SIGNUPS=${DISABLE_SIGNUPS:-False}
@@ -57,6 +51,8 @@ services:
       - INVESTMENT_TRACKING_ENABLED=${INVESTMENT_TRACKING_ENABLED:-true}
       - SIMPLEFIN_ENABLED=${SIMPLEFIN_ENABLED:-true}
       - FMP_API_KEY=${FMP_API_KEY:-}
+      - POINTSPAL_ENABLED=${POINTSPAL_ENABLED:-false}
+      - POINTSPAL_SYNC_INTERVAL_HOURS=${POINTSPAL_SYNC_INTERVAL_HOURS:-24}
 
       # Email (optional - for password reset)
       - EMAIL_ENABLED=${EMAIL_ENABLED:-false}
@@ -121,8 +117,52 @@ services:
       timeout: 3s
       retries: 3
 
+  # ===================================
+  # Backup — Postgres → local + remote
+  # ===================================
+  backup:
+    build:
+      context: .
+      dockerfile: backup/Dockerfile
+    container_name: finpal-backup
+    environment:
+      # ── Postgres connection ──────────────────
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=${DB_USER:-finpal}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      # ── Schedule (cron expression) ───────────
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 3 * * *}
+      # ── Local retention ──────────────────────
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
+      # ── Remote bucket name ───────────────────
+      - BACKUP_REMOTE_BUCKET=${BACKUP_REMOTE_BUCKET:-}
+      # ── rclone remote — Backblaze B2 ─────────
+      #    Set RCLONE_CONFIG_REMOTE_TYPE=b2 to use B2
+      - RCLONE_CONFIG_REMOTE_TYPE=${RCLONE_CONFIG_REMOTE_TYPE:-}
+      - RCLONE_CONFIG_REMOTE_ACCOUNT=${RCLONE_CONFIG_REMOTE_ACCOUNT:-}
+      - RCLONE_CONFIG_REMOTE_KEY=${RCLONE_CONFIG_REMOTE_KEY:-}
+      # ── rclone remote — Cloudflare R2 / S3 ───
+      #    Set RCLONE_CONFIG_REMOTE_TYPE=s3 to use R2/S3
+      - RCLONE_CONFIG_REMOTE_PROVIDER=${RCLONE_CONFIG_REMOTE_PROVIDER:-}
+      - RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID:-}
+      - RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY:-}
+      - RCLONE_CONFIG_REMOTE_ENDPOINT=${RCLONE_CONFIG_REMOTE_ENDPOINT:-}
+      - RCLONE_CONFIG_REMOTE_REGION=${RCLONE_CONFIG_REMOTE_REGION:-auto}
+      # ── Optional monitoring ping ──────────────
+      - BACKUP_HEALTHCHECK_URL=${BACKUP_HEALTHCHECK_URL:-}
+    volumes:
+      - backup_data:/backups
+    networks:
+      - finpal-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+    driver: local
+  backup_data:
     driver: local
 
 networks:

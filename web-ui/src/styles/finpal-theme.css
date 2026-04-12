@@ -56,6 +56,22 @@
   --tooltip-border: #e9eee5;
 
   --sidebar-width: 240px;
+
+  /* pointsPal module tokens */
+  --g900: #14532d; --g800: #166534; --g700: #15803d; --g600: #16a34a;
+  --g500: #22c55e; --g400: #4ade80; --g200: #bbf7d0; --g100: #dcfce7; --g50: #f0fdf4;
+  --au600: #d97706; --au500: #f59e0b; --au400: #fbbf24; --au300: #fcd34d;
+  --au100: #fef3c7; --au50: #fffbeb;
+  --re600: #dc2626; --re100: #fee2e2; --re50: #fef2f2;
+  --ink: #0f172a; --ink2: #1e293b; --ink3: #334155;
+  --muted: #64748b; --light: #94a3b8; --border: #e2e8f0;
+  --bg: #f8fafc; --white: #ffffff;
+  --grad: linear-gradient(135deg, #15803d, #16a34a 50%, #22c55e);
+  --grad-gold: linear-gradient(135deg, #f59e0b, #fbbf24 60%, #fcd34d);
+  --sh-xs: 0 1px 2px rgba(0,0,0,.05);
+  --sh-sm: 0 2px 8px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+  --sh-md: 0 6px 20px rgba(0,0,0,.09);
+  --r: 12px; --rs: 8px;
 }
 
 [data-theme="dark"] {
@@ -100,6 +116,27 @@
   /* Tooltip */
   --tooltip-bg: #1e293b;
   --tooltip-border: rgba(148, 163, 184, 0.2);
+
+  /* pointsPal module tokens — dark overrides */
+  --white: #1e293b;
+  --bg: #0f172a;
+  --border: rgba(148, 163, 184, 0.15);
+  --ink: #f8fafc;
+  --ink2: #e2e8f0;
+  --ink3: #cbd5e1;
+  --muted: #94a3b8;
+  --light: #64748b;
+  --g50: rgba(21, 128, 61, 0.15);
+  --g100: rgba(21, 128, 61, 0.25);
+  --g200: rgba(21, 128, 61, 0.35);
+  --au50: rgba(217, 119, 6, 0.15);
+  --au100: rgba(217, 119, 6, 0.25);
+  --au300: rgba(252, 211, 77, 0.4);
+  --re50: rgba(220, 38, 38, 0.15);
+  --re100: rgba(220, 38, 38, 0.25);
+  --sh-xs: 0 1px 2px rgba(0,0,0,.25);
+  --sh-sm: 0 2px 8px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
+  --sh-md: 0 6px 20px rgba(0,0,0,.4);
 }
 
 body {
@@ -145,7 +182,7 @@ body {
 }
 
 :root:not([data-theme="dark"]) .sidebar {
-  background: linear-gradient(180deg, #fffffb 0%, #f9fdf6 100%);
+  background: linear-gradient(180deg, #f0f4ed 0%, #e8ede4 100%);
 }
 
 .sidebar-header {

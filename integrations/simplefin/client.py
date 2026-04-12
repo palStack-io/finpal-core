@@ -291,7 +291,7 @@ class SimpleFin:
         Returns:
         - Tuple of (Transaction model instance, is_transfer boolean)
         """
-        from app import Expense  # Import here to avoid circular imports
+        from src.models.transaction import Expense  # Import here to avoid circular imports
         
         # Skip transactions without required fields
         if not all(key in trans_data for key in ['external_id', 'date', 'description', 'amount']):

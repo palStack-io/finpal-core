@@ -14,6 +14,14 @@ from src.models.category import Category
 from src.models.group import Group
 from src.models.investment import Portfolio, Investment
 from src.data.seed_defaults import seed_user_defaults
+try:
+    from src.modules.pointspal.models import (
+        PointsProgram, PointsEarnCategory, UserCard,
+        SpendPeriodTotal, OptimizerAlert,
+    )
+    POINTSPAL_AVAILABLE = True
+except Exception:
+    POINTSPAL_AVAILABLE = False
 from werkzeug.security import generate_password_hash
 import logging
 import json
@@ -183,6 +191,13 @@ class DemoService:
         # Create investments for investor persona
         if persona == 'Investor':
             DemoService._create_demo_investments(user)
+
+        # Seed pointsPal wallet cards + spend history
+        if POINTSPAL_AVAILABLE:
+            try:
+                DemoService._seed_pointspal_data(user, account_data)
+            except Exception as e:
+                logger.warning(f"pointsPal seeding skipped for {email}: {e}")
 
     @staticmethod
     def _create_demo_accounts(user, account_data):
@@ -538,6 +553,218 @@ class DemoService:
                 last_update=datetime.utcnow()
             )
             db.session.add(investment)
+
+    @staticmethod
+    def _seed_pointspal_data(user, account_data):
+        """Seed pointsPal programs, wallet cards, spend history and alerts for a demo user."""
+        persona = account_data['persona']
+
+        # ── Compute period keys dynamically ─────────────────────────────────
+        now = datetime.utcnow()
+        now_month  = now.strftime('%Y-%m')
+        now_annual = str(now.year)
+        prev = (now.replace(day=1) - timedelta(days=1))
+        prev_month = prev.strftime('%Y-%m')
+        q = (now.month - 1) // 3 + 1
+        now_q = f"{now.year}-Q{q}"
+
+        # ── Ensure shared programs exist (idempotent) ────────────────────────
+        programs = [
+            {'program_id': 'chase_ur',    'issuer': 'Chase',            'program_name': 'Ultimate Rewards',       'base_cpp': 2.0, 'currency_name': 'Ultimate Rewards Points'},
+            {'program_id': 'amex_mr',     'issuer': 'American Express', 'program_name': 'Membership Rewards',     'base_cpp': 2.0, 'currency_name': 'Membership Rewards Points'},
+            {'program_id': 'cap1_miles',  'issuer': 'Capital One',      'program_name': 'Miles',                  'base_cpp': 1.0, 'currency_name': 'Miles'},
+            {'program_id': 'citi_cashback','issuer': 'Citi',            'program_name': 'Cash Back',              'base_cpp': 1.0, 'currency_name': 'Cash Back'},
+            {'program_id': 'cap1_savor',  'issuer': 'Capital One',      'program_name': 'Savor Rewards',          'base_cpp': 1.0, 'currency_name': 'Cash Back'},
+            {'program_id': 'discover_it', 'issuer': 'Discover',         'program_name': 'Discover it Cash Back',  'base_cpp': 1.0, 'currency_name': 'Cash Back'},
+        ]
+        for p in programs:
+            if not PointsProgram.query.filter_by(program_id=p['program_id']).first():
+                db.session.add(PointsProgram(**p))
+        db.session.flush()
+
+        earn_cats = [
+            {'program_id': 'chase_ur',    'category': 'travel',         'multiplier': 3.0,  'cap_amount': None, 'cap_period': None},
+            {'program_id': 'chase_ur',    'category': 'dining',         'multiplier': 3.0,  'cap_amount': None, 'cap_period': None},
+            {'program_id': 'amex_mr',     'category': 'dining',         'multiplier': 4.0,  'cap_amount': 25000,'cap_period': 'annual'},
+            {'program_id': 'amex_mr',     'category': 'groceries',      'multiplier': 4.0,  'cap_amount': 25000,'cap_period': 'annual'},
+            {'program_id': 'amex_mr',     'category': 'travel',         'multiplier': 3.0,  'cap_amount': None, 'cap_period': None},
+            {'program_id': 'cap1_miles',  'category': 'travel',         'multiplier': 10.0, 'cap_amount': None, 'cap_period': None},
+            {'program_id': 'cap1_miles',  'category': 'hotels',         'multiplier': 5.0,  'cap_amount': None, 'cap_period': None},
+            {'program_id': 'cap1_savor',  'category': 'dining',         'multiplier': 4.0,  'cap_amount': None, 'cap_period': None},
+            {'program_id': 'cap1_savor',  'category': 'groceries',      'multiplier': 3.0,  'cap_amount': None, 'cap_period': None},
+            {'program_id': 'cap1_savor',  'category': 'entertainment',  'multiplier': 4.0,  'cap_amount': None, 'cap_period': None},
+            {'program_id': 'discover_it', 'category': 'groceries',      'multiplier': 5.0,  'cap_amount': 1500, 'cap_period': 'quarterly'},
+        ]
+        for ec in earn_cats:
+            if not PointsEarnCategory.query.filter_by(program_id=ec['program_id'], category=ec['category']).first():
+                db.session.add(PointsEarnCategory(**ec))
+        db.session.flush()
+
+        # ── Per-persona card + spend config ─────────────────────────────────
+        if persona == 'Personal budgeter':
+            # Alex: Chase Sapphire Preferred + Citi Double Cash
+            # Story: moderate spender, dining 3x on track, no caps
+            cards = [
+                {'program_id': 'chase_ur',     'card_nickname': 'Chase Sapphire Preferred', 'last_four': '1142', 'confidence_level': 'high',   'user_last_verified_at': datetime(now.year, now.month, 1), 'user_stale_flag': False},
+                {'program_id': 'citi_cashback','card_nickname': 'Citi Double Cash',          'last_four': '8820', 'confidence_level': 'medium', 'user_last_verified_at': datetime(now.year - 1, 11, 1),    'user_stale_flag': True},
+            ]
+            for cd in cards:
+                if not UserCard.query.filter_by(user_id=user.id, card_nickname=cd['card_nickname']).first():
+                    db.session.add(UserCard(user_id=user.id, association_source='user_manual', **cd))
+            db.session.flush()
+
+            def cid(nick): return (UserCard.query.filter_by(user_id=user.id, card_nickname=nick).first() or type('', (), {'id': None})()).id
+            sp_id = cid('Chase Sapphire Preferred')
+            dc_id = cid('Citi Double Cash')
+
+            spend_rows = [
+                (sp_id, 'dining',    'monthly', now_month,   480.0, 1440, 0),
+                (sp_id, 'travel',    'monthly', now_month,   620.0, 1860, 0),
+                (sp_id, 'dining',    'monthly', prev_month,  510.0, 1530, 0),
+                (sp_id, 'travel',    'monthly', prev_month,  390.0, 1170, 0),
+                (sp_id, 'dining',    'annual',  now_annual, 5760.0,17280, 0),
+                (sp_id, 'travel',    'annual',  now_annual, 7440.0,22320, 0),
+                (dc_id, 'dining',    'monthly', now_month,   210.0,  210,  840),
+                (dc_id, 'groceries', 'monthly', now_month,   340.0,  340,  680),
+                (dc_id, 'dining',    'annual',  now_annual, 2520.0, 2520, 5040),
+                (dc_id, 'groceries', 'annual',  now_annual, 4080.0, 4080, 4080),
+            ]
+            alerts = []
+
+        elif persona == 'International user':
+            # Morgan: Amex Gold + Chase Sapphire Reserve
+            # Story: Amex dining annual at 58% — healthy, no alerts
+            cards = [
+                {'program_id': 'amex_mr',  'card_nickname': 'Amex Gold',             'last_four': '3317', 'confidence_level': 'high', 'user_last_verified_at': datetime(now.year, now.month, 1), 'user_stale_flag': False},
+                {'program_id': 'chase_ur', 'card_nickname': 'Chase Sapphire Reserve','last_four': '7756', 'confidence_level': 'high', 'user_last_verified_at': datetime(now.year, now.month, 1), 'user_stale_flag': False},
+            ]
+            for cd in cards:
+                if not UserCard.query.filter_by(user_id=user.id, card_nickname=cd['card_nickname']).first():
+                    db.session.add(UserCard(user_id=user.id, association_source='user_manual', **cd))
+            db.session.flush()
+
+            def cid(nick): return (UserCard.query.filter_by(user_id=user.id, card_nickname=nick).first() or type('', (), {'id': None})()).id
+            am_id  = cid('Amex Gold')
+            csr_id = cid('Chase Sapphire Reserve')
+
+            spend_rows = [
+                (am_id,  'dining',    'monthly', now_month,  1100.0, 4400, 0),
+                (am_id,  'groceries', 'monthly', now_month,   290.0, 1160, 0),
+                (am_id,  'travel',    'monthly', now_month,   880.0, 2640, 0),
+                (am_id,  'dining',    'monthly', prev_month,  980.0, 3920, 0),
+                (am_id,  'dining',    'annual',  now_annual,14500.0,58000, 0),  # 58% of $25k — on track
+                (am_id,  'groceries', 'annual',  now_annual, 3480.0,13920, 0),
+                (am_id,  'travel',    'annual',  now_annual,10560.0,31680, 0),
+                (csr_id, 'travel',    'monthly', now_month,  1650.0, 4950, 0),
+                (csr_id, 'dining',    'monthly', now_month,   320.0,  960, 0),
+                (csr_id, 'travel',    'monthly', prev_month, 2200.0, 6600, 0),
+                (csr_id, 'travel',    'annual',  now_annual,19800.0,59400, 0),
+                (csr_id, 'dining',    'annual',  now_annual, 3840.0,11520, 0),
+            ]
+            alerts = []
+
+        elif persona == 'Group expense tracker':
+            # Jordan: Capital One Savor + Discover it
+            # Story: Discover grocery quarterly cap at 94% → warning alert
+            cards = [
+                {'program_id': 'cap1_savor',  'card_nickname': 'Capital One Savor', 'last_four': '4490', 'confidence_level': 'high', 'user_last_verified_at': datetime(now.year, now.month, 1), 'user_stale_flag': False},
+                {'program_id': 'discover_it', 'card_nickname': 'Discover it',        'last_four': '6671', 'confidence_level': 'high', 'user_last_verified_at': datetime(now.year, now.month, 1), 'user_stale_flag': False},
+            ]
+            for cd in cards:
+                if not UserCard.query.filter_by(user_id=user.id, card_nickname=cd['card_nickname']).first():
+                    db.session.add(UserCard(user_id=user.id, association_source='user_manual', **cd))
+            db.session.flush()
+
+            def cid(nick): return (UserCard.query.filter_by(user_id=user.id, card_nickname=nick).first() or type('', (), {'id': None})()).id
+            sv_id   = cid('Capital One Savor')
+            disc_id = cid('Discover it')
+
+            spend_rows = [
+                (sv_id,   'dining',        'monthly', now_month,    690.0, 2760, 0),
+                (sv_id,   'groceries',     'monthly', now_month,    310.0,  930, 0),
+                (sv_id,   'entertainment', 'monthly', now_month,    175.0,  700, 0),
+                (sv_id,   'dining',        'monthly', prev_month,   720.0, 2880, 0),
+                (sv_id,   'dining',        'annual',  now_annual,  8280.0,33120, 0),
+                (sv_id,   'groceries',     'annual',  now_annual,  3720.0,11160, 0),
+                (sv_id,   'entertainment', 'annual',  now_annual,  2100.0, 8400, 0),
+                (disc_id, 'groceries',     'quarterly', now_q,     1410.0, 7050, 0),  # 94% of $1,500 cap
+                (disc_id, 'groceries',     'monthly', now_month,    410.0, 2050, 0),
+                (disc_id, 'groceries',     'monthly', prev_month,   500.0, 2500, 0),
+            ]
+            alerts = [(user.id, disc_id, 'groceries', 'quarterly', now_q, 'warning_80', 94.0)]
+
+        elif persona == 'Investor':
+            # Taylor: Amex Gold (dining, 71% annual cap) + Venture X (heavy travel)
+            # Story: frequent business travel + restaurant dining, Amex at 71% → approaching warning
+            cards = [
+                {'program_id': 'amex_mr',    'card_nickname': 'Amex Gold',  'last_four': '9934', 'confidence_level': 'high',   'user_last_verified_at': datetime(now.year, now.month, 1), 'user_stale_flag': False},
+                {'program_id': 'cap1_miles', 'card_nickname': 'Venture X',  'last_four': '2281', 'confidence_level': 'high',   'user_last_verified_at': datetime(now.year, now.month, 1), 'user_stale_flag': False},
+                {'program_id': 'chase_ur',   'card_nickname': 'CSR',        'last_four': '5503', 'confidence_level': 'medium', 'user_last_verified_at': datetime(now.year - 1, 9, 1),     'user_stale_flag': True},
+            ]
+            for cd in cards:
+                if not UserCard.query.filter_by(user_id=user.id, card_nickname=cd['card_nickname']).first():
+                    db.session.add(UserCard(user_id=user.id, association_source='user_manual', **cd))
+            db.session.flush()
+
+            def cid(nick): return (UserCard.query.filter_by(user_id=user.id, card_nickname=nick).first() or type('', (), {'id': None})()).id
+            am_id   = cid('Amex Gold')
+            venx_id = cid('Venture X')
+            csr_id  = cid('CSR')
+
+            spend_rows = [
+                (am_id,   'dining',    'monthly', now_month,  1950.0,  7800, 0),
+                (am_id,   'groceries', 'monthly', now_month,   280.0,  1120, 0),
+                (am_id,   'travel',    'monthly', now_month,   540.0,  1620, 0),
+                (am_id,   'dining',    'monthly', prev_month, 1820.0,  7280, 0),
+                (am_id,   'dining',    'annual',  now_annual,17750.0, 71000, 0),  # 71% of $25k
+                (am_id,   'groceries', 'annual',  now_annual, 3360.0, 13440, 0),
+                (am_id,   'travel',    'annual',  now_annual, 6480.0, 19440, 0),
+                (venx_id, 'travel',    'monthly', now_month,  2400.0, 24000, 0),
+                (venx_id, 'hotels',    'monthly', now_month,   680.0,  3400, 0),
+                (venx_id, 'travel',    'monthly', prev_month, 2850.0, 28500, 0),
+                (venx_id, 'hotels',    'monthly', prev_month,  490.0,  2450, 0),
+                (venx_id, 'travel',    'annual',  now_annual,28800.0,288000, 0),
+                (venx_id, 'hotels',    'annual',  now_annual, 6120.0, 30600, 0),
+                (csr_id,  'dining',    'monthly', now_month,   180.0,   180,  540),
+                (csr_id,  'dining',    'annual',  now_annual, 2160.0,  2160, 5400),
+            ]
+            alerts = []
+        else:
+            return
+
+        # ── Persist spend rows ───────────────────────────────────────────────
+        for card_id_val, category, period_type, period_key, spent, pts_earned, pts_missed in spend_rows:
+            if not card_id_val:
+                continue
+            if not SpendPeriodTotal.query.filter_by(
+                user_card_id=card_id_val, category=category,
+                period_type=period_type, period_key=period_key,
+            ).first():
+                db.session.add(SpendPeriodTotal(
+                    user_card_id=card_id_val, category=category,
+                    period_type=period_type, period_key=period_key,
+                    total_spent=spent,
+                    total_pts_earned=float(pts_earned),
+                    total_pts_missed=float(pts_missed),
+                ))
+
+        # ── Persist alerts ───────────────────────────────────────────────────
+        for u_id, card_id_val, category, period_type, period_key, alert_type, pct in alerts:
+            if not card_id_val:
+                continue
+            if not OptimizerAlert.query.filter_by(
+                user_card_id=card_id_val, category=category,
+                period_type=period_type, period_key=period_key, alert_type=alert_type,
+            ).first():
+                db.session.add(OptimizerAlert(
+                    user_id=u_id, user_card_id=card_id_val,
+                    category=category, period_type=period_type,
+                    period_key=period_key, alert_type=alert_type,
+                    pct_used=pct, dismissed=False,
+                ))
+
+        db.session.flush()
+        logger.info(f"pointsPal seeded for {user.id} ({persona})")
 
     @staticmethod
     def _seed_demo_groups():

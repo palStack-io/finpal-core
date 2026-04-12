@@ -134,6 +134,8 @@ class AccountDetail(Resource):
                 account.institution = data['institution']
             if 'color' in data:
                 account.color = data['color']
+            if 'external_id' in data:
+                account.external_id = data['external_id']
 
             db.session.commit()
 
@@ -313,6 +315,53 @@ class SimpleFinDisconnect(Resource):
             return {'success': True, 'message': message}, 200
         else:
             return {'success': False, 'error': message}, 400
+
+
+@ns.route('/simplefin/import')
+class SimpleFinImport(Resource):
+    @ns.doc('import_simplefin_accounts', security='Bearer')
+    @jwt_required()
+    def post(self):
+        """
+        Import selected SimpleFin accounts into finPal.
+        Body: {"account_ids": ["sf_id_1", "sf_id_2"]}
+        """
+        from src.services.account.service import SimpleFinService
+
+        current_user_id = get_jwt_identity()
+        data = request.get_json() or {}
+        account_ids = data.get('account_ids', [])
+
+        if not account_ids:
+            return {'success': False, 'error': 'account_ids is required'}, 400
+
+        simplefin_service = SimpleFinService()
+        success, message, results = simplefin_service.import_simplefin_accounts(
+            current_user_id, account_ids
+        )
+
+        if success:
+            return {'success': True, 'message': message, 'accounts': results}, 200
+        return {'success': False, 'error': message}, 400
+
+
+@ns.route('/simplefin/sync-all')
+class SimpleFinSyncAll(Resource):
+    @ns.doc('sync_all_simplefin', security='Bearer')
+    @jwt_required()
+    def post(self):
+        """Sync all SimpleFin accounts for the current user."""
+        from src.services.account.service import SimpleFinService
+
+        current_user_id = get_jwt_identity()
+        simplefin_service = SimpleFinService()
+        success, message, results = simplefin_service.sync_all_accounts(current_user_id)
+
+        return {
+            'success': success,
+            'message': message,
+            'results': results,
+        }, 200
 
 
 @ns.route('/simplefin/fetch')

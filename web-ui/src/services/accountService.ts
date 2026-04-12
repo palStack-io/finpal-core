@@ -40,6 +40,8 @@ export interface UpdateAccountData {
   institution?: string;
   account_number?: string;
   is_active?: boolean;
+  external_id?: string;
+  color?: string;
 }
 
 export interface AccountBalanceResponse {

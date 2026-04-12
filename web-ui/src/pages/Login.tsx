@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { demoService, DemoAccount, DemoStatus } from '../services/demoService';
@@ -9,6 +9,7 @@ import { Eye, EyeOff, Clock, User as UserIcon } from 'lucide-react';
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login } = useAuthStore();
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -29,10 +30,18 @@ export const Login: React.FC = () => {
     const state = location.state as { message?: string } | null;
     if (state?.message) {
       showToast(state.message, 'info');
-      // Clear the state
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location, showToast, navigate]);
+
+  // Show OIDC/auth errors passed as ?error= query param (e.g. provider conflict)
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      showToast(error, 'error');
+      navigate(location.pathname, { replace: true });
+    }
+  }, [searchParams, showToast, navigate, location.pathname]);
 
   // Fetch demo status on mount
   useEffect(() => {

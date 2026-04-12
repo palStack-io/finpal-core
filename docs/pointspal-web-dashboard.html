@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pointsPal — finPal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..60,400;12..60,600;12..60,700;12..60,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --g900:#14532d;--g800:#166534;--g700:#15803d;--g600:#16a34a;
+      --g500:#22c55e;--g400:#4ade80;--g200:#bbf7d0;--g100:#dcfce7;--g50:#f0fdf4;
+      --au600:#d97706;--au500:#f59e0b;--au400:#fbbf24;--au300:#fcd34d;--au100:#fef3c7;--au50:#fffbeb;
+      --re600:#dc2626;--re100:#fee2e2;--re50:#fef2f2;
+      --ink:#0f172a;--ink2:#1e293b;--ink3:#334155;--muted:#64748b;--light:#94a3b8;--border:#e2e8f0;
+      --bg:#f8fafc;--white:#ffffff;
+      --grad:linear-gradient(135deg,#15803d,#16a34a 50%,#22c55e);
+      --grad-gold:linear-gradient(135deg,#f59e0b,#fbbf24 60%,#fcd34d);
+      --grad-dark:linear-gradient(135deg,#166534 0%,#15803d 45%,#16a34a 100%);
+      --sh-xs:0 1px 2px rgba(0,0,0,.05);
+      --sh-sm:0 2px 8px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.04);
+      --sh-md:0 6px 20px rgba(0,0,0,.09);
+      --sw:260px;--th:58px;--r:12px;--rs:8px;
+    }
+    html,body{height:100%;font-family:'Instrument Serif',serif;background:var(--bg);color:var(--ink);overflow:hidden}
+    .shell{display:flex;height:100vh}
+
+    /* ── SIDEBAR ── */
+    .sb{width:var(--sw);min-width:var(--sw);background:var(--ink2);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+    .sb::-webkit-scrollbar{display:none}
+    .sb-brand{display:flex;align-items:center;gap:12px;padding:18px 18px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .sb-icon{width:34px;height:34px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 3px 10px rgba(21,128,61,.4)}
+    .sb-wm{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:800;color:white;line-height:1;letter-spacing:-.02em}
+    .sb-wm em{color:var(--au400);font-style:normal}
+    .sb-inst{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:rgba(255,255,255,.28);margin-top:2px}
+    .sb-lbl{padding:16px 18px 5px;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.22);text-transform:uppercase;letter-spacing:.12em}
+    .sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;margin:1px 8px;border-radius:var(--rs);cursor:pointer;user-select:none;transition:background .13s,color .13s;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.45)}
+    .sb-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
+    .sb-item.open{color:rgba(255,255,255,.9);background:rgba(255,255,255,.04)}
+    .sb-ico{width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:background .13s}
+    .sb-item.open .sb-ico{background:rgba(255,255,255,.13)}
+    .sb-chv{margin-left:auto;flex-shrink:0;width:13px;height:13px;stroke:rgba(255,255,255,.28);fill:none;stroke-width:2.5;transition:transform .2s,stroke .15s}
+    .sb-item.open .sb-chv{transform:rotate(90deg);stroke:rgba(255,255,255,.55)}
+    .sb-sub{overflow:hidden;max-height:0;transition:max-height .22s ease}
+    .sb-sub.open{max-height:220px}
+    .sb-si{display:flex;align-items:center;gap:7px;padding:7px 10px 7px 44px;margin:1px 8px;border-radius:var(--rs);cursor:pointer;user-select:none;transition:background .12s,color .12s;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;color:rgba(255,255,255,.38);position:relative}
+    .sb-si::before{content:'';position:absolute;left:27px;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.18);transition:background .12s}
+    .sb-si:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.7)}
+    .sb-si:hover::before{background:rgba(255,255,255,.35)}
+    .sb-si.active{color:var(--g400)}
+    .sb-si.active::before{background:var(--g500)}
+    .sb-pill{margin-left:auto;font-family:'Bricolage Grotesque',sans-serif;font-size:9px;font-weight:800;padding:1px 5px;border-radius:100px;background:var(--au400);color:var(--g900)}
+    .sb-pill.dim{background:rgba(255,255,255,.07);color:rgba(255,255,255,.3);font-weight:600;letter-spacing:.04em}
+    .sb-pill.red{background:var(--re600);color:white}
+    .sb-div{height:1px;background:rgba(255,255,255,.05);margin:6px 14px}
+    .sb-spc{flex:1;min-height:16px}
+    .sb-user{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .12s}
+    .sb-user:hover{background:rgba(255,255,255,.04)}
+    .sb-av{width:30px;height:30px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:800;color:white;flex-shrink:0}
+    .sb-un{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:700;color:rgba(255,255,255,.65);line-height:1.2}
+    .sb-us{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:rgba(255,255,255,.28)}
+
+    /* ── MAIN ── */
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+    .topbar{height:var(--th);flex-shrink:0;background:rgba(248,250,252,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;gap:16px}
+    .tb-cr{display:flex;align-items:center;gap:5px;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;color:var(--light)}
+    .tb-cr b{color:var(--ink);font-weight:700}
+    .tb-cr s{color:var(--border);font-style:normal;font-weight:400}
+    .tb-acts{display:flex;align-items:center;gap:8px}
+    .tb-btn{display:flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--white);font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:700;color:var(--ink3);cursor:pointer;transition:all .13s;white-space:nowrap}
+    .tb-btn:hover{border-color:var(--g600);color:var(--g700)}
+    .tb-btn.p{background:var(--g700);color:white;border-color:var(--g700)}
+    .tb-btn.p:hover{background:var(--g800);border-color:var(--g800)}
+    .content{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+    .content::-webkit-scrollbar{width:4px}
+    .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+    /* ── SCREENS ── */
+    .screen{display:none;padding:26px 26px 56px}
+    .screen.active{display:block}
+    .pg-h{margin-bottom:20px}
+    .pg-t{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.02em;margin-bottom:3px}
+    .pg-s{font-size:14px;color:var(--muted)}
+
+    /* KPI ROW */
+    .kpi-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:13px;margin-bottom:20px}
+    .kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh-xs);position:relative;overflow:hidden}
+    .kpi.prime{background:var(--grad-dark);border-color:transparent;box-shadow:0 6px 24px rgba(21,128,61,.22)}
+    .kpi.warn-card{border-color:var(--au300);background:var(--au50)}
+    .kpi-l{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+    .kpi.prime .kpi-l{color:rgba(255,255,255,.5)}
+    .kpi.warn-card .kpi-l{color:var(--au600)}
+    .kpi-v{font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;color:var(--ink);line-height:1;margin-bottom:5px}
+    .kpi.prime .kpi-v{font-size:36px;color:white}
+    .kpi-v sub{font-size:14px;font-weight:600;color:var(--au400);vertical-align:baseline}
+    .kpi-n{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:600;color:var(--g600)}
+    .kpi.prime .kpi-n{color:rgba(255,255,255,.52);font-weight:400;font-size:12px}
+    .kpi-n.warn{color:var(--au500)}
+    .kpi-n.red{color:var(--re600)}
+    .kpi-orb{position:absolute;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none}
+
+    /* OVERVIEW */
+    .ov-g{display:grid;grid-template-columns:1fr 310px;gap:16px}
+    .ov-r{display:flex;flex-direction:column;gap:13px}
+    .w{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh-xs)}
+    .w-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .w-t{font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:800;color:var(--ink)}
+    .w-lk{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:700;color:var(--g700);cursor:pointer}
+    .w-lk:hover{color:var(--g800)}
+
+    /* Stale card banner */
+    .stale-banner{background:var(--au50);border:1px solid var(--au300);border-radius:var(--r);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+    .stale-ico{font-size:20px;flex-shrink:0}
+    .stale-body{flex:1}
+    .stale-t{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:700;color:var(--au600);margin-bottom:2px}
+    .stale-d{font-size:12px;color:var(--ink3)}
+    .stale-btn{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:800;padding:5px 12px;border-radius:6px;background:var(--au500);color:white;border:none;cursor:pointer;white-space:nowrap}
+    .stale-btn:hover{background:var(--au600)}
+
+    /* Card grid */
+    .cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .cc-tile{border-radius:var(--r);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .16s,box-shadow .16s}
+    .cc-tile:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+    .ccf{padding:13px 15px 12px;position:relative;overflow:hidden;min-height:86px}
+    .ccf.chase{background:linear-gradient(135deg,#1a237e,#3949ab)}
+    .ccf.amex{background:linear-gradient(135deg,#004d40,#00897b)}
+    .ccf.citi{background:linear-gradient(135deg,#b71c1c,#c62828)}
+    .ccf.cap1{background:linear-gradient(135deg,#212121,#424242)}
+    .ccf-sh{position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 100%)}
+    .ccf-chip{width:22px;height:16px;border-radius:3px;background:linear-gradient(135deg,var(--au300),var(--au500));margin-bottom:9px}
+    .ccf-n{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:700;color:rgba(255,255,255,.95)}
+    .ccf-s{font-family:'Bricolage Grotesque',sans-serif;font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+    .ccf-pts{position:absolute;top:10px;right:11px;background:rgba(0,0,0,.25);backdrop-filter:blur(6px);border-radius:5px;padding:3px 7px;text-align:right}
+    .ccf-pv{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;color:white;line-height:1}
+    .ccf-pl{font-family:'Bricolage Grotesque',sans-serif;font-size:8px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em}
+    .cc-body{background:var(--white);padding:9px 13px 11px}
+    .cc-bg{background:var(--g100);border-radius:100px;height:4px;overflow:hidden;margin-bottom:5px}
+    .cc-bf{height:100%;border-radius:100px;background:var(--grad)}
+    .cc-meta{display:flex;justify-content:space-between;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:var(--muted)}
+    .cc-meta b{color:var(--g700);font-weight:700}
+    .cc-al{display:inline-flex;align-items:center;gap:3px;margin-top:5px;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:600;color:var(--au600);background:var(--au50);padding:2px 6px;border-radius:4px}
+    .cc-al.red{color:var(--re600);background:var(--re50)}
+
+    /* Opportunity rows */
+    .opp-r{display:flex;align-items:center;gap:11px;padding:10px 8px;border-radius:var(--rs);cursor:pointer;transition:background .11s}
+    .opp-r:hover{background:var(--g50)}
+    .opp-ico{width:32px;height:32px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+    .opp-b{flex:1;min-width:0}
+    .opp-t{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .opp-d{font-size:11px;color:var(--muted);line-height:1.3}
+    .opp-g{text-align:right;flex-shrink:0}
+    .opp-gv{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:800;color:var(--g700)}
+    .opp-gv.red{color:var(--re600)}
+    .opp-gl{font-family:'Bricolage Grotesque',sans-serif;font-size:9px;color:var(--light);text-transform:uppercase}
+
+    /* Feed */
+    .feed-i{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .feed-i:last-child{border-bottom:none}
+    .feed-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .feed-b{flex:1;min-width:0}
+    .feed-t{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .feed-d{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:var(--muted)}
+    .feed-pts{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:800;color:var(--g700);flex-shrink:0}
+    .feed-pts.miss{color:var(--re600)}
+
+    /* ── CAP TRACKER (Optimizer screen) ── */
+    .period-row{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+    .period-lbl{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:700;color:var(--muted);margin-right:4px}
+    .pt-btn{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:700;padding:5px 13px;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--muted);cursor:pointer;transition:all .12s}
+    .pt-btn:hover{border-color:var(--g600);color:var(--g700)}
+    .pt-btn.active{background:var(--g700);color:white;border-color:var(--g700)}
+
+    .opt-g{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+
+    /* Cap card */
+    .cap-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh-xs);margin-bottom:12px;cursor:pointer;transition:all .15s}
+    .cap-card:hover{box-shadow:var(--sh-sm)}
+    .cap-card.capped{border-color:var(--re600);border-left:4px solid var(--re600)}
+    .cap-card.warn{border-color:var(--au400);border-left:4px solid var(--au400)}
+    .cap-card.ok{border-color:var(--g400);border-left:4px solid var(--g400)}
+    .cap-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .cap-emoji{font-size:18px;flex-shrink:0}
+    .cap-info{flex:1;min-width:0}
+    .cap-title{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;color:var(--ink)}
+    .cap-sub{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:var(--muted);margin-top:1px}
+    .cap-status{flex-shrink:0;text-align:right}
+    .cap-rate{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:800}
+    .cap-rate.green{color:var(--g700)}
+    .cap-rate.amber{color:var(--au600)}
+    .cap-rate.red{color:var(--re600)}
+    .cap-rate-lbl{font-family:'Bricolage Grotesque',sans-serif;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+    /* Cap progress bar */
+    .cap-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .cap-bar-bg{flex:1;background:#f1f5f9;border-radius:100px;height:6px;overflow:hidden}
+    .cap-bar-fill{height:100%;border-radius:100px;transition:width .3s}
+    .cap-bar-fill.green{background:var(--grad)}
+    .cap-bar-fill.amber{background:linear-gradient(90deg,var(--au400),var(--au500))}
+    .cap-bar-fill.red{background:linear-gradient(90deg,var(--re600),#ef4444)}
+    .cap-bar-pct{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:800;flex-shrink:0;width:36px;text-align:right}
+    .cap-bar-pct.green{color:var(--g700)}
+    .cap-bar-pct.amber{color:var(--au600)}
+    .cap-bar-pct.red{color:var(--re600)}
+    .cap-amounts{display:flex;justify-content:space-between;font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:var(--muted)}
+    .cap-amounts b{font-weight:700;color:var(--ink3)}
+
+    /* Cap detail (expandable) */
+    .cap-detail{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+    .cap-detail.open{display:block}
+    .cap-alert-box{border-radius:var(--rs);padding:10px 12px;margin-bottom:10px}
+    .cap-alert-box.capped{background:var(--re50);border:1px solid #fca5a5}
+    .cap-alert-box.warn{background:var(--au50);border:1px solid var(--au300)}
+    .cap-alert-box.ok{background:var(--g50);border:1px solid var(--g200)}
+    .cap-alert-title{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:800;margin-bottom:3px}
+    .cap-alert-box.capped .cap-alert-title{color:var(--re600)}
+    .cap-alert-box.warn .cap-alert-title{color:var(--au600)}
+    .cap-alert-box.ok .cap-alert-title{color:var(--g700)}
+    .cap-alert-desc{font-size:12px;color:var(--ink3);line-height:1.6}
+    .cap-alert-desc strong{color:var(--g700)}
+    .cap-rec-row{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--g50);border:1px solid var(--g200);border-radius:var(--rs)}
+    .cap-rec-lbl{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:var(--muted);flex-shrink:0}
+    .cap-rec-card{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:800;color:var(--g700);flex:1}
+    .cap-rec-rate{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;color:var(--g700);flex-shrink:0}
+
+    /* Summary panel */
+    .sum-panel{display:flex;flex-direction:column;gap:13px}
+    .sum-hero{background:var(--grad-gold);border-radius:var(--r);padding:18px 20px}
+    .sum-hero-lbl{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;color:rgba(0,0,0,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+    .sum-hero-v{font-family:'Bricolage Grotesque',sans-serif;font-size:32px;font-weight:800;color:var(--g900);line-height:1;letter-spacing:-.02em}
+    .sum-hero-s{font-size:12px;color:rgba(0,0,0,.4);margin-top:3px}
+    .sum-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+    .sum-row:last-child{border-bottom:none;padding-bottom:0}
+    .sum-rl{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;color:var(--ink3)}
+    .sum-rv{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800}
+    .sum-rv.g{color:var(--g700)}
+    .sum-rv.r{color:var(--re600)}
+    .sum-rv.a{color:var(--au600)}
+
+    /* ── RECOMMENDER ── */
+    .rec-g{display:grid;grid-template-columns:390px 1fr;gap:18px;align-items:start}
+    .fl{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:600;padding:6px 12px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--white);color:var(--ink3);cursor:pointer;transition:all .12s}
+    .chip:hover{border-color:var(--g500);color:var(--g700)}
+    .chip.active{background:var(--g700);color:white;border-color:var(--g700)}
+    .amt-row{display:flex;gap:8px}
+    .amt-in{flex:1;font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;color:var(--ink);background:var(--g50);border:2px solid var(--g200);border-radius:var(--rs);padding:9px 13px;outline:none;transition:border-color .13s}
+    .amt-in:focus{border-color:var(--g700)}
+    .go-btn{padding:9px 18px;border-radius:var(--rs);background:var(--g700);color:white;border:none;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:background .13s;white-space:nowrap}
+    .go-btn:hover{background:var(--g800)}
+    .win-b{background:var(--grad-dark);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;margin-bottom:13px}
+    .win-orb{position:absolute;top:-28px;right:-28px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.05)}
+    .win-lbl{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.09em;margin-bottom:6px}
+    .win-nm{font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:800;color:white;margin-bottom:4px;letter-spacing:-.01em}
+    .win-e{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;color:var(--au300)}
+    .win-e b{color:white}
+    /* cap-aware badge in recommender */
+    .eff-rate-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.12);border-radius:6px;padding:3px 9px;margin-top:6px}
+    .eff-rate-badge span{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:rgba(255,255,255,.7)}
+    .eff-rate-badge b{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:800;color:var(--au300)}
+    .cmp-t{width:100%;border-collapse:separate;border-spacing:0 3px}
+    .cmp-t th{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.07em;padding:0 10px 6px}
+    .cmp-t td{padding:8px 10px;background:var(--white);font-family:'Bricolage Grotesque',sans-serif}
+    .cmp-t tr.win td{background:var(--g50)}
+    .cmp-t td:first-child{border-radius:var(--rs) 0 0 var(--rs);border-left:3px solid transparent}
+    .cmp-t tr.win td:first-child{border-left-color:var(--g700)}
+    .cmp-t tr.cap-hit td:first-child{border-left-color:var(--re600)}
+    .cmp-t tr.cap-hit td{background:var(--re50);opacity:.75}
+    .cmp-t td:last-child{border-radius:0 var(--rs) var(--rs) 0}
+    .cn{font-size:12px;font-weight:700;color:var(--ink)}
+    .cp{font-size:10px;color:var(--muted);margin-top:1px}
+    .cr{font-size:14px;font-weight:800;color:var(--g700)}
+    .cr.struck{text-decoration:line-through;color:var(--muted);font-size:11px}
+    .cv{font-size:12px;font-weight:700;color:var(--ink3)}
+    .tag{display:inline-block;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+    .tag.b{background:var(--g100);color:var(--g700)}
+    .tag.g{background:var(--au100);color:var(--au600)}
+    .tag.o{background:#f1f5f9;color:var(--muted)}
+    .tag.r{background:var(--re100);color:var(--re600)}
+    .why{background:var(--g50);border:1px solid var(--g200);border-radius:var(--r);padding:13px 15px;margin-top:11px}
+    .why-t{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+    .why p{font-size:13px;color:var(--ink3);line-height:1.7}
+    .why strong{color:var(--g700)}
+
+    /* ── MY CARDS ── */
+    .cards-g{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .cd{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-xs)}
+    .cd-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 16px 10px}
+    .cd-cell{background:var(--bg);border-radius:var(--rs);padding:9px 11px}
+    .cd-cl{font-family:'Bricolage Grotesque',sans-serif;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+    .cd-cv{font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:800;color:var(--ink)}
+    .cd-cv.g{color:var(--g700)}.cd-cv.a{color:var(--au600)}
+    .cd-rates{padding:0 16px 14px}
+    .cd-rl{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+    .cd-rr{display:flex;justify-content:space-between;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;color:var(--ink3);padding:5px 0;border-bottom:1px solid var(--border)}
+    .cd-rr:last-child{border-bottom:none}
+    .cd-rv{font-weight:800;color:var(--g700)}
+    .cd-cap-note{font-size:10px;font-weight:600;color:var(--au600);font-family:'Bricolage Grotesque',sans-serif}
+    .cd-al{display:inline-flex;align-items:center;gap:3px;margin:4px 16px 0;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:600;color:var(--au600);background:var(--au50);padding:3px 7px;border-radius:4px}
+    .cd-verified{display:inline-flex;align-items:center;gap:3px;margin:4px 16px 0;font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:600;color:var(--g700);background:var(--g50);padding:3px 7px;border-radius:4px}
+
+    /* ── REDEEM TAB ── */
+    .opt-banner{background:var(--grad-gold);border-radius:18px;padding:20px 26px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .opt-bl{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;font-weight:700;color:rgba(0,0,0,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+    .opt-bv{font-family:'Bricolage Grotesque',sans-serif;font-size:40px;font-weight:800;color:var(--g900);line-height:1;letter-spacing:-.02em}
+    .opt-bs{font-size:12px;color:rgba(0,0,0,.4);margin-top:3px}
+    .opt-br{text-align:right;display:flex;flex-direction:column;gap:8px}
+    .opt-sv{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;color:var(--g900)}
+    .opt-sl{font-family:'Bricolage Grotesque',sans-serif;font-size:10px;color:rgba(0,0,0,.4)}
+    .rdm-g{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .rgh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .rgd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .rgn{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;color:var(--ink)}
+    .rgp{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:var(--muted);margin-left:auto}
+    .rt{width:100%;border-collapse:separate;border-spacing:0 3px}
+    .rt th{font-family:'Bricolage Grotesque',sans-serif;font-size:9px;font-weight:700;color:var(--light);text-transform:uppercase;letter-spacing:.07em;padding:0 10px 5px}
+    .rt th:last-child{text-align:right}
+    .rt td{padding:8px 10px;background:var(--white);font-family:'Bricolage Grotesque',sans-serif}
+    .rt td:first-child{border-radius:var(--rs) 0 0 var(--rs)}
+    .rt td:last-child{border-radius:0 var(--rs) var(--rs) 0;text-align:right}
+    .rt tr:hover td{background:var(--g50);cursor:pointer}
+    .rn{font-size:12px;font-weight:700;color:var(--ink)}
+    .rd{font-size:10px;color:var(--muted)}
+    .rc{font-size:13px;font-weight:800}
+    .rc.hi{color:var(--g700)}.rc.md{color:var(--au600)}.rc.lo{color:var(--muted)}
+    .tip{border-radius:var(--r);padding:12px 14px;margin-bottom:9px}
+    .tip:last-child{margin-bottom:0}
+    .tip-t{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+    .tip p{font-size:12px;line-height:1.65}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sb">
+  <div class="sb-brand">
+    <div class="sb-icon">💰</div>
+    <div><div class="sb-wm">fin<em>Pal</em></div><div class="sb-inst">Self-hosted · v2.1</div></div>
+  </div>
+  <div class="sb-lbl">Main</div>
+  <div class="sb-item"><div class="sb-ico">🏠</div>Dashboard</div>
+  <div class="sb-item"><div class="sb-ico">↕️</div>Transactions</div>
+  <div class="sb-item"><div class="sb-ico">📁</div>Budgets</div>
+  <div class="sb-item"><div class="sb-ico">🎯</div>Goals</div>
+  <div class="sb-item"><div class="sb-ico">📈</div>Reports</div>
+  <div class="sb-div"></div>
+  <div class="sb-lbl">Modules</div>
+  <div class="sb-item open" id="sbpp" onclick="togglePP()">
+    <div class="sb-ico">🏆</div>
+    <span>points<span style="color:var(--au400)">Pal</span></span>
+    <svg class="sb-chv" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="sb-sub open" id="sbsub">
+    <div class="sb-si active" id="ssi-overview"    onclick="go('overview')">Overview</div>
+    <div class="sb-si"        id="ssi-optimizer"   onclick="go('optimizer')">Cap Tracker <span class="sb-pill red">2</span></div>
+    <div class="sb-si"        id="ssi-recommender" onclick="go('recommender')">Best Card</div>
+    <div class="sb-si"        id="ssi-tracker"     onclick="go('tracker')">My Cards</div>
+    <div class="sb-si"        id="ssi-redeem"      onclick="go('redeem')">Redeem</div>
+  </div>
+  <div class="sb-item" style="opacity:.35;cursor:default;pointer-events:none"><div class="sb-ico">💸</div>debtFree<span class="sb-pill dim" style="margin-left:auto">Soon</span></div>
+  <div class="sb-div"></div>
+  <div class="sb-lbl">Settings</div>
+  <div class="sb-item"><div class="sb-ico">🔗</div>Connections</div>
+  <div class="sb-item"><div class="sb-ico">⚙️</div>Preferences</div>
+  <div class="sb-spc"></div>
+  <div class="sb-user"><div class="sb-av">HG</div><div><div class="sb-un">Harun G.</div><div class="sb-us">Self-hosted instance</div></div></div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-cr">finPal <s>›</s> pointsPal <s>›</s> <b id="crumb">Overview</b></div>
+    <div class="tb-acts">
+      <button class="tb-btn">🔄 Sync</button>
+      <button class="tb-btn">⚙️ Settings</button>
+      <button class="tb-btn p">+ Add Card</button>
+    </div>
+  </div>
+  <div class="content">
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <div class="screen active" id="sc-overview">
+    <div class="pg-h"><div class="pg-t">Rewards Overview</div><div class="pg-s">Your complete rewards picture — last synced today at 9:41 AM</div></div>
+
+    <!-- Stale card verification prompt (from v_user_stale_cards) -->
+    <div class="stale-banner">
+      <div class="stale-ico">⚠️</div>
+      <div class="stale-body">
+        <div class="stale-t">Venture X earn rates need verification</div>
+        <div class="stale-d">Capital One updated this card's program in January. Confirm your rates are still accurate to keep recommendations reliable.</div>
+      </div>
+      <button class="stale-btn" onclick="go('tracker')">Verify now →</button>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi prime">
+        <div class="kpi-orb" style="width:90px;height:90px;top:-25px;right:-20px"></div>
+        <div class="kpi-orb" style="width:50px;height:50px;bottom:-10px;right:50px;background:rgba(251,191,36,.13)"></div>
+        <div class="kpi-l">Total Rewards Value</div>
+        <div class="kpi-v">$847<sub>.32</sub></div>
+        <div class="kpi-n">↑ +$63.40 this month · 142,800 pts across 4 cards</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-l">Pts Earned (Mar)</div>
+        <div class="kpi-v">5,240</div>
+        <div class="kpi-n">↑ +12% vs Feb</div>
+      </div>
+      <div class="kpi warn-card">
+        <div class="kpi-l">Pts Missed (Mar)</div>
+        <div class="kpi-v" style="font-size:22px;color:var(--re600)">2,800</div>
+        <div class="kpi-n red">⚠ BofA grocery cap hit</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-l">Cap Alerts</div>
+        <div class="kpi-v" style="color:var(--re600)">2</div>
+        <div class="kpi-n warn" style="cursor:pointer" onclick="go('optimizer')">View cap tracker →</div>
+      </div>
+    </div>
+
+    <div class="ov-g">
+      <div class="w">
+        <div class="w-h"><div class="w-t">Your Cards</div><div class="w-lk" onclick="go('tracker')">Manage all →</div></div>
+        <div class="cc-grid">
+          <div class="cc-tile">
+            <div class="ccf chase"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Sapphire Reserve</div><div class="ccf-s">Chase · Ultimate Rewards</div><div class="ccf-pts"><div class="ccf-pv">68,400</div><div class="ccf-pl">pts</div></div></div>
+            <div class="cc-body"><div class="cc-bg"><div class="cc-bf" style="width:68%"></div></div><div class="cc-meta"><span>≈ <b>$410</b></span><span>Fee: <b>$550/yr</b></span></div><div class="cc-al">⚠️ 12k pts expire Jan 2026</div></div>
+          </div>
+          <div class="cc-tile">
+            <div class="ccf amex"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Amex Gold Card</div><div class="ccf-s">Amex · Membership Rewards</div><div class="ccf-pts"><div class="ccf-pv">41,200</div><div class="ccf-pl">pts</div></div></div>
+            <div class="cc-body"><div class="cc-bg"><div class="cc-bf" style="width:41%"></div></div><div class="cc-meta"><span>≈ <b>$247</b></span><span>Fee: <b>$250/yr</b></span></div></div>
+          </div>
+          <div class="cc-tile">
+            <div class="ccf cap1"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Venture X</div><div class="ccf-s">Capital One · Miles</div><div class="ccf-pts"><div class="ccf-pv">19,000</div><div class="ccf-pl">miles</div></div></div>
+            <div class="cc-body"><div class="cc-bg"><div class="cc-bf" style="width:19%"></div></div><div class="cc-meta"><span>≈ <b>$57</b></span><span>Fee: <b>$395/yr</b></span></div><div class="cc-al">🔍 Rates unverified since Jan</div></div>
+          </div>
+          <div class="cc-tile">
+            <div class="ccf citi"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Double Cash</div><div class="ccf-s">Citi · Cash Back</div><div class="ccf-pts"><div class="ccf-pv">$133</div><div class="ccf-pl">cash</div></div></div>
+            <div class="cc-body"><div class="cc-bg"><div class="cc-bf" style="width:53%"></div></div><div class="cc-meta"><span>≈ <b>$133</b></span><span>Fee: <b>$0/yr</b></span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="ov-r">
+        <div class="w">
+          <div class="w-h"><div class="w-t">🔥 Action Needed</div><div class="w-lk" onclick="go('optimizer')">All alerts →</div></div>
+          <div class="opp-r"><div class="opp-ico" style="background:var(--re50)">🚨</div><div class="opp-b"><div class="opp-t">Groceries cap hit — switch now</div><div class="opp-d">BofA $2,500 quarterly cap reached. Earning 1× instead of 3×</div></div><div class="opp-g"><div class="opp-gv red">−2,800 pts</div><div class="opp-gl">This month</div></div></div>
+          <div class="opp-r"><div class="opp-ico" style="background:var(--au50)">⚡</div><div class="opp-b"><div class="opp-t">Gas cap at 84% — $79 left</div><div class="opp-d">Citi Custom Cash 5× cap almost hit. Resets June 1</div></div><div class="opp-g"><div class="opp-gv">$79 left</div><div class="opp-gl">At 5×</div></div></div>
+          <div class="opp-r"><div class="opp-ico" style="background:#eff6ff">✈️</div><div class="opp-b"><div class="opp-t">Use CSR for travel</div><div class="opp-d">3× vs current Venture X habit (no cap)</div></div><div class="opp-g"><div class="opp-gv">+$12/mo</div><div class="opp-gl">Gain</div></div></div>
+        </div>
+        <div class="w">
+          <div class="w-h"><div class="w-t">Recent Earnings</div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:#3949ab"></div><div class="feed-b"><div class="feed-t">Delta ORD→BOS</div><div class="feed-d">Chase Sapphire Reserve · 2d ago</div></div><div class="feed-pts">+3,720 pts</div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:var(--re600)"></div><div class="feed-b"><div class="feed-t">Whole Foods Market</div><div class="feed-d">BofA Cash Rewards — cap hit, earned 1×</div></div><div class="feed-pts miss">+84 pts <span style="font-size:9px;color:var(--re600)">(−168 missed)</span></div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:#00897b"></div><div class="feed-b"><div class="feed-t">Dinner at Oleana</div><div class="feed-d">Amex Gold · 3d ago</div></div><div class="feed-pts">+348 pts</div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:#c62828"></div><div class="feed-b"><div class="feed-t">Shell gas station</div><div class="feed-d">Citi Custom Cash · 5d ago</div></div><div class="feed-pts">+225 pts</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CAP TRACKER ═══ -->
+  <div class="screen" id="sc-optimizer">
+    <div class="pg-h"><div class="pg-t">Cap Tracker</div><div class="pg-s">Real-time spend vs. earn caps — know exactly when to switch cards.</div></div>
+
+    <div class="period-row">
+      <span class="period-lbl">Period:</span>
+      <button class="pt-btn active" onclick="setPeriod('monthly',this)">Monthly</button>
+      <button class="pt-btn" onclick="setPeriod('quarterly',this)">Quarterly</button>
+      <button class="pt-btn" onclick="setPeriod('annual',this)">Annual</button>
+    </div>
+
+    <div class="opt-g">
+      <!-- Left: cap cards -->
+      <div>
+
+        <!-- CAPPED -->
+        <div class="cap-card capped" onclick="toggleDetail('d1')">
+          <div class="cap-top">
+            <div class="cap-emoji">🛒</div>
+            <div class="cap-info">
+              <div class="cap-title">Groceries · BofA Cash Rewards</div>
+              <div class="cap-sub">$500/quarter cap · resets Apr 1</div>
+            </div>
+            <div class="cap-status">
+              <div class="cap-rate red">1×</div>
+              <div class="cap-rate-lbl">Effective now</div>
+            </div>
+          </div>
+          <div class="cap-bar-wrap">
+            <div class="cap-bar-bg"><div class="cap-bar-fill red" style="width:100%"></div></div>
+            <div class="cap-bar-pct red">100%</div>
+          </div>
+          <div class="cap-amounts"><span>$500 spent</span><b>$500 cap — CAPPED</b></div>
+          <div class="cap-detail" id="d1">
+            <div class="cap-alert-box capped"><div class="cap-alert-title">🚨 Cap Reached — Now Earning 1× Instead of 3%</div><div class="cap-alert-desc">You've hit your $500 quarterly cap on groceries. Every dollar since has earned just 1× (base rate) instead of 3%. You've missed an estimated <strong>~2,800 pts</strong> this month alone. Switch cards immediately for the rest of this quarter.</div></div>
+            <div class="cap-rec-row"><span class="cap-rec-lbl">Switch to →</span><span class="cap-rec-card">Amex Gold Card</span><span class="cap-rec-rate">4× no cap</span></div>
+          </div>
+        </div>
+
+        <!-- WARNING -->
+        <div class="cap-card warn" onclick="toggleDetail('d2')">
+          <div class="cap-top">
+            <div class="cap-emoji">⛽</div>
+            <div class="cap-info">
+              <div class="cap-title">Gas · Citi Custom Cash</div>
+              <div class="cap-sub">$500/month cap · resets June 1</div>
+            </div>
+            <div class="cap-status">
+              <div class="cap-rate amber">5×</div>
+              <div class="cap-rate-lbl">Active · $79 left</div>
+            </div>
+          </div>
+          <div class="cap-bar-wrap">
+            <div class="cap-bar-bg"><div class="cap-bar-fill amber" style="width:84%"></div></div>
+            <div class="cap-bar-pct amber">84%</div>
+          </div>
+          <div class="cap-amounts"><span>$421 spent</span><b>$500 cap — $79 remaining at 5×</b></div>
+          <div class="cap-detail" id="d2">
+            <div class="cap-alert-box warn"><div class="cap-alert-title">⚡ Approaching Cap — $79 Left at 5×</div><div class="cap-alert-desc">At your typical gas spend you'll hit the cap in about 2–3 fill-ups. After that you'll earn 1% flat. Cap resets <strong>June 1</strong>. Plan accordingly — or save those last $79 for a big fill-up.</div></div>
+            <div class="cap-rec-row"><span class="cap-rec-lbl">Fallback →</span><span class="cap-rec-card">Wells Fargo Autograph</span><span class="cap-rec-rate">3× no cap</span></div>
+          </div>
+        </div>
+
+        <!-- OK: Dining -->
+        <div class="cap-card ok" onclick="toggleDetail('d3')">
+          <div class="cap-top">
+            <div class="cap-emoji">🍽️</div>
+            <div class="cap-info">
+              <div class="cap-title">Dining · Amex Gold Card</div>
+              <div class="cap-sub">$25,000/year cap · resets Jan 1</div>
+            </div>
+            <div class="cap-status">
+              <div class="cap-rate green">4×</div>
+              <div class="cap-rate-lbl">Full rate</div>
+            </div>
+          </div>
+          <div class="cap-bar-wrap">
+            <div class="cap-bar-bg"><div class="cap-bar-fill green" style="width:32%"></div></div>
+            <div class="cap-bar-pct green">32%</div>
+          </div>
+          <div class="cap-amounts"><span>$8,040 spent YTD</span><b>$25,000 cap — $16,960 remaining</b></div>
+          <div class="cap-detail" id="d3">
+            <div class="cap-alert-box ok"><div class="cap-alert-title">✅ On Track — Projected to Cap in October</div><div class="cap-alert-desc">At your current dining pace (~$670/month) you'll hit the $25k annual cap around October. No action needed now, but flag this for Q3 review. Once capped, <strong>CSR 3× dining</strong> is your best fallback.</div></div>
+            <div class="cap-rec-row"><span class="cap-rec-lbl">Fallback when capped →</span><span class="cap-rec-card">Chase Sapphire Reserve</span><span class="cap-rec-rate">3× no cap</span></div>
+          </div>
+        </div>
+
+        <!-- OK: Travel -->
+        <div class="cap-card ok">
+          <div class="cap-top">
+            <div class="cap-emoji">✈️</div>
+            <div class="cap-info">
+              <div class="cap-title">Travel · Chase Sapphire Reserve</div>
+              <div class="cap-sub">No cap — always earning 3×</div>
+            </div>
+            <div class="cap-status">
+              <div class="cap-rate green">3×</div>
+              <div class="cap-rate-lbl">No cap</div>
+            </div>
+          </div>
+          <div class="cap-bar-wrap">
+            <div class="cap-bar-bg"><div class="cap-bar-fill green" style="width:100%;background:var(--grad);opacity:.35"></div></div>
+            <div class="cap-bar-pct green">∞</div>
+          </div>
+          <div class="cap-amounts"><span>$2,140 spent YTD</span><b>No cap — no action needed</b></div>
+        </div>
+
+      </div>
+
+      <!-- Right: summary panel -->
+      <div class="sum-panel">
+        <div class="w">
+          <div class="w-h" style="margin-bottom:12px"><div class="w-t">Period Summary</div></div>
+          <div class="sum-hero" style="margin-bottom:14px">
+            <div class="sum-hero-lbl">Pts earned this month</div>
+            <div class="sum-hero-v" id="sbEarned">5,240</div>
+            <div class="sum-hero-s" id="sbPill">≈ $20 missed to caps</div>
+          </div>
+          <div class="sum-row"><span class="sum-rl">Points at full rate</span><span class="sum-rv g" id="sbLeft">5,240</span></div>
+          <div class="sum-row"><span class="sum-rl">Points at fallback rate</span><span class="sum-rv r">840</span></div>
+          <div class="sum-row"><span class="sum-rl">Points missed (caps)</span><span class="sum-rv r">2,800</span></div>
+          <div class="sum-row"><span class="sum-rl">Value missed this month</span><span class="sum-rv r">≈ $20</span></div>
+          <div class="sum-row"><span class="sum-rl">Cards with active caps</span><span class="sum-rv a">2 alerts</span></div>
+        </div>
+        <div class="w">
+          <div class="w-h" style="margin-bottom:10px"><div class="w-t">If You Switch Today</div></div>
+          <div style="font-size:13px;color:var(--ink3);line-height:1.7;margin-bottom:12px">Moving groceries to <strong style="color:var(--g700)">Amex Gold (4×)</strong> for the rest of the quarter could recover an estimated <strong style="color:var(--g700)">+4,200 pts</strong> (~$25 in value) based on your current spend rate.</div>
+          <div class="cap-rec-row"><span class="cap-rec-lbl">Switch</span><span class="cap-rec-card">Groceries → Amex Gold</span><span class="cap-rec-rate">+4,200 pts</span></div>
+        </div>
+        <div class="w">
+          <div class="w-h" style="margin-bottom:10px"><div class="w-t">Upcoming Resets</div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:var(--re600)"></div><div class="feed-b"><div class="feed-t">BofA Groceries cap resets</div><div class="feed-d">Apr 1 · quarterly</div></div><div class="feed-pts" style="color:var(--re600)">25d</div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:var(--au500)"></div><div class="feed-b"><div class="feed-t">Citi Gas cap resets</div><div class="feed-d">Jun 1 · monthly</div></div><div class="feed-pts" style="color:var(--au600)">Jun 1</div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:var(--g500)"></div><div class="feed-b"><div class="feed-t">Amex Dining cap resets</div><div class="feed-d">Jan 1 · annual</div></div><div class="feed-pts" style="color:var(--g700)">Jan 1</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RECOMMENDER ═══ -->
+  <div class="screen" id="sc-recommender">
+    <div class="pg-h"><div class="pg-t">Best Card Recommender</div><div class="pg-s">Cap-aware recommendations — we factor in where you are against each card's limits right now.</div></div>
+    <div class="rec-g">
+      <div style="display:flex;flex-direction:column;gap:13px">
+        <div class="w">
+          <div style="margin-bottom:15px"><div class="fl">Category</div><div class="chips"><div class="chip">✈️ Travel</div><div class="chip">🍽️ Dining</div><div class="chip active">🛒 Groceries</div><div class="chip">⛽ Gas</div><div class="chip">🛍️ Shopping</div><div class="chip">💊 Pharmacy</div><div class="chip">🎬 Entertainment</div><div class="chip">🌐 Other</div></div></div>
+          <div style="margin-bottom:15px"><div class="fl">Merchant (optional)</div><input class="amt-in" style="width:100%;font-size:14px;font-weight:600;padding:8px 12px" placeholder="e.g. Whole Foods, Trader Joe's…" readonly></div>
+          <div><div class="fl">Amount</div><div class="amt-row"><input class="amt-in" type="text" value="$84.50" readonly><button class="go-btn">Find Best →</button></div></div>
+        </div>
+        <div class="w">
+          <div class="w-h" style="margin-bottom:10px"><div class="w-t">Recent Lookups</div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:var(--re600)"></div><div class="feed-b"><div class="feed-t">🛒 Groceries · $84 → Amex Gold 4× (BofA capped)</div><div class="feed-d">Today · cap-aware result</div></div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:var(--g700)"></div><div class="feed-b"><div class="feed-t">✈️ Travel · $340 → CSR 3× wins</div><div class="feed-d">Yesterday</div></div></div>
+          <div class="feed-i"><div class="feed-dot" style="background:var(--au500)"></div><div class="feed-b"><div class="feed-t">🍽️ Dining · $86 → Amex Gold 4× wins</div><div class="feed-d">3 days ago</div></div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:13px">
+        <!-- Winner banner — cap-aware -->
+        <div class="win-b">
+          <div class="win-orb"></div>
+          <div class="win-lbl">Best card for $84.50 · Groceries</div>
+          <div class="win-nm">Amex Gold Card</div>
+          <div class="win-e">Earn 338 pts ≈ <b>$2.03</b> (4× · no cap)</div>
+          <div class="eff-rate-badge"><span>BofA was your usual pick — but it's</span> <b>capped this quarter</b></div>
+        </div>
+        <div class="w">
+          <div class="w-h" style="margin-bottom:10px"><div class="w-t">Full Comparison</div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:11px;color:var(--muted)">$84.50 · Groceries · cap-aware</div></div>
+          <table class="cmp-t">
+            <thead><tr><th>Card</th><th>Rate</th><th>Effective</th><th>Value</th><th></th></tr></thead>
+            <tbody>
+              <tr class="win"><td><div class="cn">Amex Gold Card</div><div class="cp">Membership Rewards · no cap</div></td><td><div class="cr">4×</div></td><td><div class="cr">4×</div></td><td><div class="cv" style="color:var(--g700);font-weight:800">$2.03</div></td><td><span class="tag b">Best</span></td></tr>
+              <tr><td><div class="cn">Chase Sapphire Reserve</div><div class="cp">Ultimate Rewards · no grocery cap</div></td><td><div class="cr" style="color:var(--muted)">1×</div></td><td><div class="cr" style="color:var(--muted)">1×</div></td><td><div class="cv">$0.51</div></td><td><span class="tag o">Skip</span></td></tr>
+              <tr><td><div class="cn">Citi Double Cash</div><div class="cp">Cash Back · no cap</div></td><td><div class="cr" style="color:var(--muted)">2%</div></td><td><div class="cr" style="color:var(--muted)">2%</div></td><td><div class="cv">$1.69</div></td><td><span class="tag g">OK</span></td></tr>
+              <tr class="cap-hit"><td><div class="cn">BofA Cash Rewards</div><div class="cp">Cash Back · <span style="color:var(--re600);font-weight:700">CAP HIT — quarterly</span></div></td><td><div class="cr struck">3%</div></td><td><div class="cr" style="color:var(--re600);font-size:12px">1% now</div></td><td><div class="cv" style="color:var(--re600)">$0.85</div></td><td><span class="tag r">Capped</span></td></tr>
+            </tbody>
+          </table>
+          <div class="why"><div class="why-t">✦ Why BofA is crossed out</div><p>BofA Cash Rewards earns 3% on groceries up to <strong>$500/quarter</strong>. You've hit that cap — so it earns just 1% for the rest of Q1. The optimizer automatically factors this in and surfaces Amex Gold (4×, no cap) as the best pick right now. This resets April 1.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MY CARDS ═══ -->
+  <div class="screen" id="sc-tracker">
+    <div class="pg-h"><div class="pg-t">My Cards</div><div class="pg-s">Balances, earn rates, cap rules, and verification status.</div></div>
+    <div class="cards-g">
+      <div class="cd">
+        <div class="ccf chase" style="border-radius:12px 12px 0 0;min-height:90px"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Chase Sapphire Reserve</div><div class="ccf-s">Chase · Ultimate Rewards</div><div class="ccf-pts"><div class="ccf-pv">68,400</div><div class="ccf-pl">pts</div></div></div>
+        <div class="cd-al">⚠️ 12,000 pts expire Jan 2026</div>
+        <div class="cd-verified">✅ Rates verified Mar 2026</div>
+        <div class="cd-meta"><div class="cd-cell"><div class="cd-cl">Est. Value</div><div class="cd-cv g">$410</div></div><div class="cd-cell"><div class="cd-cl">Annual Fee</div><div class="cd-cv a">$550</div></div><div class="cd-cell"><div class="cd-cl">Avg Rate YTD</div><div class="cd-cv g">2.8×</div></div><div class="cd-cell"><div class="cd-cl">Program</div><div class="cd-cv" style="font-size:12px">Ult. Rewards</div></div></div>
+        <div class="cd-rates"><div class="cd-rl">Earn Rates & Caps</div>
+          <div class="cd-rr"><span>✈️ Travel</span><span class="cd-rv">3× <span class="cd-cap-note">no cap</span></span></div>
+          <div class="cd-rr"><span>🍽️ Dining</span><span class="cd-rv">3× <span class="cd-cap-note">no cap</span></span></div>
+          <div class="cd-rr"><span>🌐 Everything else</span><span class="cd-rv">1×</span></div>
+        </div>
+      </div>
+      <div class="cd">
+        <div class="ccf amex" style="border-radius:12px 12px 0 0;min-height:90px"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Amex Gold Card</div><div class="ccf-s">American Express · MR Points</div><div class="ccf-pts"><div class="ccf-pv">41,200</div><div class="ccf-pl">pts</div></div></div>
+        <div class="cd-verified">✅ Rates verified Feb 2026</div>
+        <div class="cd-meta" style="margin-top:4px"><div class="cd-cell"><div class="cd-cl">Est. Value</div><div class="cd-cv g">$247</div></div><div class="cd-cell"><div class="cd-cl">Annual Fee</div><div class="cd-cv a">$250</div></div><div class="cd-cell"><div class="cd-cl">Avg Rate YTD</div><div class="cd-cv g">3.1×</div></div><div class="cd-cell"><div class="cd-cl">Program</div><div class="cd-cv" style="font-size:12px">Memb. Rewards</div></div></div>
+        <div class="cd-rates"><div class="cd-rl">Earn Rates & Caps</div>
+          <div class="cd-rr"><span>🍽️ Dining (worldwide)</span><span class="cd-rv">4× <span class="cd-cap-note">to $25k/yr</span></span></div>
+          <div class="cd-rr"><span>🛒 US Supermarkets</span><span class="cd-rv">4× <span class="cd-cap-note">to $25k/yr</span></span></div>
+          <div class="cd-rr"><span>✈️ Flights (direct)</span><span class="cd-rv">3× <span class="cd-cap-note">no cap</span></span></div>
+          <div class="cd-rr"><span>🌐 Everything else</span><span class="cd-rv">1×</span></div>
+        </div>
+      </div>
+      <div class="cd" style="border-color:var(--au300)">
+        <div class="ccf cap1" style="border-radius:12px 12px 0 0;min-height:90px"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Venture X</div><div class="ccf-s">Capital One · Miles</div><div class="ccf-pts"><div class="ccf-pv">19,000</div><div class="ccf-pl">miles</div></div></div>
+        <div class="cd-al" style="color:var(--au600);background:var(--au50)">🔍 Issuer updated program Jan 2026 — verify rates</div>
+        <div class="cd-meta" style="margin-top:4px"><div class="cd-cell"><div class="cd-cl">Est. Value</div><div class="cd-cv g">$57</div></div><div class="cd-cell"><div class="cd-cl">Annual Fee</div><div class="cd-cv a">$395</div></div><div class="cd-cell"><div class="cd-cl">Travel Credit</div><div class="cd-cv g">$300</div></div><div class="cd-cell"><div class="cd-cl">Status</div><div class="cd-cv" style="font-size:11px;color:var(--au600)">⚠ Stale</div></div></div>
+        <div class="cd-rates"><div class="cd-rl">Earn Rates & Caps <span style="color:var(--au600);font-weight:700">(unverified)</span></div>
+          <div class="cd-rr"><span>✈️ Cap One Travel portal</span><span class="cd-rv">10× <span class="cd-cap-note">no cap</span></span></div>
+          <div class="cd-rr"><span>🏨 Hotels (portal)</span><span class="cd-rv">5× <span class="cd-cap-note">no cap</span></span></div>
+          <div class="cd-rr"><span>🌐 Everything else</span><span class="cd-rv">2× <span class="cd-cap-note">no cap</span></span></div>
+        </div>
+        <div style="padding:0 16px 14px"><button style="width:100%;padding:8px;border-radius:var(--rs);background:var(--au500);color:white;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:800;border:none;cursor:pointer">Confirm rates are still accurate →</button></div>
+      </div>
+      <div class="cd">
+        <div class="ccf citi" style="border-radius:12px 12px 0 0;min-height:90px"><div class="ccf-sh"></div><div class="ccf-chip"></div><div class="ccf-n">Double Cash</div><div class="ccf-s">Citi · Cash Back</div><div class="ccf-pts"><div class="ccf-pv">$133</div><div class="ccf-pl">cash</div></div></div>
+        <div class="cd-verified">✅ Rates verified Jan 2026</div>
+        <div class="cd-meta" style="margin-top:4px"><div class="cd-cell"><div class="cd-cl">Cash Balance</div><div class="cd-cv g">$133.20</div></div><div class="cd-cell"><div class="cd-cl">Annual Fee</div><div class="cd-cv g">$0</div></div><div class="cd-cell"><div class="cd-cl">No Expiry</div><div class="cd-cv">✅</div></div><div class="cd-cell"><div class="cd-cl">Program</div><div class="cd-cv" style="font-size:12px">Cash Back</div></div></div>
+        <div class="cd-rates"><div class="cd-rl">Earn Rates & Caps</div>
+          <div class="cd-rr"><span>🌐 Every purchase</span><span class="cd-rv">1% <span class="cd-cap-note">no cap</span></span></div>
+          <div class="cd-rr"><span>✅ When payment posts</span><span class="cd-rv">+1%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REDEEM ═══ -->
+  <div class="screen" id="sc-redeem">
+    <div class="pg-h"><div class="pg-t">Redemption Optimizer</div><div class="pg-s">Maximize what your points are worth — ranked by cents per point.</div></div>
+    <div class="opt-banner">
+      <div><div class="opt-bl">Maximum extractable value</div><div class="opt-bv">$1,231</div><div class="opt-bs">from 142,800 total points across 4 cards</div></div>
+      <div class="opt-br"><div><div class="opt-sv">$847</div><div class="opt-sl">Current estimated value</div></div><div><div class="opt-sv" style="color:var(--g700)">+$384</div><div class="opt-sl">Potential uplift via transfers</div></div></div>
+    </div>
+    <div class="rdm-g">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="w">
+          <div class="rgh"><div class="rgd" style="background:#3949ab"></div><div class="rgn">Chase Ultimate Rewards</div><div class="rgp">68,400 pts</div></div>
+          <table class="rt"><thead><tr><th>Partner</th><th>Type</th><th>¢/pt</th><th>Tag</th></tr></thead><tbody>
+            <tr><td><div class="rn">World of Hyatt</div><div class="rd">Luxury hotel free nights</div></td><td><span class="tag o">Transfer</span></td><td><div class="rc hi">2.2¢</div></td><td><span class="tag b">Best</span></td></tr>
+            <tr><td><div class="rn">United MileagePlus</div><div class="rd">Business class flights</div></td><td><span class="tag o">Transfer</span></td><td><div class="rc hi">1.8¢</div></td><td><span class="tag g">Good</span></td></tr>
+            <tr><td><div class="rn">Chase Travel Portal</div><div class="rd">Book any travel at 1.5¢/pt</div></td><td><span class="tag o">Portal</span></td><td><div class="rc md">1.5¢</div></td><td><span class="tag g">Good</span></td></tr>
+            <tr><td><div class="rn">Statement Credit</div><div class="rd">Cash — worst option</div></td><td><span class="tag o">Cash</span></td><td><div class="rc lo">1.0¢</div></td><td><span class="tag o">Avoid</span></td></tr>
+          </tbody></table>
+        </div>
+        <div class="w">
+          <div class="rgh"><div class="rgd" style="background:#00897b"></div><div class="rgn">Amex Membership Rewards</div><div class="rgp">41,200 pts</div></div>
+          <table class="rt"><thead><tr><th>Partner</th><th>Type</th><th>¢/pt</th><th>Tag</th></tr></thead><tbody>
+            <tr><td><div class="rn">Air France / KLM Flying Blue</div><div class="rd">Flexible European partner</div></td><td><span class="tag o">Transfer</span></td><td><div class="rc hi">2.0¢</div></td><td><span class="tag b">Best</span></td></tr>
+            <tr><td><div class="rn">ANA Mileage Club</div><div class="rd">Premium Asia-Pacific routes</div></td><td><span class="tag o">Transfer</span></td><td><div class="rc hi">1.8¢</div></td><td><span class="tag g">Good</span></td></tr>
+            <tr><td><div class="rn">Amex Travel Portal</div><div class="rd">Pay with points — low value</div></td><td><span class="tag o">Portal</span></td><td><div class="rc lo">0.6¢</div></td><td><span class="tag o">Avoid</span></td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="w">
+          <div class="rgh"><div class="rgd" style="background:#424242"></div><div class="rgn">Capital One Miles</div><div class="rgp">19,000 miles</div></div>
+          <table class="rt"><thead><tr><th>Partner</th><th>Type</th><th>¢/pt</th><th>Tag</th></tr></thead><tbody>
+            <tr><td><div class="rn">Turkish Airlines Miles&amp;Smiles</div><div class="rd">Star Alliance business class</div></td><td><span class="tag o">Transfer</span></td><td><div class="rc hi">1.8¢</div></td><td><span class="tag b">Best</span></td></tr>
+            <tr><td><div class="rn">Avianca LifeMiles</div><div class="rd">Star Alliance, low fees</div></td><td><span class="tag o">Transfer</span></td><td><div class="rc md">1.5¢</div></td><td><span class="tag g">Good</span></td></tr>
+            <tr><td><div class="rn">Capital One Travel</div><div class="rd">Erase travel at 1¢/pt</div></td><td><span class="tag o">Portal</span></td><td><div class="rc lo">1.0¢</div></td><td><span class="tag o">OK</span></td></tr>
+          </tbody></table>
+        </div>
+        <div class="w">
+          <div class="w-h" style="margin-bottom:12px"><div class="w-t">💡 Tips</div></div>
+          <div class="tip" style="background:var(--au50);border:1px solid var(--au100)"><div class="tip-t" style="color:var(--au600)">⚠️ Expiry Alert — Act Now</div><p style="color:var(--ink3)">12,000 Chase UR points expire <strong>January 2026</strong>. Transfer to Hyatt now to lock in ~$264 value.</p></div>
+          <div class="tip" style="background:var(--g50);border:1px solid var(--g200)"><div class="tip-t" style="color:var(--g700)">🎯 Transfer Bonus Watch</div><p style="color:var(--ink3)">Flying Blue runs monthly 30–40% bonuses from Amex MR. Your 41k could become <strong>57k+ Air France miles</strong> at the right moment.</p></div>
+          <div class="tip" style="background:#eff6ff;border:1px solid #dbeafe"><div class="tip-t" style="color:#1d4ed8">📊 Powered by pointsPal DB</div><p style="color:var(--ink3)">Earn rates pull from the open-source <strong>pointsPal</strong> database (73+ cards). <span style="color:var(--g700);font-weight:700;cursor:pointer">Contribute on GitHub →</span></p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+  const crumbs={overview:'Overview',optimizer:'Cap Tracker',recommender:'Best Card',tracker:'My Cards',redeem:'Redeem'};
+  function go(v){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('sc-'+v).classList.add('active');
+    document.querySelectorAll('.sb-si').forEach(i=>i.classList.remove('active'));
+    document.getElementById('ssi-'+v).classList.add('active');
+    document.getElementById('crumb').textContent=crumbs[v];
+    document.getElementById('sbsub').classList.add('open');
+    document.getElementById('sbpp').classList.add('open');
+  }
+  function togglePP(){
+    const s=document.getElementById('sbsub'),p=document.getElementById('sbpp'),o=s.classList.contains('open');
+    s.classList.toggle('open',!o);p.classList.toggle('open',!o);
+  }
+  function toggleDetail(id){
+    const el=document.getElementById(id);
+    const wasOpen=el.classList.contains('open');
+    ['d1','d2','d3'].forEach(d=>{const e=document.getElementById(d);if(e)e.classList.remove('open')});
+    if(!wasOpen)el.classList.add('open');
+  }
+  const periodData={
+    monthly:{earned:'5,240',pill:'≈ $20 missed to caps'},
+    quarterly:{earned:'14,820',pill:'≈ $60 missed to caps'},
+    annual:{earned:'58,400',pill:'≈ $224 missed to caps'},
+  };
+  function setPeriod(p,btn){
+    document.querySelectorAll('.pt-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const d=periodData[p];
+    document.getElementById('sbEarned').textContent=d.earned;
+    document.getElementById('sbPill').textContent=d.pill;
+  }
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click',()=>{
+      c.closest('.chips').querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

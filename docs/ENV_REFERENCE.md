@@ -82,10 +82,25 @@ Only set these if you use an identity provider (Authelia, Keycloak, etc.).
 | `OIDC_CLIENT_SECRET` | _(none)_ | OAuth2 client secret |
 | `OIDC_ISSUER` | _(none)_ | Issuer URL (e.g. `https://auth.example.com`) |
 | `OIDC_DISCOVERY_URL` | Auto from issuer | `.well-known/openid-configuration` URL |
-| `OIDC_PROVIDER_NAME` | `SSO` | Button label on login page |
+| `OIDC_PROVIDER_NAME` | `SSO` | Button label on login page (e.g. `Google`) |
 | `OIDC_LOGOUT_URI` | Auto from discovery | Logout endpoint override |
 | `APP_URL` | `http://localhost:5006` | Your app's public URL (for OIDC redirect) |
 | `LOCAL_LOGIN_DISABLE` | `False` | Hide local login form when OIDC is active |
+
+**Mobile OIDC:** The mobile app opens `/login/oidc?mobile=1` in an in-app browser. When authentication completes the backend redirects to `finpal://oidc/callback?access_token=...&refresh_token=...` instead of creating a Flask-Login session.
+
+---
+
+## Optional - Apple Sign In (Mobile)
+
+Only needed if you want Apple Sign In on the iOS app. Requires an Apple Developer account.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APPLE_SIGNIN_ENABLED` | `False` | Enable Apple Sign In on the mobile app |
+| `APPLE_CLIENT_ID` | _(none)_ | Apple bundle ID — must match `app.json` (e.g. `io.palstack.finpal`) |
+
+> **Note:** `APPLE_CLIENT_ID` is used as the JWT `audience` when verifying Apple identity tokens. It must exactly match the bundle identifier in `mobile/app.json`.
 
 ---
 
@@ -126,7 +141,12 @@ DEMO_MODE=False
 # OIDC_CLIENT_ID=
 # OIDC_CLIENT_SECRET=
 # OIDC_ISSUER=
+# OIDC_PROVIDER_NAME=Google
 # APP_URL=https://finpal.yourdomain.com
+
+# === APPLE SIGN IN (optional, iOS mobile only) ===
+# APPLE_SIGNIN_ENABLED=False
+# APPLE_CLIENT_ID=io.palstack.finpal
 ```
 
 ---

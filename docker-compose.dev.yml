@@ -1,0 +1,122 @@
+services:
+  # ===================================
+  # PostgreSQL Database
+  # ===================================
+  db:
+    image: postgres:15-alpine
+    container_name: finpal-db-dev
+    environment:
+      POSTGRES_DB: finpal
+      POSTGRES_USER: finpal
+      POSTGRES_PASSWORD: finpal_dev
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - finpal-dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finpal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ===================================
+  # Backend API (built from source)
+  # ===================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finpal-backend-dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database
+      - SQLALCHEMY_DATABASE_URI=postgresql://finpal:finpal_dev@db:5432/finpal
+
+      # Flask
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - SECRET_KEY=local_dev_secret_finpal_2026
+      - DEBUG=True
+      - ENCRYPTION_KEY=
+      - DEVELOPMENT_MODE=True
+      - LOG_LEVEL=INFO
+
+      # Demo Mode
+      - DEMO_MODE=True
+      - DEMO_TIMEOUT_MINUTES=60
+      - MAX_CONCURRENT_DEMO_SESSIONS=20
+
+      # Application
+      - DISABLE_SIGNUPS=False
+
+      # Feature Flags
+      - INVESTMENT_TRACKING_ENABLED=True
+      - SIMPLEFIN_ENABLED=True
+      - POINTSPAL_ENABLED=True
+      - POINTSPAL_SYNC_INTERVAL_HOURS=24
+
+      # Email (disabled locally)
+      - EMAIL_ENABLED=False
+
+      # OIDC (disabled locally)
+      - OIDC_ENABLED=False
+
+    # Run migrations + seed demo data, then start server
+    command: >
+      bash -c "
+        echo '⏳ Running migrations...' &&
+        flask db upgrade &&
+        echo '🌱 Seeding demo data...' &&
+        python scripts/load_demo_data.py &&
+        echo '🚀 Starting server...' &&
+        /venv/bin/gunicorn --bind 0.0.0.0:5001 --workers=2 --timeout=120 --reload app:app
+      "
+    volumes:
+      # Mount source for live reload
+      - .:/app
+      - /app/venv
+    networks:
+      - finpal-dev
+    restart: unless-stopped
+
+  # ===================================
+  # Web UI (built from source)
+  # ===================================
+  web:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: finpal-web-dev
+    networks:
+      - finpal-dev
+    restart: unless-stopped
+
+  # ===================================
+  # Nginx Reverse Proxy
+  # ===================================
+  nginx:
+    image: nginx:alpine
+    container_name: finpal-nginx-dev
+    depends_on:
+      - backend
+      - web
+    ports:
+      - "8085:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - finpal-dev
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+    driver: local
+
+networks:
+  finpal-dev:
+    driver: bridge

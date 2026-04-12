@@ -90,3 +90,11 @@ api.add_namespace(users.ns, path='/users')
 api.add_namespace(team.ns, path='/team')
 api.add_namespace(transaction_rules.ns, path='/transaction-rules')
 api.add_namespace(demo.ns, path='/demo')
+
+# Module namespaces — self-registering via ModuleRegistry
+try:
+    from src.modules.registry import module_registry
+    module_registry.register_api_namespaces(api)
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).warning(f"Module namespace registration failed: {_e}")

@@ -1,0 +1,191 @@
+# ================================================================
+# finPal — Portainer Stack (plug-and-play)
+# ================================================================
+# Deploy this directly in Portainer → Stacks → Add stack → Web editor
+#
+# REQUIRED: Edit the values marked with  ← CHANGE THIS
+#   - DB_PASSWORD
+#   - SECRET_KEY       (generate: openssl rand -hex 32)
+#   - JWT_SECRET_KEY   (generate: openssl rand -hex 32)
+#
+# Everything else has safe defaults and can be changed later.
+# ================================================================
+
+services:
+
+  # ================================================================
+  # PostgreSQL Database
+  # ================================================================
+  db:
+    image: postgres:15-alpine
+    container_name: finpal-db
+    environment:
+      POSTGRES_DB: finpal
+      POSTGRES_USER: finpal
+      POSTGRES_PASSWORD: change_me_strong_password     # ← CHANGE THIS
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - finpal-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finpal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================================================
+  # Backend API
+  # ================================================================
+  backend:
+    image: ghcr.io/palstack-io/finpal-backend:latest
+    container_name: finpal-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+
+      # --- Database ---
+      SQLALCHEMY_DATABASE_URI: postgresql://finpal:change_me_strong_password@db:5432/finpal   # ← match DB_PASSWORD above
+
+      # --- Flask ---
+      FLASK_APP: app.py
+      FLASK_ENV: production
+      SECRET_KEY: change_me_run_openssl_rand_hex_32     # ← CHANGE THIS (openssl rand -hex 32)
+      DEBUG: "False"
+      DEVELOPMENT_MODE: "False"
+      LOG_LEVEL: INFO
+
+      # --- Encryption (for sensitive fields) ---
+      ENCRYPTION_KEY: ""    # ← optional but recommended — python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+      # --- Application ---
+      DISABLE_SIGNUPS: "False"   # set True to lock registrations after setup
+
+      # --- Feature Flags ---
+      INVESTMENT_TRACKING_ENABLED: "true"
+      SIMPLEFIN_ENABLED: "true"
+      FMP_API_KEY: ""    # optional — Financial Modeling Prep key for investment data
+      POINTSPAL_ENABLED: "false"
+      POINTSPAL_SYNC_INTERVAL_HOURS: "24"
+
+      # --- Email / Password Reset (optional) ---
+      EMAIL_ENABLED: "false"
+      MAIL_SERVER: smtp.gmail.com
+      MAIL_PORT: "587"
+      MAIL_USE_TLS: "True"
+      MAIL_USE_SSL: "False"
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_DEFAULT_SENDER: ""
+
+      # --- OIDC Single Sign-On (optional) ---
+      OIDC_ENABLED: "false"
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      OIDC_ISSUER: ""
+      OIDC_DISCOVERY_URL: ""
+      OIDC_PROVIDER_NAME: SSO
+      OIDC_LOGOUT_URI: ""
+      APP_URL: http://localhost    # set to your public URL if using OIDC or reverse proxy
+      LOCAL_LOGIN_DISABLE: "False"
+
+    networks:
+      - finpal-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ================================================================
+  # Web UI
+  # ================================================================
+  web:
+    image: ghcr.io/palstack-io/finpal-web:latest
+    container_name: finpal-web
+    depends_on:
+      - backend
+    networks:
+      - finpal-network
+    restart: unless-stopped
+
+  # ================================================================
+  # Nginx Reverse Proxy
+  # ================================================================
+  nginx:
+    image: ghcr.io/palstack-io/finpal-nginx:latest
+    container_name: finpal-nginx
+    depends_on:
+      - backend
+      - web
+    ports:
+      - "80:80"    # change left side (e.g. "8080:80") if port 80 is taken
+    networks:
+      - finpal-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # ================================================================
+  # Backup — Postgres → local volume + optional remote storage
+  # ================================================================
+  backup:
+    build:
+      context: .
+      dockerfile: backup/Dockerfile
+    container_name: finpal-backup
+    environment:
+
+      # --- Postgres connection ---
+      POSTGRES_HOST: db
+      POSTGRES_USER: finpal
+      POSTGRES_PASSWORD: change_me_strong_password     # ← match DB_PASSWORD above
+
+      # --- Schedule (cron expression, default: 3 AM daily) ---
+      BACKUP_SCHEDULE: "0 3 * * *"
+
+      # --- Local retention ---
+      BACKUP_RETENTION_DAYS: "14"
+
+      # --- Remote storage (optional — leave blank to keep local only) ---
+      BACKUP_REMOTE_BUCKET: ""    # e.g. "my-bucket"
+
+      # --- Backblaze B2 (set TYPE=b2) ---
+      RCLONE_CONFIG_REMOTE_TYPE: ""
+      RCLONE_CONFIG_REMOTE_ACCOUNT: ""
+      RCLONE_CONFIG_REMOTE_KEY: ""
+
+      # --- Cloudflare R2 / S3-compatible (set TYPE=s3) ---
+      RCLONE_CONFIG_REMOTE_PROVIDER: ""
+      RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID: ""
+      RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY: ""
+      RCLONE_CONFIG_REMOTE_ENDPOINT: ""
+      RCLONE_CONFIG_REMOTE_REGION: auto
+
+      # --- Optional monitoring ping (healthchecks.io or similar) ---
+      BACKUP_HEALTHCHECK_URL: ""
+
+    volumes:
+      - backup_data:/backups
+    networks:
+      - finpal-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  backup_data:
+    driver: local
+
+networks:
+  finpal-network:
+    driver: bridge

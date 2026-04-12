@@ -14,8 +14,53 @@ from src.extensions import db
 from datetime import datetime, timedelta
 from src.data import seed_user_defaults
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
+
+
+def _background_sync(app, user_id: str) -> None:
+    """
+    Spawn a daemon thread to refresh SimpleFin transactions and run
+    module background sync hooks. Non-blocking — login/app-open is never delayed.
+    """
+    def _run():
+        with app.app_context():
+            # 1. SimpleFin — per-user transaction sync
+            try:
+                from src.models.account import SimpleFin as SimpleFinConn
+                conn = SimpleFinConn.query.filter_by(
+                    user_id=user_id, enabled=True
+                ).first()
+                if conn:
+                    from src.services.account.service import SimpleFinService
+                    SimpleFinService().sync_all_accounts(user_id)
+                    logger.info(f"Background SimpleFin sync complete for {user_id}")
+            except Exception as e:
+                logger.warning(f"Background SimpleFin sync failed for {user_id}: {e}")
+
+            # 2. Module background sync hooks (e.g. pointsPal program sync)
+            try:
+                from src.modules.registry import module_registry
+                module_registry.background_sync(app, user_id)
+            except Exception as e:
+                logger.warning(f"Module background sync failed for {user_id}: {e}")
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+
+def _get_user_modules(user_id: str) -> list:
+    """Return list of module slugs enabled for this user."""
+    try:
+        from src.modules.registry import module_registry
+        return [
+            m.name for m in module_registry.modules
+            if m.is_enabled() and m.is_user_enabled(user_id)
+        ]
+    except Exception:
+        import os
+        return ['pointspal'] if os.getenv('POINTSPAL_ENABLED', 'false').lower() == 'true' else []
 
 # Create namespace
 ns = Namespace('auth', description='Authentication operations')
@@ -90,6 +135,23 @@ class Login(Resource):
             expires_delta=refresh_expires
         )
 
+        # Record login event
+        try:
+            from src.models.user import LoginEvent
+            db.session.add(LoginEvent(
+                user_id=user.id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')[:500],
+                success=True,
+            ))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # Kick off background data refresh (non-blocking)
+        if not user.is_demo_user:
+            _background_sync(current_app._get_current_object(), user.id)
+
         response_data = {
             'access_token': access_token,
             'refresh_token': refresh_token,
@@ -101,6 +163,7 @@ class Login(Resource):
                 'is_demo_user': is_demo,
                 'hasCompletedOnboarding': user.has_completed_onboarding,
                 'profile_emoji': user.profile_emoji,
+                'modules': _get_user_modules(user.id),
             }
         }
 
@@ -222,3 +285,20 @@ class Logout(Resource):
         # Note: With JWT, logout is handled client-side by discarding tokens
         # For blacklisting, you'd need to implement a token blocklist
         return {'message': 'Successfully logged out'}, 200
+
+
+@ns.route('/sync')
+class BackgroundSync(Resource):
+    @ns.doc('background_sync', security='Bearer')
+    @jwt_required()
+    def post(self):
+        """
+        Trigger background SimpleFin + pointsPal refresh for the current user.
+        Returns 202 immediately — sync runs in a daemon thread.
+        Called by the frontend on app open (once per browser session).
+        """
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if user and not user.is_demo_user:
+            _background_sync(current_app._get_current_object(), user_id)
+        return {'status': 'sync started'}, 202

@@ -17,14 +17,36 @@ depends_on = None
 
 
 def upgrade():
-    # Add new columns for advanced matching
-    op.add_column('transaction_rules', sa.Column('amount_min', sa.Float(), nullable=True))
-    op.add_column('transaction_rules', sa.Column('amount_max', sa.Float(), nullable=True))
-    op.add_column('transaction_rules', sa.Column('transaction_type_filter', sa.String(length=20), nullable=True))
+    conn = op.get_bind()
+
+    def col_exists(table, column):
+        r = conn.execute(sa.text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name=:t AND column_name=:c"
+        ), {"t": table, "c": column})
+        return r.fetchone() is not None
+
+    if not col_exists('transaction_rules', 'amount_min'):
+        op.add_column('transaction_rules', sa.Column('amount_min', sa.Float(), nullable=True))
+    if not col_exists('transaction_rules', 'amount_max'):
+        op.add_column('transaction_rules', sa.Column('amount_max', sa.Float(), nullable=True))
+    if not col_exists('transaction_rules', 'transaction_type_filter'):
+        op.add_column('transaction_rules', sa.Column('transaction_type_filter', sa.String(length=20), nullable=True))
 
 
 def downgrade():
-    # Remove advanced matching columns
-    op.drop_column('transaction_rules', 'transaction_type_filter')
-    op.drop_column('transaction_rules', 'amount_max')
-    op.drop_column('transaction_rules', 'amount_min')
+    conn = op.get_bind()
+
+    def col_exists(table, column):
+        r = conn.execute(sa.text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name=:t AND column_name=:c"
+        ), {"t": table, "c": column})
+        return r.fetchone() is not None
+
+    if col_exists('transaction_rules', 'transaction_type_filter'):
+        op.drop_column('transaction_rules', 'transaction_type_filter')
+    if col_exists('transaction_rules', 'amount_max'):
+        op.drop_column('transaction_rules', 'amount_max')
+    if col_exists('transaction_rules', 'amount_min'):
+        op.drop_column('transaction_rules', 'amount_min')

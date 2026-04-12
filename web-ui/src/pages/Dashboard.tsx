@@ -31,6 +31,7 @@ export const Dashboard = () => {
   const [budgets, setBudgets] = useState<any[]>([]);
   const [monthlyAggregation, setMonthlyAggregation] = useState<any[]>([]);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [hoveredStat, setHoveredStat] = useState<string | null>(null);
 
   // Category colors
   const COLORS = [
@@ -303,7 +304,11 @@ export const Dashboard = () => {
 
       {/* Top Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+        <div
+          onMouseEnter={() => setHoveredStat('networth')}
+          onMouseLeave={() => setHoveredStat(null)}
+          style={{ background: 'var(--bg-card)', border: `1px solid ${hoveredStat === 'networth' ? 'rgba(34,197,94,0.4)' : 'var(--border-light)'}`, borderRadius: '16px', padding: '24px', boxShadow: hoveredStat === 'networth' ? '0 8px 24px var(--card-hover-shadow)' : 'var(--card-shadow)', transform: hoveredStat === 'networth' ? 'translateY(-3px)' : 'translateY(0)', transition: 'all 0.2s ease', cursor: 'default' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Net Worth</p>
@@ -319,7 +324,11 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+        <div
+          onMouseEnter={() => setHoveredStat('income')}
+          onMouseLeave={() => setHoveredStat(null)}
+          style={{ background: 'var(--bg-card)', border: `1px solid ${hoveredStat === 'income' ? 'rgba(59,130,246,0.4)' : 'var(--border-light)'}`, borderRadius: '16px', padding: '24px', boxShadow: hoveredStat === 'income' ? '0 8px 24px var(--card-hover-shadow)' : 'var(--card-shadow)', transform: hoveredStat === 'income' ? 'translateY(-3px)' : 'translateY(0)', transition: 'all 0.2s ease', cursor: 'default' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Monthly Income</p>
@@ -334,7 +343,11 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+        <div
+          onMouseEnter={() => setHoveredStat('expenses')}
+          onMouseLeave={() => setHoveredStat(null)}
+          style={{ background: 'var(--bg-card)', border: `1px solid ${hoveredStat === 'expenses' ? 'rgba(239,68,68,0.4)' : 'var(--border-light)'}`, borderRadius: '16px', padding: '24px', boxShadow: hoveredStat === 'expenses' ? '0 8px 24px var(--card-hover-shadow)' : 'var(--card-shadow)', transform: hoveredStat === 'expenses' ? 'translateY(-3px)' : 'translateY(0)', transition: 'all 0.2s ease', cursor: 'default' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Monthly Expenses</p>
@@ -350,7 +363,11 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+        <div
+          onMouseEnter={() => setHoveredStat('savings')}
+          onMouseLeave={() => setHoveredStat(null)}
+          style={{ background: 'var(--bg-card)', border: `1px solid ${hoveredStat === 'savings' ? 'rgba(251,191,36,0.4)' : 'var(--border-light)'}`, borderRadius: '16px', padding: '24px', boxShadow: hoveredStat === 'savings' ? '0 8px 24px var(--card-hover-shadow)' : 'var(--card-shadow)', transform: hoveredStat === 'savings' ? 'translateY(-3px)' : 'translateY(0)', transition: 'all 0.2s ease', cursor: 'default' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
             <div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Savings Rate</p>

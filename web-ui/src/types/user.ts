@@ -34,6 +34,8 @@ export interface User {
   fiscalYearStart?: number;
   // Demo mode fields
   is_demo_user?: boolean;
+  // Module system — slugs granted by adminPal
+  modules?: string[];
 }
 
 export interface OnboardingData {

@@ -13,6 +13,20 @@ flask db migrate
 flask db upgrade
 ```
 
+## Running Tests
+
+See **[docs/testing.md](./testing.md)** for the full test guide.
+
+Quick start:
+```bash
+# Backend
+source venv/bin/activate && pip install -r requirements-test.txt
+pytest
+
+# Frontend
+cd web-ui && npx vitest run
+```
+
 ## Pull Request Requirements
 - All PRs require approval from **2 palStack developers**
 - Review process typically takes **24-48 hours**

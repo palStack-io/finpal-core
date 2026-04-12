@@ -13,6 +13,15 @@
 
 ---
 
+> [!WARNING]
+> **🚧 finPal is under major active development.**
+>
+> Features, APIs, and the database schema are changing frequently. Things may break between updates. **Use at your own risk** — we strongly recommend backing up your data before upgrading.
+>
+> Have questions, found a bug, or just want to follow along? **[Join our Discord →](https://discord.gg/A4n3MtDgTj)**
+
+---
+
 **Open source, privacy-first financial management from palStack**
 
 [![Status](https://img.shields.io/badge/Status-Web%20Ready-success)](https://github.com/palStack-io/finpal-core)
@@ -198,6 +207,15 @@ Don't want to manage servers? We're launching a managed hosting service where we
 - **Balance Updates**: Keep accounts synchronized automatically
 - **Manual Sync**: Trigger updates anytime
 
+### Modules
+- **pointsPal**: Credit card rewards optimizer — tracks 80+ cards across 20+ spend categories, recommends which card to swipe per purchase, monitors spend caps in real time. Community-maintained card database. Enable with `POINTSPAL_ENABLED=true`
+
+### Backups
+- **Automatic nightly backups**: Full `pg_dumpall` via a dedicated Alpine container with supercronic
+- **Configurable retention**: Default 14-day local retention, auto-cleanup
+- **Remote sync**: Push dumps to Backblaze B2, Cloudflare R2, or any S3-compatible storage via rclone
+- **Zero config to start**: Backup runs automatically — add a remote bucket when you're ready
+
 ### Privacy & Control
 - **100% Self-Hosted**: Your financial data never leaves your server
 - **No Subscriptions**: Free and open source (AGPL-3.0)
@@ -233,11 +251,11 @@ cp .env.example .env
 # Start finPal
 docker-compose up -d
 
-# Access at http://localhost:5000
+# Access at http://localhost
 ```
 
 **First Time Setup:**
-1. Open http://localhost:5000 in your browser
+1. Open http://localhost in your browser
 2. Create your account (first user becomes admin)
 3. Configure your default currency in Settings
 4. (Optional) Set up SimpleFin for bank sync
@@ -248,7 +266,7 @@ docker-compose up -d
 
 ### Prerequisites
 - Docker and Docker Compose installed
-- Port 5000 available (default, or configure custom port)
+- Port 80 available (default, configurable via `HTTP_PORT`)
 - 2GB RAM minimum (4GB recommended)
 - 10GB disk space
 - (Optional) SimpleFin account for bank sync (US banks)
@@ -257,7 +275,7 @@ docker-compose up -d
 
 **📚 Detailed setup guides available at [finpal.palstack.io/docs](https://finpal.palstack.io/docs)**
 
-**That's it!** Open http://localhost:5000 and create your account.
+**That's it!** Open http://localhost and create your account.
 
 ---
 
@@ -285,18 +303,20 @@ Built with a microservices architecture:
 nginx (reverse proxy)
 ├── backend (Flask/Python)    # RESTful API, business logic
 │   ├── Authentication        # JWT, OIDC, user management
-│   ├── Transactions         # Expense tracking, categorization
-│   ├── Budgets              # Budget management, alerts
-│   ├── Accounts             # Multi-account support
-│   ├── Groups               # Bill splitting, settlements
-│   ├── Investments          # Portfolio tracking
-│   └── Integrations         # SimpleFin, GoCardless, Yahoo Finance
+│   ├── Transactions          # Expense tracking, categorization
+│   ├── Budgets               # Budget management, alerts
+│   ├── Accounts              # Multi-account support
+│   ├── Groups                # Bill splitting, settlements
+│   ├── Investments           # Portfolio tracking
+│   ├── Modules               # pointsPal, and future plug-ins
+│   └── Integrations          # SimpleFin, Yahoo Finance
 ├── postgres                  # PostgreSQL database
-└── web-ui (React)           # Dashboard interface
+├── web-ui (React)            # Dashboard interface
+└── backup                    # Nightly pg_dumpall → local + optional remote (rclone)
 ```
 
 **Tech Stack:**
-- **Backend**: Python 3.11+ / Flask 3.x
+- **Backend**: Python 3.11+ / Flask 2.2
 - **Frontend**: React 19 + TypeScript 5.9 + Vite 7
 - **Mobile**: React Native 0.74 + Expo SDK 51 (in development)
 - **Database**: PostgreSQL 15
@@ -320,18 +340,20 @@ finPal can be configured via environment variables in your `.env` file:
 #### Core Settings
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DB_USER` | `finpal` | PostgreSQL username |
-| `DB_PASSWORD` | - | PostgreSQL password |
-| `DB_NAME` | `finpal` | Database name |
-| `SECRET_KEY` | - | Flask secret key |
-| `JWT_SECRET_KEY` | - | JWT signing key |
-| `DEFAULT_CURRENCY` | `USD` | Default currency code |
+| `SQLALCHEMY_DATABASE_URI` | - | Full PostgreSQL connection string, e.g. `postgresql://finpal:pass@db:5432/finpal` |
+| `SECRET_KEY` | - | Flask secret key — also used to sign JWTs. Generate: `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | - | Fernet key for encrypting sensitive fields (API keys, tokens). Generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 
 #### Features
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `INVESTMENT_TRACKING_ENABLED` | `false` | Enable portfolio features |
+| `INVESTMENT_TRACKING_ENABLED` | `false` | Enable portfolio tracking features |
 | `SIMPLEFIN_ENABLED` | `false` | Enable SimpleFin bank sync |
+| `POINTSPAL_ENABLED` | `false` | Enable pointsPal card rewards module |
+| `POINTSPAL_SYNC_INTERVAL_HOURS` | `1` | How often to auto-sync the pointsPal card database |
+| `FMP_API_KEY` | - | Financial Modeling Prep API key (optional, enhances investment data) |
+| `DISABLE_SIGNUPS` | `false` | Set `true` to lock registrations after initial setup |
 
 #### Authentication
 | Variable | Default | Description |
@@ -339,32 +361,50 @@ finPal can be configured via environment variables in your `.env` file:
 | `OIDC_ENABLED` | `false` | Enable OIDC/SSO authentication |
 | `OIDC_CLIENT_ID` | - | OAuth2 client ID |
 | `OIDC_CLIENT_SECRET` | - | OAuth2 client secret |
-| `OIDC_PROVIDER_NAME` | `OIDC` | Display name for provider |
+| `OIDC_PROVIDER_NAME` | `SSO` | Display name for the SSO button |
 | `OIDC_DISCOVERY_URL` | - | OIDC discovery endpoint |
+| `LOCAL_LOGIN_DISABLE` | `false` | Set `true` to force SSO-only login |
+
+#### Backup
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BACKUP_SCHEDULE` | `0 3 * * *` | Cron expression for backup runs (default: nightly 3 AM) |
+| `BACKUP_RETENTION_DAYS` | `14` | Days of local dumps to keep |
+| `BACKUP_REMOTE_BUCKET` | - | Remote bucket name — leave blank for local-only |
+| `RCLONE_CONFIG_REMOTE_TYPE` | - | `b2` (Backblaze B2) or `s3` (R2/S3-compatible) |
+| `BACKUP_HEALTHCHECK_URL` | - | Ping URL after each successful backup (healthchecks.io etc.) |
 
 ### Example Configuration
 
 ```bash
 # .env file
 
-# Database
+# Database — full connection string
 DB_USER=finpal
 DB_PASSWORD=your_secure_password
 DB_NAME=finpal
+SQLALCHEMY_DATABASE_URI=postgresql://finpal:your_secure_password@db:5432/finpal
 
 # Security
+# Generate with: openssl rand -hex 32
 SECRET_KEY=your_secret_key_here
-JWT_SECRET_KEY=your_jwt_secret_here
 
-# Application
-DEFAULT_CURRENCY=USD
+# Encryption for sensitive fields (API keys, SimpleFin tokens)
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+ENCRYPTION_KEY=
 
 # Features
 INVESTMENT_TRACKING_ENABLED=true
 SIMPLEFIN_ENABLED=true
+POINTSPAL_ENABLED=false
 
-# Optional: Google OAuth
-OIDC_ENABLED=true
+# Backup (nightly by default, local-only unless BACKUP_REMOTE_BUCKET is set)
+BACKUP_SCHEDULE=0 3 * * *
+BACKUP_RETENTION_DAYS=14
+BACKUP_REMOTE_BUCKET=
+
+# Optional: Google OAuth SSO
+OIDC_ENABLED=false
 OIDC_CLIENT_ID=your-google-client-id
 OIDC_CLIENT_SECRET=your-google-client-secret
 OIDC_DISCOVERY_URL=https://accounts.google.com/.well-known/openid-configuration

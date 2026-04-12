@@ -16,6 +16,12 @@ __pycache__/
 dist/
 build/
 
+# Virtual environment (large, rebuilt in container)
+venv/
+env/
+ENV/
+.venv/
+
 # Testing
 .pytest_cache/
 .coverage
@@ -33,9 +39,6 @@ tests/
 # Environment
 .env
 .env.local
-venv/
-env/
-ENV/
 
 # Git
 .git/
@@ -65,6 +68,34 @@ simplefin_*.json
 # Data files
 app.db
 *.sqlite3
+instance/
+
+# Frontend (has its own Dockerfile)
+web-ui/
+
+# Docker files (not needed inside container)
+docker-compose*.yml
+Dockerfile*
+
+# Server-specific / operational compose files
+docker-compose.demo.yml
+docker-compose.local.yml
+docker-compose.override.yml
+
+# Nginx config (not needed in backend container)
+nginx/
+
+# Images (not needed in backend)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+
+# Dockerfile-generated artifacts
+ssl_fix.py
+temp_app.py
 
 # Misc
 *.bak

@@ -269,22 +269,18 @@ class CategorySplit(db.Model):
 
 
 # ---------------------------------------------------------------------------
-# pointsPal spend-tracking hook
-# Fires after every Expense INSERT. Uses the raw connection so it never
-# interferes with the caller's ORM session. Silently no-ops if pointsPal
-# is disabled or if the account has no card link.
+# Module event hook — fires after every Expense INSERT.
+# Dispatches 'expense_created' to all registered modules via the registry.
+# A failing module never blocks the caller's transaction.
 # ---------------------------------------------------------------------------
 
-import os as _os
 from sqlalchemy import event as _sa_event
 
 
 @_sa_event.listens_for(Expense, 'after_insert')
-def _pointspal_on_expense_insert(mapper, connection, target):
-    if _os.getenv('POINTSPAL_ENABLED', 'false').lower() != 'true':
-        return
+def _on_expense_insert(mapper, connection, target):
     try:
-        from src.modules.pointspal.simplefin_bridge import handle_new_transaction
-        handle_new_transaction(connection, target)
+        from src.modules.registry import module_registry
+        module_registry.dispatch_event('expense_created', connection=connection, expense=target)
     except Exception:
         pass  # Never block the caller's transaction

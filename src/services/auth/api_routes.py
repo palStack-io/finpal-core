@@ -131,6 +131,16 @@ def login():
         access_token = create_access_token(identity=email, additional_claims={'email': email})
         refresh_token = create_refresh_token(identity=email)
 
+        # Resolve module access for this user
+        try:
+            from src.modules.registry import module_registry
+            modules = [
+                m.name for m in module_registry.modules
+                if m.is_enabled() and m.is_user_enabled(user.id)
+            ]
+        except Exception:
+            modules = []
+
         return jsonify({
             'access_token': access_token,
             'refresh_token': refresh_token,
@@ -140,8 +150,9 @@ def login():
                 'email': user.id,
                 'profile_emoji': user.profile_emoji,
                 'default_currency_code': user.default_currency_code,
-                'hasCompletedOnboarding': user.has_completed_onboarding,  # Added
+                'hasCompletedOnboarding': user.has_completed_onboarding,
                 'timezone': user.timezone,
+                'modules': modules,
                 'notifications': {
                     'email': user.notification_email if hasattr(user, 'notification_email') else True,
                     'push': user.notification_push if hasattr(user, 'notification_push') else False,
@@ -408,6 +419,117 @@ def forgot_password():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/config', methods=['GET'])
+def auth_config():
+    """Return auth capabilities so mobile can show correct login options."""
+    import os
+    oidc_enabled = current_app.config.get('OIDC_ENABLED', False)
+    oidc_provider_name = current_app.config.get('OIDC_PROVIDER_NAME', 'SSO')
+    apple_signin_enabled = os.getenv('APPLE_SIGNIN_ENABLED', 'False').lower() == 'true'
+    return jsonify({
+        'oidc_enabled': bool(oidc_enabled),
+        'oidc_provider_name': oidc_provider_name,
+        'apple_signin_enabled': apple_signin_enabled,
+    }), 200
+
+
+@api_bp.route('/apple', methods=['POST'])
+def apple_signin():
+    """Verify Apple Sign In identity token and return finPal JWT tokens."""
+    import os
+    import requests as http_requests
+    import jwt as pyjwt
+    from jwt.algorithms import RSAAlgorithm
+
+    if os.getenv('APPLE_SIGNIN_ENABLED', 'False').lower() != 'true':
+        return jsonify({'error': 'Apple Sign In is not enabled'}), 403
+
+    data = request.get_json() or {}
+    identity_token = data.get('identity_token')
+    if not identity_token:
+        return jsonify({'error': 'identity_token is required'}), 400
+
+    try:
+        # Fetch Apple's public keys
+        keys_resp = http_requests.get(
+            'https://appleid.apple.com/auth/keys', timeout=10
+        )
+        keys_resp.raise_for_status()
+        apple_keys = keys_resp.json().get('keys', [])
+
+        # Find the key matching the token's kid header
+        header = pyjwt.get_unverified_header(identity_token)
+        kid = header.get('kid')
+        apple_key_dict = next((k for k in apple_keys if k['kid'] == kid), None)
+        if not apple_key_dict:
+            return jsonify({'error': 'Invalid token: key not found'}), 401
+
+        # Build RSA public key and verify the token
+        public_key = RSAAlgorithm.from_jwk(apple_key_dict)
+        bundle_id = os.getenv('APPLE_CLIENT_ID', '')
+        claims = pyjwt.decode(
+            identity_token,
+            public_key,
+            algorithms=['RS256'],
+            audience=bundle_id,
+            issuer='https://appleid.apple.com',
+        )
+
+        # Extract user info — Apple only sends email on first login
+        sub = claims['sub']
+        token_email = claims.get('email') or data.get('email')
+        if not token_email:
+            return jsonify({'error': 'Could not determine user email from Apple token'}), 400
+
+        full_name = data.get('full_name')
+        name = full_name or token_email.split('@')[0]
+
+        oidc_data = {
+            'sub': sub,
+            'email': token_email,
+            'name': name,
+            'email_verified': True,
+        }
+
+        # Reuse existing OIDC user creation logic
+        # User.from_oidc is added by extend_user_model at startup
+        try:
+            user = User.from_oidc(oidc_data, provider='apple')
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 409
+        if not user:
+            return jsonify({'error': 'Failed to create or find user'}), 500
+
+        db.session.commit()
+
+        access_token = create_access_token(
+            identity=user.id,
+            additional_claims={'email': user.id}
+        )
+        refresh_token = create_refresh_token(identity=user.id)
+
+        return jsonify({
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'email': user.id,
+                'default_currency_code': getattr(user, 'default_currency_code', 'USD') or 'USD',
+                'profile_emoji': getattr(user, 'profile_emoji', '👤'),
+            }
+        }), 200
+
+    except pyjwt.ExpiredSignatureError:
+        return jsonify({'error': 'Apple token has expired'}), 401
+    except pyjwt.InvalidTokenError as e:
+        current_app.logger.warning(f"Apple token validation failed: {e}")
+        return jsonify({'error': 'Invalid Apple token'}), 401
+    except Exception as e:
+        current_app.logger.error(f"Apple Sign In error: {e}")
+        return jsonify({'error': 'Authentication failed'}), 500
 
 
 @api_bp.route('/reset-password', methods=['POST'])

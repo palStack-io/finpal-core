@@ -9,9 +9,62 @@ import { InvestmentSettings } from '../components/investment/InvestmentSettings'
 import { RecurringTransactions } from '../components/RecurringTransactions';
 import { TeamManagement } from '../components/settings/TeamManagement';
 import { userService } from '../services/userService';
+import { useTheme } from '../contexts/ThemeContext';
+import { moduleRegistry } from '../modules';
+import type { ModuleManifest } from '../modules/registry';
+
+// ---------------------------------------------------------------------------
+// ModuleCard — per-module hide/show toggle card for Settings > Modules tab
+// ---------------------------------------------------------------------------
+const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
+  const hiddenKey = `module_hidden_${manifest.slug}`;
+  const [hidden, setHidden] = useState<boolean>(() => {
+    try { return localStorage.getItem(hiddenKey) === 'true'; } catch { return false; }
+  });
+
+  const toggle = () => {
+    const next = !hidden;
+    setHidden(next);
+    try {
+      localStorage.setItem(hiddenKey, String(next));
+      window.dispatchEvent(new StorageEvent('storage', { key: hiddenKey, newValue: String(next) }));
+    } catch {}
+  };
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 16,
+      padding: '16px 20px', borderRadius: 12,
+      background: 'var(--card-bg)', border: '1px solid var(--border-color)',
+    }}>
+      <span style={{ fontSize: 24 }}>{manifest.icon}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: 15 }}>{manifest.label}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{manifest.description}</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          {hidden ? 'Hidden in sidebar' : 'Visible in sidebar'}
+        </span>
+        <div onClick={toggle} style={{
+          width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
+          background: hidden ? 'var(--border-color)' : 'var(--g500)',
+          position: 'relative', transition: 'background 0.2s',
+        }}>
+          <div style={{
+            position: 'absolute', top: 3, borderRadius: '50%',
+            width: 18, height: 18, background: '#fff',
+            left: hidden ? 3 : 23, transition: 'left 0.2s',
+          }} />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const Settings: React.FC = () => {
   const { user } = useAuthStore();
+  const { theme } = useTheme();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const [activeTab, setActiveTab] = useState('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -52,6 +105,9 @@ export const Settings: React.FC = () => {
     { id: 'security', label: 'Security', icon: <Lock size={18} /> },
     ...(user?.is_admin ? [{ id: 'household', label: 'Household', icon: <Home size={18} /> }] : []),
     { id: 'integrations', label: 'Integrations', icon: <Link size={18} /> },
+    ...(user?.modules && user.modules.length > 0
+      ? [{ id: 'modules', label: 'Modules', icon: <Zap size={18} /> }]
+      : []),
     { id: 'categories', label: 'Categories', icon: <Tag size={18} /> },
     { id: 'rules', label: 'Transaction Rules', icon: <Zap size={18} /> },
     { id: 'recurring', label: 'Recurring', icon: <Repeat size={18} /> },
@@ -250,7 +306,7 @@ export const Settings: React.FC = () => {
                     background: activeTab === tab.id ? 'rgba(21, 128, 61, 0.2)' : 'transparent',
                     border: activeTab === tab.id ? '1px solid rgba(21, 128, 61, 0.3)' : '1px solid transparent',
                     borderRadius: '8px',
-                    color: activeTab === tab.id ? '#86efac' : 'var(--text-secondary)',
+                    color: activeTab === tab.id ? (theme === 'dark' ? '#86efac' : '#15803d') : 'var(--text-secondary)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -693,6 +749,20 @@ export const Settings: React.FC = () => {
                 </div>
               )}
 
+              {activeTab === 'modules' && (
+                <div>
+                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Modules</h2>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '14px' }}>
+                    Modules are features granted by your plan. You can hide them from the sidebar without losing access.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {moduleRegistry
+                      .filter(m => user?.modules?.includes(m.slug))
+                      .map(m => <ModuleCard key={m.slug} manifest={m} />)}
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'categories' && (
                 <CategoryManagement />
               )}
@@ -800,15 +870,7 @@ export const Settings: React.FC = () => {
               )}
 
               {activeTab === 'preferences' && (
-                <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>App Preferences</h2>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Customize your app experience</p>
-
-                  <div style={{ marginTop: '24px', padding: '20px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px', textAlign: 'center' }}>
-                    <Palette size={48} color="#64748b" style={{ margin: '0 auto 16px' }} />
-                    <p style={{ color: 'var(--text-muted)' }}>Additional preferences coming soon</p>
-                  </div>
-                </div>
+                <PreferencesTab />
               )}
 
               {activeTab === 'data' && (
@@ -1091,5 +1153,20 @@ export const Settings: React.FC = () => {
         </div>
       )}
     </>
+  );
+};
+
+// ── Preferences Tab ────────────────────────────────────────────────────────
+
+const PreferencesTab: React.FC = () => {
+  return (
+    <div>
+      <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
+        App Preferences
+      </h2>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '28px' }}>
+        Customize your app experience.
+      </p>
+    </div>
   );
 };

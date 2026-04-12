@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette, CreditCard } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
+import { pointspalService, WalletCard } from '../../modules/pointspal/service';
 
 interface AddAccountFormProps {
   onSuccess: () => void;
@@ -45,6 +46,16 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // pointsPal linking (credit accounts only)
+  const [walletCards, setWalletCards] = useState<WalletCard[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<number | ''>('');
+
+  useEffect(() => {
+    if (formData.type === 'credit') {
+      pointspalService.getCards().then(setWalletCards).catch(() => setWalletCards([]));
+    }
+  }, [formData.type]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const updates: any = { [name]: value };
@@ -73,13 +84,32 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       }
 
       // Call API to create account
-      await accountService.createAccount({
+      const newAccount = await accountService.createAccount({
         name: formData.name,
         account_type: formData.type,
         balance: parseFloat(formData.balance),
         currency_code: formData.currency,
         color: formData.color
       });
+
+      // Link to pointsPal if a rewards card was selected
+      if (formData.type === 'credit' && selectedCardId && newAccount?.id) {
+        const externalId = `manual-${newAccount.id}`;
+        try {
+          // Set external_id on the account so the pointsPal bridge can match it
+          await accountService.updateAccount(newAccount.id, { external_id: externalId });
+          // Create the SimpleFin card link
+          await pointspalService.createCardLink({
+            simplefin_account_id: externalId,
+            user_card_id: selectedCardId as number,
+            is_credit_card: true,
+            simplefin_account_name: formData.name,
+          });
+        } catch {
+          // Non-fatal — account was created, just the linking failed
+          showToast('Account created but pointsPal linking failed. Link it manually from pointsPal.', 'error');
+        }
+      }
 
       setSuccess(true);
       showToast('Account created successfully', 'success');
@@ -273,6 +303,37 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           <option value="AUD" style={{ background: 'var(--bg-primary)' }}>AUD (A$)</option>
         </select>
       </div>
+
+      {/* pointsPal rewards card link (credit only) */}
+      {formData.type === 'credit' && (
+        <div style={{ padding: '14px 16px', background: 'rgba(21,128,61,0.05)', border: '1px solid rgba(21,128,61,0.2)', borderRadius: '8px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)', marginBottom: '8px' }}>
+            <CreditCard size={16} style={{ color: '#15803d' }} />
+            Link to pointsPal Rewards Card
+          </label>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 10px' }}>
+            Linking lets pointsPal automatically track points earned on this account's transactions.
+          </p>
+          <select
+            value={selectedCardId}
+            onChange={(e) => setSelectedCardId(e.target.value === '' ? '' : parseInt(e.target.value))}
+            disabled={isSubmitting}
+            style={{ ...inputStyle, cursor: 'pointer' }}
+          >
+            <option value="">Don't link (set up later in pointsPal)</option>
+            {walletCards.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.card_name}{c.last_four ? ` (···${c.last_four})` : ''}{c.program ? ` — ${c.program}` : ''}
+              </option>
+            ))}
+          </select>
+          {walletCards.length === 0 && (
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0 0' }}>
+              No cards in your wallet yet — add cards in pointsPal first.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Color Picker */}
       <div>

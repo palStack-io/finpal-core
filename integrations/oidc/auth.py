@@ -176,6 +176,10 @@ def register_oidc_routes(app, User, db):
             # Store the original URL to redirect after authentication
             redirect_to = request.args.get('next', url_for('dashboard'))
             set_oidc_session('redirect_to', redirect_to)
+
+            # Store mobile flag so callback can return JWT deep link
+            mobile = request.args.get('mobile', '0')
+            set_oidc_session('mobile', mobile)
             
             # Build authorization request URL
             params = {
@@ -287,16 +291,35 @@ def register_oidc_routes(app, User, db):
                 return redirect(url_for('login'))
             
             # Create or get the user
-            user = User.from_oidc(user_info)
-            
+            try:
+                user = User.from_oidc(user_info)
+            except ValueError as e:
+                from urllib.parse import quote
+                return redirect(f"/login?error={quote(str(e))}")
+
             if not user:
                 flash('Authentication failed: Unable to create or find user.')
                 return redirect(url_for('login'))
             
-            # Login the user
+            is_mobile = get_oidc_session('mobile', '0', delete=True) == '1'
+
+            if is_mobile:
+                # Mobile flow: return JWT tokens via deep link instead of Flask-Login session
+                from flask_jwt_extended import create_access_token, create_refresh_token
+                access_token = create_access_token(
+                    identity=user.id,
+                    additional_claims={'email': user.id}
+                )
+                refresh_token = create_refresh_token(identity=user.id)
+                deep_link = (
+                    f"finpal://oidc/callback"
+                    f"?access_token={access_token}"
+                    f"&refresh_token={refresh_token}"
+                )
+                return redirect(deep_link)
+
+            # Web flow: unchanged
             login_user(user)
-            
-            # Redirect to the original requested URL or dashboard
             redirect_to = get_oidc_session('redirect_to', url_for('dashboard'), delete=True)
             return redirect(redirect_to)
             

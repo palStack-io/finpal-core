@@ -10,7 +10,6 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Calendar,
   Download,
   ArrowUpRight,
   ArrowDownRight,
@@ -18,14 +17,12 @@ import {
   CheckCircle2,
   Activity,
   Target,
-  CreditCard,
   PieChart as PieChartIcon,
   BarChart3,
-  Wallet
 } from 'lucide-react';
 
 // Tab types
-type AnalyticsTab = 'overview' | 'cashflow' | 'spending' | 'health' | 'credit';
+type AnalyticsTab = 'overview' | 'cashflow' | 'spending' | 'health';
 
 // Color palette for categories
 const CATEGORY_COLORS = ['#3b82f6', '#a855f7', '#10b981', '#f97316', '#ec4899', '#06b6d4', '#f59e0b', '#84cc16'];
@@ -160,7 +157,6 @@ export const Analytics: React.FC = () => {
     { id: 'cashflow' as const, label: 'Cash Flow', icon: <Activity size={18} /> },
     { id: 'spending' as const, label: 'Spending Analysis', icon: <PieChartIcon size={18} /> },
     { id: 'health' as const, label: 'Financial Health', icon: <Target size={18} /> },
-    { id: 'credit' as const, label: 'Credit Utilization', icon: <CreditCard size={18} /> }
   ];
 
   return (
@@ -717,116 +713,6 @@ export const Analytics: React.FC = () => {
           </div>
         )}
 
-        {/* Credit Utilization Tab */}
-        {activeTab === 'credit' && (
-          <div>
-            {/* Header Section */}
-            <div style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px',
-              padding: '32px',
-              marginBottom: '24px',
-              textAlign: 'center'
-            }}>
-              <CreditCard size={48} color="#8b5cf6" style={{ margin: '0 auto 16px' }} />
-              <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                Maximize Every Dollar Spent
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '16px', lineHeight: '1.6', maxWidth: '800px', margin: '0 auto' }}>
-                Automatically track credit card rewards utilization and guide you to optimal card usage based on category spending limits, rotating bonuses, annual caps, and sign-up bonus progress.
-              </p>
-            </div>
-
-            {/* Feature Cards */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '24px',
-              marginBottom: '32px'
-            }}>
-              <div style={{
-                background: 'var(--bg-card)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '16px',
-                padding: '24px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <Target size={24} color="#10b981" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Category Limits</h3>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-                  Track spending limits for category bonuses like BofA's 3% on gas up to $2,500/quarter or Amex Gold's 4x points up to $25k on groceries.
-                </p>
-              </div>
-
-              <div style={{
-                background: 'var(--bg-card)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '16px',
-                padding: '24px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <Activity size={24} color="#3b82f6" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Rotating Bonuses</h3>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-                  Stay on top of quarterly rotating categories like Chase Freedom's 5% bonuses and get reminders to activate them.
-                </p>
-              </div>
-
-              <div style={{
-                background: 'var(--bg-card)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '16px',
-                padding: '24px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <TrendingUp size={24} color="#f59e0b" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>SUB Progress</h3>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-                  Monitor your progress toward sign-up bonus requirements and get alerts when you're close to hitting minimum spend thresholds.
-                </p>
-              </div>
-
-              <div style={{
-                background: 'var(--bg-card)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '16px',
-                padding: '24px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <Wallet size={24} color="#8b5cf6" />
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Optimal Card Guide</h3>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-                  Get real-time recommendations on which card to use for each transaction to maximize your rewards earnings.
-                </p>
-              </div>
-            </div>
-
-            {/* Coming Soon Banner */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              borderRadius: '12px',
-              padding: '24px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
-                Coming Soon
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                This feature is currently in development. Stay tuned for updates!
-              </p>
-            </div>
-          </div>
-        )}
         </div>
       </div>
     </>

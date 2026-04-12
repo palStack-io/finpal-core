@@ -17,10 +17,21 @@ depends_on = None
 
 
 def upgrade():
-    # Add color column to accounts table
-    op.add_column('accounts', sa.Column('color', sa.String(length=7), nullable=True))
+    # Add color column to accounts table (skip if already exists)
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='accounts' AND column_name='color'"
+    ))
+    if not result.fetchone():
+        op.add_column('accounts', sa.Column('color', sa.String(length=7), nullable=True))
 
 
 def downgrade():
-    # Remove color column from accounts table
-    op.drop_column('accounts', 'color')
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='accounts' AND column_name='color'"
+    ))
+    if result.fetchone():
+        op.drop_column('accounts', 'color')

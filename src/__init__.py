@@ -73,6 +73,11 @@ def create_app(config_name=None):
     def revoked_token_response(jwt_header, jwt_payload):
         return {'message': 'Token has been revoked', 'error': 'token_revoked'}, 401
 
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        from src.models.user import RevokedToken
+        return RevokedToken.is_revoked(jwt_payload['jti'])
+
     # Configure CORS for React Native and web frontend
     CORS(app, resources={
         r"/api/*": {
@@ -191,6 +196,13 @@ def create_app(config_name=None):
         db.create_all()
         app.logger.info("Database tables verified")
 
+        # Module startup hooks (seeding, cache warming, etc.)
+        try:
+            from src.modules.registry import module_registry
+            module_registry.startup(app)
+        except Exception as e:
+            app.logger.warning(f"Module startup failed (non-fatal): {e}")
+
         if app.config.get('DEMO_MODE', False):
             try:
                 # Seed default currencies
@@ -234,12 +246,59 @@ def setup_scheduled_tasks(app):
 
     @scheduler.task('cron', id='simplefin_sync', hour=23, minute=0)
     def scheduled_simplefin_sync():
-        """Run every day at 11:00 PM"""
+        """Sync all SimpleFin accounts for every connected user. Runs daily at 11 PM."""
         with app.app_context():
             try:
-                app.logger.info("SimpleFin sync task executed")
+                from src.models.account import SimpleFin
+                from src.services.account.service import SimpleFinService
+
+                service = SimpleFinService()
+                connections = SimpleFin.query.filter_by(enabled=True).all()
+                total_users = len(connections)
+                total_imported = 0
+
+                for conn in connections:
+                    try:
+                        _, _, results = service.sync_all_accounts(conn.user_id)
+                        total_imported += sum(r.get('imported', 0) for r in results)
+                    except Exception as user_err:
+                        app.logger.error(
+                            f"SimpleFin sync failed for user {conn.user_id}: {user_err}"
+                        )
+
+                app.logger.info(
+                    f"SimpleFin sync complete: {total_users} user(s), "
+                    f"{total_imported} new transaction(s)"
+                )
             except Exception as e:
-                app.logger.error(f"SimpleFin sync failed: {e}")
+                app.logger.error(f"SimpleFin sync task failed: {e}")
+
+    # Module scheduled tasks (e.g. pointsPal nightly sync)
+    try:
+        from src.modules.registry import module_registry
+        module_registry.register_tasks(scheduler, app)
+    except Exception as e:
+        app.logger.warning(f"Module task registration failed (non-fatal): {e}")
+
+    @scheduler.task('cron', id='update_investment_prices', hour=4, minute=0)
+    def scheduled_investment_price_update():
+        """Update all investment prices from yfinance nightly at 4 AM."""
+        with app.app_context():
+            try:
+                from src.models.investment import Portfolio
+                from src.services.investment.service import InvestmentService
+
+                service = InvestmentService()
+                user_ids = db.session.query(Portfolio.user_id).distinct().all()
+                total_updated = 0
+
+                for (uid,) in user_ids:
+                    results = service.update_all_user_prices(uid)
+                    total_updated += sum(1 for r in results if r['ok'])
+
+                app.logger.info(f"Investment price update complete: {len(user_ids)} user(s), {total_updated} portfolio(s) updated")
+            except Exception as e:
+                app.logger.error(f"Investment price update failed: {e}")
 
     @scheduler.task('cron', id='update_exchange_rates', hour=2, minute=0)
     def scheduled_exchange_rate_update():

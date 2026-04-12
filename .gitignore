@@ -53,6 +53,7 @@ build/
 htmlcov/
 .pytest_cache/
 .tox/
+web-ui/coverage/
 
 # Migrations (optional - you might want to keep these)
 # migrations/
@@ -80,6 +81,11 @@ app.db
 # Docker
 .docker
 
+# Server-specific / operational compose files (not for repo)
+docker-compose.demo.yml
+docker-compose.local.yml
+docker-compose.override.yml
+
 # Jupyter Notebooks
 .ipynb_checkpoints
 
@@ -91,3 +97,7 @@ _archive/
 *.bak
 *.swp
 *~.nib
+
+# Dockerfile-generated files
+ssl_fix.py
+temp_app.py

@@ -37,6 +37,12 @@ password_reset_model = ns.model('PasswordReset', {
     'email': fields.String(required=True, description='User email'),
 })
 
+password_reset_confirm_model = ns.model('PasswordResetConfirm', {
+    'email': fields.String(required=True, description='User email'),
+    'token': fields.String(required=True, description='Reset token from email'),
+    'newPassword': fields.String(required=True, description='New password'),
+})
+
 delete_account_model = ns.model('DeleteAccount', {
     'password': fields.String(required=True, description='Password confirmation'),
 })
@@ -193,10 +199,50 @@ class PasswordReset(Resource):
 
         user = User.query.filter_by(id=email).first()
 
-        # Don't reveal if user exists
-        # In production, send password reset email here
+        if user:
+            token = user.generate_reset_token()
+            db.session.commit()
 
+            from src.services.email_service import email_service
+            app_url = os.getenv('APP_URL', 'http://localhost:3000')
+            reset_link = f"{app_url}/reset-password?token={token}&email={email}"
+            email_service.send_password_reset_email(
+                to_email=user.id,
+                user_name=user.name or user.id,
+                reset_link=reset_link,
+                expires_in='1 hour',
+            )
+
+        # Don't reveal if user exists
         return {'message': 'If account exists, password reset email sent'}, 200
+
+
+@ns.route('/password-reset-confirm')
+class PasswordResetConfirm(Resource):
+    @ns.doc('confirm_password_reset')
+    @ns.expect(password_reset_confirm_model)
+    def post(self):
+        """Consume a reset token and set a new password"""
+        data = request.get_json() or {}
+        email = data.get('email', '').strip().lower()
+        token = data.get('token', '').strip()
+        new_password = data.get('newPassword', '')
+
+        if not email or not token or not new_password:
+            return {'message': 'email, token, and newPassword are required'}, 400
+
+        if len(new_password) < 8:
+            return {'message': 'Password must be at least 8 characters'}, 400
+
+        user = User.query.filter_by(id=email).first()
+        if not user or not user.verify_reset_token(token):
+            return {'message': 'Invalid or expired reset token'}, 400
+
+        user.set_password(new_password)
+        user.clear_reset_token()
+        db.session.commit()
+
+        return {'message': 'Password reset successfully'}, 200
 
 
 @ns.route('/sessions')
@@ -204,24 +250,30 @@ class Sessions(Resource):
     @ns.doc('get_sessions')
     @jwt_required()
     def get(self):
-        """Get active sessions for current user"""
+        """Get recent login sessions for current user (from login history)"""
         user_id = get_jwt_identity()
-
-        # This is a simplified implementation
-        # In production, you'd track sessions in database or Redis
         from flask_jwt_extended import get_jwt
-        jti = get_jwt().get('jti')
+        from src.models.user import LoginEvent
 
-        sessions = [{
-            'id': jti,
-            'device': 'Current Device',
-            'browser': 'Unknown Browser',
-            'location': 'Unknown',
-            'ipAddress': request.remote_addr,
-            'lastActive': datetime.utcnow().isoformat(),
-            'createdAt': datetime.utcnow().isoformat(),
-            'current': True,
-        }]
+        current_jti = get_jwt().get('jti')
+        events = (
+            LoginEvent.query
+            .filter_by(user_id=user_id, success=True)
+            .order_by(LoginEvent.timestamp.desc())
+            .limit(20)
+            .all()
+        )
+
+        sessions = []
+        for i, e in enumerate(events):
+            sessions.append({
+                'id': f"{user_id}:{e.id}",
+                'ipAddress': e.ip_address,
+                'userAgent': e.user_agent,
+                'lastActive': e.timestamp.isoformat(),
+                'createdAt': e.timestamp.isoformat(),
+                'current': i == 0,
+            })
 
         return sessions, 200
 
@@ -231,9 +283,16 @@ class SessionDetail(Resource):
     @ns.doc('terminate_session')
     @jwt_required()
     def delete(self, session_id):
-        """Terminate a specific session"""
-        # This would revoke the JWT in production using a blocklist
-        # For now, return success
+        """Revoke a JWT token (add JTI to blocklist)"""
+        from flask_jwt_extended import get_jwt
+        from src.models.user import RevokedToken
+
+        # session_id is the JTI of the token to revoke
+        jti = session_id
+        if not RevokedToken.is_revoked(jti):
+            db.session.add(RevokedToken(jti=jti))
+            db.session.commit()
+
         return {'message': 'Session terminated'}, 200
 
 
@@ -244,20 +303,28 @@ class LoginHistory(Resource):
     def get(self):
         """Get login history for current user"""
         user_id = get_jwt_identity()
-        limit = request.args.get('limit', 10, type=int)
+        limit = min(request.args.get('limit', 10, type=int), 100)
 
-        # This is a placeholder
-        # In production, you'd track login history in database
-        history = [{
-            'timestamp': datetime.utcnow().isoformat(),
-            'ipAddress': request.remote_addr,
-            'device': 'Current Device',
-            'browser': 'Unknown Browser',
-            'location': 'Unknown',
-            'success': True,
-        }]
+        from src.models.user import LoginEvent
+        events = (
+            LoginEvent.query
+            .filter_by(user_id=user_id)
+            .order_by(LoginEvent.timestamp.desc())
+            .limit(limit)
+            .all()
+        )
 
-        return history[:limit], 200
+        history = [
+            {
+                'timestamp': e.timestamp.isoformat(),
+                'ipAddress': e.ip_address,
+                'userAgent': e.user_agent,
+                'success': e.success,
+            }
+            for e in events
+        ]
+
+        return history, 200
 
 
 @ns.route('/account')
@@ -283,10 +350,14 @@ class Account(Resource):
         if not user.check_password(password):
             return {'message': 'Password is incorrect'}, 401
 
-        # Delete user and all related data
-        # In production, this should cascade delete all user data
-        db.session.delete(user)
-        db.session.commit()
+        try:
+            _delete_all_user_data(user_id)
+            db.session.delete(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Account delete error for {user_id}: {e}')
+            return {'message': f'Delete failed: {str(e)}'}, 500
 
         return {'message': 'Account deleted successfully'}, 200
 
@@ -303,21 +374,82 @@ class Export(Resource):
         if not user:
             return {'message': 'User not found'}, 404
 
-        # Collect all user data
+        from src.models.account import Account
+        from src.models.transaction import Expense
+        from src.models.budget import Budget
+        from src.models.category import Category
+
+        accounts = Account.query.filter_by(user_id=user_id).all()
+        transactions = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.desc()).all()
+        budgets = Budget.query.filter_by(user_id=user_id).all()
+        # Export subcategories after parents so import can rebuild the tree
+        categories = Category.query.filter_by(user_id=user_id).order_by(
+            Category.parent_id.nullsfirst()
+        ).all()
+
         data = {
+            'schema_version': '1.0',
+            'exported_at': datetime.utcnow().isoformat(),
             'user': {
                 'email': user.id,
                 'name': user.name,
-                'phone': user.phone,
-                'bio': user.bio,
                 'default_currency_code': user.default_currency_code,
                 'timezone': user.timezone,
                 'created_at': user.created_at.isoformat() if user.created_at else None,
             },
-            'accounts': [],  # Would include user's accounts
-            'transactions': [],  # Would include user's transactions
-            'budgets': [],  # Would include user's budgets
-            'categories': [],  # Would include user's categories
+            'categories': [
+                {
+                    'exported_id': c.id,
+                    'name': c.name,
+                    'icon': c.icon,
+                    'color': c.color,
+                    'parent_exported_id': c.parent_id,
+                    'is_system': c.is_system,
+                }
+                for c in categories
+            ],
+            'accounts': [
+                {
+                    'name': a.name,
+                    'type': a.type,
+                    'institution': a.institution,
+                    'balance': a.balance,
+                    'currency_code': a.currency_code,
+                    'color': a.color,
+                    'import_source': a.import_source,
+                }
+                for a in accounts
+            ],
+            'transactions': [
+                {
+                    'description': e.description,
+                    'amount': e.amount,
+                    'date': e.date.isoformat() if e.date else None,
+                    'transaction_type': e.transaction_type,
+                    'category_exported_id': e.category_id,
+                    'card_used': e.card_used,
+                    'split_method': e.split_method,
+                    'paid_by': e.paid_by,
+                    'currency_code': e.currency_code,
+                    'original_amount': e.original_amount,
+                    'import_source': e.import_source,
+                    'external_id': e.external_id,
+                }
+                for e in transactions
+            ],
+            'budgets': [
+                {
+                    'name': b.name,
+                    'amount': b.amount,
+                    'period': b.period,
+                    'category_exported_id': b.category_id,
+                    'include_subcategories': b.include_subcategories,
+                    'is_recurring': b.is_recurring,
+                    'active': b.active,
+                    'rollover': b.rollover,
+                }
+                for b in budgets
+            ],
         }
 
         # Create JSON file in memory
@@ -351,11 +483,15 @@ class Import(Resource):
 
         try:
             data = json.load(file)
-            # Process import data
-            # This would restore user data from backup
-
-            return {'message': 'Data imported successfully'}, 200
         except Exception as e:
+            return {'message': f'Invalid JSON: {str(e)}'}, 400
+
+        try:
+            stats = _import_user_data(user_id, data)
+            return {'message': 'Data imported successfully', 'stats': stats}, 200
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Import error for {user_id}: {e}')
             return {'message': f'Import failed: {str(e)}'}, 400
 
 
@@ -367,10 +503,10 @@ class ClearCache(Resource):
         """Clear user cache"""
         user_id = get_jwt_identity()
 
-        # Clear any cached data for user
-        # This is a placeholder
+        fmp_cache = current_app.extensions.get('fmp_cache')
+        cleared = fmp_cache.clear_all() if fmp_cache else 0
 
-        return {'message': 'Cache cleared successfully'}, 200
+        return {'message': 'Cache cleared successfully', 'files_removed': cleared}, 200
 
 
 @ns.route('/reset-categories')
@@ -381,10 +517,54 @@ class ResetCategories(Resource):
         """Reset categories to default"""
         user_id = get_jwt_identity()
 
-        # Reset user's categories to default set
-        # This would delete custom categories and restore defaults
+        from src.models.transaction import Expense, CategorySplit
+        from src.models.category import Category, CategoryMapping
+        from src.models.transaction_rule import TransactionRule
+        from src.models.budget import Budget
+        from src.data import seed_user_defaults
 
-        return {'message': 'Categories reset to default'}, 200
+        try:
+            # Nullify category_id on expenses (allows FK constraint to be removed)
+            Expense.query.filter_by(user_id=user_id).update(
+                {'category_id': None}, synchronize_session=False
+            )
+
+            # Delete category splits for this user's expenses (category_id is NOT NULL there)
+            expense_ids = [
+                row.id for row in
+                db.session.query(Expense.id).filter_by(user_id=user_id).all()
+            ]
+            if expense_ids:
+                CategorySplit.query.filter(
+                    CategorySplit.expense_id.in_(expense_ids)
+                ).delete(synchronize_session=False)
+                Expense.query.filter_by(user_id=user_id).update(
+                    {'has_category_splits': False}, synchronize_session=False
+                )
+
+            # Delete budgets, rules, mappings that reference categories
+            Budget.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+            TransactionRule.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+            CategoryMapping.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+            # Delete subcategories before parents (self-referential FK)
+            Category.query.filter(
+                Category.user_id == user_id,
+                Category.parent_id.isnot(None)
+            ).delete(synchronize_session=False)
+            Category.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Reset failed: {str(e)}'}, 500
+
+        result = seed_user_defaults(user_id)
+        return {
+            'message': 'Categories reset to defaults',
+            'categories_created': result.get('categories_count', 0),
+            'rules_created': result.get('rules_count', 0),
+        }, 200
 
 
 @ns.route('/delete-all-data')
@@ -409,8 +589,13 @@ class DeleteAllData(Resource):
         if not user.check_password(password):
             return {'message': 'Password is incorrect'}, 401
 
-        # Delete all user data but keep the account
-        # This would delete transactions, accounts, budgets, etc.
+        try:
+            _delete_all_user_data(user_id)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'delete-all-data error for {user_id}: {e}')
+            return {'message': f'Delete failed: {str(e)}'}, 500
 
         return {'message': 'All data deleted successfully'}, 200
 
@@ -487,3 +672,189 @@ class ApiSettings(Resource):
             'hasSimplefinConnection': api_settings.simplefin_access_url is not None,
             'investmentTrackingEnabled': api_settings.investment_tracking_enabled
         }, 200
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+def _delete_all_user_data(user_id):
+    """
+    Delete all data belonging to user_id without deleting the user account itself.
+    Caller is responsible for commit/rollback.
+    """
+    from src.models.transaction import Expense, CategorySplit
+    from src.models.account import Account
+    from src.models.budget import Budget
+    from src.models.category import Category, CategoryMapping
+    from src.models.transaction_rule import TransactionRule
+    from src.models.recurring import RecurringExpense
+    from src.models.investment import Portfolio, Investment, InvestmentTransaction
+    from src.models.category import Tag
+    from src.models.user import LoginEvent
+    from src.models.associations import expense_tags, group_users
+
+    # Collect expense IDs for association cleanup
+    expense_ids = [
+        row.id for row in db.session.query(Expense.id).filter_by(user_id=user_id).all()
+    ]
+
+    if expense_ids:
+        # Remove expense-tag associations (association table, no ORM cascade)
+        db.session.execute(
+            expense_tags.delete().where(expense_tags.c.expense_id.in_(expense_ids))
+        )
+        # Delete category splits (FK to expenses, NOT NULL so must delete before expenses)
+        CategorySplit.query.filter(
+            CategorySplit.expense_id.in_(expense_ids)
+        ).delete(synchronize_session=False)
+
+    Expense.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    RecurringExpense.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    Budget.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    CategoryMapping.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    TransactionRule.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    Account.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+    # Investments: delete transactions → investments → portfolios (no DB cascade)
+    portfolio_ids = [
+        row.id for row in db.session.query(Portfolio.id).filter_by(user_id=user_id).all()
+    ]
+    if portfolio_ids:
+        inv_ids = [
+            row.id for row in
+            db.session.query(Investment.id).filter(
+                Investment.portfolio_id.in_(portfolio_ids)
+            ).all()
+        ]
+        if inv_ids:
+            InvestmentTransaction.query.filter(
+                InvestmentTransaction.investment_id.in_(inv_ids)
+            ).delete(synchronize_session=False)
+        Investment.query.filter(
+            Investment.portfolio_id.in_(portfolio_ids)
+        ).delete(synchronize_session=False)
+    Portfolio.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+    # Categories: delete subcategories (parent_id not null) before parents
+    Category.query.filter(
+        Category.user_id == user_id,
+        Category.parent_id.isnot(None)
+    ).delete(synchronize_session=False)
+    Category.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+    Tag.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    LoginEvent.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+    # Remove user from group memberships
+    db.session.execute(group_users.delete().where(group_users.c.user_id == user_id))
+
+
+def _import_user_data(user_id, data: dict) -> dict:
+    """
+    Restore data from an export payload produced by GET /users/export.
+    Returns a stats dict. Caller is responsible for rollback on exception.
+    """
+    from src.models.category import Category
+    from src.models.account import Account
+    from src.models.transaction import Expense
+    from src.models.budget import Budget
+
+    stats = {'categories': 0, 'accounts': 0, 'transactions': 0, 'budgets': 0}
+
+    # --- 1. Categories (ordered parents-first by the export) ---
+    # Map exported_id → new DB id so transactions/budgets can reference them
+    cat_id_map = {}  # exported_id (int) → new id (int)
+
+    for cat_data in data.get('categories', []):
+        exported_id = cat_data.get('exported_id')
+        parent_exported_id = cat_data.get('parent_exported_id')
+        new_parent_id = cat_id_map.get(parent_exported_id) if parent_exported_id else None
+
+        cat = Category(
+            name=cat_data.get('name', 'Unnamed'),
+            icon=cat_data.get('icon', '🏷️'),
+            color=cat_data.get('color', '#6c757d'),
+            parent_id=new_parent_id,
+            user_id=user_id,
+            is_system=cat_data.get('is_system', False),
+        )
+        db.session.add(cat)
+        db.session.flush()  # get the new id
+
+        if exported_id is not None:
+            cat_id_map[exported_id] = cat.id
+        stats['categories'] += 1
+
+    # --- 2. Accounts ---
+    acct_name_map = {}  # name → new Account.id (for transactions)
+
+    for acct_data in data.get('accounts', []):
+        name = acct_data.get('name', 'Unnamed Account')
+        acct = Account(
+            name=name,
+            type=acct_data.get('type', 'checking'),
+            institution=acct_data.get('institution'),
+            balance=acct_data.get('balance', 0.0),
+            currency_code=acct_data.get('currency_code'),
+            color=acct_data.get('color'),
+            import_source=acct_data.get('import_source'),
+            user_id=user_id,
+        )
+        db.session.add(acct)
+        db.session.flush()
+        acct_name_map[name] = acct.id
+        stats['accounts'] += 1
+
+    # --- 3. Transactions ---
+    for tx_data in data.get('transactions', []):
+        date_raw = tx_data.get('date')
+        try:
+            date = datetime.fromisoformat(date_raw) if date_raw else datetime.utcnow()
+        except ValueError:
+            date = datetime.utcnow()
+
+        cat_exported_id = tx_data.get('category_exported_id')
+        category_id = cat_id_map.get(cat_exported_id) if cat_exported_id else None
+
+        expense = Expense(
+            description=tx_data.get('description', ''),
+            amount=tx_data.get('amount', 0.0),
+            date=date,
+            transaction_type=tx_data.get('transaction_type', 'expense'),
+            category_id=category_id,
+            card_used=tx_data.get('card_used', ''),
+            split_method=tx_data.get('split_method', 'none'),
+            paid_by=tx_data.get('paid_by', user_id),
+            user_id=user_id,
+            currency_code=tx_data.get('currency_code'),
+            original_amount=tx_data.get('original_amount'),
+            import_source=tx_data.get('import_source', 'import'),
+            external_id=tx_data.get('external_id'),
+        )
+        db.session.add(expense)
+        stats['transactions'] += 1
+
+    # --- 4. Budgets ---
+    for bgt_data in data.get('budgets', []):
+        cat_exported_id = bgt_data.get('category_exported_id')
+        category_id = cat_id_map.get(cat_exported_id) if cat_exported_id else None
+        if not category_id:
+            continue  # budgets require a category
+
+        budget = Budget(
+            name=bgt_data.get('name'),
+            amount=bgt_data.get('amount', 0.0),
+            period=bgt_data.get('period', 'monthly'),
+            category_id=category_id,
+            include_subcategories=bgt_data.get('include_subcategories', True),
+            is_recurring=bgt_data.get('is_recurring', True),
+            active=bgt_data.get('active', True),
+            rollover=bgt_data.get('rollover', False),
+            user_id=user_id,
+        )
+        db.session.add(budget)
+        stats['budgets'] += 1
+
+    db.session.commit()
+    return stats

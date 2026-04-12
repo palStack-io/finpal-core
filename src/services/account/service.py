@@ -373,17 +373,15 @@ class SimpleFinService:
         Returns (success, message)
         """
         try:
-            # Check if user already has SimpleFin connected
             existing = SimpleFin.query.filter_by(user_id=user_id).first()
 
             if existing:
                 existing.access_url = access_url
-                existing.connected_at = datetime.utcnow()
+                existing.updated_at = datetime.utcnow()
             else:
                 simplefin = SimpleFin(
                     user_id=user_id,
                     access_url=access_url,
-                    connected_at=datetime.utcnow()
                 )
                 db.session.add(simplefin)
 
@@ -418,24 +416,219 @@ class SimpleFinService:
         """Get SimpleFin settings for a user"""
         return SimpleFin.query.filter_by(user_id=user_id).first()
 
+    # ------------------------------------------------------------------
+    # Account import
+    # ------------------------------------------------------------------
+
+    def import_simplefin_accounts(self, user_id, simplefin_account_ids):
+        """
+        Given a list of SimpleFin account IDs chosen by the user, create or
+        update Account rows in the database.
+        Returns (success, message, list_of_result_dicts)
+        """
+        from integrations.simplefin.client import SimpleFin as SimpleFinClient
+
+        settings = SimpleFin.query.filter_by(user_id=user_id).first()
+        if not settings or not settings.access_url:
+            return False, 'SimpleFin not connected', []
+
+        try:
+            sf_client = SimpleFinClient(current_app)
+            # Fetch with days_back=1 just to get current balances — no transactions needed
+            raw_data = sf_client.get_accounts_with_transactions(
+                settings.access_url, days_back=1
+            )
+            if not raw_data:
+                return False, 'Failed to fetch accounts from SimpleFin', []
+
+            processed = sf_client.process_raw_accounts(raw_data)
+            results = []
+
+            for acc in processed:
+                if acc['id'] not in simplefin_account_ids:
+                    continue
+
+                existing = Account.query.filter_by(
+                    user_id=user_id,
+                    external_id=acc['id'],
+                    import_source='simplefin'
+                ).first()
+
+                if existing:
+                    existing.balance = acc['balance']
+                    existing.last_sync = datetime.utcnow()
+                    results.append({
+                        'id': existing.id,
+                        'name': existing.name,
+                        'status': 'updated'
+                    })
+                else:
+                    account = Account(
+                        name=acc['name'],
+                        type=acc['type'],
+                        institution=acc['institution'],
+                        balance=acc['balance'],
+                        currency_code=acc['currency_code'],
+                        color=acc.get('color', '#3b82f6'),
+                        import_source='simplefin',
+                        external_id=acc['id'],
+                        user_id=user_id,
+                        last_sync=datetime.utcnow(),
+                    )
+                    db.session.add(account)
+                    db.session.flush()
+                    results.append({
+                        'id': account.id,
+                        'name': account.name,
+                        'status': 'imported'
+                    })
+
+            db.session.commit()
+            return True, f'{len(results)} account(s) processed', results
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error importing SimpleFin accounts: {str(e)}")
+            return False, str(e), []
+
+    # ------------------------------------------------------------------
+    # Transaction sync
+    # ------------------------------------------------------------------
+
     def sync_account(self, account_id, user_id):
         """
-        Sync a SimpleFin account (placeholder - actual sync handled by SimpleFin client)
+        Fetch new transactions from SimpleFin for a single account and write
+        them to the expenses table.
         Returns (success, message, synced_count)
         """
+        from integrations.simplefin.client import SimpleFin as SimpleFinClient
+
         account = Account.query.get(account_id)
         if not account:
             return False, 'Account not found', 0
-
         if account.user_id != user_id:
-            return False, 'You do not have permission to sync this account', 0
-
+            return False, 'Permission denied', 0
         if account.import_source != 'simplefin':
-            return False, 'This account is not connected to SimpleFin', 0
+            return False, 'Not a SimpleFin account', 0
+        if not account.external_id:
+            return False, 'Account has no SimpleFin ID', 0
 
-        # Actual sync logic handled by SimpleFin client integration
-        # This method would call the SimpleFin client to fetch new transactions
-        return True, 'Account sync initiated', 0
+        settings = SimpleFin.query.filter_by(user_id=user_id).first()
+        if not settings or not settings.access_url:
+            return False, 'SimpleFin not connected', 0
+
+        # How far back to fetch — buffer of 2 days beyond last sync
+        if account.last_sync:
+            days_since = (datetime.utcnow() - account.last_sync).days
+            days_back = max(days_since + 2, 3)
+        else:
+            days_back = 30
+
+        try:
+            sf_client = SimpleFinClient(current_app)
+            raw_data = sf_client.get_accounts_with_transactions(
+                settings.access_url, days_back=days_back
+            )
+            if not raw_data:
+                return False, 'Failed to fetch data from SimpleFin', 0
+
+            # Find this specific account in the response by external_id
+            account_raw = next(
+                (a for a in raw_data.get('accounts', [])
+                 if a.get('id') == account.external_id),
+                None
+            )
+            if not account_raw:
+                return False, 'Account not found in SimpleFin response', 0
+
+            processed_list = sf_client.process_raw_accounts([account_raw])
+            if not processed_list:
+                return True, 'No data returned', 0
+
+            account_data = processed_list[0]
+            imported_count = 0
+
+            for trans in account_data.get('transactions', []):
+                external_id = trans.get('external_id')
+                if not external_id:
+                    continue
+
+                # Skip duplicates
+                if Expense.query.filter_by(
+                    user_id=user_id,
+                    external_id=external_id,
+                    import_source='simplefin'
+                ).first():
+                    continue
+
+                # Auto-categorize using user's category mapping rules
+                category_id = auto_categorize_transaction(
+                    trans.get('description', ''), user_id
+                )
+
+                expense = Expense(
+                    description=trans.get('description', 'SimpleFin Transaction'),
+                    amount=trans['amount'],
+                    original_amount=trans['amount'],
+                    currency_code=account.currency_code or 'USD',
+                    date=trans['date'],
+                    card_used=account.name,
+                    transaction_type=trans.get('transaction_type', 'expense'),
+                    split_method='equal',
+                    split_value=0,
+                    paid_by=user_id,
+                    user_id=user_id,
+                    account_id=account_id,
+                    external_id=external_id,
+                    import_source='simplefin',
+                    category_id=category_id,
+                )
+                db.session.add(expense)
+                imported_count += 1
+
+            # Update balance from latest SimpleFin data
+            if account_data.get('balance') is not None:
+                account.balance = account_data['balance']
+            account.last_sync = datetime.utcnow()
+
+            db.session.commit()
+            return True, f'Synced {imported_count} new transaction(s)', imported_count
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"SimpleFin sync error for account {account_id}: {str(e)}"
+            )
+            return False, str(e), 0
+
+    def sync_all_accounts(self, user_id):
+        """
+        Sync all SimpleFin accounts for a user.
+        Returns (success, message, list_of_per_account_results)
+        """
+        sf_accounts = Account.query.filter_by(
+            user_id=user_id,
+            import_source='simplefin'
+        ).all()
+
+        if not sf_accounts:
+            return True, 'No SimpleFin accounts to sync', []
+
+        total_imported = 0
+        results = []
+
+        for account in sf_accounts:
+            success, message, count = self.sync_account(account.id, user_id)
+            total_imported += count
+            results.append({
+                'account_id': account.id,
+                'account_name': account.name,
+                'success': success,
+                'message': message,
+                'imported': count,
+            })
+
+        return True, f'Synced {total_imported} total transaction(s)', results
 
     def disconnect_account(self, account_id, user_id):
         """
@@ -445,16 +638,14 @@ class SimpleFinService:
         account = Account.query.get(account_id)
         if not account:
             return False, 'Account not found'
-
         if account.user_id != user_id:
-            return False, 'You do not have permission to disconnect this account'
+            return False, 'Permission denied'
 
         try:
             account.import_source = None
-            account.simplefin_id = None
+            account.external_id = None
             db.session.commit()
             return True, 'Account disconnected from SimpleFin'
-
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error disconnecting account: {str(e)}")

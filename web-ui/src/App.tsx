@@ -3,13 +3,17 @@
  * Main application component with routing
  */
 
-import React from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastContainer } from './components/common/Toast';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Sidebar } from './components/layout/Sidebar';
+import { useAuthStore } from './store/authStore';
+import { api } from './services/api';
+import { moduleRegistry } from './modules';
+import { Loading } from './components/common/Loading';
 import './styles/finpal-theme.css';
 
 // Auth Pages
@@ -32,16 +36,28 @@ import { Settings } from './pages/Settings';
 import { SimpleFinSetup } from './pages/SimpleFinSetup';
 
 /** Layout wrapper that adds sidebar for authenticated pages */
-const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ display: 'flex', minHeight: '100vh' }}>
-    <Sidebar />
-    <main className="main-content">
-      {children}
-    </main>
-  </div>
-);
+const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isDemoUser } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || isDemoUser) return;
+    if (sessionStorage.getItem('bg_sync_fired')) return;
+    sessionStorage.setItem('bg_sync_fired', '1');
+    api.post('/api/v1/auth/sync').catch(() => {}); // fire-and-forget
+  }, [isAuthenticated, isDemoUser]);
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar />
+      <main className="main-content">
+        {children}
+      </main>
+    </div>
+  );
+};
 
 function App() {
+  const { user } = useAuthStore();
   return (
     <ThemeProvider>
       <ToastProvider>
@@ -151,6 +167,28 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Module routes — driven by moduleRegistry, gated by user.modules */}
+            {moduleRegistry
+              .filter(m => user?.modules?.includes(m.slug))
+              .flatMap(m =>
+                m.routes.map(r => (
+                  <Route
+                    key={r.path}
+                    path={r.path}
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout>
+                          <Suspense fallback={<Loading />}>
+                            <r.component />
+                          </Suspense>
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                ))
+              )
+            }
 
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
