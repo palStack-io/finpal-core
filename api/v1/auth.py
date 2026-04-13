@@ -287,6 +287,62 @@ class Logout(Resource):
         return {'message': 'Successfully logged out'}, 200
 
 
+@ns.route('/onboarding')
+class CompleteOnboarding(Resource):
+    @ns.doc('complete_onboarding', security='Bearer')
+    @jwt_required()
+    def post(self):
+        """Complete user onboarding — save currency, timezone, notifications, and profile emoji"""
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+
+        if not user:
+            return {'message': 'User not found'}, 404
+
+        data = request.get_json() or {}
+
+        # Update currency
+        if 'default_currency_code' in data:
+            user.default_currency_code = data['default_currency_code']
+
+        # Update timezone
+        if 'timezone' in data:
+            user.timezone = data['timezone']
+
+        # Update profile emoji
+        if 'profile_emoji' in data:
+            user.profile_emoji = data['profile_emoji']
+
+        # Update notification preferences
+        notifications = data.get('notifications', {})
+        if notifications:
+            user.notification_email = notifications.get('email', user.notification_email)
+            user.notification_push = notifications.get('push', user.notification_push)
+            user.notification_budget_alerts = notifications.get('budgetAlerts', user.notification_budget_alerts)
+            user.notification_transaction_alerts = notifications.get('transactionAlerts', user.notification_transaction_alerts)
+
+        user.has_completed_onboarding = True
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'Onboarding save failed for {current_user_id}: {e}')
+            return {'message': 'Failed to save onboarding data'}, 500
+
+        return {
+            'id': user.id,
+            'name': user.name,
+            'email': user.id,
+            'default_currency_code': user.default_currency_code,
+            'timezone': user.timezone,
+            'profile_emoji': user.profile_emoji,
+            'hasCompletedOnboarding': True,
+            'is_demo_user': user.is_demo_user,
+            'modules': _get_user_modules(user.id),
+        }, 200
+
+
 @ns.route('/sync')
 class BackgroundSync(Resource):
     @ns.doc('background_sync', security='Bearer')

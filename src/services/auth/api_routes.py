@@ -3,7 +3,7 @@ API Routes for Authentication
 JWT-based authentication endpoints for React Native frontend
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -18,6 +18,19 @@ from werkzeug.security import generate_password_hash
 
 # Create API Blueprint
 api_bp = Blueprint('auth_api', __name__, url_prefix='/api/v1/auth')
+
+
+def _get_user_modules(user_id: str) -> list:
+    """Return list of module slugs enabled for this user."""
+    try:
+        from src.modules.registry import module_registry
+        return [
+            m.name for m in module_registry.modules
+            if m.is_enabled() and m.is_user_enabled(user_id)
+        ]
+    except Exception:
+        import os
+        return ['pointspal'] if os.getenv('POINTSPAL_ENABLED', 'false').lower() == 'true' else []
 
 
 @api_bp.route('/register', methods=['POST'])
@@ -99,7 +112,11 @@ def register():
                 'email': user.id,
                 'email_verified': user.email_verified,
                 'is_admin': user.is_admin,
-                'default_currency_code': user.default_currency_code
+                'is_demo_user': user.is_demo_user,
+                'default_currency_code': user.default_currency_code,
+                'hasCompletedOnboarding': user.has_completed_onboarding,
+                'profile_emoji': user.profile_emoji,
+                'modules': _get_user_modules(user.id),
             }
         }), 201
 
@@ -131,16 +148,6 @@ def login():
         access_token = create_access_token(identity=email, additional_claims={'email': email})
         refresh_token = create_refresh_token(identity=email)
 
-        # Resolve module access for this user
-        try:
-            from src.modules.registry import module_registry
-            modules = [
-                m.name for m in module_registry.modules
-                if m.is_enabled() and m.is_user_enabled(user.id)
-            ]
-        except Exception:
-            modules = []
-
         return jsonify({
             'access_token': access_token,
             'refresh_token': refresh_token,
@@ -152,7 +159,7 @@ def login():
                 'default_currency_code': user.default_currency_code,
                 'hasCompletedOnboarding': user.has_completed_onboarding,
                 'timezone': user.timezone,
-                'modules': modules,
+                'modules': _get_user_modules(user.id),
                 'notifications': {
                     'email': user.notification_email if hasattr(user, 'notification_email') else True,
                     'push': user.notification_push if hasattr(user, 'notification_push') else False,
@@ -244,13 +251,7 @@ def complete_onboarding():
 
         # Update user preferences
         if 'default_currency_code' in data:
-            currency_code = data['default_currency_code']
-            # Validate currency code exists
-            from src.models.currency import Currency
-            currency = Currency.query.filter_by(code=currency_code).first()
-            if not currency:
-                return jsonify({'error': f'Invalid currency code: {currency_code}'}), 400
-            user.default_currency_code = currency_code
+            user.default_currency_code = data['default_currency_code']
 
         if 'timezone' in data:
             user.timezone = data['timezone']
@@ -276,22 +277,15 @@ def complete_onboarding():
         db.session.commit()
 
         return jsonify({
-            'message': 'Onboarding completed successfully',
-            'user': {
-                'id': user.id,
-                'name': user.name,
-                'email': user.id,
-                'profile_emoji': user.profile_emoji,
-                'default_currency_code': user.default_currency_code,
-                'timezone': user.timezone,
-                'hasCompletedOnboarding': user.has_completed_onboarding,  # Changed to camelCase
-                'notifications': {
-                    'email': user.notification_email,
-                    'push': user.notification_push,
-                    'budgetAlerts': user.notification_budget_alerts,
-                    'transactionAlerts': user.notification_transaction_alerts
-                }
-            }
+            'id': user.id,
+            'name': user.name,
+            'email': user.id,
+            'profile_emoji': user.profile_emoji,
+            'default_currency_code': user.default_currency_code,
+            'timezone': user.timezone,
+            'hasCompletedOnboarding': True,
+            'is_demo_user': user.is_demo_user,
+            'modules': _get_user_modules(user.id),
         }), 200
 
     except Exception as e:
@@ -395,7 +389,7 @@ def forgot_password():
 
         # Always return success to prevent email enumeration
         if not user:
-            return jsonify({'message': 'If the email exists, a reset link has been sent'}), 200
+            return jsonify({'success': True, 'message': 'If the email exists, a reset link has been sent'}), 200
 
         # Generate reset token
         token = user.generate_reset_token()
@@ -406,7 +400,7 @@ def forgot_password():
         import os
 
         app_url = os.getenv('APP_URL', 'http://localhost:3000')
-        reset_link = f"{app_url}/reset-password?token={token}"
+        reset_link = f"{app_url}/reset-password?token={token}&email={user.id}"
 
         email_service.send_password_reset_email(
             to_email=user.id,
@@ -414,7 +408,7 @@ def forgot_password():
             reset_link=reset_link
         )
 
-        return jsonify({'message': 'If the email exists, a reset link has been sent'}), 200
+        return jsonify({'success': True, 'message': 'If the email exists, a reset link has been sent'}), 200
 
     except Exception as e:
         db.session.rollback()
@@ -538,11 +532,11 @@ def reset_password():
     try:
         data = request.get_json()
 
-        if not data or not data.get('token') or not data.get('password'):
+        token = data.get('token')
+        # Accept both 'password' and 'new_password' for compatibility
+        new_password = data.get('password') or data.get('new_password')
+        if not token or not new_password:
             return jsonify({'error': 'Token and new password are required'}), 400
-
-        token = data['token']
-        new_password = data['password']
 
         # Validate password length
         if len(new_password) < 8:
@@ -563,8 +557,8 @@ def reset_password():
         user.clear_reset_token()
         db.session.commit()
 
-        return jsonify({'message': 'Password reset successfully'}), 200
+        return jsonify({'success': True, 'message': 'Password reset successfully'}), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
