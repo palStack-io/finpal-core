@@ -161,7 +161,7 @@ def register_oidc_routes(app, User, db):
         """Initiate OIDC authentication with PKCE flow for enhanced security"""
         if not is_oidc_enabled():
             flash('OIDC authentication is not enabled.')
-            return redirect(url_for('login'))
+            return redirect('/')
         
         try:
             # Generate and store PKCE code_verifier
@@ -174,7 +174,7 @@ def register_oidc_routes(app, User, db):
             set_oidc_session('state', state)
             
             # Store the original URL to redirect after authentication
-            redirect_to = request.args.get('next', url_for('dashboard'))
+            redirect_to = request.args.get('next', '/')
             set_oidc_session('redirect_to', redirect_to)
 
             # Store mobile flag so callback can return JWT deep link
@@ -209,14 +209,14 @@ def register_oidc_routes(app, User, db):
         except Exception as e:
             current_app.logger.error(f"Error initiating OIDC authentication: {str(e)}")
             flash('An error occurred while initiating authentication.')
-            return redirect(url_for('login'))
+            return redirect('/')
 
     @app.route('/oidc/callback')
     def oidc_callback():
         """Handle OIDC callback with proper security validation"""
         if not is_oidc_enabled():
             flash('OIDC authentication is not enabled.')
-            return redirect(url_for('login'))
+            return redirect('/')
         
         try:
             # Get the authorization code from the callback
@@ -231,14 +231,14 @@ def register_oidc_routes(app, User, db):
             if not callback_state or callback_state != stored_state:
                 current_app.logger.warning("Invalid state parameter in OIDC callback")
                 flash('Authentication failed: Invalid state parameter.')
-                return redirect(url_for('login'))
+                return redirect('/')
             
             # Get the code verifier from session
             code_verifier = get_oidc_session('code_verifier', delete=True)
             if not code_verifier:
                 current_app.logger.warning("Missing code verifier in OIDC callback")
                 flash('Authentication failed: Missing code verifier.')
-                return redirect(url_for('login'))
+                return redirect('/')
             
             # Exchange the code for tokens
             token_data = {
@@ -261,7 +261,7 @@ def register_oidc_routes(app, User, db):
             if token_response.status_code != 200:
                 current_app.logger.error(f"Token exchange failed: {token_response.text}")
                 flash('Authentication failed: Unable to validate credentials.')
-                return redirect(url_for('login'))
+                return redirect('/')
             
             tokens = token_response.json()
             
@@ -280,7 +280,7 @@ def register_oidc_routes(app, User, db):
             if userinfo_response.status_code != 200:
                 current_app.logger.error(f"Userinfo request failed: {userinfo_response.text}")
                 flash('Authentication failed: Unable to retrieve user information.')
-                return redirect(url_for('login'))
+                return redirect('/')
             
             user_info = userinfo_response.json()
             
@@ -288,7 +288,7 @@ def register_oidc_routes(app, User, db):
             if 'sub' not in user_info:
                 current_app.logger.error("Missing sub claim in OIDC userinfo")
                 flash('Authentication failed: Incomplete user information received.')
-                return redirect(url_for('login'))
+                return redirect('/')
             
             # Create or get the user
             try:
@@ -299,12 +299,13 @@ def register_oidc_routes(app, User, db):
 
             if not user:
                 flash('Authentication failed: Unable to create or find user.')
-                return redirect(url_for('login'))
+                return redirect('/')
             
             is_mobile = get_oidc_session('mobile', '0', delete=True) == '1'
 
             if is_mobile:
-                # Mobile flow: return JWT tokens via deep link instead of Flask-Login session
+                # Mobile flow: pass tokens via URL fragment (#), not query params (?).
+                # Fragment is never sent to servers or logged by proxies.
                 from flask_jwt_extended import create_access_token, create_refresh_token
                 access_token = create_access_token(
                     identity=user.id,
@@ -313,27 +314,33 @@ def register_oidc_routes(app, User, db):
                 refresh_token = create_refresh_token(identity=user.id)
                 deep_link = (
                     f"finpal://oidc/callback"
-                    f"?access_token={access_token}"
+                    f"#access_token={access_token}"
                     f"&refresh_token={refresh_token}"
                 )
                 return redirect(deep_link)
 
-            # Web flow: unchanged
-            login_user(user)
-            redirect_to = get_oidc_session('redirect_to', url_for('dashboard'), delete=True)
-            return redirect(redirect_to)
+            # Web flow: generate JWT tokens and pass to React SPA via URL fragment
+            from flask_jwt_extended import create_access_token, create_refresh_token
+            access_token = create_access_token(
+                identity=user.id,
+                additional_claims={'email': user.id}
+            )
+            refresh_token = create_refresh_token(identity=user.id)
+            app_url = current_app.config.get('OIDC_REDIRECT_URI', '').rsplit('/oidc/callback', 1)[0]
+            if not app_url:
+                app_url = request.host_url.rstrip('/')
+            return redirect(f"{app_url}/auth/callback#access_token={access_token}&refresh_token={refresh_token}")
             
         except Exception as e:
             current_app.logger.error(f"Error processing OIDC callback: {str(e)}")
             flash('An error occurred during authentication. Please try again.')
-            return redirect(url_for('login'))
+            return redirect('/')
 
     @app.route('/logout/oidc')
-    @login_required
     def logout_oidc():
         """Properly handle complete logout for both local and OIDC sessions"""
         if not is_oidc_enabled():
-            return redirect(url_for('logout'))
+            return redirect('/')
         
         # Check if this user is authenticated via OIDC
         has_oidc = hasattr(current_user, 'oidc_id') and current_user.oidc_id is not None
@@ -360,7 +367,7 @@ def register_oidc_routes(app, User, db):
             try:
                 # Build the post-logout redirect URL
                 app_url = request.host_url.rstrip('/')
-                post_logout_redirect_uri = f"{app_url}{url_for('login')}"
+                post_logout_redirect_uri = f"{app_url}{'/'}"
                 
                 # Construct logout parameters
                 logout_params = {
@@ -379,4 +386,4 @@ def register_oidc_routes(app, User, db):
                 # Continue to local logout fallback if there's an error
         
         # Default behavior: redirect to the app's login page directly
-        return redirect(url_for('login'))
+        return redirect('/')

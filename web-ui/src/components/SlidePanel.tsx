@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -10,6 +10,8 @@ interface SlidePanelProps {
   width?: string;
 }
 
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export const SlidePanel: React.FC<SlidePanelProps> = ({
   isOpen,
   onClose,
@@ -17,29 +19,45 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
   children,
   width = '500px'
 }) => {
-  // Close panel on Escape key
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useRef(`panel-title-${Math.random().toString(36).slice(2)}`).current;
+
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+
+      const focusables = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)
+      ).filter(el => !el.hasAttribute('disabled'));
+
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+    document.addEventListener('keydown', handleKeyDown);
 
-  // Prevent body scroll when panel is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    requestAnimationFrame(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+      first?.focus();
+    });
+
     return () => {
+      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -48,6 +66,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
       {/* Backdrop */}
       <div
         onClick={onClose}
+        aria-hidden="true"
         style={{
           position: 'fixed',
           top: 0,
@@ -63,6 +82,10 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
 
       {/* Panel */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         style={{
           position: 'fixed',
           top: 0,
@@ -91,6 +114,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           }}
         >
           <h2
+            id={titleId}
             style={{
               fontSize: '24px',
               fontWeight: 700,
@@ -102,6 +126,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close panel"
             style={{
               background: 'rgba(239, 68, 68, 0.1)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -122,7 +147,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <X size={20} style={{ color: '#ef4444' }} />
+            <X size={20} style={{ color: 'var(--accent-red)' }} />
           </button>
         </div>
 
@@ -145,21 +170,12 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
       {/* CSS Animations */}
       <style>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-
         @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-          }
-          to {
-            transform: translateX(0);
-          }
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
         }
       `}</style>
     </>,

@@ -164,7 +164,7 @@ export const Onboarding: React.FC = () => {
             }}>
               Welcome to {branding.appName}
             </h1>
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
               Let's get you set up in just a few steps
             </p>
 
@@ -200,7 +200,7 @@ export const Onboarding: React.FC = () => {
                 background: 'transparent',
                 border: '1px solid rgba(148, 163, 184, 0.3)',
                 borderRadius: '0.5rem',
-                color: '#94a3b8',
+                color: 'var(--text-muted)',
                 fontSize: '0.875rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
@@ -223,8 +223,8 @@ export const Onboarding: React.FC = () => {
           {/* Progress Bar */}
           <div style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Step {step} of 4</span>
-              <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>{Math.round((step / 4) * 100)}%</span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Step {step} of 4</span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{Math.round((step / 4) * 100)}%</span>
             </div>
             <div style={{
               height: '0.5rem',
@@ -262,7 +262,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Choose Your Currency
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
                       This will personalize your experience
                     </p>
                   </div>
@@ -304,7 +304,7 @@ export const Onboarding: React.FC = () => {
                       >
                         <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{currencyBranding.currencySymbol}</div>
                         <div style={{ color: '#ffffff', fontWeight: '600', marginBottom: '0.25rem' }}>{currency}</div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{currencyBranding.appName}</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{currencyBranding.appName}</div>
                       </button>
                     );
                   })}
@@ -331,7 +331,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Select Your Timezone
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
                       For accurate transaction timing
                     </p>
                   </div>
@@ -398,7 +398,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Notification Preferences
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
                       Stay updated with what matters to you
                     </p>
                   </div>
@@ -437,7 +437,7 @@ export const Onboarding: React.FC = () => {
                     >
                       <div style={{ textAlign: 'left' }}>
                         <div style={{ color: '#ffffff', fontWeight: '500', marginBottom: '0.25rem' }}>{item.label}</div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{item.description}</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{item.description}</div>
                       </div>
                       <div style={{
                         height: '1.5rem',
@@ -484,7 +484,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Pick Your Emoji
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
                       Choose an emoji as your profile picture
                     </p>
                   </div>
@@ -506,7 +506,7 @@ export const Onboarding: React.FC = () => {
                   }}>
                     {formData.profile_emoji}
                   </div>
-                  <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>This will appear as your profile picture</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>This will appear as your profile picture</p>
                 </div>
 
                 <div style={{

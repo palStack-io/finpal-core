@@ -84,15 +84,17 @@ class BudgetService:
         return True, 'Success', budget
 
     def add_budget(self, user_id, category_id, amount, period, include_subcategories=False,
-                   name=None, start_date=None, is_recurring=False):
+                   name=None, start_date=None, is_recurring=False, rollover=False,
+                   rollover_amount=0.0, transaction_types='expense', active=True):
         """
         Add a new budget
         Returns (success, message, budget)
         """
-        # Validate category exists
-        category = Category.query.get(category_id)
-        if not category or category.user_id != user_id:
-            return False, 'Invalid category selected', None
+        # Validate category if provided
+        if category_id:
+            category = Category.query.get(category_id)
+            if not category or category.user_id != user_id:
+                return False, 'Invalid category selected', None
 
         # Parse start date
         if start_date:
@@ -104,16 +106,16 @@ class BudgetService:
         else:
             start_date = datetime.utcnow()
 
-        # Check if a budget already exists for this category
-        existing_budget = Budget.query.filter_by(
-            user_id=user_id,
-            category_id=category_id,
-            period=period,
-            active=True
-        ).first()
-
-        if existing_budget:
-            return False, f'An active {period} budget already exists for this category. Please edit or deactivate it first.', None
+        # Check for duplicate only when a category is assigned
+        if category_id:
+            existing_budget = Budget.query.filter_by(
+                user_id=user_id,
+                category_id=category_id,
+                period=period,
+                active=True
+            ).first()
+            if existing_budget:
+                return False, f'An active {period} budget already exists for this category. Please edit or deactivate it first.', None
 
         try:
             # Create new budget
@@ -126,7 +128,10 @@ class BudgetService:
                 include_subcategories=include_subcategories,
                 start_date=start_date,
                 is_recurring=is_recurring,
-                active=True
+                active=active,
+                rollover=rollover,
+                rollover_amount=float(rollover_amount),
+                transaction_types=transaction_types,
             )
 
             db.session.add(budget)

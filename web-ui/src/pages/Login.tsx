@@ -94,7 +94,7 @@ export const Login: React.FC = () => {
 
     try {
       const response = await authService.login(formData);
-      login(response.user, response.access_token, response.refresh_token, response.demo_expires_at);
+      login(response.user, response.access_token, response.refresh_token, response.demo_expires_at, response.features);
 
       showToast('Login successful!', 'success');
 
@@ -124,7 +124,7 @@ export const Login: React.FC = () => {
         email: account.email,
         password: account.password
       });
-      login(response.user, response.access_token, response.refresh_token, response.demo_expires_at);
+      login(response.user, response.access_token, response.refresh_token, response.demo_expires_at, response.features);
 
       showToast(`Welcome to the demo, ${account.name}!`, 'success');
       navigate('/dashboard');
@@ -675,7 +675,7 @@ export const Login: React.FC = () => {
               type="button"
               onClick={() => {
                 // Redirect to backend OIDC login endpoint
-                window.location.href = '/api/login/oidc';
+                window.location.href = '/login/oidc';
               }}
               style={{
                 width: '100%',

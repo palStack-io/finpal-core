@@ -51,8 +51,8 @@ def create_app(config_name=None):
     # Initialize Flask extensions
     init_extensions(app)
 
-    # Configure JWT for API authentication
-    app.config['JWT_SECRET_KEY'] = app.config.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    # Configure JWT for API authentication — use dedicated JWT key if set, fall back to SECRET_KEY
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY') or app.config['SECRET_KEY']
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 86400  # 24 hours
     app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 2592000  # 30 days
     jwt = JWTManager(app)
@@ -78,10 +78,11 @@ def create_app(config_name=None):
         from src.models.user import RevokedToken
         return RevokedToken.is_revoked(jwt_payload['jti'])
 
-    # Configure CORS for React Native and web frontend
+    # Configure CORS — origins read from CORS_ALLOWED_ORIGINS env var (see config.py)
+    allowed_origins = app.config.get('CORS_ALLOWED_ORIGINS', ['http://localhost:5173'])
     CORS(app, resources={
         r"/api/*": {
-            "origins": "*",  # Allow all origins for development/demo
+            "origins": allowed_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
             "expose_headers": ["Content-Type", "Authorization"],

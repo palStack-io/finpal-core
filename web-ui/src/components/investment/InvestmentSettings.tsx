@@ -76,9 +76,9 @@ export const InvestmentSettings: React.FC = () => {
         borderRadius: '8px'
       }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <AlertCircle size={20} style={{ color: '#fbbf24' }} />
+          <AlertCircle size={20} style={{ color: 'var(--brand-accent-gold)' }} />
           <div>
-            <p style={{ color: '#fbbf24', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+            <p style={{ color: 'var(--brand-accent-gold)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
               Investment Tracking Not Available
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
@@ -104,8 +104,8 @@ export const InvestmentSettings: React.FC = () => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <AlertCircle size={20} style={{ color: '#ef4444' }} />
-          <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{error}</p>
+          <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
@@ -121,8 +121,8 @@ export const InvestmentSettings: React.FC = () => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <Check size={20} style={{ color: '#22c55e' }} />
-          <p style={{ color: '#22c55e', fontSize: '14px', margin: 0 }}>{success}</p>
+          <Check size={20} style={{ color: 'var(--brand-green-glow)' }} />
+          <p style={{ color: 'var(--brand-green-glow)', fontSize: '14px', margin: 0 }}>{success}</p>
         </div>
       )}
 
@@ -160,7 +160,7 @@ export const InvestmentSettings: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: isEnabled ? '#15803d' : 'var(--surface-active)',
+            background: isEnabled ? 'var(--brand-main-green)' : 'var(--surface-active)',
             borderRadius: '24px',
             transition: '0.3s',
             opacity: isLoading ? 0.5 : 1
@@ -205,7 +205,7 @@ export const InvestmentSettings: React.FC = () => {
               href="https://site.financialmodelingprep.com/developer/docs"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#3b82f6', textDecoration: 'underline' }}
+              style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}
             >
               Financial Modeling Prep
             </a>
@@ -262,7 +262,7 @@ export const InvestmentSettings: React.FC = () => {
             style={{
               width: '100%',
               padding: '12px',
-              background: isLoading ? '#166534' : '#15803d',
+              background: isLoading ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
               border: 'none',
               borderRadius: '8px',
               color: 'var(--text-primary)',

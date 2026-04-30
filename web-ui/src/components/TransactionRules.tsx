@@ -4,6 +4,14 @@ import { transactionRulesApi, TransactionRule, CreateRuleData } from '../service
 import { categoriesApi, Category } from '../services/api/categories';
 import { accountService, Account } from '../services/accountService';
 import { Modal } from './Modal';
+import { formActionsStyle, inputStyle, labelStyle } from '../styles/formStyles';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+
+const accentTextStyle: React.CSSProperties = { fontSize: '14px', color: 'var(--text-secondary)', margin: 0 };
+const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 };
+const fieldMetaStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' };
+const clickableRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', cursor: 'pointer' };
+const iconBtnStyle: React.CSSProperties = { width: '18px', height: '18px', cursor: 'pointer' };
 
 export const TransactionRules: React.FC = () => {
   const [rules, setRules] = useState<TransactionRule[]>([]);
@@ -116,7 +124,7 @@ export const TransactionRules: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Zap size={24} style={{ color: '#fbbf24' }} />
+            <Zap size={24} style={{ color: 'var(--brand-accent-gold)' }} />
             Transaction Rules
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
@@ -190,16 +198,16 @@ export const TransactionRules: React.FC = () => {
       {/* Success Message */}
       {successMessage && (
         <div style={{ padding: '16px', background: 'rgba(134, 239, 172, 0.1)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Check size={20} style={{ color: '#86efac' }} />
-          <p style={{ color: '#86efac', margin: 0 }}>{successMessage}</p>
+          <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
+          <p style={{ color: 'var(--brand-light-green)', margin: 0 }}>{successMessage}</p>
         </div>
       )}
 
       {/* Error Message */}
       {error && (
         <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AlertCircle size={20} style={{ color: '#ef4444' }} />
-          <p style={{ color: '#ef4444', margin: 0 }}>{error}</p>
+          <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+          <p style={{ color: 'var(--accent-red)', margin: 0 }}>{error}</p>
         </div>
       )}
 
@@ -208,24 +216,24 @@ export const TransactionRules: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(134, 239, 172, 0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <BarChart3 size={20} style={{ color: '#86efac' }} />
-              <h3 style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>Total Rules</h3>
+              <BarChart3 size={20} style={{ color: 'var(--brand-light-green)' }} />
+              <h3 style={accentTextStyle}>Total Rules</h3>
             </div>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{stats.total_rules}</p>
+            <p style={bigStatStyle}>{stats.total_rules}</p>
           </div>
           <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <Zap size={20} style={{ color: '#fbbf24' }} />
-              <h3 style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>Active Rules</h3>
+              <Zap size={20} style={{ color: 'var(--brand-accent-gold)' }} />
+              <h3 style={accentTextStyle}>Active Rules</h3>
             </div>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{stats.active_rules}</p>
+            <p style={bigStatStyle}>{stats.active_rules}</p>
           </div>
           <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <Check size={20} style={{ color: '#3b82f6' }} />
-              <h3 style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>Total Matches</h3>
+              <Check size={20} style={{ color: 'var(--accent-blue)' }} />
+              <h3 style={accentTextStyle}>Total Matches</h3>
             </div>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>{stats.total_matches}</p>
+            <p style={bigStatStyle}>{stats.total_matches}</p>
           </div>
         </div>
       )}
@@ -238,7 +246,7 @@ export const TransactionRules: React.FC = () => {
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Create your first rule to automatically organize transactions</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={flexColGap12}>
           {rules.map((rule) => (
             <div
               key={rule.id}
@@ -260,7 +268,7 @@ export const TransactionRules: React.FC = () => {
                       {rule.name}
                     </h3>
                     {rule.active ? (
-                      <span style={{ padding: '4px 12px', background: 'rgba(134, 239, 172, 0.2)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '12px', fontSize: '12px', color: '#86efac', fontWeight: '600' }}>
+                      <span style={{ padding: '4px 12px', background: 'rgba(134, 239, 172, 0.2)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--brand-light-green)', fontWeight: '600' }}>
                         Active
                       </span>
                     ) : (
@@ -272,14 +280,14 @@ export const TransactionRules: React.FC = () => {
 
                   {/* Pattern Info */}
                   <div style={{ marginBottom: '16px' }}>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>
+                    <p style={fieldMetaStyle}>
                       <strong>Pattern:</strong> "{rule.pattern}" {rule.is_regex && '(regex)'} {!rule.case_sensitive && '(case insensitive)'}
                     </p>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>
+                    <p style={fieldMetaStyle}>
                       <strong>Field:</strong> {rule.pattern_field}
                     </p>
                     {(rule.amount_min !== undefined || rule.amount_max !== undefined) && (
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>
+                      <p style={fieldMetaStyle}>
                         <strong>Amount:</strong>{' '}
                         {rule.amount_min !== undefined && `Min: $${rule.amount_min}`}
                         {rule.amount_min !== undefined && rule.amount_max !== undefined && ' - '}
@@ -292,7 +300,7 @@ export const TransactionRules: React.FC = () => {
                       </p>
                     )}
                     {rule.is_system && (
-                      <span style={{ padding: '4px 12px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', fontSize: '12px', color: '#3b82f6', fontWeight: '600', marginTop: '8px', display: 'inline-block' }}>
+                      <span style={{ padding: '4px 12px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--accent-blue)', fontWeight: '600', marginTop: '8px', display: 'inline-block' }}>
                         Default Rule
                       </span>
                     )}
@@ -301,12 +309,12 @@ export const TransactionRules: React.FC = () => {
                   {/* Actions Applied */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                     {rule.auto_category && (
-                      <span style={{ padding: '6px 12px', background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '6px', fontSize: '13px', color: '#fbbf24' }}>
+                      <span style={{ padding: '6px 12px', background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '6px', fontSize: '13px', color: 'var(--brand-accent-gold)' }}>
                         → Category: {rule.auto_category}
                       </span>
                     )}
                     {rule.auto_account && (
-                      <span style={{ padding: '6px 12px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', fontSize: '13px', color: '#3b82f6' }}>
+                      <span style={{ padding: '6px 12px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', fontSize: '13px', color: 'var(--accent-blue)' }}>
                         → Account: {rule.auto_account}
                       </span>
                     )}
@@ -334,7 +342,7 @@ export const TransactionRules: React.FC = () => {
                       background: rule.active ? 'rgba(239, 68, 68, 0.1)' : 'rgba(134, 239, 172, 0.1)',
                       border: rule.active ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(134, 239, 172, 0.3)',
                       borderRadius: '6px',
-                      color: rule.active ? '#ef4444' : '#86efac',
+                      color: rule.active ? 'var(--accent-red)' : 'var(--brand-light-green)',
                       cursor: 'pointer',
                       transition: 'all 0.3s',
                       display: 'flex',
@@ -352,7 +360,7 @@ export const TransactionRules: React.FC = () => {
                       background: 'rgba(251, 191, 36, 0.1)',
                       border: '1px solid rgba(251, 191, 36, 0.3)',
                       borderRadius: '6px',
-                      color: '#fbbf24',
+                      color: 'var(--brand-accent-gold)',
                       cursor: 'pointer',
                       transition: 'all 0.3s',
                       display: 'flex',
@@ -370,7 +378,7 @@ export const TransactionRules: React.FC = () => {
                       background: 'rgba(239, 68, 68, 0.1)',
                       border: '1px solid rgba(239, 68, 68, 0.3)',
                       borderRadius: '6px',
-                      color: '#ef4444',
+                      color: 'var(--accent-red)',
                       cursor: 'pointer',
                       transition: 'all 0.3s',
                       display: 'flex',
@@ -489,39 +497,21 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '12px 16px',
-    background: 'var(--input-bg)',
-    border: '1px solid var(--border-light)',
-    borderRadius: '8px',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    outline: 'none',
-    transition: 'all 0.3s'
-  };
 
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    fontWeight: '600',
-    marginBottom: '8px'
-  };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <form onSubmit={handleSubmit} style={flexColGap20}>
       {success && (
         <div style={{ padding: '16px', background: 'rgba(134, 239, 172, 0.1)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Check size={20} style={{ color: '#86efac' }} />
-          <p style={{ color: '#86efac', margin: 0 }}>Rule saved successfully!</p>
+          <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
+          <p style={{ color: 'var(--brand-light-green)', margin: 0 }}>Rule saved successfully!</p>
         </div>
       )}
 
       {error && (
         <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AlertCircle size={20} style={{ color: '#ef4444' }} />
-          <p style={{ color: '#ef4444', margin: 0 }}>{error}</p>
+          <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+          <p style={{ color: 'var(--accent-red)', margin: 0 }}>{error}</p>
         </div>
       )}
 
@@ -584,25 +574,25 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       </div>
 
       <div style={{ display: 'flex', gap: '16px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+        <label style={clickableRowStyle}>
           <input
             type="checkbox"
             name="is_regex"
             checked={formData.is_regex}
             onChange={handleChange}
             disabled={isSubmitting}
-            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            style={iconBtnStyle}
           />
           Use Regular Expression
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+        <label style={clickableRowStyle}>
           <input
             type="checkbox"
             name="case_sensitive"
             checked={formData.case_sensitive}
             onChange={handleChange}
             disabled={isSubmitting}
-            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            style={iconBtnStyle}
           />
           Case Sensitive
         </label>
@@ -677,7 +667,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
         <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', marginBottom: '16px' }}>Actions to Apply</h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={flexColGap16}>
           <div>
             <label style={labelStyle}>Auto-assign Category</label>
             <select
@@ -738,21 +728,21 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
             />
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+          <label style={clickableRowStyle}>
             <input
               type="checkbox"
               name="active"
               checked={formData.active}
               onChange={handleChange}
               disabled={isSubmitting}
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              style={iconBtnStyle}
             />
             Rule is Active
           </label>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+      <div style={formActionsStyle}>
         <button
           type="button"
           onClick={onCancel}

@@ -30,6 +30,7 @@ flask-cors==4.0.0  # CORS support for React Native
 marshmallow==3.21.0  # Serialization/deserialization
 marshmallow-sqlalchemy==1.0.0  # SQLAlchemy integration
 flask-restx==1.3.0  # REST API with Swagger documentation
+flask-limiter==3.5.0  # Rate limiting for auth endpoints
 
 # Investment integrations
 multitasking==0.0.11  # Required by yfinance, 0.0.12+ requires Python 3.9+

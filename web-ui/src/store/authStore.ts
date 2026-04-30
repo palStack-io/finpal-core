@@ -5,13 +5,15 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, AuthState } from '../types/user';
+import type { User, AuthState, ServerFeatures } from '../types/user';
+
+const DEFAULT_FEATURES: ServerFeatures = { simplefin: true, investments: true };
 
 interface AuthStore extends AuthState {
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   setRefreshToken: (token: string | null) => void;
-  login: (user: User, accessToken: string, refreshToken: string, demoExpiresAt?: string) => void;
+  login: (user: User, accessToken: string, refreshToken: string, demoExpiresAt?: string, features?: ServerFeatures) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   setLoading: (loading: boolean) => void;
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthStore>()(
       hasCompletedOnboarding: false,
       isDemoUser: false,
       demoExpiresAt: null,
+      features: DEFAULT_FEATURES,
 
       setUser: (user) =>
         set({
@@ -43,7 +46,7 @@ export const useAuthStore = create<AuthStore>()(
 
       setRefreshToken: (refreshToken) => set({ refreshToken }),
 
-      login: (user, accessToken, refreshToken, demoExpiresAt) =>
+      login: (user, accessToken, refreshToken, demoExpiresAt, features) =>
         set({
           user,
           token: accessToken,
@@ -52,6 +55,7 @@ export const useAuthStore = create<AuthStore>()(
           hasCompletedOnboarding: user.hasCompletedOnboarding || false,
           isDemoUser: user.is_demo_user || false,
           demoExpiresAt: demoExpiresAt || null,
+          features: features ?? DEFAULT_FEATURES,
         }),
 
       logout: () =>
@@ -63,6 +67,7 @@ export const useAuthStore = create<AuthStore>()(
           hasCompletedOnboarding: false,
           isDemoUser: false,
           demoExpiresAt: null,
+          features: DEFAULT_FEATURES,
         }),
 
       updateUser: (updates) =>
@@ -95,6 +100,7 @@ export const useAuthStore = create<AuthStore>()(
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         isDemoUser: state.isDemoUser,
         demoExpiresAt: state.demoExpiresAt,
+        features: state.features,
       }),
     }
   )

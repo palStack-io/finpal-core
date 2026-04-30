@@ -1,44 +1,93 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { DollarSign, Calendar, Tag, FileText, AlertCircle, Check, Wallet, Users } from 'lucide-react';
 import { transactionsApi, Transaction } from '../../services/api/transactions';
 import { categoriesApi, Category } from '../../services/api/categories';
 import { groupsApi, Group } from '../../services/api/groups';
 import { accountService, Account } from '../../services/accountService';
+import { useAuthStore } from '../../store/authStore';
+import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 
 interface AddTransactionFormProps {
-  transaction?: Transaction; // Optional transaction for editing
+  transaction?: Transaction;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
+interface TransactionFormValues {
+  name: string;
+  description: string;
+  amount: string;
+  date: string;
+  category_id: string;
+  type: 'income' | 'expense' | 'transfer';
+  account_id: string;
+  destination_account_id: string;
+  group_id: string;
+  split_method: string;
+  split_value: string;
+}
+
+interface TransactionPayload {
+  description: string;
+  amount: number;
+  date: string;
+  transaction_type: string;
+  currency_code: string;
+  notes?: string;
+  category_id?: number;
+  account_id?: number;
+  group_id?: number;
+  split_method?: string;
+  split_value?: number;
+  destination_account_id?: number;
+  category_splits?: Record<string, number>;
+  has_category_splits?: boolean;
+}
+
+const bgPrimaryStyle: React.CSSProperties = { background: 'var(--bg-primary)' };
+const hintTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' };
+
 export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transaction, onSuccess, onCancel }) => {
-  const [formData, setFormData] = useState({
-    name: transaction?.description || '',
-    description: transaction?.notes || '',
-    amount: transaction?.amount?.toString() || '',
-    date: transaction?.date?.split('T')[0] || new Date().toISOString().split('T')[0],
-    category_id: transaction?.category_id?.toString() || '',
-    type: (transaction?.transaction_type || 'expense') as 'income' | 'expense' | 'transfer',
-    account_id: transaction?.account_id?.toString() || '',
-    destination_account_id: transaction?.destination_account_id?.toString() || '',
-    group_id: transaction?.group_id?.toString() || '',
-    split_method: transaction?.split_method || 'equal',
-    notes: transaction?.notes || '',
-    split_value: transaction?.split_value?.toString() || ''
+  const userCurrency = useAuthStore((s) => s.user?.default_currency_code ?? 'USD');
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<TransactionFormValues>({
+    defaultValues: {
+      name: transaction?.description || '',
+      description: transaction?.notes || '',
+      amount: transaction?.amount?.toString() || '',
+      date: transaction?.date?.split('T')[0] || new Date().toISOString().split('T')[0],
+      category_id: transaction?.category_id?.toString() || '',
+      type: (transaction?.transaction_type || 'expense') as 'income' | 'expense' | 'transfer',
+      account_id: transaction?.account_id?.toString() || '',
+      destination_account_id: transaction?.destination_account_id?.toString() || '',
+      group_id: transaction?.group_id?.toString() || '',
+      split_method: transaction?.split_method || 'equal',
+      split_value: transaction?.split_value?.toString() || '',
+    },
   });
 
-  const [categorySplits, setCategorySplits] = useState<Array<{category_id: string, amount: string, percentage: string}>>([]);
-  const [memberSplits, setMemberSplits] = useState<{[key: string]: string}>({});
+  const watchType = watch('type');
+  const watchAccountId = watch('account_id');
+  const watchGroupId = watch('group_id');
+  const watchSplitMethod = watch('split_method');
+  const watchAmount = watch('amount');
 
+  const [categorySplits, setCategorySplits] = useState<Array<{ category_id: string; amount: string; percentage: string }>>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  // Load categories, accounts, and groups on mount
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -46,123 +95,79 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
         const [categoriesData, accountsData, groupsData] = await Promise.all([
           categoriesApi.getAll().catch(() => ({ categories: [] })),
           accountService.getAccounts().catch(() => []),
-          groupsApi.getAll().catch(() => ({ groups: [] }))
+          groupsApi.getAll().catch(() => ({ groups: [] })),
         ]);
-
         setCategories(categoriesData.categories || []);
         setAccounts(accountsData || []);
         setGroups(groupsData.groups || []);
-      } catch (err) {
-        console.error('Error loading form data:', err);
       } finally {
         setLoadingData(false);
       }
     };
-
     loadData();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setError(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
+  const onSubmit = async (data: TransactionFormValues) => {
+    setApiError(null);
     try {
-      // Validation
-      if (!formData.name.trim()) {
-        throw new Error('Transaction name is required');
-      }
-      if (!formData.amount || parseFloat(formData.amount) <= 0) {
-        throw new Error('Amount must be greater than 0');
-      }
-
-      // Prepare data for API
-      const transactionData: any = {
-        description: formData.name,
-        amount: parseFloat(formData.amount),
-        date: formData.date,
-        transaction_type: formData.type,
-        currency_code: 'USD', // TODO: Get from user settings or account
-        notes: formData.notes || formData.description
+      const payload: TransactionPayload = {
+        description: data.name,
+        amount: parseFloat(data.amount),
+        date: data.date,
+        transaction_type: data.type,
+        currency_code: accounts.find((a) => a.id === parseInt(data.account_id))?.currency_code ?? userCurrency,
+        notes: data.description,
       };
 
-      // Add optional fields if provided
-      if (formData.category_id) {
-        transactionData.category_id = parseInt(formData.category_id);
-      }
-      if (formData.account_id) {
-        transactionData.account_id = parseInt(formData.account_id);
-      }
-      if (formData.group_id) {
-        transactionData.group_id = parseInt(formData.group_id);
-        transactionData.split_method = formData.split_method;
-
-        // Add split_value for non-equal splits
-        if (formData.split_value && formData.split_method !== 'equal') {
-          transactionData.split_value = parseFloat(formData.split_value);
+      if (data.category_id) payload.category_id = parseInt(data.category_id);
+      if (data.account_id) payload.account_id = parseInt(data.account_id);
+      if (data.group_id) {
+        payload.group_id = parseInt(data.group_id);
+        payload.split_method = data.split_method;
+        if (data.split_value && data.split_method !== 'equal') {
+          payload.split_value = parseFloat(data.split_value);
         }
       }
-
-      // Add destination account for transfers
-      if (formData.type === 'transfer' && formData.destination_account_id) {
-        transactionData.destination_account_id = parseInt(formData.destination_account_id);
+      if (data.type === 'transfer' && data.destination_account_id) {
+        payload.destination_account_id = parseInt(data.destination_account_id);
       }
-
-      // Add category splits if present
       if (categorySplits.length > 0) {
-        const validSplits = categorySplits.filter(s => s.category_id && s.amount);
+        const validSplits = categorySplits.filter((s) => s.category_id && s.amount);
         if (validSplits.length > 0) {
-          transactionData.category_splits = validSplits.reduce((acc, split) => {
+          payload.category_splits = validSplits.reduce((acc, split) => {
             acc[split.category_id] = parseFloat(split.amount);
             return acc;
-          }, {} as {[key: string]: number});
-          transactionData.has_category_splits = true;
+          }, {} as Record<string, number>);
+          payload.has_category_splits = true;
         }
       }
 
-      // Update or create based on whether transaction prop exists
       if (transaction) {
-        await transactionsApi.update(transaction.id, transactionData);
+        await transactionsApi.update(transaction.id, payload);
       } else {
-        await transactionsApi.create(transactionData);
+        await transactionsApi.create(payload);
       }
-      setSuccess(true);
 
-      // Wait a moment to show success message, then close
-      setTimeout(() => {
-        onSuccess();
-      }, 1000);
-    } catch (err: any) {
-      setError(err.message || err.response?.data?.error || 'Failed to create transaction');
-    } finally {
-      setIsSubmitting(false);
+      setSuccess(true);
+      setTimeout(() => { onSuccess(); }, 1000);
+    } catch (err) {
+      const e = err as { message?: string; response?: { data?: { error?: string } } };
+      setApiError(e.response?.data?.error || e.message || 'Failed to create transaction');
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '12px 16px',
-    background: 'var(--input-bg)',
-    border: '1px solid var(--input-border)',
-    borderRadius: '8px',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    outline: 'none',
-    transition: 'all 0.3s'
-  };
 
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    fontWeight: '600',
-    marginBottom: '8px'
+
+
+  const focusHandlers = {
+    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+      e.currentTarget.style.background = 'var(--input-bg-focus)';
+    },
+    onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      e.currentTarget.style.borderColor = 'var(--input-border)';
+      e.currentTarget.style.background = 'var(--input-bg)';
+    },
   };
 
   if (loadingData) {
@@ -174,46 +179,26 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <form onSubmit={handleSubmit(onSubmit)} style={flexColGap20}>
       {/* Success Message */}
       {success && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '16px',
-            background: 'rgba(134, 239, 172, 0.1)',
-            border: '1px solid rgba(134, 239, 172, 0.3)',
-            borderRadius: '8px'
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'rgba(134, 239, 172, 0.1)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '8px' }}>
           <div style={{ background: 'rgba(134, 239, 172, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <Check size={20} style={{ color: '#86efac' }} />
+            <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
           </div>
-          <p style={{ color: '#86efac', fontWeight: '600', fontSize: '14px', margin: 0 }}>
-            Transaction created successfully!
+          <p style={{ color: 'var(--brand-light-green)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
+            Transaction {transaction ? 'updated' : 'created'} successfully!
           </p>
         </div>
       )}
 
-      {/* Error Message */}
-      {error && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '16px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '8px'
-          }}
-        >
+      {/* API Error */}
+      {apiError && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <AlertCircle size={20} style={{ color: '#ef4444' }} />
+            <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           </div>
-          <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{apiError}</p>
         </div>
       )}
 
@@ -221,168 +206,115 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       <div>
         <label style={labelStyle}>Transaction Type</label>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="button"
-            onClick={() => setFormData(prev => ({ ...prev, type: 'expense' }))}
-            style={{
-              flex: 1,
-              padding: '10px',
-              background: formData.type === 'expense' ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'var(--input-bg)',
-              border: `1px solid ${formData.type === 'expense' ? 'rgba(220, 38, 38, 0.5)' : 'var(--input-border)'}`,
-              borderRadius: '8px',
-              color: 'var(--text-primary)',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s'
-            }}
-          >
-            Expense
-          </button>
-          <button
-            type="button"
-            onClick={() => setFormData(prev => ({ ...prev, type: 'income' }))}
-            style={{
-              flex: 1,
-              padding: '10px',
-              background: formData.type === 'income' ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : 'var(--input-bg)',
-              border: `1px solid ${formData.type === 'income' ? 'rgba(21, 128, 61, 0.5)' : 'var(--input-border)'}`,
-              borderRadius: '8px',
-              color: 'var(--text-primary)',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s'
-            }}
-          >
-            Income
-          </button>
-          <button
-            type="button"
-            onClick={() => setFormData(prev => ({ ...prev, type: 'transfer' }))}
-            style={{
-              flex: 1,
-              padding: '10px',
-              background: formData.type === 'transfer' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'var(--input-bg)',
-              border: `1px solid ${formData.type === 'transfer' ? 'rgba(59, 130, 246, 0.5)' : 'var(--input-border)'}`,
-              borderRadius: '8px',
-              color: 'var(--text-primary)',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s'
-            }}
-          >
-            Transfer
-          </button>
+          {(['expense', 'income', 'transfer'] as const).map((t) => {
+            const colors = { expense: '#dc2626', income: 'var(--brand-main-green)', transfer: 'var(--accent-blue)' };
+            const isActive = watchType === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setValue('type', t)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: isActive ? `linear-gradient(135deg, ${colors[t]} 0%, ${colors[t]}cc 100%)` : 'var(--input-bg)',
+                  border: `1px solid ${isActive ? `${colors[t]}80` : 'var(--input-border)'}`,
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {t}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Transaction Name */}
       <div>
         <label style={labelStyle}>
-          <FileText size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <FileText size={16} style={iconInlineStyle} />
           Transaction Name *
         </label>
         <input
           type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
           placeholder="e.g., Grocery shopping"
-          required
           disabled={isSubmitting}
           style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          {...focusHandlers}
+          {...register('name', { required: 'Transaction name is required' })}
         />
+        {errors.name && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <AlertCircle size={14} style={{ color: 'var(--accent-red)', flexShrink: 0 }} />
+            <p style={errorTextStyle}>{errors.name.message}</p>
+          </div>
+        )}
       </div>
 
       {/* Amount */}
       <div>
         <label style={labelStyle}>
-          <DollarSign size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <DollarSign size={16} style={iconInlineStyle} />
           Amount *
         </label>
         <input
           type="number"
-          name="amount"
-          value={formData.amount}
-          onChange={handleChange}
           placeholder="0.00"
           step="0.01"
           min="0"
-          required
           disabled={isSubmitting}
           style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          {...focusHandlers}
+          {...register('amount', {
+            required: 'Amount is required',
+            min: { value: 0.01, message: 'Amount must be greater than 0' },
+          })}
         />
+        {errors.amount && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <AlertCircle size={14} style={{ color: 'var(--accent-red)', flexShrink: 0 }} />
+            <p style={errorTextStyle}>{errors.amount.message}</p>
+          </div>
+        )}
       </div>
 
       {/* Date */}
       <div>
         <label style={labelStyle}>
-          <Calendar size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <Calendar size={16} style={iconInlineStyle} />
           Date
         </label>
         <input
           type="date"
-          name="date"
-          value={formData.date}
-          onChange={handleChange}
           disabled={isSubmitting}
           style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          {...focusHandlers}
+          {...register('date', { required: 'Date is required' })}
         />
+        {errors.date && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <AlertCircle size={14} style={{ color: 'var(--accent-red)', flexShrink: 0 }} />
+            <p style={errorTextStyle}>{errors.date.message}</p>
+          </div>
+        )}
       </div>
 
       {/* Category */}
       <div>
         <label style={labelStyle}>
-          <Tag size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <Tag size={16} style={iconInlineStyle} />
           Category
         </label>
-        <select
-          name="category_id"
-          value={formData.category_id}
-          onChange={handleChange}
-          disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
-        >
-          <option value="" style={{ background: 'var(--bg-primary)' }}>Select a category (optional)</option>
-          {categories.map(category => (
-            <option key={category.id} value={category.id} style={{ background: 'var(--bg-primary)' }}>
+        <select disabled={isSubmitting} style={{ ...inputStyle, cursor: 'pointer' }} {...focusHandlers} {...register('category_id')}>
+          <option value="" style={bgPrimaryStyle}>Select a category (optional)</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id} style={bgPrimaryStyle}>
               {category.name}
             </option>
           ))}
@@ -392,204 +324,126 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       {/* Account */}
       <div>
         <label style={labelStyle}>
-          <Wallet size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-          {formData.type === 'transfer' ? 'From Account *' : 'Account'}
+          <Wallet size={16} style={iconInlineStyle} />
+          {watchType === 'transfer' ? 'From Account *' : 'Account'}
         </label>
         <select
-          name="account_id"
-          value={formData.account_id}
-          onChange={handleChange}
           disabled={isSubmitting}
-          required={formData.type === 'transfer'}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          style={{ ...inputStyle, cursor: 'pointer' }}
+          {...focusHandlers}
+          {...register('account_id', { required: watchType === 'transfer' })}
         >
-          <option value="" style={{ background: 'var(--bg-primary)' }}>
-            {formData.type === 'transfer' ? 'Select source account' : 'Select an account (optional)'}
+          <option value="" style={bgPrimaryStyle}>
+            {watchType === 'transfer' ? 'Select source account' : 'Select an account (optional)'}
           </option>
-          {accounts.map(account => (
-            <option key={account.id} value={account.id} style={{ background: 'var(--bg-primary)' }}>
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id} style={bgPrimaryStyle}>
               {account.name} ({account.currency_code || 'USD'})
             </option>
           ))}
         </select>
       </div>
 
-      {/* Destination Account (for transfers only) */}
-      {formData.type === 'transfer' && (
+      {/* Destination Account (transfers only) */}
+      {watchType === 'transfer' && (
         <div>
           <label style={labelStyle}>
-            <Wallet size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <Wallet size={16} style={iconInlineStyle} />
             To Account *
           </label>
           <select
-            name="destination_account_id"
-            value={formData.destination_account_id}
-            onChange={handleChange}
             disabled={isSubmitting}
-            required
-            style={{
-              ...inputStyle,
-              cursor: 'pointer'
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-              e.currentTarget.style.background = 'var(--input-bg-focus)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--input-border)';
-              e.currentTarget.style.background = 'var(--input-bg)';
-            }}
+            style={{ ...inputStyle, cursor: 'pointer' }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)'; e.currentTarget.style.background = 'var(--input-bg-focus)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--input-border)'; e.currentTarget.style.background = 'var(--input-bg)'; }}
+            {...register('destination_account_id', { required: watchType === 'transfer' })}
           >
-            <option value="" style={{ background: 'var(--bg-primary)' }}>Select destination account</option>
+            <option value="" style={bgPrimaryStyle}>Select destination account</option>
             {accounts
-              .filter(account => account.id.toString() !== formData.account_id)
-              .map(account => (
-                <option key={account.id} value={account.id} style={{ background: 'var(--bg-primary)' }}>
+              .filter((account) => account.id.toString() !== watchAccountId)
+              .map((account) => (
+                <option key={account.id} value={account.id} style={bgPrimaryStyle}>
                   {account.name} ({account.currency_code || 'USD'})
                 </option>
               ))}
           </select>
-          <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
+          <p style={hintTextStyle}>
             Transfer money from one account to another
           </p>
         </div>
       )}
 
-      {/* Group (for split expenses) */}
+      {/* Group */}
       <div>
         <label style={labelStyle}>
-          <Users size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <Users size={16} style={iconInlineStyle} />
           Group (Split Expense)
         </label>
-        <select
-          name="group_id"
-          value={formData.group_id}
-          onChange={handleChange}
-          disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
-        >
-          <option value="" style={{ background: 'var(--bg-primary)' }}>No group (personal expense)</option>
-          {groups.map(group => (
-            <option key={group.id} value={group.id} style={{ background: 'var(--bg-primary)' }}>
+        <select disabled={isSubmitting} style={{ ...inputStyle, cursor: 'pointer' }} {...focusHandlers} {...register('group_id')}>
+          <option value="" style={bgPrimaryStyle}>No group (personal expense)</option>
+          {groups.map((group) => (
+            <option key={group.id} value={group.id} style={bgPrimaryStyle}>
               {group.name} ({group.members.length} members)
             </option>
           ))}
         </select>
       </div>
 
-      {/* Split Method (shown only if group is selected) */}
-      {formData.group_id && (
+      {/* Split Method (when group selected) */}
+      {watchGroupId && (
         <div>
           <label style={labelStyle}>Split Method</label>
-          <select
-            name="split_method"
-            value={formData.split_method}
-            onChange={handleChange}
-            disabled={isSubmitting}
-            style={{
-              ...inputStyle,
-              cursor: 'pointer'
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-              e.currentTarget.style.background = 'var(--input-bg-focus)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--input-border)';
-              e.currentTarget.style.background = 'var(--input-bg)';
-            }}
-          >
-            <option value="equal" style={{ background: 'var(--bg-primary)' }}>Split Equally</option>
-            <option value="percentage" style={{ background: 'var(--bg-primary)' }}>By Percentage</option>
-            <option value="custom" style={{ background: 'var(--bg-primary)' }}>Custom Amounts</option>
-            <option value="shares" style={{ background: 'var(--bg-primary)' }}>By Shares</option>
+          <select disabled={isSubmitting} style={{ ...inputStyle, cursor: 'pointer' }} {...focusHandlers} {...register('split_method')}>
+            <option value="equal" style={bgPrimaryStyle}>Split Equally</option>
+            <option value="percentage" style={bgPrimaryStyle}>By Percentage</option>
+            <option value="custom" style={bgPrimaryStyle}>Custom Amounts</option>
+            <option value="shares" style={bgPrimaryStyle}>By Shares</option>
           </select>
-          <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
-            {formData.split_method === 'equal' && 'Expense will be split equally among all group members'}
-            {formData.split_method === 'percentage' && 'Specify percentage for each member'}
-            {formData.split_method === 'custom' && 'Specify exact amount for each member'}
-            {formData.split_method === 'shares' && 'Specify shares for each member (e.g., 1:2:3)'}
+          <p style={hintTextStyle}>
+            {watchSplitMethod === 'equal' && 'Expense will be split equally among all group members'}
+            {watchSplitMethod === 'percentage' && 'Specify percentage for each member'}
+            {watchSplitMethod === 'custom' && 'Specify exact amount for each member'}
+            {watchSplitMethod === 'shares' && 'Specify shares for each member (e.g., 1:2:3)'}
           </p>
 
-          {/* Split Value Input (for percentage, custom, shares) */}
-          {(formData.split_method === 'percentage' || formData.split_method === 'shares') && (
+          {(watchSplitMethod === 'percentage' || watchSplitMethod === 'shares') && (
             <div style={{ marginTop: '16px' }}>
               <label style={labelStyle}>
-                {formData.split_method === 'percentage' ? 'Your Percentage (%)' : 'Your Shares'}
+                {watchSplitMethod === 'percentage' ? 'Your Percentage (%)' : 'Your Shares'}
               </label>
               <input
                 type="number"
-                name="split_value"
-                value={formData.split_value}
-                onChange={handleChange}
-                placeholder={formData.split_method === 'percentage' ? '50' : '1'}
-                step={formData.split_method === 'percentage' ? '0.01' : '1'}
+                placeholder={watchSplitMethod === 'percentage' ? '50' : '1'}
+                step={watchSplitMethod === 'percentage' ? '0.01' : '1'}
                 min="0"
-                max={formData.split_method === 'percentage' ? '100' : undefined}
+                max={watchSplitMethod === 'percentage' ? '100' : undefined}
                 disabled={isSubmitting}
                 style={inputStyle}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-                  e.currentTarget.style.background = 'var(--input-bg-focus)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--input-border)';
-                  e.currentTarget.style.background = 'var(--input-bg)';
-                }}
+                {...focusHandlers}
+                {...register('split_value')}
               />
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
-                {formData.split_method === 'percentage'
+              <p style={hintTextStyle}>
+                {watchSplitMethod === 'percentage'
                   ? 'Enter the percentage you want to pay (other members split the rest)'
                   : 'Enter number of shares (e.g., if you enter 2 and others have 1, you pay double)'}
               </p>
             </div>
           )}
 
-          {formData.split_method === 'custom' && (
+          {watchSplitMethod === 'custom' && (
             <div style={{ marginTop: '16px' }}>
               <label style={labelStyle}>Your Amount ($)</label>
               <input
                 type="number"
-                name="split_value"
-                value={formData.split_value}
-                onChange={handleChange}
                 placeholder="0.00"
                 step="0.01"
                 min="0"
                 disabled={isSubmitting}
                 style={inputStyle}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-                  e.currentTarget.style.background = 'var(--input-bg-focus)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--input-border)';
-                  e.currentTarget.style.background = 'var(--input-bg)';
-                }}
+                {...focusHandlers}
+                {...register('split_value')}
               />
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>
+              <p style={hintTextStyle}>
                 Enter the exact amount you want to pay (other members split the rest)
               </p>
             </div>
@@ -597,8 +451,8 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
         </div>
       )}
 
-      {/* Category Splits Section */}
-      {!formData.group_id && (
+      {/* Category Splits (when no group) */}
+      {!watchGroupId && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <label style={labelStyle}>Split Across Categories</label>
@@ -606,16 +460,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
               type="button"
               onClick={() => setCategorySplits([...categorySplits, { category_id: '', amount: '', percentage: '' }])}
               disabled={isSubmitting}
-              style={{
-                padding: '6px 12px',
-                background: 'rgba(21, 128, 61, 0.2)',
-                border: '1px solid rgba(21, 128, 61, 0.5)',
-                borderRadius: '6px',
-                color: '#86efac',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer'
-              }}
+              style={{ padding: '6px 12px', background: 'rgba(21, 128, 61, 0.2)', border: '1px solid rgba(21, 128, 61, 0.5)', borderRadius: '6px', color: 'var(--brand-light-green)', fontSize: '12px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
             >
               + Add Category Split
             </button>
@@ -624,25 +469,18 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           {categorySplits.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
               {categorySplits.map((split, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  gap: '8px',
-                  padding: '12px',
-                  background: 'var(--input-bg)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: '8px'
-                }}>
+                <div key={index} style={{ display: 'flex', gap: '8px', padding: '12px', background: 'var(--input-bg)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
                   <select
                     value={split.category_id}
                     onChange={(e) => {
-                      const newSplits = [...categorySplits];
-                      newSplits[index].category_id = e.target.value;
-                      setCategorySplits(newSplits);
+                      const updated = [...categorySplits];
+                      updated[index].category_id = e.target.value;
+                      setCategorySplits(updated);
                     }}
                     style={{ ...inputStyle, flex: 2 }}
                   >
                     <option value="">Select category</option>
-                    {categories.map(cat => (
+                    {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
@@ -651,9 +489,9 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                     placeholder="Amount"
                     value={split.amount}
                     onChange={(e) => {
-                      const newSplits = [...categorySplits];
-                      newSplits[index].amount = e.target.value;
-                      setCategorySplits(newSplits);
+                      const updated = [...categorySplits];
+                      updated[index].amount = e.target.value;
+                      setCategorySplits(updated);
                     }}
                     style={{ ...inputStyle, flex: 1 }}
                     step="0.01"
@@ -662,15 +500,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                   <button
                     type="button"
                     onClick={() => setCategorySplits(categorySplits.filter((_, i) => i !== index))}
-                    style={{
-                      padding: '8px 12px',
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      border: '1px solid rgba(239, 68, 68, 0.5)',
-                      borderRadius: '6px',
-                      color: '#ef4444',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
+                    style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.5)', borderRadius: '6px', color: 'var(--accent-red)', fontSize: '12px', cursor: 'pointer' }}
                   >
                     ×
                   </button>
@@ -678,101 +508,46 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
               ))}
               <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                 Total split: ${categorySplits.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toFixed(2)}
-                {formData.amount && ` / $${parseFloat(formData.amount).toFixed(2)}`}
+                {watchAmount && ` / $${parseFloat(watchAmount).toFixed(2)}`}
               </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Description/Notes */}
+      {/* Notes */}
       <div>
         <label style={labelStyle}>Notes</label>
         <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
           placeholder="Add any additional details..."
           rows={3}
           disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            resize: 'vertical',
-            fontFamily: 'inherit'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+          {...focusHandlers}
+          {...register('description')}
         />
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+      <div style={formActionsStyle}>
         <button
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          style={{
-            flex: 1,
-            padding: '14px 24px',
-            background: 'rgba(71, 85, 105, 0.3)',
-            border: '1px solid var(--border-light)',
-            borderRadius: '8px',
-            color: 'var(--text-primary)',
-            fontSize: '15px',
-            fontWeight: '600',
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s',
-            opacity: isSubmitting ? 0.5 : 1
-          }}
-          onMouseEnter={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.background = 'rgba(71, 85, 105, 0.5)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.background = 'rgba(71, 85, 105, 0.3)';
-            }
-          }}
+          style={{ flex: 1, padding: '14px 24px', background: 'rgba(71, 85, 105, 0.3)', border: '1px solid var(--border-light)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '15px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: isSubmitting ? 0.5 : 1 }}
+          onMouseEnter={(e) => { if (!isSubmitting) e.currentTarget.style.background = 'rgba(71, 85, 105, 0.5)'; }}
+          onMouseLeave={(e) => { if (!isSubmitting) e.currentTarget.style.background = 'rgba(71, 85, 105, 0.3)'; }}
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          style={{
-            flex: 1,
-            padding: '14px 24px',
-            background: isSubmitting ? 'rgba(21, 128, 61, 0.5)' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-            border: '1px solid rgba(21, 128, 61, 0.5)',
-            borderRadius: '8px',
-            color: 'white',
-            fontSize: '15px',
-            fontWeight: '600',
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s',
-            opacity: isSubmitting ? 0.7 : 1
-          }}
-          onMouseEnter={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.transform = 'scale(1.02)';
-              e.currentTarget.style.boxShadow = '0 8px 16px rgba(21, 128, 61, 0.3)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = 'none';
-            }
-          }}
+          style={{ flex: 1, padding: '14px 24px', background: isSubmitting ? 'rgba(21, 128, 61, 0.5)' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)', border: '1px solid rgba(21, 128, 61, 0.5)', borderRadius: '8px', color: 'white', fontSize: '15px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: isSubmitting ? 0.7 : 1 }}
+          onMouseEnter={(e) => { if (!isSubmitting) { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(21, 128, 61, 0.3)'; } }}
+          onMouseLeave={(e) => { if (!isSubmitting) { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; } }}
         >
-          {isSubmitting ? 'Creating...' : 'Create Transaction'}
+          {isSubmitting ? 'Saving...' : transaction ? 'Update Transaction' : 'Create Transaction'}
         </button>
       </div>
     </form>

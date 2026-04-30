@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -10,6 +10,8 @@ interface ModalProps {
   maxWidth?: string;
 }
 
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -17,18 +19,43 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = '600px'
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useRef(`modal-title-${Math.random().toString(36).slice(2)}`).current;
+
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+
+      const focusables = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)
+      ).filter(el => !el.hasAttribute('disabled'));
+
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
     };
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Focus first focusable element
+    requestAnimationFrame(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+      first?.focus();
+    });
+
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, onClose]);
@@ -54,6 +81,10 @@ export const Modal: React.FC<ModalProps> = ({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         style={{
           width: '100%',
           maxWidth: maxWidth,
@@ -81,6 +112,7 @@ export const Modal: React.FC<ModalProps> = ({
           }}
         >
           <h2
+            id={titleId}
             style={{
               fontSize: '24px',
               fontWeight: 700,
@@ -92,6 +124,7 @@ export const Modal: React.FC<ModalProps> = ({
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             style={{
               background: 'rgba(239, 68, 68, 0.1)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -112,7 +145,7 @@ export const Modal: React.FC<ModalProps> = ({
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <X size={20} style={{ color: '#ef4444' }} />
+            <X size={20} style={{ color: 'var(--accent-red)' }} />
           </button>
         </div>
 

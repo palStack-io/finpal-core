@@ -136,9 +136,7 @@ services:
   # Backup — Postgres → local volume + optional remote storage
   # ================================================================
   backup:
-    build:
-      context: .
-      dockerfile: backup/Dockerfile
+    image: ghcr.io/palstack-io/finpal-backup:latest
     container_name: finpal-backup
     environment:
 
@@ -172,7 +170,7 @@ services:
       BACKUP_HEALTHCHECK_URL: ""
 
     volumes:
-      - backup_data:/backups
+      - ${BACKUP_PATH:-/opt/finpal/backups}:/backups
     networks:
       - finpal-network
     depends_on:
@@ -182,8 +180,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
-  backup_data:
     driver: local
 
 networks:

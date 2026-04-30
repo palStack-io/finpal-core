@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { Link2, Check, AlertCircle, ArrowRight, RefreshCw, ExternalLink } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+
+const stepTitleStyle: React.CSSProperties = { color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' };
+const stepDescStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' };
+const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
 
 export const SimpleFinSetup: React.FC = () => {
   const { user } = useAuthStore();
@@ -38,14 +43,14 @@ export const SimpleFinSetup: React.FC = () => {
 
   return (
     <>
-      <div style={{ minHeight: '100vh', padding: '24px' }}>
+      <div style={pageContainerStyle}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
             <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
               SimpleFIN Connection
             </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Connect your SimpleFIN account to import transactions automatically</p>
+            <p style={bodyTextStyle}>Connect your SimpleFIN account to import transactions automatically</p>
           </div>
 
           {/* Main Card */}
@@ -78,7 +83,7 @@ export const SimpleFinSetup: React.FC = () => {
               <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px' }}>
                 Connect SimpleFIN
               </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+              <p style={bodyTextStyle}>
                 Securely import your financial data
               </p>
             </div>
@@ -98,10 +103,10 @@ export const SimpleFinSetup: React.FC = () => {
                 }}
               >
                 <div style={{ background: 'rgba(134, 239, 172, 0.2)', padding: '8px', borderRadius: '8px' }}>
-                  <Check size={20} style={{ color: '#86efac' }} />
+                  <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
                 </div>
                 <div>
-                  <p style={{ color: '#86efac', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                  <p style={{ color: 'var(--brand-light-green)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
                     Connection Successful!
                   </p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
@@ -125,10 +130,10 @@ export const SimpleFinSetup: React.FC = () => {
                 }}
               >
                 <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
-                  <AlertCircle size={20} style={{ color: '#ef4444' }} />
+                  <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
                 </div>
                 <div>
-                  <p style={{ color: '#ef4444', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                  <p style={{ color: 'var(--accent-red)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
                     Connection Failed
                   </p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
@@ -239,7 +244,7 @@ export const SimpleFinSetup: React.FC = () => {
               How to get your SimpleFIN Setup Token
             </h3>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={flexColGap16}>
               {/* Step 1 */}
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div
@@ -260,17 +265,17 @@ export const SimpleFinSetup: React.FC = () => {
                   1
                 </div>
                 <div>
-                  <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                  <p style={stepTitleStyle}>
                     Create a SimpleFIN account
                   </p>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                  <p style={stepDescStyle}>
                     Visit{' '}
                     <a
                       href="https://bridge.simplefin.org"
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        color: '#86efac',
+                        color: 'var(--brand-light-green)',
                         textDecoration: 'none',
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -305,10 +310,10 @@ export const SimpleFinSetup: React.FC = () => {
                   2
                 </div>
                 <div>
-                  <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                  <p style={stepTitleStyle}>
                     Connect your financial institutions
                   </p>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                  <p style={stepDescStyle}>
                     Link your banks, credit cards, and other accounts through SimpleFIN Bridge
                   </p>
                 </div>
@@ -334,10 +339,10 @@ export const SimpleFinSetup: React.FC = () => {
                   3
                 </div>
                 <div>
-                  <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                  <p style={stepTitleStyle}>
                     Generate a Setup Token
                   </p>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                  <p style={stepDescStyle}>
                     In SimpleFIN Bridge, create a new Setup Token for DollarPal and copy the generated URL
                   </p>
                 </div>
@@ -363,10 +368,10 @@ export const SimpleFinSetup: React.FC = () => {
                   4
                 </div>
                 <div>
-                  <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                  <p style={stepTitleStyle}>
                     Paste the token above
                   </p>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                  <p style={stepDescStyle}>
                     Copy the entire Setup Token URL and paste it into the field above, then click "Connect"
                   </p>
                 </div>
@@ -384,9 +389,9 @@ export const SimpleFinSetup: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', gap: '12px' }}>
-                <AlertCircle size={20} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                <AlertCircle size={20} style={{ color: 'var(--brand-accent-gold)', flexShrink: 0 }} />
                 <div>
-                  <p style={{ color: '#fbbf24', fontWeight: '600', fontSize: '13px', marginBottom: '4px' }}>
+                  <p style={{ color: 'var(--brand-accent-gold)', fontWeight: '600', fontSize: '13px', marginBottom: '4px' }}>
                     Security Note
                   </p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '12px', lineHeight: '1.6' }}>

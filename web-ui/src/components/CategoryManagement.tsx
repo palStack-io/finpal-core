@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Tag, Folder, Search, X } from 'lucide-react';
 import { categoriesApi, type Category } from '../services/api/categories';
 import { Modal } from './Modal';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 
 // Category icons mapping
 const categoryIcons: Record<string, string> = {
@@ -32,7 +33,7 @@ const categoryIcons: Record<string, string> = {
 };
 
 const categoryColors = [
-  '#3b82f6', '#22c55e', '#ef4444', '#f59e0b',
+  'var(--accent-blue)', 'var(--brand-green-glow)', 'var(--accent-red)', 'var(--accent-yellow)',
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
   '#06b6d4', '#84cc16', '#a855f7', '#eab308'
 ];
@@ -48,7 +49,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
   const [formData, setFormData] = useState({
     name: category?.name || '',
     icon: category?.icon || '📁',
-    color: category?.color || '#3b82f6',
+    color: category?.color || 'var(--accent-blue)',
     parent_id: category?.parent_id || ''
   });
   const [error, setError] = useState('');
@@ -101,7 +102,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
           background: 'rgba(239, 68, 68, 0.1)',
           border: '1px solid rgba(239, 68, 68, 0.3)',
           borderRadius: '8px',
-          color: '#ef4444',
+          color: 'var(--accent-red)',
           marginBottom: '16px',
           fontSize: '14px'
         }}>
@@ -115,7 +116,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
           background: 'rgba(34, 197, 94, 0.1)',
           border: '1px solid rgba(34, 197, 94, 0.3)',
           borderRadius: '8px',
-          color: '#22c55e',
+          color: 'var(--brand-green-glow)',
           marginBottom: '16px',
           fontSize: '14px'
         }}>
@@ -124,7 +125,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
       )}
 
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <label style={fieldLabelStyle}>
           Category Name *
         </label>
         <input
@@ -149,7 +150,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
 
       {!category?.parent_id && (
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+          <label style={fieldLabelStyle}>
             Parent Category (optional)
           </label>
           <select
@@ -168,9 +169,9 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
               cursor: 'pointer'
             }}
           >
-            <option value="" style={{ background: 'var(--bg-secondary)' }}>None - This is a main category</option>
+            <option value="" style={secondaryBgStyle}>None - This is a main category</option>
             {parentCategories.map(cat => (
-              <option key={cat.id} value={cat.id} style={{ background: 'var(--bg-secondary)' }}>
+              <option key={cat.id} value={cat.id} style={secondaryBgStyle}>
                 {cat.icon} {cat.name}
               </option>
             ))}
@@ -179,7 +180,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
       )}
 
       <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <label style={fieldLabelStyle}>
           Icon
         </label>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
@@ -228,7 +229,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
       </div>
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <label style={fieldLabelStyle}>
           Color
         </label>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
@@ -305,6 +306,11 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
   );
 };
 
+const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
+const fieldLabelStyle: React.CSSProperties = { display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' };
+const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' };
+const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)' };
+
 export const CategoryManagement: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -352,7 +358,7 @@ export const CategoryManagement: React.FC = () => {
       id: 0,
       name: '',
       icon: '📁',
-      color: '#3b82f6',
+      color: 'var(--accent-blue)',
       parent_id: parentId,
       is_system: false
     });
@@ -408,7 +414,7 @@ export const CategoryManagement: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Categories</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Organize your transactions with categories and subcategories</p>
+          <p style={bodyTextStyle}>Organize your transactions with categories and subcategories</p>
         </div>
         <button
           onClick={handleAddCategory}
@@ -453,9 +459,9 @@ export const CategoryManagement: React.FC = () => {
             }}>
               <Folder size={20} color="#3b82f6" />
             </div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Main Categories</span>
+            <span style={bodyTextStyle}>Main Categories</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{parentCategories.length}</p>
+          <p style={bigStatStyle}>{parentCategories.length}</p>
         </div>
 
         <div style={{
@@ -477,9 +483,9 @@ export const CategoryManagement: React.FC = () => {
             }}>
               <Tag size={20} color="#a855f7" />
             </div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Subcategories</span>
+            <span style={bodyTextStyle}>Subcategories</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+          <p style={bigStatStyle}>
             {categories.filter(c => c.parent_id).length}
           </p>
         </div>
@@ -503,9 +509,9 @@ export const CategoryManagement: React.FC = () => {
             }}>
               <Search size={20} color="#22c55e" />
             </div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Total Items</span>
+            <span style={bodyTextStyle}>Total Items</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{categories.length}</p>
+          <p style={bigStatStyle}>{categories.length}</p>
         </div>
       </div>
 
@@ -552,7 +558,7 @@ export const CategoryManagement: React.FC = () => {
       </div>
 
       {/* Categories List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={flexColGap16}>
         {parentCategories.length === 0 ? (
           <div style={{
             padding: '60px 20px',
@@ -619,12 +625,12 @@ export const CategoryManagement: React.FC = () => {
                       <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
                         {category.name}
                       </h3>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+                      <p style={bodyTextStyle}>
                         {subcategories.length} subcategory{subcategories.length !== 1 ? 'ies' : ''}
                       </p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={flexRowGap8}>
                     <button
                       onClick={() => handleEdit(category)}
                       style={{
@@ -632,7 +638,7 @@ export const CategoryManagement: React.FC = () => {
                         background: 'rgba(59, 130, 246, 0.1)',
                         border: '1px solid rgba(59, 130, 246, 0.3)',
                         borderRadius: '8px',
-                        color: '#3b82f6',
+                        color: 'var(--accent-blue)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -649,7 +655,7 @@ export const CategoryManagement: React.FC = () => {
                         background: 'rgba(239, 68, 68, 0.1)',
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         borderRadius: '8px',
-                        color: '#ef4444',
+                        color: 'var(--accent-red)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -684,7 +690,7 @@ export const CategoryManagement: React.FC = () => {
                           transition: 'all 0.3s'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={flexRowGap12}>
                           <div style={{
                             fontSize: '24px',
                             width: '40px',
@@ -699,7 +705,7 @@ export const CategoryManagement: React.FC = () => {
                           </div>
                           <span style={{ color: 'var(--text-primary)', fontSize: '15px' }}>{sub.name}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={flexRowGap8}>
                           <button
                             onClick={() => handleEdit(sub)}
                             style={{
@@ -707,7 +713,7 @@ export const CategoryManagement: React.FC = () => {
                               background: 'rgba(59, 130, 246, 0.1)',
                               border: '1px solid rgba(59, 130, 246, 0.3)',
                               borderRadius: '6px',
-                              color: '#3b82f6',
+                              color: 'var(--accent-blue)',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
@@ -723,7 +729,7 @@ export const CategoryManagement: React.FC = () => {
                               background: 'rgba(239, 68, 68, 0.1)',
                               border: '1px solid rgba(239, 68, 68, 0.3)',
                               borderRadius: '6px',
-                              color: '#ef4444',
+                              color: 'var(--accent-red)',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',

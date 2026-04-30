@@ -4,6 +4,11 @@
 
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR' | 'CAD' | 'AUD';
 
+export interface ServerFeatures {
+  simplefin: boolean;
+  investments: boolean;
+}
+
 export interface UserNotifications {
   email: boolean;
   push: boolean;
@@ -55,6 +60,8 @@ export interface AuthState {
   // Demo mode state
   isDemoUser: boolean;
   demoExpiresAt: string | null;
+  // Server-level optional features
+  features: ServerFeatures;
 }
 
 export interface LoginCredentials {
@@ -73,6 +80,7 @@ export interface AuthResponse {
   refresh_token: string;
   user: User;
   demo_expires_at?: string;
+  features?: ServerFeatures;
 }
 
 export interface ProfileUpdate {

@@ -2,6 +2,11 @@
 from flask import current_app
 from flask_restx import Namespace, Resource, fields
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # Create namespace
 ns = Namespace('demo', description='Demo mode operations')
 

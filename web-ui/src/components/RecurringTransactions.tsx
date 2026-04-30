@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Repeat, Plus, X, Check, AlertCircle, Sparkles, Eye, EyeOff, Trash2, Edit2 } from 'lucide-react';
 import { recurringService, RecurringExpense, RecurringPattern } from '../services/recurringService';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+
+const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 
 export const RecurringTransactions: React.FC = () => {
   const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
@@ -154,8 +157,8 @@ export const RecurringTransactions: React.FC = () => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <AlertCircle size={20} style={{ color: '#ef4444' }} />
-          <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{error}</p>
+          <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
@@ -171,8 +174,8 @@ export const RecurringTransactions: React.FC = () => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <Check size={20} style={{ color: '#22c55e' }} />
-          <p style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', margin: 0 }}>{success}</p>
+          <Check size={20} style={{ color: 'var(--brand-green-glow)' }} />
+          <p style={{ color: 'var(--brand-green-glow)', fontSize: '14px', fontWeight: '600', margin: 0 }}>{success}</p>
         </div>
       )}
 
@@ -186,7 +189,7 @@ export const RecurringTransactions: React.FC = () => {
           marginBottom: '24px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <Sparkles size={24} style={{ color: '#fbbf24' }} />
+            <Sparkles size={24} style={{ color: 'var(--brand-accent-gold)' }} />
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
               Detected Patterns ({patterns.length})
             </h3>
@@ -212,17 +215,17 @@ export const RecurringTransactions: React.FC = () => {
                     {pattern.description}
                   </h4>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                      Amount: <strong style={{ color: '#86efac' }}>${pattern.amount.toFixed(2)}</strong>
+                    <span style={metaTextStyle}>
+                      Amount: <strong style={{ color: 'var(--brand-light-green)' }}>${pattern.amount.toFixed(2)}</strong>
                     </span>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                      Frequency: <strong style={{ color: '#86efac' }}>{getFrequencyLabel(pattern.frequency)}</strong>
+                    <span style={metaTextStyle}>
+                      Frequency: <strong style={{ color: 'var(--brand-light-green)' }}>{getFrequencyLabel(pattern.frequency)}</strong>
                     </span>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                      Occurrences: <strong style={{ color: '#86efac' }}>{pattern.occurrences}</strong>
+                    <span style={metaTextStyle}>
+                      Occurrences: <strong style={{ color: 'var(--brand-light-green)' }}>{pattern.occurrences}</strong>
                     </span>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                      Confidence: <strong style={{ color: '#86efac' }}>{(pattern.confidence * 100).toFixed(0)}%</strong>
+                    <span style={metaTextStyle}>
+                      Confidence: <strong style={{ color: 'var(--brand-light-green)' }}>{(pattern.confidence * 100).toFixed(0)}%</strong>
                     </span>
                   </div>
                 </div>
@@ -288,7 +291,7 @@ export const RecurringTransactions: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={flexColGap12}>
           {recurring.map((item) => (
             <div
               key={item.id}
@@ -305,7 +308,7 @@ export const RecurringTransactions: React.FC = () => {
             >
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <Repeat size={20} style={{ color: item.active ? '#86efac' : '#64748b' }} />
+                  <Repeat size={20} style={{ color: item.active ? 'var(--brand-light-green)' : 'var(--text-muted)' }} />
                   <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', margin: 0 }}>
                     {item.description}
                   </h3>
@@ -324,14 +327,14 @@ export const RecurringTransactions: React.FC = () => {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                    Amount: <strong style={{ color: '#86efac' }}>${item.amount.toFixed(2)}</strong>
+                  <span style={metaTextStyle}>
+                    Amount: <strong style={{ color: 'var(--brand-light-green)' }}>${item.amount.toFixed(2)}</strong>
                   </span>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                    Frequency: <strong style={{ color: '#86efac' }}>{getFrequencyLabel(item.frequency)}</strong>
+                  <span style={metaTextStyle}>
+                    Frequency: <strong style={{ color: 'var(--brand-light-green)' }}>{getFrequencyLabel(item.frequency)}</strong>
                   </span>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                    Type: <strong style={{ color: '#86efac' }}>{item.transaction_type}</strong>
+                  <span style={metaTextStyle}>
+                    Type: <strong style={{ color: 'var(--brand-light-green)' }}>{item.transaction_type}</strong>
                   </span>
                 </div>
               </div>
@@ -343,7 +346,7 @@ export const RecurringTransactions: React.FC = () => {
                     background: item.active ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
                     border: `1px solid ${item.active ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`,
                     borderRadius: '8px',
-                    color: item.active ? '#fca5a5' : '#86efac',
+                    color: item.active ? '#fca5a5' : 'var(--brand-light-green)',
                     fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer',

@@ -7,6 +7,11 @@ from src.models.user import User
 from src.models.invitation import Invitation
 from src.extensions import db
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # Create namespace
 ns = Namespace('team', description='Household collaboration operations')
 

@@ -6,12 +6,12 @@
 export const theme = {
   colors: {
     primary: {
-      DEFAULT: '#15803d',
-      dark: '#166534',
+      DEFAULT: 'var(--brand-main-green)',
+      dark: 'var(--brand-dark-green)',
       darker: '#14532d',
     },
     accent: {
-      DEFAULT: '#fbbf24',
+      DEFAULT: 'var(--brand-accent-gold)',
       light: '#fef3c7',
       gold: '#ffd700',
     },
@@ -20,7 +20,7 @@ export const theme = {
       darker: '#030712',
     },
     green: {
-      money: '#22c55e',
+      money: 'var(--brand-green-glow)',
     },
     text: {
       primary: '#ffffff',
@@ -49,5 +49,17 @@ export const theme = {
     button: '8px',
   },
 } as const;
+
+/** Ordered palette for chart series / category rotation (8 distinct colors). */
+export const CHART_COLORS = [
+  'var(--accent-blue)', // blue
+  'var(--accent-green)', // emerald
+  'var(--accent-yellow)', // amber
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#f43f5e', // rose
+  '#06b6d4', // cyan
+] as const;
 
 export type Theme = typeof theme;

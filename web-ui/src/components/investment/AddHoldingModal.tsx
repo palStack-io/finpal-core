@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, AlertCircle, TrendingUp } from 'lucide-react';
 import { investmentService } from '../../services/api/investments';
 import { useToast } from '../../contexts/ToastContext';
+import { inputStyle, labelStyle } from '../../styles/formStyles';
 
 interface Portfolio {
   id: number;
@@ -136,24 +137,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
 
   if (!isOpen) return null;
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '12px',
-    background: 'var(--input-bg)',
-    border: '1px solid var(--input-border)',
-    borderRadius: '8px',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    outline: 'none'
-  };
 
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    color: 'var(--text-secondary)',
-    fontSize: '14px',
-    fontWeight: '500',
-    marginBottom: '8px'
-  };
 
   return (
     <div style={{
@@ -224,8 +208,8 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
               borderRadius: '8px',
               marginBottom: '20px'
             }}>
-              <AlertCircle size={20} style={{ color: '#ef4444' }} />
-              <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{error}</p>
+              <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+              <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
             </div>
           )}
 
@@ -269,7 +253,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: isSearching || !symbol.trim() ? '#166534' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                  background: isSearching || !symbol.trim() ? 'var(--brand-dark-green)' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                   border: 'none',
                   borderRadius: '8px',
                   color: 'white',
@@ -331,7 +315,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                 marginBottom: '24px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <TrendingUp size={24} style={{ color: '#15803d' }} />
+                  <TrendingUp size={24} style={{ color: 'var(--brand-main-green)' }} />
                   <div>
                     <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '700', margin: 0 }}>
                       {stockData.symbol}
@@ -342,7 +326,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   </div>
                 </div>
                 {stockData.price && (
-                  <div style={{ color: '#86efac', fontSize: '24px', fontWeight: '700' }}>
+                  <div style={{ color: 'var(--brand-light-green)', fontSize: '24px', fontWeight: '700' }}>
                     ${stockData.price.toFixed(2)}
                   </div>
                 )}
@@ -457,7 +441,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   style={{
                     flex: 2,
                     padding: '12px',
-                    background: isSaving ? '#166534' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                    background: isSaving ? 'var(--brand-dark-green)' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                     border: 'none',
                     borderRadius: '8px',
                     color: 'white',

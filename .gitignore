@@ -65,6 +65,7 @@ web-ui/coverage/
 
 # AI Assistant
 .claude/
+CLAUDE.md
 
 # Shell scripts — root-level utility/deployment scripts only
 /*.sh

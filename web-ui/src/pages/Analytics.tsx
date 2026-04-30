@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -25,7 +26,13 @@ import {
 type AnalyticsTab = 'overview' | 'cashflow' | 'spending' | 'health';
 
 // Color palette for categories
-const CATEGORY_COLORS = ['#3b82f6', '#a855f7', '#10b981', '#f97316', '#ec4899', '#06b6d4', '#f59e0b', '#84cc16'];
+const CATEGORY_COLORS = ['var(--accent-blue)', '#a855f7', 'var(--accent-green)', '#f97316', '#ec4899', '#06b6d4', 'var(--accent-yellow)', '#84cc16'];
+
+const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
+const tooltipBoxStyle: React.CSSProperties = { background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' };
+const emptyStateStyle: React.CSSProperties = { textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' };
+
+const tooltipLabelStyle: React.CSSProperties = { color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' };
 
 export const Analytics: React.FC = () => {
   const { user } = useAuthStore();
@@ -34,6 +41,7 @@ export const Analytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
+  const rangeLabel = timeRange === 'week' ? 'Last 7 days' : timeRange === 'year' ? 'Last 12 months' : 'This month';
 
   // Data state
   const [cashFlowMonthly, setCashFlowMonthly] = useState<Array<{
@@ -82,15 +90,31 @@ export const Analytics: React.FC = () => {
     try {
       setLoading(true);
 
-      // Determine months based on time range
-      const months = timeRange === 'week' ? 1 : timeRange === 'year' ? 12 : 6;
+      const now = new Date();
+      const toISO = (d: Date) => d.toISOString().split('T')[0];
+
+      let months: number;
+      let startDate: string;
+      if (timeRange === 'week') {
+        months = 1;
+        const d = new Date(now); d.setDate(now.getDate() - 7);
+        startDate = toISO(d);
+      } else if (timeRange === 'year') {
+        months = 12;
+        const d = new Date(now); d.setFullYear(now.getFullYear() - 1);
+        startDate = toISO(d);
+      } else {
+        months = 1;
+        startDate = toISO(new Date(now.getFullYear(), now.getMonth(), 1));
+      }
+      const endDate = toISO(now);
 
       // Load all data in parallel
       const [cashflow, health, networth, topCategories] = await Promise.all([
         analyticsService.getCashFlowData(months),
         analyticsService.getFinancialHealth(),
         analyticsService.getNetWorthTrendData(12),
-        analyticsService.getTopSpendingCategories(8)
+        analyticsService.getTopSpendingCategories(8, startDate, endDate)
       ]);
 
       // Set cash flow data
@@ -110,14 +134,13 @@ export const Analytics: React.FC = () => {
         percentage: totalCategorySpending > 0 ? (cat.amount / totalCategorySpending) * 100 : 0,
         color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length]
       }));
-      console.log('Category spending data:', categoriesWithPercentage); // Debug log
       setCategorySpending(categoriesWithPercentage);
 
       // Set income sources (placeholder - could be enhanced with actual income source tracking)
       setIncomeSources([
-        { name: 'Primary Income', value: health.totalIncome * 0.75, color: '#15803d' },
+        { name: 'Primary Income', value: health.totalIncome * 0.75, color: 'var(--brand-main-green)' },
         { name: 'Secondary Income', value: health.totalIncome * 0.20, color: '#059669' },
-        { name: 'Other', value: health.totalIncome * 0.05, color: '#10b981' },
+        { name: 'Other', value: health.totalIncome * 0.05, color: 'var(--accent-green)' },
       ]);
 
       setLoading(false);
@@ -134,7 +157,7 @@ export const Analytics: React.FC = () => {
   if (loading) {
     return (
       <>
-        <div style={{ minHeight: '100vh', padding: '24px' }}>
+        <div style={pageContainerStyle}>
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <div style={{
               width: '48px',
@@ -161,7 +184,7 @@ export const Analytics: React.FC = () => {
 
   return (
     <>
-      <div style={{ minHeight: '100vh', padding: '24px' }}>
+      <div style={pageContainerStyle}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{
@@ -314,7 +337,7 @@ export const Analytics: React.FC = () => {
               gap: '24px'
             }}>
               {/* Income vs Expenses */}
-              <ChartCard title="Income vs Expenses" subtitle="Last 6 months">
+              <ChartCard title="Income vs Expenses" subtitle={rangeLabel}>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={cashFlowMonthly}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
@@ -335,7 +358,7 @@ export const Analytics: React.FC = () => {
               </ChartCard>
 
               {/* Spending by Category */}
-              <ChartCard title="Spending by Category" subtitle="Current period">
+              <ChartCard title="Spending by Category" subtitle={rangeLabel}>
                 {categorySpending.length > 0 ? (
                   <>
                     <ResponsiveContainer width="100%" height={200}>
@@ -357,8 +380,8 @@ export const Analytics: React.FC = () => {
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <div style={{ background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' }}>
-                                  <p style={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
+                                <div style={tooltipBoxStyle}>
+                                  <p style={tooltipLabelStyle}>{payload[0].name}</p>
                                   <p style={{ color: payload[0].payload.color, margin: 0 }}>
                                     {branding.currencySymbol}{payload[0].value.toLocaleString()} ({payload[0].payload.percentage.toFixed(1)}%)
                                   </p>
@@ -377,7 +400,7 @@ export const Analytics: React.FC = () => {
                             <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }}></div>
                             <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{cat.name || 'Unknown'}</span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={flexRowGap12}>
                             <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
                             <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>({cat.percentage.toFixed(1)}%)</span>
                           </div>
@@ -386,7 +409,7 @@ export const Analytics: React.FC = () => {
                     </div>
                   </>
                 ) : (
-                  <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' }}>No spending data</div>
+                  <div style={emptyStateStyle}>No spending data</div>
                 )}
               </ChartCard>
             </div>
@@ -428,7 +451,7 @@ export const Analytics: React.FC = () => {
               />
             </div>
 
-            <ChartCard title="Cash Flow Trend" subtitle="Monthly breakdown over 6 months">
+            <ChartCard title="Cash Flow Trend" subtitle={rangeLabel}>
               <ResponsiveContainer width="100%" height={400}>
                 <AreaChart data={cashFlowMonthly}>
                   <defs>
@@ -496,8 +519,8 @@ export const Analytics: React.FC = () => {
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <div style={{ background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' }}>
-                                  <p style={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
+                                <div style={tooltipBoxStyle}>
+                                  <p style={tooltipLabelStyle}>{payload[0].name}</p>
                                   <p style={{ color: payload[0].payload.color, margin: 0 }}>
                                     {branding.currencySymbol}{payload[0].value.toLocaleString()} ({payload[0].payload.percentage.toFixed(1)}%)
                                   </p>
@@ -512,11 +535,11 @@ export const Analytics: React.FC = () => {
                     <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                       {categorySpending.map((cat, idx) => (
                         <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={flexRowGap8}>
                             <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }}></div>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{cat.name || 'Unknown'}</span>
+                            <span style={metaTextStyle}>{cat.name || 'Unknown'}</span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={flexRowGap12}>
                             <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
                             <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '50px', textAlign: 'right' }}>{cat.percentage.toFixed(1)}%</span>
                           </div>
@@ -525,7 +548,7 @@ export const Analytics: React.FC = () => {
                     </div>
                   </>
                 ) : (
-                  <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' }}>No spending data</div>
+                  <div style={emptyStateStyle}>No spending data</div>
                 )}
               </ChartCard>
 
@@ -568,7 +591,7 @@ export const Analytics: React.FC = () => {
               <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>
                 Category Breakdown
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={flexColGap16}>
                 {categorySpending.map((category, index) => (
                   <div key={index} style={{ paddingBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
                     <div style={{
@@ -577,7 +600,7 @@ export const Analytics: React.FC = () => {
                       justifyContent: 'space-between',
                       marginBottom: '8px'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={flexRowGap12}>
                         <div style={{
                           width: '12px',
                           height: '12px',
@@ -590,7 +613,7 @@ export const Analytics: React.FC = () => {
                         <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
                           {branding.currencySymbol}{category.value.toLocaleString()}
                         </p>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{category.percentage.toFixed(1)}%</p>
+                        <p style={metaTextStyle}>{category.percentage.toFixed(1)}%</p>
                       </div>
                     </div>
                     <div style={{
@@ -687,7 +710,7 @@ export const Analytics: React.FC = () => {
               <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
                 Financial Health Insights
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={flexColGap12}>
                 <InsightItem
                   icon={<CheckCircle2 size={20} color="#10b981" />}
                   text="Your savings rate is above the recommended 20% threshold"
@@ -760,7 +783,7 @@ const MetricCard: React.FC<{
       <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>
         {value}
       </p>
-      <p style={{ color: isPositive ? '#10b981' : '#ef4444', fontSize: '13px' }}>{change} vs last period</p>
+      <p style={{ color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)', fontSize: '13px' }}>{change} vs last period</p>
     </div>
   </div>
 );
@@ -782,7 +805,7 @@ const ChartCard: React.FC<{
         {title}
       </h2>
       {subtitle && (
-        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{subtitle}</p>
+        <p style={metaTextStyle}>{subtitle}</p>
       )}
     </div>
     {children}
@@ -796,9 +819,9 @@ const HealthMetricCard: React.FC<{
   description: string;
 }> = ({ title, value, status, description }) => {
   const colors = {
-    good: { bg: '#10b981', light: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)' },
+    good: { bg: 'var(--accent-green)', light: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)' },
     warning: { bg: '#f97316', light: 'rgba(249, 115, 22, 0.1)', border: 'rgba(249, 115, 22, 0.3)' },
-    danger: { bg: '#ef4444', light: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.3)' }
+    danger: { bg: 'var(--accent-red)', light: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.3)' }
   };
 
   return (
@@ -821,7 +844,7 @@ const HealthMetricCard: React.FC<{
       }}>
         {value}
       </p>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{description}</p>
+      <p style={metaTextStyle}>{description}</p>
     </div>
   );
 };

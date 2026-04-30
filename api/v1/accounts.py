@@ -1,11 +1,17 @@
 """Accounts API endpoints"""
-from flask import request
+from flask import request, current_app
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.account import Account
 from src.extensions import db
 from schemas import account_schema, accounts_schema
+from schemas.input_schemas import account_input
+from src.utils.validation import validate_request, validation_error_response
+from src.services.account.service import AccountService
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create namespace
 ns = Namespace('accounts', description='Account operations')
@@ -44,9 +50,8 @@ class AccountList(Resource):
                 'accounts': result
             }, 200
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {'success': False, 'error': str(e)}, 500
+            logger.exception("Failed to list accounts")
+            return {'success': False, 'error': 'Internal server error'}, 500
 
     @ns.doc('create_account', security='Bearer')
     @ns.expect(account_model)
@@ -56,34 +61,26 @@ class AccountList(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        try:
-            new_account = Account(
-                name=data.get('name'),
-                type=data.get('account_type'),
-                balance=data.get('balance', 0),
-                currency_code=data.get('currency_code', 'USD'),
-                institution=data.get('institution', ''),
-                color=data.get('color'),
-                user_id=current_user_id
-            )
+        validated, errors = validate_request(account_input, data)
+        if errors:
+            return validation_error_response(errors)
 
-            db.session.add(new_account)
-            db.session.commit()
+        svc = AccountService()
+        success, message, new_account = svc.add_account(
+            user_id=current_user_id,
+            name=validated['name'],
+            account_type=validated['account_type'],
+            institution=validated.get('institution', ''),
+            balance=validated.get('balance', 0),
+            currency_code=validated.get('currency_code', 'USD'),
+            color=validated.get('color'),
+        )
 
-            result = account_schema.dump(new_account)
+        if not success:
+            return {'success': False, 'error': message}, 400
 
-            return {
-                'success': True,
-                'account': result,
-                'message': 'Account created successfully'
-            }, 201
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 400
+        result = account_schema.dump(new_account)
+        return {'success': True, 'account': result, 'message': 'Account created successfully'}, 201
 
 
 @ns.route('/<int:id>')
@@ -119,7 +116,9 @@ class AccountDetail(Resource):
         if not account:
             return {'success': False, 'error': 'Account not found'}, 404
 
-        data = request.get_json()
+        data = request.get_json() or {}
+        if not data:
+            return {'success': False, 'error': 'Request body required'}, 400
 
         try:
             if 'name' in data:
@@ -151,7 +150,7 @@ class AccountDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_account', security='Bearer')
@@ -160,26 +159,14 @@ class AccountDetail(Resource):
         """Delete an account"""
         current_user_id = get_jwt_identity()
 
-        account = Account.query.filter_by(id=id, user_id=current_user_id).first()
+        svc = AccountService()
+        success, message = svc.delete_account(id, current_user_id)
 
-        if not account:
-            return {'success': False, 'error': 'Account not found'}, 404
+        if not success:
+            status = 404 if 'not found' in message.lower() else 403
+            return {'success': False, 'error': message}, status
 
-        try:
-            db.session.delete(account)
-            db.session.commit()
-
-            return {
-                'success': True,
-                'message': 'Account deleted successfully'
-            }, 200
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 400
+        return {'success': True, 'message': 'Account deleted successfully'}, 200
 
 
 @ns.route('/<int:id>/balance')
@@ -208,6 +195,13 @@ class AccountBalance(Resource):
         }, 200
 
 
+def _simplefin_required():
+    """Return a 503 error dict if SimpleFin is disabled, else None."""
+    if not current_app.config.get('SIMPLEFIN_ENABLED', False):
+        return {'success': False, 'error': 'SimpleFin integration is not enabled on this server'}, 503
+    return None
+
+
 @ns.route('/<int:id>/sync')
 @ns.param('id', 'Account ID')
 class AccountSync(Resource):
@@ -215,6 +209,9 @@ class AccountSync(Resource):
     @jwt_required()
     def post(self, id):
         """Sync SimpleFin account"""
+        err = _simplefin_required()
+        if err:
+            return err
         from src.services.account.service import SimpleFinService
 
         current_user_id = get_jwt_identity()
@@ -239,6 +236,9 @@ class SimpleFinConnect(Resource):
     @jwt_required()
     def post(self):
         """Save SimpleFin access token"""
+        err = _simplefin_required()
+        if err:
+            return err
         from src.services.account.service import SimpleFinService
 
         current_user_id = get_jwt_identity()
@@ -270,6 +270,9 @@ class SimpleFinStatus(Resource):
     @jwt_required()
     def get(self):
         """Get SimpleFin connection status"""
+        err = _simplefin_required()
+        if err:
+            return err
         from src.services.account.service import SimpleFinService
         from src.models.account import SimpleFin
 
@@ -304,6 +307,9 @@ class SimpleFinDisconnect(Resource):
     @jwt_required()
     def post(self):
         """Disconnect SimpleFin integration"""
+        err = _simplefin_required()
+        if err:
+            return err
         from src.services.account.service import SimpleFinService
 
         current_user_id = get_jwt_identity()
@@ -326,6 +332,9 @@ class SimpleFinImport(Resource):
         Import selected SimpleFin accounts into finPal.
         Body: {"account_ids": ["sf_id_1", "sf_id_2"]}
         """
+        err = _simplefin_required()
+        if err:
+            return err
         from src.services.account.service import SimpleFinService
 
         current_user_id = get_jwt_identity()
@@ -351,6 +360,9 @@ class SimpleFinSyncAll(Resource):
     @jwt_required()
     def post(self):
         """Sync all SimpleFin accounts for the current user."""
+        err = _simplefin_required()
+        if err:
+            return err
         from src.services.account.service import SimpleFinService
 
         current_user_id = get_jwt_identity()
@@ -370,6 +382,9 @@ class SimpleFinFetch(Resource):
     @jwt_required()
     def post(self):
         """Fetch available SimpleFin accounts"""
+        err = _simplefin_required()
+        if err:
+            return err
         from src.services.account.service import SimpleFinService
         from integrations.simplefin.client import SimpleFin as SimpleFinClient
         from flask import current_app
@@ -416,7 +431,7 @@ class SimpleFinFetch(Resource):
 
         except Exception as e:
             current_app.logger.error(f"Error fetching SimpleFin accounts: {str(e)}")
-            return {'success': False, 'error': f'Error fetching accounts: {str(e)}'}, 500
+            return {'success': False, 'error': 'Internal server error'}, 500
 
 
 @ns.route('/import-csv')

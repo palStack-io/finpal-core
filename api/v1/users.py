@@ -13,6 +13,11 @@ import os
 import json
 import io
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # Create namespace
 ns = Namespace('users', description='User management operations')
 

@@ -1,5 +1,5 @@
 """Investments API endpoints"""
-from flask import request
+from flask import request, current_app
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.investment import Portfolio, Investment, InvestmentTransaction
@@ -11,6 +11,16 @@ from schemas import (
 )
 from integrations.investments.yfinance import YFinanceCache, get_stock_data_with_fallback
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+def _investments_required():
+    """Return a 503 error dict if Investments module is disabled, else None."""
+    if not current_app.config.get('INVESTMENT_TRACKING_ENABLED', False):
+        return {'success': False, 'error': 'Investments module is not enabled on this server'}, 503
+    return None
+
 
 # Create namespace
 ns = Namespace('investments', description='Investment operations')
@@ -51,6 +61,9 @@ class PortfolioList(Resource):
     @jwt_required()
     def get(self):
         """Get all portfolios for household"""
+        err = _investments_required()
+        if err:
+            return err
         from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
@@ -70,6 +83,9 @@ class PortfolioList(Resource):
     @jwt_required()
     def post(self):
         """Create a new portfolio"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
@@ -96,7 +112,7 @@ class PortfolioList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -107,6 +123,9 @@ class PortfolioDetail(Resource):
     @jwt_required()
     def get(self, id):
         """Get a specific portfolio by ID"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
 
         portfolio = Portfolio.query.filter_by(id=id, user_id=current_user_id).first()
@@ -126,6 +145,9 @@ class PortfolioDetail(Resource):
     @jwt_required()
     def put(self, id):
         """Update a portfolio"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
@@ -154,13 +176,16 @@ class PortfolioDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_portfolio', security='Bearer')
     @jwt_required()
     def delete(self, id):
         """Delete a portfolio"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
 
         portfolio = Portfolio.query.filter_by(id=id, user_id=current_user_id).first()
@@ -181,7 +206,7 @@ class PortfolioDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -191,6 +216,9 @@ class InvestmentList(Resource):
     @jwt_required()
     def get(self):
         """Get all holdings (investments) for current user"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
 
         # Get portfolio_id from query params if provided
@@ -232,6 +260,9 @@ class InvestmentList(Resource):
     @jwt_required()
     def post(self):
         """Add a new holding (investment)"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
@@ -297,7 +328,7 @@ class InvestmentList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -308,6 +339,9 @@ class InvestmentDetail(Resource):
     @jwt_required()
     def get(self, id):
         """Get a specific holding by ID"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
 
         investment = db.session.query(Investment).join(Portfolio).filter(
@@ -337,6 +371,9 @@ class InvestmentDetail(Resource):
     @jwt_required()
     def put(self, id):
         """Update a holding"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
@@ -367,13 +404,16 @@ class InvestmentDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_holding', security='Bearer')
     @jwt_required()
     def delete(self, id):
         """Delete a holding"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
 
         investment = db.session.query(Investment).join(Portfolio).filter(
@@ -397,7 +437,7 @@ class InvestmentDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -407,6 +447,9 @@ class TransactionList(Resource):
     @jwt_required()
     def get(self):
         """Get all investment transactions for current user"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
 
         # Get investment_id from query params if provided
@@ -435,6 +478,9 @@ class TransactionList(Resource):
     @jwt_required()
     def post(self):
         """Create a new investment transaction"""
+        err = _investments_required()
+        if err:
+            return err
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
@@ -484,7 +530,7 @@ class TransactionList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -495,6 +541,9 @@ class StockQuote(Resource):
     @jwt_required()
     def get(self, symbol):
         """Get real-time stock quote with automatic fallback to FMP"""
+        err = _investments_required()
+        if err:
+            return err
         exchange = request.args.get('exchange', 'US')
 
         # Use fallback function that tries yfinance first, then FMP
@@ -519,6 +568,9 @@ class StockHistory(Resource):
     @jwt_required()
     def get(self, symbol):
         """Get stock price history"""
+        err = _investments_required()
+        if err:
+            return err
         exchange = request.args.get('exchange', 'US')
         period = request.args.get('period', '1mo')  # 1d, 1mo, 3mo, 1y, etc.
 
@@ -542,6 +594,9 @@ class ExchangeList(Resource):
     @jwt_required()
     def get(self):
         """Get list of supported stock exchanges"""
+        err = _investments_required()
+        if err:
+            return err
         exchanges = yf_cache.get_available_exchanges()
 
         return {

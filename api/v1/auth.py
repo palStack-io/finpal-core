@@ -9,10 +9,12 @@ from flask_jwt_extended import (
     get_jwt
 )
 from werkzeug.security import check_password_hash, generate_password_hash
-from src.models.user import User
-from src.extensions import db
+from src.models.user import User, RevokedToken
+from src.extensions import db, limiter
 from datetime import datetime, timedelta
 from src.data import seed_user_defaults
+from schemas.input_schemas import login_input, register_input
+from src.utils.validation import validate_request, validation_error_response
 import logging
 import threading
 
@@ -62,6 +64,14 @@ def _get_user_modules(user_id: str) -> list:
         import os
         return ['pointspal'] if os.getenv('POINTSPAL_ENABLED', 'false').lower() == 'true' else []
 
+
+def _get_server_features() -> dict:
+    """Return which server-level optional features are enabled."""
+    return {
+        'simplefin': current_app.config.get('SIMPLEFIN_ENABLED', True),
+        'investments': current_app.config.get('INVESTMENT_TRACKING_ENABLED', True),
+    }
+
 # Create namespace
 ns = Namespace('auth', description='Authentication operations')
 
@@ -96,14 +106,16 @@ user_response = ns.model('UserResponse', {
 class Login(Resource):
     @ns.doc('login')
     @ns.expect(login_model)
+    @limiter.limit("10 per minute")
     def post(self):
         """Login with email and password"""
         data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
+        validated, errors = validate_request(login_input, data)
+        if errors:
+            return validation_error_response(errors)
 
-        if not email or not password:
-            return {'message': 'Email and password required'}, 400
+        email = validated['email']
+        password = validated['password']
 
         # Note: User.id IS the email in this schema
         user = User.query.filter_by(id=email).first()
@@ -164,7 +176,8 @@ class Login(Resource):
                 'hasCompletedOnboarding': user.has_completed_onboarding,
                 'profile_emoji': user.profile_emoji,
                 'modules': _get_user_modules(user.id),
-            }
+            },
+            'features': _get_server_features(),
         }
 
         if demo_expires_at:
@@ -177,19 +190,21 @@ class Login(Resource):
 class Register(Resource):
     @ns.doc('register')
     @ns.expect(register_model)
+    @limiter.limit("5 per minute")
     def post(self):
         """Register a new user"""
         data = request.get_json()
-        name = data.get('username')  # API expects 'username' but model uses 'name'
-        email = data.get('email')
-        password = data.get('password')
+        validated, errors = validate_request(register_input, data)
+        if errors:
+            return validation_error_response(errors)
 
-        if not name or not email or not password:
-            return {'message': 'Name, email, and password required'}, 400
+        name = validated['username']
+        email = validated['email']
+        password = validated['password']
 
-        # Check if user already exists (id IS the email)
+        # Check if user already exists — generic message prevents user enumeration
         if User.query.filter_by(id=email).first():
-            return {'message': 'Email already registered'}, 400
+            return {'message': 'Unable to create account'}, 400
 
         # Create new user
         new_user = User(
@@ -281,9 +296,14 @@ class Logout(Resource):
     @ns.doc('logout', security='Bearer')
     @jwt_required()
     def post(self):
-        """Logout (client should discard tokens)"""
-        # Note: With JWT, logout is handled client-side by discarding tokens
-        # For blacklisting, you'd need to implement a token blocklist
+        """Logout — revoke the current access token so it cannot be reused"""
+        jti = get_jwt()['jti']
+        try:
+            db.session.add(RevokedToken(jti=jti))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("Failed to revoke token on logout")
         return {'message': 'Successfully logged out'}, 200
 
 
@@ -340,6 +360,7 @@ class CompleteOnboarding(Resource):
             'hasCompletedOnboarding': True,
             'is_demo_user': user.is_demo_user,
             'modules': _get_user_modules(user.id),
+            'features': _get_server_features(),
         }, 200
 
 

@@ -5,8 +5,34 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.transaction import Expense
 from src.extensions import db
 from schemas import transaction_schema, transactions_schema
+from schemas.input_schemas import transaction_input
+from src.utils.validation import validate_request, validation_error_response
 from datetime import datetime
 from sqlalchemy import or_, and_
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _split_with_filter(column, user_id: str):
+    """Return a filter that correctly matches user_id in a comma-separated split_with column.
+    Replaces the buggy LIKE '%user_id%' which false-positives on IDs that are substrings of others."""
+    return or_(
+        column == user_id,
+        column.like(f'{user_id},%'),
+        column.like(f'%,{user_id},%'),
+        column.like(f'%,{user_id}'),
+    )
+
+
+def _transactions_for_user(user_id):
+    """Base query: transactions owned by the user OR where they appear in split_with."""
+    return Expense.query.filter(
+        or_(
+            Expense.user_id == user_id,
+            _split_with_filter(Expense.split_with, str(user_id))
+        )
+    )
 
 # Create namespace
 ns = Namespace('transactions', description='Transaction operations')
@@ -47,12 +73,7 @@ class TransactionList(Resource):
         search = request.args.get('search', type=str)
 
         # Build query
-        query = Expense.query.filter(
-            or_(
-                Expense.user_id == current_user_id,
-                Expense.split_with.like(f'%{current_user_id}%')
-            )
-        )
+        query = _transactions_for_user(current_user_id)
 
         # Apply filters
         if start_date:
@@ -110,10 +131,15 @@ class TransactionList(Resource):
 
     @ns.doc('create_transaction', security='Bearer')
     @ns.expect(transaction_model)
+    @jwt_required()
     def post(self):
         """Create a new transaction"""
         current_user_id = get_jwt_identity()
         data = request.get_json()
+
+        validated, errors = validate_request(transaction_input, data)
+        if errors:
+            return validation_error_response(errors)
 
         try:
             # Prepare transaction data for rule engine
@@ -165,7 +191,7 @@ class TransactionList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -178,15 +204,7 @@ class TransactionDetail(Resource):
         """Get a specific transaction by ID"""
         current_user_id = get_jwt_identity()
 
-        transaction = Expense.query.filter(
-            and_(
-                Expense.id == id,
-                or_(
-                    Expense.user_id == current_user_id,
-                    Expense.split_with.like(f'%{current_user_id}%')
-                )
-            )
-        ).first()
+        transaction = _transactions_for_user(current_user_id).filter(Expense.id == id).first()
 
         if not transaction:
             return {'success': False, 'error': 'Transaction not found'}, 404
@@ -200,6 +218,7 @@ class TransactionDetail(Resource):
 
     @ns.doc('update_transaction', security='Bearer')
     @ns.expect(transaction_model)
+    @jwt_required()
     def put(self, id):
         """Update a transaction"""
         current_user_id = get_jwt_identity()
@@ -209,7 +228,9 @@ class TransactionDetail(Resource):
         if not transaction:
             return {'success': False, 'error': 'Transaction not found'}, 404
 
-        data = request.get_json()
+        data = request.get_json() or {}
+        if not data:
+            return {'success': False, 'error': 'Request body required'}, 400
 
         try:
             # Update fields
@@ -250,10 +271,11 @@ class TransactionDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_transaction', security='Bearer')
+    @jwt_required()
     def delete(self, id):
         """Delete a transaction"""
         current_user_id = get_jwt_identity()
@@ -276,7 +298,7 @@ class TransactionDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -289,12 +311,7 @@ class RecentTransactions(Resource):
         current_user_id = get_jwt_identity()
         limit = request.args.get('limit', 10, type=int)
 
-        transactions = Expense.query.filter(
-            or_(
-                Expense.user_id == current_user_id,
-                Expense.split_with.like(f'%{current_user_id}%')
-            )
-        ).order_by(Expense.date.desc()).limit(limit).all()
+        transactions = _transactions_for_user(current_user_id).order_by(Expense.date.desc()).limit(limit).all()
 
         result = transactions_schema.dump(transactions)
 

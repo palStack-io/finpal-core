@@ -6,6 +6,8 @@
 import React, { useState, useCallback } from 'react';
 import { X, Upload, FileText, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { accountService, Account } from '../../services/accountService';
+import { api } from '../../services/api';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 
 interface CSVImportModalProps {
   isOpen: boolean;
@@ -23,6 +25,9 @@ interface ColumnMapping {
 const REQUIRED_FIELDS = ['date', 'description', 'amount'];
 const OPTIONAL_FIELDS = ['type', 'category', 'account', 'currency'];
 
+const descTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' };
+const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '40px 0' };
+
 export const CSVImportModal: React.FC<CSVImportModalProps> = ({
   isOpen,
   onClose,
@@ -39,6 +44,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [dateFormat, setDateFormat] = useState('%Y-%m-%d');
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -166,33 +172,35 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
     setStep('importing');
 
     try {
-      // Create FormData with file and mapping
-      const formData = new FormData();
-      formData.append('csv_file', selectedFile);
-      if (selectedAccount) {
-        formData.append('account_id', selectedAccount.toString());
+      // Invert mapping: { csvCol: appField } -> { appField: csvCol }
+      const invertedMapping: { [key: string]: string } = {};
+      for (const [csvCol, appField] of Object.entries(columnMapping)) {
+        if (appField) {
+          invertedMapping[appField] = csvCol;
+        }
       }
-      formData.append('column_mapping', JSON.stringify(columnMapping));
 
-      const importResult = await accountService.importTransactionsCSV(
-        selectedFile,
-        selectedAccount
-      );
+      const config: { [key: string]: any } = { date_format: dateFormat };
+      if (selectedAccount) config.account_id = selectedAccount;
 
-      if (importResult.success) {
-        setResult({
-          imported: importResult.importedCount,
-          skipped: importResult.skippedCount,
-        });
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('mapping', JSON.stringify(invertedMapping));
+      formData.append('config', JSON.stringify(config));
+
+      const { data } = await api.post('/api/v1/csv-import/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (data.success) {
+        setResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 });
         setStep('complete');
-
-        // Wait a moment to show results
         setTimeout(() => {
           onSuccess();
           handleClose();
         }, 3000);
       } else {
-        setError(importResult.errors?.join(', ') || 'Import failed');
+        setError(data.error || 'Import failed');
         setStep('mapping');
       }
     } catch (err: any) {
@@ -213,6 +221,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
     setError(null);
     setResult(null);
     setIsDragging(false);
+    setDateFormat('%Y-%m-%d');
     onClose();
   };
 
@@ -251,7 +260,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
           justifyContent: 'space-between',
           marginBottom: '24px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={flexRowGap12}>
             <div style={{
               height: '48px',
               width: '48px',
@@ -261,7 +270,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <Upload style={{ height: '24px', width: '24px', color: 'var(--text-primary)' }} />
+              <Upload style={{ height: '24px', width: '24px', color: 'white' }} />
             </div>
             <div>
               <h2 style={{
@@ -300,7 +309,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'var(--surface-hover)';
-              e.currentTarget.style.color = '#94a3b8';
+              e.currentTarget.style.color = 'var(--text-secondary)';
             }}
           >
             <X style={{ height: '24px', width: '24px' }} />
@@ -321,15 +330,15 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                 <div style={{
                   width: '40px',
                   height: '2px',
-                  background: step === s || (index === 1 && step === 'mapping') || step === 'importing' || step === 'complete' ? '#22c55e' : 'var(--border-medium)'
+                  background: step === s || (index === 1 && step === 'mapping') || step === 'importing' || step === 'complete' ? 'var(--brand-green-glow)' : 'var(--border-medium)'
                 }} />
               )}
               <div style={{
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                background: step === s || (s === 'upload' && (step === 'mapping' || step === 'importing' || step === 'complete')) || (s === 'mapping' && (step === 'importing' || step === 'complete')) ? '#22c55e' : 'var(--surface-hover)',
-                color: 'var(--text-primary)',
+                background: step === s || (s === 'upload' && (step === 'mapping' || step === 'importing' || step === 'complete')) || (s === 'mapping' && (step === 'importing' || step === 'complete')) ? 'var(--brand-green-glow)' : 'var(--surface-hover)',
+                color: step === s || (s === 'upload' && (step === 'mapping' || step === 'importing' || step === 'complete')) || (s === 'mapping' && (step === 'importing' || step === 'complete')) ? 'white' : 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -371,7 +380,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                   cursor: 'pointer',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#22c55e'}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--brand-green-glow)'}
                 onBlur={(e) => e.currentTarget.style.borderColor = 'var(--input-border)'}
               >
                 <option value="">All Accounts</option>
@@ -389,7 +398,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               style={{
-                border: `2px dashed ${isDragging ? '#22c55e' : selectedFile ? 'rgba(34, 197, 94, 0.5)' : 'var(--border-medium)'}`,
+                border: `2px dashed ${isDragging ? 'var(--brand-green-glow)' : selectedFile ? 'rgba(34, 197, 94, 0.5)' : 'var(--border-medium)'}`,
                 borderRadius: '12px',
                 padding: '48px 32px',
                 marginBottom: '24px',
@@ -403,7 +412,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
               <p style={{ color: 'var(--text-primary)', fontWeight: '500', marginBottom: '8px', fontSize: '16px' }}>
                 Drop your CSV file here
               </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+              <p style={descTextStyle}>
                 or click to browse
               </p>
               <input
@@ -420,10 +429,10 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                   disabled={isLoading}
                   style={{
                     padding: '10px 20px',
-                    background: '#22c55e',
+                    background: 'var(--brand-green-glow)',
                     border: 'none',
                     borderRadius: '8px',
-                    color: 'var(--text-primary)',
+                    color: 'white',
                     fontSize: '14px',
                     fontWeight: '600',
                     cursor: 'pointer',
@@ -431,7 +440,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                     boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = '#16a34a'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = '#22c55e'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--brand-green-glow)'}
                 >
                   Select File
                 </button>
@@ -453,15 +462,52 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
               alignItems: 'center',
               gap: '8px'
             }}>
-              <FileText style={{ height: '20px', width: '20px', color: '#22c55e' }} />
-              <span style={{ color: '#22c55e', fontSize: '14px', fontWeight: '500' }}>
+              <FileText style={{ height: '20px', width: '20px', color: 'var(--brand-green-glow)' }} />
+              <span style={{ color: 'var(--brand-green-glow)', fontSize: '14px', fontWeight: '500' }}>
                 {selectedFile?.name} ({csvHeaders.length} columns detected)
               </span>
             </div>
 
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+            <p style={descTextStyle}>
               Map your CSV columns to transaction fields. Required fields are marked with *
             </p>
+
+            {/* Date Format */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', color: 'var(--text-primary)', fontWeight: '500', fontSize: '14px', marginBottom: '8px' }}>
+                Date Format *
+              </label>
+              <select
+                value={dateFormat}
+                onChange={(e) => setDateFormat(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="%Y-%m-%d">YYYY-MM-DD (e.g. 2025-04-17)</option>
+                <option value="%d/%m/%Y">DD/MM/YYYY (e.g. 17/04/2025)</option>
+                <option value="%m/%d/%Y">MM/DD/YYYY (e.g. 04/17/2025)</option>
+                <option value="%d-%m-%Y">DD-MM-YYYY (e.g. 17-04-2025)</option>
+                <option value="%d.%m.%Y">DD.MM.YYYY (e.g. 17.04.2025)</option>
+                <option value="%Y/%m/%d">YYYY/MM/DD (e.g. 2025/04/17)</option>
+              </select>
+              {csvPreview[0] && (() => {
+                const dateColHeader = Object.entries(columnMapping).find(([, v]) => v === 'date')?.[0];
+                const sampleDate = dateColHeader ? csvPreview[0][csvHeaders.indexOf(dateColHeader)] : null;
+                return sampleDate ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '6px' }}>
+                    Sample date value: <strong>{sampleDate}</strong>
+                  </p>
+                ) : null;
+              })()}
+            </div>
 
             {/* Column Mapping */}
             <div style={{ marginBottom: '24px' }}>
@@ -551,7 +597,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                           }}>
                             {header}
                             {columnMapping[header] && (
-                              <div style={{ fontSize: '10px', color: '#22c55e', marginTop: '4px' }}>
+                              <div style={{ fontSize: '10px', color: 'var(--brand-green-glow)', marginTop: '4px' }}>
                                 → {columnMapping[header]}
                               </div>
                             )}
@@ -616,10 +662,10 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                 style={{
                   flex: 2,
                   padding: '12px 16px',
-                  background: isLoading ? 'rgba(34, 197, 94, 0.3)' : '#22c55e',
+                  background: isLoading ? 'rgba(34, 197, 94, 0.3)' : 'var(--brand-green-glow)',
                   border: 'none',
                   borderRadius: '8px',
-                  color: 'var(--text-primary)',
+                  color: 'white',
                   fontWeight: '600',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                   opacity: isLoading ? 0.5 : 1,
@@ -631,7 +677,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                   gap: '8px'
                 }}
                 onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#16a34a')}
-                onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#22c55e')}
+                onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = 'var(--brand-green-glow)')}
               >
                 Import Transactions
                 <ArrowRight style={{ height: '16px', width: '16px' }} />
@@ -642,12 +688,12 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
 
         {/* Importing Step */}
         {step === 'importing' && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <div style={emptyStateStyle}>
             <div style={{
               width: '64px',
               height: '64px',
               border: '4px solid rgba(34, 197, 94, 0.3)',
-              borderTopColor: '#22c55e',
+              borderTopColor: 'var(--brand-green-glow)',
               borderRadius: '50%',
               margin: '0 auto 24px',
               animation: 'spin 1s linear infinite'
@@ -663,7 +709,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
 
         {/* Complete Step */}
         {step === 'complete' && result && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <div style={emptyStateStyle}>
             <div style={{
               width: '64px',
               height: '64px',
@@ -674,7 +720,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <CheckCircle style={{ height: '32px', width: '32px', color: '#22c55e' }} />
+              <CheckCircle style={{ height: '32px', width: '32px', color: 'var(--brand-green-glow)' }} />
             </div>
             <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
               Import Successful!

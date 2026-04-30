@@ -257,11 +257,11 @@ class DemoService:
         transactions = DemoService._get_transactions_for_persona(persona)
 
         for txn in transactions:
-            # Find category
+            # Find category — hint must be a substring of the category name
             category_id = None
             hint = txn.get('category_hint', '').lower()
             for cat_name, cat_id in category_map.items():
-                if hint and cat_name in hint:
+                if hint and hint in cat_name:
                     category_id = cat_id
                     break
 

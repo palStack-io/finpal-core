@@ -113,8 +113,43 @@ services:
       - finpal-dev
     restart: unless-stopped
 
+  # ===================================
+  # Backup (opt-in: docker compose --profile backup up -d)
+  # ===================================
+  backup:
+    build:
+      context: .
+      dockerfile: backup/Dockerfile
+    container_name: finpal-backup-dev
+    profiles: ["backup"]
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=finpal
+      - POSTGRES_PASSWORD=finpal_dev
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 3 * * *}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - BACKUP_REMOTE_BUCKET=${BACKUP_REMOTE_BUCKET:-}
+      - RCLONE_CONFIG_REMOTE_TYPE=${RCLONE_CONFIG_REMOTE_TYPE:-}
+      - RCLONE_CONFIG_REMOTE_ACCOUNT=${RCLONE_CONFIG_REMOTE_ACCOUNT:-}
+      - RCLONE_CONFIG_REMOTE_KEY=${RCLONE_CONFIG_REMOTE_KEY:-}
+      - RCLONE_CONFIG_REMOTE_PROVIDER=${RCLONE_CONFIG_REMOTE_PROVIDER:-}
+      - RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID:-}
+      - RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY:-}
+      - RCLONE_CONFIG_REMOTE_ENDPOINT=${RCLONE_CONFIG_REMOTE_ENDPOINT:-}
+      - BACKUP_HEALTHCHECK_URL=${BACKUP_HEALTHCHECK_URL:-}
+    volumes:
+      - backup_dev_data:/backups
+    networks:
+      - finpal-dev
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_dev_data:
+    driver: local
+  backup_dev_data:
     driver: local
 
 networks:

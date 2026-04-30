@@ -123,9 +123,9 @@ export const SimpleFinSettings: React.FC = () => {
         borderRadius: '8px'
       }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <AlertCircle size={20} style={{ color: '#fbbf24' }} />
+          <AlertCircle size={20} style={{ color: 'var(--brand-accent-gold)' }} />
           <div>
-            <p style={{ color: '#fbbf24', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+            <p style={{ color: 'var(--brand-accent-gold)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
               SimpleFin Not Available
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
@@ -151,8 +151,8 @@ export const SimpleFinSettings: React.FC = () => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <AlertCircle size={20} style={{ color: '#ef4444' }} />
-          <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{error}</p>
+          <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
@@ -168,8 +168,8 @@ export const SimpleFinSettings: React.FC = () => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <Check size={20} style={{ color: '#22c55e' }} />
-          <p style={{ color: '#22c55e', fontSize: '14px', margin: 0 }}>{success}</p>
+          <Check size={20} style={{ color: 'var(--brand-green-glow)' }} />
+          <p style={{ color: 'var(--brand-green-glow)', fontSize: '14px', margin: 0 }}>{success}</p>
         </div>
       )}
 
@@ -195,7 +195,7 @@ export const SimpleFinSettings: React.FC = () => {
             background: isConnected ? 'rgba(34, 197, 94, 0.2)' : 'rgba(148, 163, 184, 0.2)',
             border: `1px solid ${isConnected ? 'rgba(34, 197, 94, 0.3)' : 'rgba(148, 163, 184, 0.3)'}`,
             borderRadius: '6px',
-            color: isConnected ? '#22c55e' : '#94a3b8',
+            color: isConnected ? 'var(--brand-green-glow)' : 'var(--text-secondary)',
             fontSize: '13px',
             fontWeight: '600'
           }}>
@@ -245,7 +245,7 @@ export const SimpleFinSettings: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              background: isEnabled ? '#15803d' : 'var(--surface-active)',
+              background: isEnabled ? 'var(--brand-main-green)' : 'var(--surface-active)',
               borderRadius: '24px',
               transition: '0.3s',
               opacity: isLoading ? 0.5 : 1
@@ -273,7 +273,7 @@ export const SimpleFinSettings: React.FC = () => {
           style={{
             width: '100%',
             padding: '14px',
-            background: '#15803d',
+            background: 'var(--brand-main-green)',
             border: 'none',
             borderRadius: '8px',
             color: 'var(--text-primary)',
@@ -286,8 +286,8 @@ export const SimpleFinSettings: React.FC = () => {
             gap: '8px',
             transition: 'all 0.3s'
           }}
-          onMouseEnter={(e) => ((e.target as HTMLButtonElement).style.background = '#166534')}
-          onMouseLeave={(e) => ((e.target as HTMLButtonElement).style.background = '#15803d')}
+          onMouseEnter={(e) => ((e.target as HTMLButtonElement).style.background = 'var(--brand-dark-green)')}
+          onMouseLeave={(e) => ((e.target as HTMLButtonElement).style.background = 'var(--brand-main-green)')}
         >
           <Link2 size={16} />
           Connect SimpleFin
@@ -319,7 +319,7 @@ export const SimpleFinSettings: React.FC = () => {
                 href="https://beta-bridge.simplefin.org/simplefin/claim"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#3b82f6', textDecoration: 'underline' }}
+                style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}
               >
                 SimpleFin's setup page
               </a>
@@ -381,7 +381,7 @@ export const SimpleFinSettings: React.FC = () => {
               style={{
                 flex: 1,
                 padding: '12px',
-                background: (isLoading || !accessUrl.trim()) ? '#166534' : '#15803d',
+                background: (isLoading || !accessUrl.trim()) ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
                 border: 'none',
                 borderRadius: '8px',
                 color: 'var(--text-primary)',
@@ -408,7 +408,7 @@ export const SimpleFinSettings: React.FC = () => {
             background: 'rgba(239, 68, 68, 0.2)',
             border: '1px solid rgba(239, 68, 68, 0.5)',
             borderRadius: '8px',
-            color: '#ef4444',
+            color: 'var(--accent-red)',
             fontSize: '14px',
             fontWeight: '600',
             cursor: isLoading ? 'not-allowed' : 'pointer',

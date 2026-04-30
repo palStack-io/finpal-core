@@ -1,153 +1,137 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette, CreditCard } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
 import { pointspalService, WalletCard } from '../../modules/pointspal/service';
+import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 
 interface AddAccountFormProps {
   onSuccess: () => void;
   onCancel: () => void;
 }
 
+interface AccountFormValues {
+  name: string;
+  type: string;
+  balance: string;
+  currency: string;
+  description: string;
+  color: string;
+}
+
 const ACCOUNT_COLORS = [
-  { value: '#3b82f6', label: 'Blue' },
-  { value: '#22c55e', label: 'Green' },
-  { value: '#ef4444', label: 'Red' },
+  { value: 'var(--accent-blue)', label: 'Blue' },
+  { value: 'var(--brand-green-glow)', label: 'Green' },
+  { value: 'var(--accent-red)', label: 'Red' },
   { value: '#8b5cf6', label: 'Purple' },
-  { value: '#f59e0b', label: 'Orange' },
+  { value: 'var(--accent-yellow)', label: 'Orange' },
   { value: '#ec4899', label: 'Pink' },
   { value: '#06b6d4', label: 'Cyan' },
   { value: '#eab308', label: 'Yellow' },
 ];
 
 const getDefaultColorForType = (type: string): string => {
-  switch(type) {
-    case 'checking': return '#3b82f6';
-    case 'savings': return '#22c55e';
-    case 'credit': return '#ef4444';
+  switch (type) {
+    case 'checking': return 'var(--accent-blue)';
+    case 'savings': return 'var(--brand-green-glow)';
+    case 'credit': return 'var(--accent-red)';
     case 'investment': return '#8b5cf6';
-    case 'cash': return '#f59e0b';
-    default: return '#3b82f6';
+    case 'cash': return 'var(--accent-yellow)';
+    default: return 'var(--accent-blue)';
   }
 };
 
 export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCancel }) => {
   const { showToast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'checking',
-    balance: '',
-    currency: 'USD',
-    description: '',
-    color: '#3b82f6'
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<AccountFormValues>({
+    defaultValues: {
+      name: '',
+      type: 'checking',
+      balance: '',
+      currency: 'USD',
+      description: '',
+      color: 'var(--accent-blue)',
+    },
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const watchType = watch('type');
+  const watchColor = watch('color');
 
-  // pointsPal linking (credit accounts only)
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [walletCards, setWalletCards] = useState<WalletCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<number | ''>('');
 
   useEffect(() => {
-    if (formData.type === 'credit') {
+    setValue('color', getDefaultColorForType(watchType));
+  }, [watchType, setValue]);
+
+  useEffect(() => {
+    if (watchType === 'credit') {
       pointspalService.getCards().then(setWalletCards).catch(() => setWalletCards([]));
     }
-  }, [formData.type]);
+  }, [watchType]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    const updates: any = { [name]: value };
-
-    // Auto-update color when account type changes
-    if (name === 'type') {
-      updates.color = getDefaultColorForType(value);
-    }
-
-    setFormData(prev => ({ ...prev, ...updates }));
-    setError(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
+  const onSubmit = async (data: AccountFormValues) => {
+    setApiError(null);
     try {
-      // Validation
-      if (!formData.name.trim()) {
-        throw new Error('Account name is required');
-      }
-      if (!formData.balance || parseFloat(formData.balance) < 0) {
-        throw new Error('Balance must be 0 or greater');
-      }
-
-      // Call API to create account
       const newAccount = await accountService.createAccount({
-        name: formData.name,
-        account_type: formData.type,
-        balance: parseFloat(formData.balance),
-        currency_code: formData.currency,
-        color: formData.color
+        name: data.name,
+        account_type: data.type,
+        balance: parseFloat(data.balance),
+        currency_code: data.currency,
+        color: data.color,
       });
 
-      // Link to pointsPal if a rewards card was selected
-      if (formData.type === 'credit' && selectedCardId && newAccount?.id) {
+      if (data.type === 'credit' && selectedCardId && newAccount?.id) {
         const externalId = `manual-${newAccount.id}`;
         try {
-          // Set external_id on the account so the pointsPal bridge can match it
           await accountService.updateAccount(newAccount.id, { external_id: externalId });
-          // Create the SimpleFin card link
           await pointspalService.createCardLink({
             simplefin_account_id: externalId,
             user_card_id: selectedCardId as number,
             is_credit_card: true,
-            simplefin_account_name: formData.name,
+            simplefin_account_name: data.name,
           });
         } catch {
-          // Non-fatal — account was created, just the linking failed
           showToast('Account created but pointsPal linking failed. Link it manually from pointsPal.', 'error');
         }
       }
 
       setSuccess(true);
       showToast('Account created successfully', 'success');
-
-      // Wait a moment to show success message, then close
-      setTimeout(() => {
-        onSuccess();
-      }, 1000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      setTimeout(() => { onSuccess(); }, 1000);
+    } catch (err) {
+      const msg = (err as { message?: string }).message || 'Failed to create account';
+      setApiError(msg);
       showToast('Failed to create account', 'error');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '12px 16px',
-    background: 'var(--input-bg)',
-    border: '1px solid var(--input-border)',
-    borderRadius: '8px',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    outline: 'none',
-    transition: 'all 0.3s'
-  };
 
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    fontWeight: '600',
-    marginBottom: '8px'
+
+
+  const focusHandlers = {
+    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+      e.currentTarget.style.background = 'var(--input-bg-focus)';
+    },
+    onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      e.currentTarget.style.borderColor = 'var(--input-border)';
+      e.currentTarget.style.background = 'var(--input-bg)';
+    },
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <form onSubmit={handleSubmit(onSubmit)} style={flexColGap20}>
       {/* Success Message */}
       {success && (
         <div
@@ -158,20 +142,20 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             padding: '16px',
             background: 'rgba(134, 239, 172, 0.1)',
             border: '1px solid rgba(134, 239, 172, 0.3)',
-            borderRadius: '8px'
+            borderRadius: '8px',
           }}
         >
           <div style={{ background: 'rgba(134, 239, 172, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <Check size={20} style={{ color: '#86efac' }} />
+            <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
           </div>
-          <p style={{ color: '#86efac', fontWeight: '600', fontSize: '14px', margin: 0 }}>
+          <p style={{ color: 'var(--brand-light-green)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
             Account created successfully!
           </p>
         </div>
       )}
 
-      {/* Error Message */}
-      {error && (
+      {/* API Error Message */}
+      {apiError && (
         <div
           style={{
             display: 'flex',
@@ -180,62 +164,46 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             padding: '16px',
             background: 'rgba(239, 68, 68, 0.1)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '8px'
+            borderRadius: '8px',
           }}
         >
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <AlertCircle size={20} style={{ color: '#ef4444' }} />
+            <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           </div>
-          <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{apiError}</p>
         </div>
       )}
 
       {/* Account Name */}
       <div>
         <label style={labelStyle}>
-          <Wallet size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <Wallet size={16} style={iconInlineStyle} />
           Account Name *
         </label>
         <input
           type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
           placeholder="e.g., Main Checking Account"
-          required
           disabled={isSubmitting}
           style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          {...focusHandlers}
+          {...register('name', { required: 'Account name is required' })}
         />
+        {errors.name && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <AlertCircle size={14} style={{ color: 'var(--accent-red)', flexShrink: 0 }} />
+            <p style={errorTextStyle}>{errors.name.message}</p>
+          </div>
+        )}
       </div>
 
       {/* Account Type */}
       <div>
         <label style={labelStyle}>Account Type</label>
         <select
-          name="type"
-          value={formData.type}
-          onChange={handleChange}
           disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          style={{ ...inputStyle, cursor: 'pointer' }}
+          {...focusHandlers}
+          {...register('type')}
         >
           <option value="checking" style={{ background: 'var(--bg-primary)' }}>Checking Account</option>
           <option value="savings" style={{ background: 'var(--bg-primary)' }}>Savings Account</option>
@@ -250,50 +218,37 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       {/* Initial Balance */}
       <div>
         <label style={labelStyle}>
-          <DollarSign size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <DollarSign size={16} style={iconInlineStyle} />
           Initial Balance *
         </label>
         <input
           type="number"
-          name="balance"
-          value={formData.balance}
-          onChange={handleChange}
           placeholder="0.00"
           step="0.01"
-          required
           disabled={isSubmitting}
           style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          {...focusHandlers}
+          {...register('balance', {
+            required: 'Balance is required',
+            min: { value: 0, message: 'Balance must be 0 or greater' },
+          })}
         />
+        {errors.balance && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <AlertCircle size={14} style={{ color: 'var(--accent-red)', flexShrink: 0 }} />
+            <p style={errorTextStyle}>{errors.balance.message}</p>
+          </div>
+        )}
       </div>
 
       {/* Currency */}
       <div>
         <label style={labelStyle}>Currency</label>
         <select
-          name="currency"
-          value={formData.currency}
-          onChange={handleChange}
           disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          style={{ ...inputStyle, cursor: 'pointer' }}
+          {...focusHandlers}
+          {...register('currency')}
         >
           <option value="USD" style={{ background: 'var(--bg-primary)' }}>USD ($)</option>
           <option value="EUR" style={{ background: 'var(--bg-primary)' }}>EUR (€)</option>
@@ -305,10 +260,10 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       </div>
 
       {/* pointsPal rewards card link (credit only) */}
-      {formData.type === 'credit' && (
+      {watchType === 'credit' && (
         <div style={{ padding: '14px 16px', background: 'rgba(21,128,61,0.05)', border: '1px solid rgba(21,128,61,0.2)', borderRadius: '8px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)', marginBottom: '8px' }}>
-            <CreditCard size={16} style={{ color: '#15803d' }} />
+            <CreditCard size={16} style={{ color: 'var(--brand-main-green)' }} />
             Link to pointsPal Rewards Card
           </label>
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 10px' }}>
@@ -338,7 +293,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       {/* Color Picker */}
       <div>
         <label style={labelStyle}>
-          <Palette size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <Palette size={16} style={iconInlineStyle} />
           Account Color
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
@@ -346,20 +301,20 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             <button
               key={color.value}
               type="button"
-              onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
+              onClick={() => setValue('color', color.value)}
               disabled={isSubmitting}
               style={{
                 padding: '12px',
                 background: color.value,
-                border: formData.color === color.value ? '3px solid white' : '1px solid var(--border-medium)',
+                border: watchColor === color.value ? '3px solid white' : '1px solid var(--border-medium)',
                 borderRadius: '8px',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 transition: 'all 0.3s',
                 position: 'relative',
-                opacity: isSubmitting ? 0.5 : 1
+                opacity: isSubmitting ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
-                if (!isSubmitting && formData.color !== color.value) {
+                if (!isSubmitting && watchColor !== color.value) {
                   e.currentTarget.style.transform = 'scale(1.1)';
                 }
               }}
@@ -369,7 +324,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
                 }
               }}
             >
-              {formData.color === color.value && (
+              {watchColor === color.value && (
                 <Check size={20} style={{ color: 'white', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
               )}
             </button>
@@ -380,34 +335,21 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       {/* Description */}
       <div>
         <label style={labelStyle}>
-          <FileText size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <FileText size={16} style={iconInlineStyle} />
           Description
         </label>
         <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
           placeholder="Add notes about this account..."
           rows={3}
           disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            resize: 'vertical',
-            fontFamily: 'inherit'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+          {...focusHandlers}
+          {...register('description')}
         />
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+      <div style={formActionsStyle}>
         <button
           type="button"
           onClick={onCancel}
@@ -423,17 +365,13 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s',
-            opacity: isSubmitting ? 0.5 : 1
+            opacity: isSubmitting ? 0.5 : 1,
           }}
           onMouseEnter={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.background = 'rgba(71, 85, 105, 0.5)';
-            }
+            if (!isSubmitting) e.currentTarget.style.background = 'rgba(71, 85, 105, 0.5)';
           }}
           onMouseLeave={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.background = 'rgba(71, 85, 105, 0.3)';
-            }
+            if (!isSubmitting) e.currentTarget.style.background = 'rgba(71, 85, 105, 0.3)';
           }}
         >
           Cancel
@@ -452,7 +390,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s',
-            opacity: isSubmitting ? 0.7 : 1
+            opacity: isSubmitting ? 0.7 : 1,
           }}
           onMouseEnter={(e) => {
             if (!isSubmitting) {

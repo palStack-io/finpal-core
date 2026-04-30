@@ -189,6 +189,7 @@ export const Categories: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        aria-label="Edit category"
                         onClick={() => setEditingCategory(category)}
                       >
                         <Edit2 className="h-4 w-4" />
@@ -196,6 +197,7 @@ export const Categories: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        aria-label="Delete category"
                         onClick={() => handleDeleteCategory(category.id)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -219,6 +221,7 @@ export const Categories: React.FC = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              aria-label="Edit subcategory"
                               onClick={() => setEditingCategory(sub)}
                             >
                               <Edit2 className="h-3 w-3" />
@@ -226,6 +229,7 @@ export const Categories: React.FC = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              aria-label="Delete subcategory"
                               onClick={() => handleDeleteCategory(sub.id)}
                             >
                               <Trash2 className="h-3 w-3" />

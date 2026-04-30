@@ -1,5 +1,6 @@
 import React from 'react';
 import type { RecommendCard, DisplacedWinner } from '../service';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../../styles/layoutStyles';
 
 interface RecommendTableProps {
   cards: RecommendCard[];
@@ -41,7 +42,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
         </div>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table style={tableStyle}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {['Card', 'Rate', 'Effective', 'Value', ''].map((h) => (

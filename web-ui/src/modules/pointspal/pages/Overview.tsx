@@ -155,7 +155,7 @@ const PointsPalOverview: React.FC = () => {
             <div style={cardTitle}>Your Cards</div>
             <button
               onClick={() => navigate('/pointspal/cards')}
-              style={{ background: 'none', border: 'none', color: 'var(--g700)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+              style={textBtnStyle}
             >
               Manage all →
             </button>
@@ -208,7 +208,7 @@ const PointsPalOverview: React.FC = () => {
                 <div style={cardTitle}>🔥 Action Needed</div>
                 <button
                   onClick={() => navigate('/pointspal/caps')}
-                  style={{ background: 'none', border: 'none', color: 'var(--g700)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                  style={textBtnStyle}
                 >
                   All alerts →
                 </button>
@@ -225,13 +225,13 @@ const PointsPalOverview: React.FC = () => {
                     <div style={{ width: 32, height: 32, borderRadius: 'var(--rs)', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                       {item.emoji}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={flexMinZeroStyle}>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, color: 'var(--ink)' }}>{item.title}</div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, lineHeight: 1.4 }}>{item.description}</div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={rightAlignStyle}>
                       <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, color: valueColor }}>{item.value}</div>
-                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>{item.value_label}</div>
+                      <div style={microTextStyle}>{item.value_label}</div>
                     </div>
                   </div>
                 );
@@ -246,11 +246,11 @@ const PointsPalOverview: React.FC = () => {
               {data.recent_activity.map((act, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < data.recent_activity.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: act.dot_color, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={flexMinZeroStyle}>
                     <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 12, color: 'var(--ink)' }}>{act.description}</div>
-                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>{act.card_name} · {act.subtitle}</div>
+                    <div style={microTextStyle}>{act.card_name} · {act.subtitle}</div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={rightAlignStyle}>
                     <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, color: 'var(--g700)' }}>
                       +{act.pts_earned.toLocaleString()} pts
                     </div>
@@ -297,5 +297,10 @@ const btnStyle: React.CSSProperties = {
   fontSize: 13,
   cursor: 'pointer',
 };
+
+const microTextStyle: React.CSSProperties = { fontSize: 10, color: 'var(--muted)' };
+const flexMinZeroStyle: React.CSSProperties = { flex: 1, minWidth: 0 };
+const rightAlignStyle: React.CSSProperties = { textAlign: 'right', flexShrink: 0 };
+const textBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: 'var(--g700)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer' };
 
 export default PointsPalOverview;

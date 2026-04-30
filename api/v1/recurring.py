@@ -6,6 +6,11 @@ from src.services.recurring.service import RecurringService
 from src.models.recurring import RecurringExpense
 from src.extensions import db
 from schemas import recurring_schema, recurrings_schema
+from schemas.input_schemas import recurring_input
+from src.utils.validation import validate_request, validation_error_response
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create namespace
 ns = Namespace('recurring', description='Recurring transaction operations')
@@ -47,13 +52,8 @@ class RecurringList(Resource):
             }, 200
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {
-                'success': False,
-                'error': str(e),
-                'recurring': []
-            }, 500
+            logger.exception("Failed to list recurring transactions")
+            return {'success': False, 'error': 'Internal server error', 'recurring': []}, 500
 
     @ns.doc('create_recurring', security='Bearer')
     @ns.expect(recurring_model)
@@ -63,16 +63,20 @@ class RecurringList(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
+        validated, errors = validate_request(recurring_input, data)
+        if errors:
+            return validation_error_response(errors)
+
         try:
             success, message, recurring = recurring_service.add_recurring(
                 user_id=current_user_id,
-                description=data.get('description'),
-                amount=data.get('amount'),
-                frequency=data.get('frequency'),
-                category_id=data.get('category_id'),
-                start_date=data.get('start_date'),
-                account_id=data.get('account_id'),
-                currency_code=data.get('currency_code')
+                description=validated['description'],
+                amount=validated['amount'],
+                frequency=validated['frequency'],
+                category_id=validated.get('category_id'),
+                start_date=validated.get('start_date'),
+                account_id=validated.get('account_id'),
+                currency_code=validated.get('currency_code')
             )
 
             if not success:
@@ -92,7 +96,7 @@ class RecurringList(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -123,7 +127,9 @@ class RecurringDetail(Resource):
     def put(self, id):
         """Update a recurring transaction"""
         current_user_id = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json() or {}
+        if not data:
+            return {'success': False, 'error': 'Request body required'}, 400
 
         try:
             success, message = recurring_service.update_recurring(
@@ -150,7 +156,7 @@ class RecurringDetail(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_recurring', security='Bearer')
@@ -176,7 +182,7 @@ class RecurringDetail(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -207,7 +213,7 @@ class RecurringToggle(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -230,7 +236,7 @@ class RecurringDetect(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e),
+                'error': 'Internal server error',
                 'patterns': []
             }, 500
 
@@ -242,7 +248,7 @@ class RecurringIgnore(Resource):
     def post(self):
         """Ignore a detected recurring pattern"""
         current_user_id = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json() or {}
 
         pattern_key = data.get('pattern_key')
         if not pattern_key:
@@ -268,7 +274,7 @@ class RecurringIgnore(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -279,7 +285,7 @@ class RecurringFromPattern(Resource):
     def post(self):
         """Create recurring transaction from detected pattern"""
         current_user_id = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json() or {}
 
         pattern_key = data.get('pattern_key')
         if not pattern_key:
@@ -326,5 +332,5 @@ class RecurringFromPattern(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400

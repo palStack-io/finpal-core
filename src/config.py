@@ -11,8 +11,8 @@ load_dotenv()
 
 class Config:
     """Base configuration"""
-    # Secret key
-    SECRET_KEY = os.getenv('SECRET_KEY', 'fallback_secret_key_change_in_production')
+    # Secret key — must be set via environment variable; no default allowed
+    SECRET_KEY = os.getenv('SECRET_KEY')
 
     # Encryption key for sensitive fields (API keys, tokens).
     # Must be a valid URL-safe base64-encoded 32-byte key.
@@ -72,6 +72,19 @@ class Config:
     # Logging
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 
+    # CORS — comma-separated list of allowed origins
+    CORS_ALLOWED_ORIGINS = [
+        o.strip()
+        for o in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000').split(',')
+        if o.strip()
+    ]
+
 def get_config():
     """Get the appropriate configuration"""
-    return Config()
+    config = Config()
+    if not config.SECRET_KEY:
+        raise ValueError(
+            "SECRET_KEY environment variable must be set. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    return config

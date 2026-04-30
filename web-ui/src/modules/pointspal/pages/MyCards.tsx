@@ -184,15 +184,15 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
   // ── Community PR step (shown after card is saved) ───────────────────────────
   if (savedCardId !== null) {
     return (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={overlayStyle}>
         <div style={{ background: 'var(--white)', borderRadius: 'var(--r)', width: '100%', maxWidth: 460, boxShadow: 'var(--sh-md)', display: 'flex', flexDirection: 'column' }}>
 
           {/* Header */}
-          <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--ink)', margin: 0 }}>
+          <div style={modalHeaderStyle}>
+            <h2 style={modalTitleStyle}>
               Card saved ✓
             </h2>
-            <button onClick={onSave} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 }}>
+            <button onClick={onSave} style={iconBtnStyle}>
               <X size={18} />
             </button>
           </div>
@@ -235,15 +235,15 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div style={overlayStyle}>
       <div style={{ background: 'var(--white)', borderRadius: 'var(--r)', width: '100%', maxWidth: 500, boxShadow: 'var(--sh-md)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
 
         {/* Header */}
-        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--ink)', margin: 0 }}>
+        <div style={modalHeaderStyle}>
+          <h2 style={modalTitleStyle}>
             {card ? 'Edit Card' : 'Add Card to Wallet'}
           </h2>
-          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 }}>
+          <button onClick={onCancel} style={iconBtnStyle}>
             <X size={18} />
           </button>
         </div>
@@ -303,7 +303,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         {p.tpg_cpp != null && <div style={{ fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--g700)' }}>{p.tpg_cpp}¢/pt</div>}
-                        {p.annual_fee != null && <div style={{ fontSize: 10, color: 'var(--muted)' }}>${p.annual_fee}/yr</div>}
+                        {p.annual_fee != null && <div style={microTextStyle}>${p.annual_fee}/yr</div>}
                       </div>
                     </button>
                   ))}
@@ -336,7 +336,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
 
             {/* Not in DB hint */}
             {!selectedProgram && (
-              <p style={{ fontSize: 11, color: 'var(--muted)', margin: '6px 0 0' }}>
+              <p style={captionStyle}>
                 Can't find your card? Enter it manually below and optionally submit it to the community database.
               </p>
             )}
@@ -468,7 +468,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                   </button>
                 ))}
               </div>
-              <p style={{ fontSize: 11, color: 'var(--muted)', margin: '6px 0 0' }}>Low confidence cards are excluded from optimizer recommendations.</p>
+              <p style={captionStyle}>Low confidence cards are excluded from optimizer recommendations.</p>
             </div>
           )}
         </div>
@@ -756,13 +756,13 @@ const MyCards: React.FC = () => {
                           <div key={txn.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < txnCache[card.id].length - 1 ? '1px solid var(--border)' : 'none' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 11, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {txn.description || txn.category}
+                                {txn.description || txn.category?.name || txn.category}
                               </div>
-                              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{txn.category} · {txn.date} · {txn.rate}×</div>
+                              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{txn.category?.name || txn.category || 'Uncategorized'} · {txn.date} · {txn.rate}×</div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
                               <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--g700)' }}>+{txn.pts_earned.toLocaleString()} pts</div>
-                              <div style={{ fontSize: 10, color: 'var(--muted)' }}>${txn.amount.toFixed(2)}</div>
+                              <div style={microTextStyle}>${txn.amount.toFixed(2)}</div>
                             </div>
                           </div>
                         ))
@@ -799,5 +799,12 @@ const btnStyle: React.CSSProperties = {
   fontSize: 13,
   cursor: 'pointer',
 };
+
+const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 };
+const modalHeaderStyle: React.CSSProperties = { padding: '20px 20px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 };
+const modalTitleStyle: React.CSSProperties = { fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--ink)', margin: 0 };
+const iconBtnStyle: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 };
+const microTextStyle: React.CSSProperties = { fontSize: 10, color: 'var(--muted)' };
+const captionStyle: React.CSSProperties = { fontSize: 11, color: 'var(--muted)', margin: '6px 0 0' };
 
 export default MyCards;

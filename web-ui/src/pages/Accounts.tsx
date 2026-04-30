@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Edit2, Trash2, RefreshCw, Eye, EyeOff, MoreVertical, DollarSign, Upload } from 'lucide-react';
+import { Plus, Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Edit2, Trash2, RefreshCw, DollarSign, Upload, Loader2 } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
@@ -8,13 +8,17 @@ import { SlidePanel } from '../components/SlidePanel';
 import { AddAccountForm } from '../components/forms/AddAccountForm';
 import { EditAccountForm } from '../components/forms/EditAccountForm';
 import { CSVImportModal } from '../components/import/CSVImportModal';
+import { StatCard } from '../components/StatCard';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+
+const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
+const actionBtnStyle: React.CSSProperties = { padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' };
 
 export const Accounts = () => {
   const { showToast } = useToast();
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const [showBalances, setShowBalances] = useState(true);
-  const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCSVImport, setShowCSVImport] = useState(false);
@@ -49,7 +53,6 @@ export const Accounts = () => {
 
       setAccounts(formattedAccounts);
     } catch (error: any) {
-      console.error('Failed to load accounts:', error);
       showToast('Failed to load accounts', 'error');
     } finally {
       setLoading(false);
@@ -58,12 +61,12 @@ export const Accounts = () => {
 
   const getAccountColor = (type: string) => {
     switch(type) {
-      case 'checking': return '#3b82f6';
-      case 'savings': return '#22c55e';
-      case 'credit': return '#ef4444';
+      case 'checking': return 'var(--accent-blue)';
+      case 'savings': return 'var(--brand-green-glow)';
+      case 'credit': return 'var(--accent-red)';
       case 'investment': return '#8b5cf6';
-      case 'cash': return '#f59e0b';
-      default: return '#3b82f6';
+      case 'cash': return 'var(--accent-yellow)';
+      default: return 'var(--accent-blue)';
     }
   };
 
@@ -91,7 +94,6 @@ export const Accounts = () => {
       showToast('Account deleted successfully', 'success');
       loadAccounts();
     } catch (error: any) {
-      console.error('Failed to delete account:', error);
       showToast('Failed to delete account', 'error');
     }
   };
@@ -103,7 +105,6 @@ export const Accounts = () => {
       await loadAccounts();
       showToast('Accounts synced successfully', 'success');
     } catch (error: any) {
-      console.error('Failed to sync accounts:', error);
       showToast('Failed to sync accounts', 'error');
     }
   };
@@ -114,15 +115,18 @@ export const Accounts = () => {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: `linear-gradient(to bottom, var(--bg-primary), var(--bg-secondary))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'var(--text-primary)', fontSize: '18px' }}>Loading accounts...</div>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <Loader2 size={40} className="animate-spin" style={{ color: 'var(--brand-green-glow)' }} />
+          <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>Loading accounts...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      <div style={{ minHeight: '100vh', padding: '24px' }}>
+      <div style={pageContainerStyle}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
@@ -131,12 +135,12 @@ export const Accounts = () => {
               <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
                 Accounts
               </h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Manage all your financial accounts in one place</p>
+              <p style={bodyTextStyle}>Manage all your financial accounts in one place</p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={() => setShowCSVImport(true)}
-                style={{ padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
+                style={actionBtnStyle}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'var(--border-light)'}
               >
@@ -145,7 +149,7 @@ export const Accounts = () => {
               </button>
               <button
                 onClick={handleSyncAll}
-                style={{ padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
+                style={actionBtnStyle}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'var(--border-light)'}
               >
@@ -153,9 +157,9 @@ export const Accounts = () => {
               </button>
               <button
                 onClick={() => setShowAddModal(true)}
-                style={{ padding: '10px 20px', background: '#15803d', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#166534'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#15803d'}
+                style={{ padding: '10px 20px', background: 'var(--brand-main-green)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--brand-dark-green)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--brand-main-green)'}
               >
                 <Plus size={16} /> Add Account
               </button>
@@ -165,57 +169,27 @@ export const Accounts = () => {
 
         {/* Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
-              <div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Net Worth</p>
-                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                  {showBalances ? formatCurrency(totalBalance) : '••••••'}
-                </h3>
-              </div>
-              <div style={{ width: '48px', height: '48px', background: 'rgba(34, 197, 94, 0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Wallet size={24} color="#22c55e" />
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={16} color="#22c55e" />
-              <span style={{ color: '#22c55e', fontSize: '14px' }}>Assets - Liabilities</span>
-            </div>
-          </div>
-
-          <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
-              <div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Assets</p>
-                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                  {showBalances ? formatCurrency(totalAssets) : '••••••'}
-                </h3>
-              </div>
-              <div style={{ width: '48px', height: '48px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TrendingUp size={24} color="#3b82f6" />
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{accounts.filter(a => a.balance > 0).length} accounts</span>
-            </div>
-          </div>
-
-          <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
-              <div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Liabilities</p>
-                <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                  {showBalances ? formatCurrency(totalLiabilities) : '••••••'}
-                </h3>
-              </div>
-              <div style={{ width: '48px', height: '48px', background: 'rgba(239, 68, 68, 0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TrendingDown size={24} color="#ef4444" />
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{accounts.filter(a => a.balance < 0).length} accounts</span>
-            </div>
-          </div>
+          <StatCard
+            label="Net Worth"
+            value={showBalances ? formatCurrency(totalBalance) : '••••••'}
+            accentColor="#22c55e"
+            icon={<Wallet size={24} color="#22c55e" />}
+            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--brand-green-glow)', fontSize: '14px' }}>Assets − Liabilities</span></>}
+          />
+          <StatCard
+            label="Total Assets"
+            value={showBalances ? formatCurrency(totalAssets) : '••••••'}
+            accentColor="#3b82f6"
+            icon={<TrendingUp size={24} color="#3b82f6" />}
+            subtitle={<span style={bodyTextStyle}>{accounts.filter(a => a.balance > 0).length} positive accounts</span>}
+          />
+          <StatCard
+            label="Total Liabilities"
+            value={showBalances ? formatCurrency(totalLiabilities) : '••••••'}
+            accentColor="#ef4444"
+            icon={<TrendingDown size={24} color="#ef4444" />}
+            subtitle={<span style={bodyTextStyle}>{accounts.filter(a => a.balance < 0).length} credit/loan accounts</span>}
+          />
         </div>
 
         {/* Accounts List */}
@@ -284,7 +258,7 @@ export const Accounts = () => {
                       {account.type === 'credit' && account.creditLimit && (
                         <div style={{ textAlign: 'right' }}>
                           <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Available Credit</p>
-                          <p style={{ color: '#22c55e', fontSize: '16px', fontWeight: '600' }}>
+                          <p style={{ color: 'var(--brand-green-glow)', fontSize: '16px', fontWeight: '600' }}>
                             {showBalances ? formatCurrency(account.availableCredit) : '••••••'}
                           </p>
                         </div>
@@ -292,7 +266,7 @@ export const Accounts = () => {
 
                       {/* Balance */}
                       <div style={{ textAlign: 'right', minWidth: '150px' }}>
-                        <p style={{ fontSize: '24px', fontWeight: '700', color: account.balance < 0 ? '#ef4444' : 'var(--text-primary)', marginBottom: '4px' }}>
+                        <p style={{ fontSize: '24px', fontWeight: '700', color: account.balance < 0 ? 'var(--accent-red)' : 'var(--text-primary)', marginBottom: '4px' }}>
                           {showBalances ? (
                             <>
                               {account.balance < 0 && '-'}{formatCurrency(account.balance)}
@@ -307,7 +281,7 @@ export const Accounts = () => {
                               <TrendingDown size={14} color="#ef4444" />
                             )}
                             <span style={{
-                              color: account.trend.direction === 'up' ? '#22c55e' : '#ef4444',
+                              color: account.trend.direction === 'up' ? 'var(--brand-green-glow)' : 'var(--accent-red)',
                               fontSize: '13px',
                               fontWeight: '500'
                             }}>
@@ -325,6 +299,7 @@ export const Accounts = () => {
                             setEditingAccount(account);
                             setShowEditModal(true);
                           }}
+                          aria-label="Edit account"
                           style={{
                             padding: '8px',
                             background: 'var(--border-light)',
@@ -344,12 +319,13 @@ export const Accounts = () => {
                         </button>
                         <button
                           onClick={(e) => handleDeleteAccount(account.id, e)}
+                          aria-label="Delete account"
                           style={{
                             padding: '8px',
                             background: 'rgba(239, 68, 68, 0.1)',
                             border: '1px solid rgba(239, 68, 68, 0.3)',
                             borderRadius: '6px',
-                            color: '#ef4444',
+                            color: 'var(--accent-red)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',

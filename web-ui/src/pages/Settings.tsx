@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { TransactionRules } from '../components/TransactionRules';
@@ -12,6 +13,7 @@ import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
 import type { ModuleManifest } from '../modules/registry';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 
 // ---------------------------------------------------------------------------
 // ModuleCard — per-module hide/show toggle card for Settings > Modules tab
@@ -62,8 +64,15 @@ const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
   );
 };
 
+const fieldLabelStyle: React.CSSProperties = { display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' };
+const sectionTitleStyle: React.CSSProperties = { fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' };
+const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
+const redTextStyle: React.CSSProperties = { color: 'var(--accent-red)', fontSize: '14px', margin: 0 };
+const successBannerStyle: React.CSSProperties = { marginTop: '16px', padding: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '8px', color: 'var(--brand-green-glow)', fontSize: '14px' };
+
 export const Settings: React.FC = () => {
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, features } = useAuthStore();
   const { theme } = useTheme();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const [activeTab, setActiveTab] = useState('profile');
@@ -76,7 +85,7 @@ export const Settings: React.FC = () => {
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    userColor: user?.user_color || '#3b82f6',
+    userColor: user?.user_color || 'var(--accent-blue)',
     profileEmoji: user?.profile_emoji || '😊',
     timezone: user?.timezone || 'America/New_York',
     currency: user?.default_currency_code || 'USD'
@@ -135,13 +144,15 @@ export const Settings: React.FC = () => {
     '🌈', '🎨', '🎵', '🏆', '⚡', '🍀', '🌺', '🦋',
   ];
 
+  const savedScrollY = useRef(0);
+
   // Load user data on mount
   useEffect(() => {
     if (user) {
       setProfileData({
         name: user.name || '',
         email: user.email || '',
-        userColor: user.user_color || '#3b82f6',
+        userColor: user.user_color || 'var(--accent-blue)',
         profileEmoji: user.profile_emoji || '😊',
         timezone: user.timezone || 'UTC',
         currency: user.default_currency_code || 'USD'
@@ -149,7 +160,15 @@ export const Settings: React.FC = () => {
     }
   }, [user]);
 
+  // Restore scroll position after save feedback appears (prevents layout-shift jump)
+  useEffect(() => {
+    if (saveSuccess || saveError) {
+      requestAnimationFrame(() => window.scrollTo(0, savedScrollY.current));
+    }
+  }, [saveSuccess, saveError]);
+
   const handleProfileSave = async () => {
+    savedScrollY.current = window.scrollY;
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -185,6 +204,7 @@ export const Settings: React.FC = () => {
   };
 
   const handlePasswordChange = async () => {
+    savedScrollY.current = window.scrollY;
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -228,6 +248,7 @@ export const Settings: React.FC = () => {
   };
 
   const handleNotificationsSave = async () => {
+    savedScrollY.current = window.scrollY;
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -284,60 +305,78 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <>
-      <div style={{ minHeight: '100vh', padding: '24px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
-              Settings
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Manage your account preferences and settings</p>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
+
+      {/* Settings sidebar — mirrors main nav style */}
+      <aside style={{
+        width: '240px',
+        flexShrink: 0,
+        background: 'var(--bg-secondary)',
+        borderRight: '1px solid var(--border-light)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+      }}>
+        {/* Header */}
+        <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border-light)' }}>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-secondary)', fontSize: '14px', fontWeight: 500,
+              padding: '8px', borderRadius: '8px', width: '100%',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--nav-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          >
+            <ArrowLeft size={18} />
+            <span>Back</span>
+          </button>
+          <div style={{ marginTop: '16px', paddingLeft: '8px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Settings</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Account & preferences</div>
           </div>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '24px' }}>
-            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '16px', height: 'fit-content' }}>
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: activeTab === tab.id ? 'rgba(21, 128, 61, 0.2)' : 'transparent',
-                    border: activeTab === tab.id ? '1px solid rgba(21, 128, 61, 0.3)' : '1px solid transparent',
-                    borderRadius: '8px',
-                    color: activeTab === tab.id ? (theme === 'dark' ? '#86efac' : '#15803d') : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: activeTab === tab.id ? '600' : '500',
-                    transition: 'all 0.3s',
-                    textAlign: 'left'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== tab.id) {
-                      (e.target as HTMLButtonElement).style.background = 'var(--surface-hover)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== tab.id) {
-                      (e.target as HTMLButtonElement).style.background = 'transparent';
-                    }
-                  }}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`nav-item${activeTab === tab.id ? ' active' : ''}`}
+              style={{
+                width: '100%', border: 'none', cursor: 'pointer',
+                background: 'transparent', textAlign: 'left',
+                marginBottom: '2px',
+              }}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
 
-            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '32px' }}>
+        {/* Footer branding */}
+        <div style={{ padding: '16px', borderTop: '1px solid var(--border-light)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="/finPal.png" alt="finPal" style={{ height: '22px', width: 'auto' }} />
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>finPal</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* Content area */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '48px 56px' }}>
+        <div style={{ maxWidth: '860px' }}>
+          <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '32px' }}>
               {activeTab === 'profile' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Profile Information</h2>
+                  <h2 style={sectionTitleStyle}>Profile Information</h2>
 
                   {/* Error Message */}
                   {saveError && (
@@ -351,13 +390,13 @@ export const Settings: React.FC = () => {
                       borderRadius: '8px',
                       marginBottom: '20px'
                     }}>
-                      <AlertCircle size={20} style={{ color: '#ef4444' }} />
-                      <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{saveError}</p>
+                      <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+                      <p style={redTextStyle}>{saveError}</p>
                     </div>
                   )}
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Full Name
                     </label>
                     <input
@@ -378,7 +417,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Email Address
                     </label>
                     <input
@@ -401,7 +440,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Profile Emoji
                     </label>
                     <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '12px' }}>
@@ -422,7 +461,7 @@ export const Settings: React.FC = () => {
                       }}>
                         {profileData.profileEmoji}
                       </div>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current emoji</span>
+                      <span style={bodyTextStyle}>Current emoji</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px' }}>
                       {profileEmojis.map((emoji) => (
@@ -451,7 +490,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Default Currency
                     </label>
                     <select
@@ -476,7 +515,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '32px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Timezone
                     </label>
                     <select
@@ -505,7 +544,7 @@ export const Settings: React.FC = () => {
                     disabled={isSaving}
                     style={{
                       padding: '12px 24px',
-                      background: isSaving ? '#166534' : '#15803d',
+                      background: isSaving ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
                       border: 'none',
                       borderRadius: '8px',
                       color: 'white',
@@ -518,15 +557,15 @@ export const Settings: React.FC = () => {
                       transition: 'all 0.3s',
                       opacity: isSaving ? 0.7 : 1
                     }}
-                    onMouseEnter={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = '#166534')}
-                    onMouseLeave={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = '#15803d')}
+                    onMouseEnter={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = 'var(--brand-dark-green)')}
+                    onMouseLeave={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = 'var(--brand-main-green)')}
                   >
                     <Save size={16} />
                     {isSaving ? 'Saving...' : 'Save Changes'}
                   </button>
 
                   {saveSuccess && (
-                    <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '8px', color: '#22c55e', fontSize: '14px' }}>
+                    <div style={successBannerStyle}>
                       ✓ Settings saved successfully!
                     </div>
                   )}
@@ -535,7 +574,7 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'security' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Security Settings</h2>
+                  <h2 style={sectionTitleStyle}>Security Settings</h2>
 
                   {/* Error Message */}
                   {saveError && (
@@ -549,8 +588,8 @@ export const Settings: React.FC = () => {
                       borderRadius: '8px',
                       marginBottom: '20px'
                     }}>
-                      <AlertCircle size={20} style={{ color: '#ef4444' }} />
-                      <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{saveError}</p>
+                      <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+                      <p style={redTextStyle}>{saveError}</p>
                     </div>
                   )}
 
@@ -566,13 +605,13 @@ export const Settings: React.FC = () => {
                       borderRadius: '8px',
                       marginBottom: '20px'
                     }}>
-                      <Check size={20} style={{ color: '#22c55e' }} />
-                      <p style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600', margin: 0 }}>Password changed successfully!</p>
+                      <Check size={20} style={{ color: 'var(--brand-green-glow)' }} />
+                      <p style={{ color: 'var(--brand-green-glow)', fontSize: '14px', fontWeight: '600', margin: 0 }}>Password changed successfully!</p>
                     </div>
                   )}
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Current Password
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -614,7 +653,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       New Password
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -656,7 +695,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '32px' }}>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Confirm New Password
                     </label>
                     <input
@@ -682,7 +721,7 @@ export const Settings: React.FC = () => {
                     disabled={isSaving}
                     style={{
                       padding: '12px 24px',
-                      background: isSaving ? '#166534' : '#15803d',
+                      background: isSaving ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
                       border: 'none',
                       borderRadius: '8px',
                       color: 'white',
@@ -692,8 +731,8 @@ export const Settings: React.FC = () => {
                       transition: 'all 0.3s',
                       opacity: isSaving ? 0.7 : 1
                     }}
-                    onMouseEnter={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = '#166534')}
-                    onMouseLeave={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = '#15803d')}
+                    onMouseEnter={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = 'var(--brand-dark-green)')}
+                    onMouseLeave={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = 'var(--brand-main-green)')}
                   >
                     {isSaving ? 'Updating...' : 'Update Password'}
                   </button>
@@ -702,7 +741,7 @@ export const Settings: React.FC = () => {
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <Shield size={20} color="#3b82f6" style={{ flexShrink: 0 }} />
                       <div>
-                        <p style={{ color: '#3b82f6', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>Password Requirements</p>
+                        <p style={{ color: 'var(--accent-blue)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>Password Requirements</p>
                         <ul style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', margin: 0, paddingLeft: '20px' }}>
                           <li>At least 8 characters long</li>
                           <li>Contains uppercase and lowercase letters</li>
@@ -721,31 +760,45 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'integrations' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>
+                  <h2 style={sectionTitleStyle}>
                     Integrations
                   </h2>
 
                   {/* SimpleFin */}
-                  <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
-                      SimpleFin
-                    </h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
-                      Connect your bank accounts automatically with SimpleFin. Import transactions and keep your accounts in sync.
-                    </p>
-                    <SimpleFinSettings />
-                  </div>
+                  {features?.simplefin !== false ? (
+                    <div style={{ marginBottom: '32px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        SimpleFin
+                      </h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                        Connect your bank accounts automatically with SimpleFin. Import transactions and keep your accounts in sync.
+                      </p>
+                      <SimpleFinSettings />
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '32px', padding: '16px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>SimpleFin</h3>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>SimpleFin is not enabled on this server. Set <code>SIMPLEFIN_ENABLED=true</code> to activate it.</p>
+                    </div>
+                  )}
 
                   {/* Investment Tracking */}
-                  <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
-                      Investment Tracking
-                    </h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
-                      Track your stocks, ETFs, and other investments. Monitor portfolio performance and get real-time quotes.
-                    </p>
-                    <InvestmentSettings />
-                  </div>
+                  {features?.investments !== false ? (
+                    <div style={{ marginBottom: '32px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        Investment Tracking
+                      </h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                        Track your stocks, ETFs, and other investments. Monitor portfolio performance and get real-time quotes.
+                      </p>
+                      <InvestmentSettings />
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '32px', padding: '16px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>Investment Tracking</h3>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Investment tracking is not enabled on this server. Set <code>INVESTMENT_TRACKING_ENABLED=true</code> to activate it.</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -777,7 +830,7 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'notifications' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Notification Preferences</h2>
+                  <h2 style={sectionTitleStyle}>Notification Preferences</h2>
 
                   {Object.entries(notificationSettings).map(([key, value]) => (
                     <div key={key} style={{
@@ -815,7 +868,7 @@ export const Settings: React.FC = () => {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          background: value ? '#15803d' : 'var(--border-medium)',
+                          background: value ? 'var(--brand-main-green)' : 'var(--border-medium)',
                           borderRadius: '24px',
                           transition: '0.3s'
                         }}>
@@ -841,7 +894,7 @@ export const Settings: React.FC = () => {
                     style={{
                       marginTop: '20px',
                       padding: '12px 24px',
-                      background: isSaving ? '#166534' : '#15803d',
+                      background: isSaving ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
                       border: 'none',
                       borderRadius: '8px',
                       color: 'white',
@@ -854,15 +907,15 @@ export const Settings: React.FC = () => {
                       transition: 'all 0.3s',
                       opacity: isSaving ? 0.7 : 1
                     }}
-                    onMouseEnter={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = '#166534')}
-                    onMouseLeave={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = '#15803d')}
+                    onMouseEnter={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = 'var(--brand-dark-green)')}
+                    onMouseLeave={(e) => !isSaving && ((e.target as HTMLButtonElement).style.background = 'var(--brand-main-green)')}
                   >
                     <Save size={16} />
                     {isSaving ? 'Saving...' : 'Save Preferences'}
                   </button>
 
                   {saveSuccess && (
-                    <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '8px', color: '#22c55e', fontSize: '14px' }}>
+                    <div style={successBannerStyle}>
                       ✓ Notification preferences saved successfully!
                     </div>
                   )}
@@ -875,7 +928,7 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'data' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Data & Privacy</h2>
+                  <h2 style={sectionTitleStyle}>Data & Privacy</h2>
 
                   {/* Error Message */}
                   {saveError && (
@@ -889,8 +942,8 @@ export const Settings: React.FC = () => {
                       borderRadius: '8px',
                       marginBottom: '20px'
                     }}>
-                      <AlertCircle size={20} style={{ color: '#ef4444' }} />
-                      <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{saveError}</p>
+                      <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
+                      <p style={redTextStyle}>{saveError}</p>
                     </div>
                   )}
 
@@ -921,7 +974,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
-                    <h3 style={{ color: '#ef4444', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Delete Account</h3>
+                    <h3 style={{ color: 'var(--accent-red)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Delete Account</h3>
                     <p style={{ color: '#fca5a5', fontSize: '14px', marginBottom: '12px' }}>Permanently delete your account and all associated data</p>
                     <button
                       onClick={() => setShowDeleteModal(true)}
@@ -930,7 +983,7 @@ export const Settings: React.FC = () => {
                         background: 'rgba(239, 68, 68, 0.2)',
                         border: '1px solid rgba(239, 68, 68, 0.5)',
                         borderRadius: '8px',
-                        color: '#ef4444',
+                        color: 'var(--accent-red)',
                         fontSize: '14px',
                         cursor: 'pointer',
                         fontWeight: '600',
@@ -949,7 +1002,7 @@ export const Settings: React.FC = () => {
 
               {activeTab === 'about' && (
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>About finPal</h2>
+                  <h2 style={sectionTitleStyle}>About finPal</h2>
 
                   <div style={{ marginBottom: '24px', padding: '24px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
@@ -960,7 +1013,7 @@ export const Settings: React.FC = () => {
                       />
                       <div>
                         <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>finPal</h3>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Version 1.0.0</p>
+                        <p style={bodyTextStyle}>Version 1.0.0</p>
                       </div>
                     </div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
@@ -1006,17 +1059,15 @@ export const Settings: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Footer */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
-            <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
+            {/* Footer */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
+              <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (
         <div style={{
           position: 'fixed',
@@ -1039,7 +1090,7 @@ export const Settings: React.FC = () => {
             width: '90%'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ color: '#ef4444', fontSize: '20px', fontWeight: '600', margin: 0 }}>Delete Account</h3>
+              <h3 style={{ color: 'var(--accent-red)', fontSize: '20px', fontWeight: '600', margin: 0 }}>Delete Account</h3>
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
@@ -1082,13 +1133,13 @@ export const Settings: React.FC = () => {
                 borderRadius: '8px',
                 marginBottom: '16px'
               }}>
-                <AlertCircle size={18} style={{ color: '#ef4444' }} />
-                <p style={{ color: '#ef4444', fontSize: '13px', margin: 0 }}>{saveError}</p>
+                <AlertCircle size={18} style={{ color: 'var(--accent-red)' }} />
+                <p style={{ color: 'var(--accent-red)', fontSize: '13px', margin: 0 }}>{saveError}</p>
               </div>
             )}
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+              <label style={fieldLabelStyle}>
                 Enter your password to confirm
               </label>
               <input
@@ -1152,7 +1203,7 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

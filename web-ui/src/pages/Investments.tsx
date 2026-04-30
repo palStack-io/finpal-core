@@ -20,6 +20,7 @@ import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { AddHoldingModal } from '../components/investment/AddHoldingModal';
 import { StockDetailModal } from '../components/investment/StockDetailModal';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 
 interface Portfolio {
   id: number;
@@ -44,6 +45,12 @@ interface Holding {
   industry: string;
   last_update: string;
 }
+
+const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
+const tableHeaderRightStyle: React.CSSProperties = { padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' };
+const tableHeaderLeftStyle: React.CSSProperties = { padding: '16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' };
+const bigNumberStyle: React.CSSProperties = { color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' };
+const tableCellRightStyle: React.CSSProperties = { padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' };
 
 export const Investments: React.FC = () => {
   const { showToast } = useToast();
@@ -165,7 +172,7 @@ export const Investments: React.FC = () => {
 
   return (
     <>
-      <div style={{ minHeight: '100vh', padding: '24px' }}>
+      <div style={pageContainerStyle}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
@@ -174,7 +181,7 @@ export const Investments: React.FC = () => {
                 <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
                   Investments
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Track and manage your investment portfolio</p>
+                <p style={bodyTextStyle}>Track and manage your investment portfolio</p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
@@ -207,7 +214,7 @@ export const Investments: React.FC = () => {
                     background: 'rgba(21, 128, 61, 0.2)',
                     border: '1px solid rgba(21, 128, 61, 0.5)',
                     borderRadius: '8px',
-                    color: '#86efac',
+                    color: 'var(--brand-light-green)',
                     cursor: isRefreshing ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -242,11 +249,11 @@ export const Investments: React.FC = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(21, 128, 61, 0.2)', borderRadius: '8px' }}>
-                  <DollarSign size={20} style={{ color: '#15803d' }} />
+                  <DollarSign size={20} style={{ color: 'var(--brand-main-green)' }} />
                 </div>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Total Value</span>
+                <span style={bodyTextStyle}>Total Value</span>
               </div>
-              <div style={{ color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' }}>
+              <div style={bigNumberStyle}>
                 {formatCurrency(stats.totalValue)}
               </div>
             </div>
@@ -266,22 +273,22 @@ export const Investments: React.FC = () => {
                   borderRadius: '8px'
                 }}>
                   {stats.totalGain >= 0 ? (
-                    <TrendingUp size={20} style={{ color: '#22c55e' }} />
+                    <TrendingUp size={20} style={{ color: 'var(--brand-green-glow)' }} />
                   ) : (
-                    <TrendingDown size={20} style={{ color: '#ef4444' }} />
+                    <TrendingDown size={20} style={{ color: 'var(--accent-red)' }} />
                   )}
                 </div>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Total Gain/Loss</span>
+                <span style={bodyTextStyle}>Total Gain/Loss</span>
               </div>
               <div style={{
-                color: stats.totalGain >= 0 ? '#22c55e' : '#ef4444',
+                color: stats.totalGain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)',
                 fontSize: '28px',
                 fontWeight: '700'
               }}>
                 {formatCurrency(stats.totalGain)}
               </div>
               <div style={{
-                color: stats.totalGain >= 0 ? '#22c55e' : '#ef4444',
+                color: stats.totalGain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)',
                 fontSize: '14px',
                 marginTop: '4px'
               }}>
@@ -299,11 +306,11 @@ export const Investments: React.FC = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(251, 191, 36, 0.2)', borderRadius: '8px' }}>
-                  <Package size={20} style={{ color: '#fbbf24' }} />
+                  <Package size={20} style={{ color: 'var(--brand-accent-gold)' }} />
                 </div>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Total Cost</span>
+                <span style={bodyTextStyle}>Total Cost</span>
               </div>
-              <div style={{ color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' }}>
+              <div style={bigNumberStyle}>
                 {formatCurrency(stats.totalCost)}
               </div>
             </div>
@@ -318,11 +325,11 @@ export const Investments: React.FC = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
-                  <BarChart3 size={20} style={{ color: '#3b82f6' }} />
+                  <BarChart3 size={20} style={{ color: 'var(--accent-blue)' }} />
                 </div>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Holdings</span>
+                <span style={bodyTextStyle}>Holdings</span>
               </div>
-              <div style={{ color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' }}>
+              <div style={bigNumberStyle}>
                 {stats.holdingsCount}
               </div>
             </div>
@@ -344,16 +351,16 @@ export const Investments: React.FC = () => {
               </div>
 
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table style={tableStyle}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Symbol</th>
-                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Name</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Shares</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Avg Cost</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Current Price</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Market Value</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>Gain/Loss</th>
+                      <th style={tableHeaderLeftStyle}>Symbol</th>
+                      <th style={tableHeaderLeftStyle}>Name</th>
+                      <th style={tableHeaderRightStyle}>Shares</th>
+                      <th style={tableHeaderRightStyle}>Avg Cost</th>
+                      <th style={tableHeaderRightStyle}>Current Price</th>
+                      <th style={tableHeaderRightStyle}>Market Value</th>
+                      <th style={tableHeaderRightStyle}>Gain/Loss</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -390,23 +397,23 @@ export const Investments: React.FC = () => {
                               )}
                             </div>
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' }}>
+                          <td style={tableCellRightStyle}>
                             {holding.shares.toFixed(2)}
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' }}>
+                          <td style={tableCellRightStyle}>
                             {formatCurrency(holding.purchase_price)}
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' }}>
+                          <td style={tableCellRightStyle}>
                             {formatCurrency(holding.current_price)}
                           </td>
                           <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px', fontWeight: '600' }}>
                             {formatCurrency(marketValue)}
                           </td>
                           <td style={{ padding: '16px', textAlign: 'right' }}>
-                            <div style={{ color: gain >= 0 ? '#22c55e' : '#ef4444', fontSize: '14px', fontWeight: '600' }}>
+                            <div style={{ color: gain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '14px', fontWeight: '600' }}>
                               {formatCurrency(gain)}
                             </div>
-                            <div style={{ color: gain >= 0 ? '#22c55e' : '#ef4444', fontSize: '12px', marginTop: '2px' }}>
+                            <div style={{ color: gain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '12px', marginTop: '2px' }}>
                               {formatPercent(gainPercent)}
                             </div>
                           </td>
@@ -433,7 +440,7 @@ export const Investments: React.FC = () => {
                 borderRadius: '50%',
                 marginBottom: '16px'
               }}>
-                <LineChart size={32} style={{ color: '#15803d' }} />
+                <LineChart size={32} style={{ color: 'var(--brand-main-green)' }} />
               </div>
               <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
                 No Holdings Yet

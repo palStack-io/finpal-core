@@ -29,6 +29,11 @@ interface StockDetailModalProps {
   onUpdate?: () => void;
 }
 
+const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' };
+const fieldValueStyle: React.CSSProperties = { color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' };
+const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
+const bigStatStyle: React.CSSProperties = { color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' };
+
 export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onClose, onUpdate }) => {
   const { showToast } = useToast();
   const [quoteData, setQuoteData] = useState<any>(null);
@@ -201,8 +206,8 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   borderRadius: '8px'
                 }}
               >
-                {dayChange >= 0 ? <TrendingUp size={16} style={{ color: '#22c55e' }} /> : <TrendingDown size={16} style={{ color: '#ef4444' }} />}
-                <span style={{ color: dayChange >= 0 ? '#22c55e' : '#ef4444', fontSize: '14px', fontWeight: '600' }}>
+                {dayChange >= 0 ? <TrendingUp size={16} style={{ color: 'var(--brand-green-glow)' }} /> : <TrendingDown size={16} style={{ color: 'var(--accent-red)' }} />}
+                <span style={{ color: dayChange >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '14px', fontWeight: '600' }}>
                   {formatPercent(dayChangePercent)}
                 </span>
               </div>
@@ -239,7 +244,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                <Edit2 size={20} style={{ color: '#22c55e' }} />
+                <Edit2 size={20} style={{ color: 'var(--brand-green-glow)' }} />
               </button>
             ) : (
               <>
@@ -269,7 +274,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                     e.currentTarget.style.transform = 'scale(1)';
                   }}
                 >
-                  <Save size={20} style={{ color: '#22c55e' }} />
+                  <Save size={20} style={{ color: 'var(--brand-green-glow)' }} />
                 </button>
                 <button
                   onClick={handleCancelEdit}
@@ -320,7 +325,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              <X size={20} style={{ color: '#ef4444' }} />
+              <X size={20} style={{ color: 'var(--accent-red)' }} />
             </button>
           </div>
         </div>
@@ -346,13 +351,13 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <DollarSign size={16} style={{ color: '#fbbf24' }} />
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current Price</span>
+                <DollarSign size={16} style={{ color: 'var(--brand-accent-gold)' }} />
+                <span style={bodyTextStyle}>Current Price</span>
               </div>
-              <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' }}>
+              <div style={bigStatStyle}>
                 {formatCurrency(holding.current_price)}
               </div>
-              <div style={{ color: dayChange >= 0 ? '#22c55e' : '#ef4444', fontSize: '14px', marginTop: '4px' }}>
+              <div style={{ color: dayChange >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '14px', marginTop: '4px' }}>
                 {dayChange >= 0 ? '+' : ''}{formatCurrency(dayChange)} today
               </div>
             </div>
@@ -368,8 +373,8 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <Calendar size={16} style={{ color: '#3b82f6' }} />
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Purchase Price</span>
+                <Calendar size={16} style={{ color: 'var(--accent-blue)' }} />
+                <span style={bodyTextStyle}>Purchase Price</span>
               </div>
               {isEditing ? (
                 <input
@@ -392,7 +397,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)'; }}
                 />
               ) : (
-                <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' }}>
+                <div style={bigStatStyle}>
                   {formatCurrency(purchasePrice)}
                 </div>
               )}
@@ -413,7 +418,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <Briefcase size={16} style={{ color: '#a855f7' }} />
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Shares Owned</span>
+                <span style={bodyTextStyle}>Shares Owned</span>
               </div>
               {isEditing ? (
                 <input
@@ -436,7 +441,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
                   onBlur={(e) => { e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)'; }}
                 />
               ) : (
-                <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' }}>
+                <div style={bigStatStyle}>
                   {shares.toFixed(2)}
                 </div>
               )}
@@ -458,31 +463,31 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             }}
           >
             <h3 style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={20} style={{ color: '#fbbf24' }} />
+              <Activity size={20} style={{ color: 'var(--brand-accent-gold)' }} />
               Position Summary
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Cost Basis</div>
+                <div style={fieldLabelStyle}>Cost Basis</div>
                 <div style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600' }}>
                   {formatCurrency(costBasis)}
                 </div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Market Value</div>
+                <div style={fieldLabelStyle}>Market Value</div>
                 <div style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600' }}>
                   {formatCurrency(marketValue)}
                 </div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Total Gain/Loss</div>
-                <div style={{ color: totalGain >= 0 ? '#22c55e' : '#ef4444', fontSize: '20px', fontWeight: '600' }}>
+                <div style={fieldLabelStyle}>Total Gain/Loss</div>
+                <div style={{ color: totalGain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '20px', fontWeight: '600' }}>
                   {formatCurrency(totalGain)}
                 </div>
               </div>
               <div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Return</div>
-                <div style={{ color: gainPercent >= 0 ? '#22c55e' : '#ef4444', fontSize: '20px', fontWeight: '600' }}>
+                <div style={fieldLabelStyle}>Return</div>
+                <div style={{ color: gainPercent >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '20px', fontWeight: '600' }}>
                   {formatPercent(gainPercent)}
                 </div>
               </div>
@@ -507,64 +512,64 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
                 {quoteData.market_cap && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Market Cap</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>Market Cap</div>
+                    <div style={fieldValueStyle}>
                       {quoteData.market_cap}
                     </div>
                   </div>
                 )}
                 {quoteData.pe_ratio && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>P/E Ratio</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>P/E Ratio</div>
+                    <div style={fieldValueStyle}>
                       {quoteData.pe_ratio}
                     </div>
                   </div>
                 )}
                 {quoteData.dividend_yield && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Dividend Yield</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>Dividend Yield</div>
+                    <div style={fieldValueStyle}>
                       {quoteData.dividend_yield}%
                     </div>
                   </div>
                 )}
                 {quoteData.day_high && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Day High</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>Day High</div>
+                    <div style={fieldValueStyle}>
                       {formatCurrency(quoteData.day_high)}
                     </div>
                   </div>
                 )}
                 {quoteData.day_low && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Day Low</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>Day Low</div>
+                    <div style={fieldValueStyle}>
                       {formatCurrency(quoteData.day_low)}
                     </div>
                   </div>
                 )}
                 {quoteData.week_52_high && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>52-Week High</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>52-Week High</div>
+                    <div style={fieldValueStyle}>
                       {formatCurrency(quoteData.week_52_high)}
                     </div>
                   </div>
                 )}
                 {quoteData.week_52_low && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>52-Week Low</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>52-Week Low</div>
+                    <div style={fieldValueStyle}>
                       {formatCurrency(quoteData.week_52_low)}
                     </div>
                   </div>
                 )}
                 {quoteData.volume && (
                   <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '4px' }}>Volume</div>
-                    <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>
+                    <div style={fieldLabelStyle}>Volume</div>
+                    <div style={fieldValueStyle}>
                       {new Intl.NumberFormat('en-US', { notation: 'compact' }).format(quoteData.volume)}
                     </div>
                   </div>

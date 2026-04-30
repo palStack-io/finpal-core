@@ -5,7 +5,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.budget import Budget
 from src.extensions import db
 from schemas import budget_schema, budgets_schema
+from schemas.input_schemas import budget_input
+from src.utils.validation import validate_request, validation_error_response
+from src.services.budget.service import BudgetService
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create namespace
 ns = Namespace('budgets', description='Budget operations')
@@ -43,9 +49,8 @@ class BudgetList(Resource):
                 'budgets': result
             }, 200
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {'success': False, 'error': str(e)}, 500
+            logger.exception("Failed to list budgets")
+            return {'success': False, 'error': 'Internal server error'}, 500
 
     @ns.doc('create_budget', security='Bearer')
     @ns.expect(budget_model)
@@ -55,48 +60,29 @@ class BudgetList(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        try:
-            # Parse dates if provided
-            start_date = None
+        validated, errors = validate_request(budget_input, data)
+        if errors:
+            return validation_error_response(errors)
 
-            if data.get('start_date'):
-                if isinstance(data['start_date'], str):
-                    start_date = datetime.fromisoformat(data['start_date'])
-                else:
-                    start_date = data['start_date']
+        svc = BudgetService()
+        success, message, new_budget = svc.add_budget(
+            user_id=current_user_id,
+            category_id=validated.get('category_id'),
+            amount=validated['amount'],
+            period=validated['period'],
+            name=validated['name'],
+            start_date=validated.get('start_date'),
+            include_subcategories=validated.get('include_subcategories', True),
+            rollover=validated.get('rollover', False),
+            transaction_types=data.get('transaction_types', 'expense'),
+            active=validated.get('is_active', True),
+        )
 
-            new_budget = Budget(
-                name=data.get('name'),
-                amount=data.get('amount'),
-                period=data.get('period', 'monthly'),
-                category_id=data.get('category_id'),
-                start_date=start_date or datetime.now(),
-                is_recurring=data.get('is_recurring', True),
-                active=data.get('active', True),
-                include_subcategories=data.get('include_subcategories', True),
-                transaction_types=data.get('transaction_types', 'expense'),
-                rollover=data.get('rollover', False),
-                rollover_amount=data.get('rollover_amount', 0.0),
-                user_id=current_user_id
-            )
+        if not success:
+            return {'success': False, 'error': message}, 400
 
-            db.session.add(new_budget)
-            db.session.commit()
-
-            result = budget_schema.dump(new_budget)
-
-            return {
-                'success': True,
-                'budget': result,
-                'message': 'Budget created successfully'
-            }, 201
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 400
+        result = budget_schema.dump(new_budget)
+        return {'success': True, 'budget': result, 'message': 'Budget created successfully'}, 201
 
 
 @ns.route('/<int:id>')
@@ -132,7 +118,9 @@ class BudgetDetail(Resource):
         if not budget:
             return {'success': False, 'error': 'Budget not found'}, 404
 
-        data = request.get_json()
+        data = request.get_json() or {}
+        if not data:
+            return {'success': False, 'error': 'Request body required'}, 400
 
         try:
             if 'name' in data:
@@ -175,7 +163,7 @@ class BudgetDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_budget', security='Bearer')
@@ -202,7 +190,7 @@ class BudgetDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -251,7 +239,7 @@ class BudgetOverview(Resource):
             }, 200
 
         except Exception as e:
-            return {'success': False, 'error': str(e)}, 500
+            return {'success': False, 'error': 'Internal server error'}, 500
 
 
 @ns.route('/<int:id>/progress')

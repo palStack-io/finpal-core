@@ -8,6 +8,11 @@ from src.extensions import db
 from src.utils.rule_engine import bulk_apply_rules, suggest_rule_from_edit
 from datetime import datetime
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # Create namespace
 ns = Namespace('transaction-rules', description='Transaction rule operations')
 
@@ -103,7 +108,7 @@ class TransactionRuleList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -193,7 +198,7 @@ class TransactionRuleDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_transaction_rule', security='Bearer')
@@ -223,7 +228,7 @@ class TransactionRuleDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -245,7 +250,7 @@ class BulkApplyRules(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -296,7 +301,7 @@ class TestRule(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -350,7 +355,7 @@ class SuggestRule(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 

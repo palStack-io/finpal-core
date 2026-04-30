@@ -1,0 +1,68 @@
+# ================================================================
+# finPal — Standalone Backup Service
+# ================================================================
+# Use this to add backup to an already-running finPal stack,
+# or to run backup independently without the full stack.
+#
+# Prerequisites:
+#   - finPal stack already running (docker-compose.yml or portainer)
+#   - The finpal-network Docker network already exists
+#
+# Usage:
+#   docker compose -f docker-compose.backup.yml up -d
+#   docker compose -f docker-compose.backup.yml logs -f
+#
+# To trigger a backup immediately (without waiting for the cron):
+#   docker exec finpal-backup /scripts/backup-pg.sh
+#
+# Required variables (set in .env or export before running):
+#   DB_PASSWORD
+# ================================================================
+
+services:
+  backup:
+    image: ghcr.io/palstack-io/finpal-backup:latest
+    container_name: finpal-backup
+    environment:
+      # ── Postgres connection ─────────────────────────────────────
+      # POSTGRES_HOST must match the container_name of your db service
+      - POSTGRES_HOST=${POSTGRES_HOST:-finpal-db}
+      - POSTGRES_USER=${DB_USER:-finpal}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+
+      # ── Schedule (cron expression, default: 3 AM daily) ─────────
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 3 * * *}
+
+      # ── Local retention ─────────────────────────────────────────
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
+
+      # ── Remote storage (optional) ───────────────────────────────
+      # Leave BACKUP_REMOTE_BUCKET blank for local-only storage
+      - BACKUP_REMOTE_BUCKET=${BACKUP_REMOTE_BUCKET:-}
+
+      # Backblaze B2 — set RCLONE_CONFIG_REMOTE_TYPE=b2
+      - RCLONE_CONFIG_REMOTE_TYPE=${RCLONE_CONFIG_REMOTE_TYPE:-}
+      - RCLONE_CONFIG_REMOTE_ACCOUNT=${RCLONE_CONFIG_REMOTE_ACCOUNT:-}
+      - RCLONE_CONFIG_REMOTE_KEY=${RCLONE_CONFIG_REMOTE_KEY:-}
+
+      # Cloudflare R2 / S3-compatible — set RCLONE_CONFIG_REMOTE_TYPE=s3
+      - RCLONE_CONFIG_REMOTE_PROVIDER=${RCLONE_CONFIG_REMOTE_PROVIDER:-}
+      - RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID:-}
+      - RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY:-}
+      - RCLONE_CONFIG_REMOTE_ENDPOINT=${RCLONE_CONFIG_REMOTE_ENDPOINT:-}
+      - RCLONE_CONFIG_REMOTE_REGION=${RCLONE_CONFIG_REMOTE_REGION:-auto}
+
+      # ── Optional monitoring ping ─────────────────────────────────
+      # Ping this URL after every successful backup (healthchecks.io etc.)
+      - BACKUP_HEALTHCHECK_URL=${BACKUP_HEALTHCHECK_URL:-}
+
+    volumes:
+      - ${BACKUP_PATH:-./backups}:/backups
+    networks:
+      - finpal-network
+    restart: unless-stopped
+
+networks:
+  finpal-network:
+    # Attach to the network created by the main finPal stack
+    external: true

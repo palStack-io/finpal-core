@@ -13,6 +13,11 @@ from src.utils.decorators import demo_restricted
 from datetime import datetime
 from werkzeug.datastructures import FileStorage
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # Create namespace
 ns = Namespace('csv-import', description='CSV import operations')
 
@@ -40,6 +45,22 @@ import_config_model = ns.model('ImportConfig', {
 })
 
 
+CSV_MAX_ROWS = 10_000
+CSV_ALLOWED_MIMETYPES = {'text/csv', 'application/csv', 'text/plain', 'application/vnd.ms-excel'}
+
+
+def _validate_csv_file(file):
+    """Return an error string if the file is invalid, else None."""
+    if not file or file.filename == '':
+        return 'No file selected'
+    if not file.filename.lower().endswith('.csv'):
+        return 'File must be a CSV'
+    mimetype = (file.mimetype or '').split(';')[0].strip().lower()
+    if mimetype and mimetype not in CSV_ALLOWED_MIMETYPES:
+        return 'Invalid file type'
+    return None
+
+
 @ns.route('/preview')
 class CSVPreview(Resource):
     @ns.doc('preview_csv', security='Bearer')
@@ -47,47 +68,39 @@ class CSVPreview(Resource):
     def post(self):
         """Preview CSV file and return column headers and sample data"""
         try:
-            # Check if file is in request
             if 'file' not in request.files:
                 return {'success': False, 'error': 'No file provided'}, 400
 
             file = request.files['file']
+            err = _validate_csv_file(file)
+            if err:
+                return {'success': False, 'error': err}, 400
 
-            if file.filename == '':
-                return {'success': False, 'error': 'No file selected'}, 400
-
-            if not file.filename.endswith('.csv'):
-                return {'success': False, 'error': 'File must be a CSV'}, 400
-
-            # Read CSV file
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             csv_reader = csv.DictReader(stream)
-
-            # Get column headers
             columns = csv_reader.fieldnames
 
-            # Get first 5 rows as sample
             sample_rows = []
-            all_rows = []
+            total = 0
             for idx, row in enumerate(csv_reader):
-                all_rows.append(row)
+                total += 1
                 if idx < 5:
                     sample_rows.append(row)
+                if total > CSV_MAX_ROWS:
+                    break
 
             return {
                 'success': True,
                 'preview': {
                     'columns': columns,
                     'sample_rows': sample_rows,
-                    'total_rows': len(all_rows)
+                    'total_rows': total,
+                    'truncated': total > CSV_MAX_ROWS,
                 }
             }, 200
 
         except Exception as e:
-            return {
-                'success': False,
-                'error': f'Error reading CSV: {str(e)}'
-            }, 400
+            return {'success': False, 'error': 'Error reading CSV'}, 400
 
 
 @ns.route('/import')
@@ -106,6 +119,9 @@ class CSVImport(Resource):
                 return {'success': False, 'error': 'No file provided'}, 400
 
             file = request.files['file']
+            err = _validate_csv_file(file)
+            if err:
+                return {'success': False, 'error': err}, 400
 
             # Get mapping and config from form data
             mapping_json = request.form.get('mapping')
@@ -141,6 +157,9 @@ class CSVImport(Resource):
             amount_multiplier = config.get('amount_multiplier', 1.0)
 
             for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (1 is header)
+                if row_num - 2 >= CSV_MAX_ROWS:
+                    errors.append(f"Import limited to {CSV_MAX_ROWS} rows — remaining rows skipped")
+                    break
                 try:
                     # Extract data based on mapping
                     date_str = row.get(mapping['date'], '').strip()
@@ -257,10 +276,8 @@ class CSVImport(Resource):
 
         except Exception as e:
             db.session.rollback()
-            return {
-                'success': False,
-                'error': f'Import failed: {str(e)}'
-            }, 500
+            logger.exception("CSV import failed")
+            return {'success': False, 'error': 'Import failed'}, 500
 
 
 @ns.route('/template')

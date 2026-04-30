@@ -26,15 +26,11 @@ const navItems = [
   { name: 'Budgets', path: '/budgets', icon: Target },
 ];
 
-const navItems2 = [
-  { name: 'Investments', path: '/investments', icon: LineChart },
+const navItemsAnalytics = [
   { name: 'Analytics', path: '/analytics', icon: TrendingUp },
   { name: 'Groups', path: '/groups', icon: Users },
 ];
 
-const navItems3 = [
-  { name: 'Settings', path: '/settings', icon: Settings },
-];
 
 // ---------------------------------------------------------------------------
 // ModuleNavSection — renders one module's sidebar nav section
@@ -143,7 +139,7 @@ const ModuleNavSection: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) 
 
 export const Sidebar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuthStore();
+  const { user, logout, features } = useAuthStore();
   const navigate = useNavigate();
 
   // Re-render when module hide/show preferences change from Settings
@@ -214,7 +210,8 @@ export const Sidebar: React.FC = () => {
       <nav className="sidebar-nav">
         {renderNavItems(navItems)}
         <div className="nav-divider" />
-        {renderNavItems(navItems2)}
+        {features?.investments !== false && renderNavItems([{ name: 'Investments', path: '/investments', icon: LineChart }])}
+        {renderNavItems(navItemsAnalytics)}
         <div className="nav-divider" />
 
         {/* ── Modules section — driven by moduleRegistry + user.modules ── */}
@@ -235,7 +232,7 @@ export const Sidebar: React.FC = () => {
         })()}
 
         <div className="nav-divider" />
-        {renderNavItems(navItems3)}
+        {renderNavItems([{ name: 'Settings', path: '/settings', icon: Settings }])}
       </nav>
 
       {/* Footer */}

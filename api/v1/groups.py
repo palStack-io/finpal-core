@@ -8,6 +8,11 @@ from src.models.associations import group_users
 from src.extensions import db
 from schemas import group_schema, groups_schema
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # Create namespace
 ns = Namespace('groups', description='Group and bill splitting operations')
 
@@ -85,7 +90,7 @@ class GroupList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -175,7 +180,7 @@ class GroupDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_group', security='Bearer')
@@ -202,7 +207,7 @@ class GroupDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -347,5 +352,5 @@ class GroupInvite(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400

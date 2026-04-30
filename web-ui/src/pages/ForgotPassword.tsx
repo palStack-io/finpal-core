@@ -98,7 +98,7 @@ export const ForgotPassword: React.FC = () => {
           </h2>
           <p style={{
             fontSize: '1rem',
-            color: '#94a3b8',
+            color: 'var(--text-muted)',
             lineHeight: '1.75',
             marginBottom: '0.5rem'
           }}>
@@ -114,7 +114,7 @@ export const ForgotPassword: React.FC = () => {
           </p>
           <p style={{
             fontSize: '0.875rem',
-            color: '#64748b',
+            color: 'var(--text-secondary)',
             lineHeight: '1.5',
             marginBottom: '2rem'
           }}>
@@ -148,7 +148,7 @@ export const ForgotPassword: React.FC = () => {
               padding: '0.875rem 1.5rem',
               fontSize: '1rem',
               fontWeight: '600',
-              color: '#94a3b8',
+              color: 'var(--text-muted)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -203,7 +203,7 @@ export const ForgotPassword: React.FC = () => {
           </h2>
           <p style={{
             fontSize: '1rem',
-            color: '#94a3b8',
+            color: 'var(--text-muted)',
             lineHeight: '1.75'
           }}>
             Enter your email address and we'll send you instructions to reset your password.
@@ -246,7 +246,7 @@ export const ForgotPassword: React.FC = () => {
               onBlur={(e) => e.target.style.borderColor = error ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}
             />
             {error && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--accent-red)' }}>
                 {error}
               </p>
             )}
@@ -274,11 +274,11 @@ export const ForgotPassword: React.FC = () => {
           </button>
 
           <Link to="/login" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <ArrowLeft size={16} style={{ color: '#94a3b8' }} />
+            <ArrowLeft size={16} style={{ color: 'var(--text-muted)' }} />
             <span style={{
               fontSize: '1rem',
               fontWeight: '600',
-              color: '#94a3b8',
+              color: 'var(--text-muted)',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}

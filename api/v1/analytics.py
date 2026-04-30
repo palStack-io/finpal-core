@@ -3,6 +3,9 @@ from flask import jsonify
 from flask_restx import Namespace, Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.services.analytics.service import AnalyticsService
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create namespace
 ns = Namespace('analytics', description='Analytics and dashboard operations')
@@ -71,12 +74,8 @@ class Dashboard(Resource):
             }, 200
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 500
+            logger.exception("Dashboard data fetch failed")
+            return {'success': False, 'error': 'Internal server error'}, 500
 
 
 @ns.route('/stats')
@@ -112,7 +111,7 @@ class Statistics(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 500
 
 
@@ -145,7 +144,7 @@ class Trends(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 500
 
 
@@ -172,7 +171,7 @@ class TopCategories(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 500
 
 
@@ -205,7 +204,7 @@ class Summary(Resource):
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 500
 
     def _calculate_budget_remaining(self, dashboard_data):
@@ -233,12 +232,8 @@ class CashFlow(Resource):
             }, 200
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 500
+            logger.exception("Cashflow data fetch failed")
+            return {'success': False, 'error': 'Internal server error'}, 500
 
 
 @ns.route('/health')
@@ -258,12 +253,8 @@ class FinancialHealth(Resource):
             }, 200
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 500
+            logger.exception("Financial health fetch failed")
+            return {'success': False, 'error': 'Internal server error'}, 500
 
 
 @ns.route('/networth')
@@ -283,12 +274,8 @@ class NetWorth(Resource):
             }, 200
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 500
+            logger.exception("Net worth trend fetch failed")
+            return {'success': False, 'error': 'Internal server error'}, 500
 
 
 @ns.route('/monthly-comparison')
@@ -313,9 +300,5 @@ class MonthlyComparison(Resource):
             }, 200
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {
-                'success': False,
-                'error': str(e)
-            }, 500
+            logger.exception("Monthly comparison fetch failed")
+            return {'success': False, 'error': 'Internal server error'}, 500

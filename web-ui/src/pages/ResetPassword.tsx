@@ -144,7 +144,7 @@ export const ResetPassword: React.FC = () => {
           </h2>
           <p style={{
             fontSize: '1rem',
-            color: '#94a3b8',
+            color: 'var(--text-muted)',
             lineHeight: '1.75',
             marginBottom: '2rem'
           }}>
@@ -212,7 +212,7 @@ export const ResetPassword: React.FC = () => {
           </h2>
           <p style={{
             fontSize: '1rem',
-            color: '#94a3b8',
+            color: 'var(--text-muted)',
             lineHeight: '1.75'
           }}>
             Enter a new password for your account
@@ -276,17 +276,17 @@ export const ResetPassword: React.FC = () => {
                   border: 'none',
                   cursor: 'pointer',
                   padding: '0.25rem',
-                  color: '#94a3b8'
+                  color: 'var(--text-muted)'
                 }}>
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {errors.password && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--accent-red)' }}>
                 {errors.password}
               </p>
             )}
-            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Must be at least 8 characters with uppercase, lowercase, and number
             </p>
           </div>
@@ -335,13 +335,13 @@ export const ResetPassword: React.FC = () => {
                   border: 'none',
                   cursor: 'pointer',
                   padding: '0.25rem',
-                  color: '#94a3b8'
+                  color: 'var(--text-muted)'
                 }}>
                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {errors.confirmPassword && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--accent-red)' }}>
                 {errors.confirmPassword}
               </p>
             )}
@@ -372,7 +372,7 @@ export const ResetPassword: React.FC = () => {
             <button type="button" style={{
               fontSize: '1rem',
               fontWeight: '600',
-              color: '#94a3b8',
+              color: 'var(--text-muted)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',

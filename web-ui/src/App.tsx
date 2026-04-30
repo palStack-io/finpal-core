@@ -21,6 +21,8 @@ import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Onboarding } from './pages/Onboarding';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 
 // Main Pages
 import { Dashboard } from './pages/Dashboard';
@@ -34,6 +36,7 @@ import { Analytics } from './pages/Analytics';
 import { Investments } from './pages/Investments';
 import { Settings } from './pages/Settings';
 import { SimpleFinSetup } from './pages/SimpleFinSetup';
+import { OidcCallback } from './pages/OidcCallback';
 
 /** Layout wrapper that adds sidebar for authenticated pages */
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -57,7 +60,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 function App() {
-  const { user } = useAuthStore();
+  const { user, features } = useAuthStore();
   return (
     <ThemeProvider>
       <ToastProvider>
@@ -67,6 +70,9 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/callback" element={<OidcCallback />} />
 
             {/* Onboarding Route - requires auth but not onboarding completion */}
             <Route
@@ -143,19 +149,21 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/investments"
-              element={
-                <ProtectedRoute>
-                  <AppLayout><Investments /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+            {features?.investments !== false && (
+              <Route
+                path="/investments"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><Investments /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+            )}
             <Route
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <AppLayout><Settings /></AppLayout>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

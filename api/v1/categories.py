@@ -5,6 +5,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.category import Category
 from src.extensions import db
 from schemas import category_schema, categories_schema
+from schemas.input_schemas import category_input
+from src.utils.validation import validate_request, validation_error_response
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # Create namespace
 ns = Namespace('categories', description='Category operations')
@@ -45,11 +52,15 @@ class CategoryList(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
+        validated, errors = validate_request(category_input, data)
+        if errors:
+            return validation_error_response(errors)
+
         try:
             new_category = Category(
-                name=data.get('name'),
-                icon=data.get('icon', 'fa-tag'),
-                parent_id=data.get('parent_id'),
+                name=validated['name'],
+                icon=validated.get('icon', 'fa-tag'),
+                parent_id=validated.get('parent_id'),
                 user_id=current_user_id
             )
 
@@ -68,7 +79,7 @@ class CategoryList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
 
@@ -105,7 +116,9 @@ class CategoryDetail(Resource):
         if not category:
             return {'success': False, 'error': 'Category not found'}, 404
 
-        data = request.get_json()
+        data = request.get_json() or {}
+        if not data:
+            return {'success': False, 'error': 'Request body required'}, 400
 
         try:
             if 'name' in data:
@@ -129,7 +142,7 @@ class CategoryDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400
 
     @ns.doc('delete_category', security='Bearer')
@@ -156,5 +169,5 @@ class CategoryDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': 'Internal server error'
             }, 400

@@ -2,7 +2,12 @@
 from datetime import datetime, timedelta
 from flask import request
 from flask_login import current_user
+import os
 import threading
+
+def _default_demo_users():
+    raw = os.environ.get('DEMO_USERS', 'demo@example.com,demo1@example.com,demo2@example.com')
+    return [u.strip() for u in raw.split(',') if u.strip()]
 
 
 class DemoTimeout:
@@ -15,11 +20,7 @@ class DemoTimeout:
 
     def __init__(self, app=None, timeout_minutes=10, demo_users=None, max_concurrent_sessions=5):
         self.timeout_minutes = timeout_minutes
-        self.demo_users = demo_users or [
-            'demo@example.com',
-            'demo1@example.com',
-            'demo2@example.com'
-        ]
+        self.demo_users = demo_users or _default_demo_users()
         self.max_concurrent_sessions = max_concurrent_sessions
 
         if app is not None:
@@ -76,7 +77,6 @@ class DemoTimeout:
             return False
 
         return (user_id in self.demo_users or
-                user_id in ['demo@example.com', 'demo1@example.com', 'demo2@example.com'] or
                 user_id.endswith('@demo.com') or
                 'demo' in user_id.lower())
 

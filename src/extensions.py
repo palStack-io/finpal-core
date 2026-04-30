@@ -8,6 +8,8 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import pytz
 
 # Initialize extensions
@@ -16,6 +18,7 @@ login_manager = LoginManager()
 mail = Mail()
 migrate = Migrate()
 scheduler = APScheduler()
+limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
 # Configure scheduler timezone
 scheduler.timezone = pytz.timezone('EST')
@@ -27,5 +30,6 @@ def init_extensions(app):
     login_manager.login_view = 'auth.login'
     mail.init_app(app)
     migrate.init_app(app, db)
+    limiter.init_app(app)
     scheduler.init_app(app)
     scheduler.start()

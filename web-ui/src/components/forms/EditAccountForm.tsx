@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
+import { formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 
 interface EditAccountFormProps {
   account: any;
@@ -10,11 +12,11 @@ interface EditAccountFormProps {
 }
 
 const ACCOUNT_COLORS = [
-  { value: '#3b82f6', label: 'Blue' },
-  { value: '#22c55e', label: 'Green' },
-  { value: '#ef4444', label: 'Red' },
+  { value: 'var(--accent-blue)', label: 'Blue' },
+  { value: 'var(--brand-green-glow)', label: 'Green' },
+  { value: 'var(--accent-red)', label: 'Red' },
   { value: '#8b5cf6', label: 'Purple' },
-  { value: '#f59e0b', label: 'Orange' },
+  { value: 'var(--accent-yellow)', label: 'Orange' },
   { value: '#ec4899', label: 'Pink' },
   { value: '#06b6d4', label: 'Cyan' },
   { value: '#eab308', label: 'Yellow' },
@@ -22,12 +24,12 @@ const ACCOUNT_COLORS = [
 
 const getDefaultColorForType = (type: string): string => {
   switch(type) {
-    case 'checking': return '#3b82f6';
-    case 'savings': return '#22c55e';
-    case 'credit': return '#ef4444';
+    case 'checking': return 'var(--accent-blue)';
+    case 'savings': return 'var(--brand-green-glow)';
+    case 'credit': return 'var(--accent-red)';
     case 'investment': return '#8b5cf6';
-    case 'cash': return '#f59e0b';
-    default: return '#3b82f6';
+    case 'cash': return 'var(--accent-yellow)';
+    default: return 'var(--accent-blue)';
   }
 };
 
@@ -98,28 +100,10 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '12px 16px',
-    background: 'var(--input-bg)',
-    border: '1px solid var(--input-border)',
-    borderRadius: '8px',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    outline: 'none',
-    transition: 'all 0.3s'
-  };
 
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    fontWeight: '600',
-    marginBottom: '8px'
-  };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <form onSubmit={handleSubmit} style={flexColGap20}>
       {/* Success Message */}
       {success && (
         <div
@@ -134,9 +118,9 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           }}
         >
           <div style={{ background: 'rgba(134, 239, 172, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <Check size={20} style={{ color: '#86efac' }} />
+            <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
           </div>
-          <p style={{ color: '#86efac', fontWeight: '600', fontSize: '14px', margin: 0 }}>
+          <p style={{ color: 'var(--brand-light-green)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
             Account updated successfully!
           </p>
         </div>
@@ -156,16 +140,16 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           }}
         >
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <AlertCircle size={20} style={{ color: '#ef4444' }} />
+            <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           </div>
-          <p style={{ color: '#ef4444', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
       {/* Account Name */}
       <div>
         <label style={labelStyle}>
-          <Wallet size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <Wallet size={16} style={iconInlineStyle} />
           Account Name *
         </label>
         <input
@@ -222,7 +206,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       {/* Balance */}
       <div>
         <label style={labelStyle}>
-          <DollarSign size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <DollarSign size={16} style={iconInlineStyle} />
           Balance *
         </label>
         <input
@@ -324,7 +308,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       {/* Color Picker */}
       <div>
         <label style={labelStyle}>
-          <Palette size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+          <Palette size={16} style={iconInlineStyle} />
           Account Color
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
@@ -364,7 +348,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+      <div style={formActionsStyle}>
         <button
           type="button"
           onClick={onCancel}

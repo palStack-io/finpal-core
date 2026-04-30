@@ -15,35 +15,35 @@ from src.models.currency import Currency
 from src.models.user import User
 from src.utils.currency_converter import convert_currency, get_base_currency
 from src.utils.helpers import auto_categorize_transaction
+from src.repositories.account import AccountRepository
 
 
 class AccountService:
     """Service class for account operations"""
 
     def __init__(self):
-        pass
+        self.repo = AccountRepository()
 
     # Account CRUD Methods
 
     def get_all_accounts(self, user_id):
         """Get all accounts for the household"""
         from src.utils.household import get_all_user_ids
-        return Account.query.filter(Account.user_id.in_(get_all_user_ids())).all()
+        return self.repo.get_all_for_household(get_all_user_ids())
 
     def get_account(self, account_id, user_id):
         """
         Get a specific account with transaction count
         Returns (success, message, account_data)
         """
-        account = Account.query.get(account_id)
+        account = self.repo.get_by_id(account_id)
         if not account:
             return False, 'Account not found', None
 
         if account.user_id != user_id:
             return False, 'You do not have permission to view this account', None
 
-        # Get transaction count
-        transaction_count = Expense.query.filter_by(account_id=account_id).count()
+        transaction_count = self.repo.transaction_count(account_id)
 
         user = User.query.get(user_id)
         default_currency = user.default_currency_code if user else 'USD'
@@ -89,22 +89,20 @@ class AccountService:
                 user_id=user_id
             )
 
-            db.session.add(account)
-            db.session.commit()
-
+            self.repo.save(account)
             return True, 'Account added successfully', account
 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error adding account: {str(e)}")
-            return False, f'Error adding account: {str(e)}', None
+            return False, 'Error adding account', None
 
     def update_account(self, account_id, user_id, name, account_type, institution, balance, currency_code):
         """
         Update an existing account
         Returns (success, message)
         """
-        account = Account.query.get(account_id)
+        account = self.repo.get_by_id(account_id)
         if not account:
             return False, 'Account not found'
 
@@ -118,20 +116,20 @@ class AccountService:
             account.balance = float(balance) if balance else 0
             account.currency_code = currency_code
 
-            db.session.commit()
+            self.repo.save(account)
             return True, 'Account updated successfully'
 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error updating account: {str(e)}")
-            return False, f'Error updating account: {str(e)}'
+            return False, 'Error updating account'
 
     def delete_account(self, account_id, user_id):
         """
         Delete an account (soft delete - just removes link from transactions)
         Returns (success, message)
         """
-        account = Account.query.get(account_id)
+        account = self.repo.get_by_id(account_id)
         if not account:
             return False, 'Account not found'
 
@@ -139,19 +137,14 @@ class AccountService:
             return False, 'You do not have permission to delete this account'
 
         try:
-            # Update all transactions to remove account reference
-            Expense.query.filter_by(account_id=account_id).update({'account_id': None})
-
-            # Delete the account
-            db.session.delete(account)
-            db.session.commit()
-
+            self.repo.nullify_account_on_transactions(account_id)
+            self.repo.delete(account)
             return True, 'Account deleted successfully'
 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error deleting account: {str(e)}")
-            return False, f'Error deleting account: {str(e)}'
+            return False, 'Error deleting account'
 
     def calculate_financial_summary(self, user_id, user_currency_code=None):
         """
@@ -448,11 +441,7 @@ class SimpleFinService:
                 if acc['id'] not in simplefin_account_ids:
                     continue
 
-                existing = Account.query.filter_by(
-                    user_id=user_id,
-                    external_id=acc['id'],
-                    import_source='simplefin'
-                ).first()
+                existing = self.repo.get_by_external_id(acc['id'], user_id)
 
                 if existing:
                     existing.balance = acc['balance']
@@ -503,7 +492,7 @@ class SimpleFinService:
         """
         from integrations.simplefin.client import SimpleFin as SimpleFinClient
 
-        account = Account.query.get(account_id)
+        account = self.repo.get_by_id(account_id)
         if not account:
             return False, 'Account not found', 0
         if account.user_id != user_id:
@@ -606,10 +595,7 @@ class SimpleFinService:
         Sync all SimpleFin accounts for a user.
         Returns (success, message, list_of_per_account_results)
         """
-        sf_accounts = Account.query.filter_by(
-            user_id=user_id,
-            import_source='simplefin'
-        ).all()
+        sf_accounts = self.repo.get_by_import_source(user_id, 'simplefin')
 
         if not sf_accounts:
             return True, 'No SimpleFin accounts to sync', []
@@ -635,7 +621,7 @@ class SimpleFinService:
         Disconnect a SimpleFin account
         Returns (success, message)
         """
-        account = Account.query.get(account_id)
+        account = self.repo.get_by_id(account_id)
         if not account:
             return False, 'Account not found'
         if account.user_id != user_id:

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ChevronDown, ChevronUp, Edit2, Trash2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Edit2, Trash2, Calendar, ChevronLeft, ChevronRight, Loader2, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { budgetService, type Budget } from '../services/budgetService';
@@ -8,6 +8,7 @@ import { categoriesApi, type Category } from '../services/api/categories';
 import { useToast } from '../contexts/ToastContext';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
+import { StatCard } from '../components/StatCard';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -18,6 +19,12 @@ interface BudgetWithDetails extends Budget {
   category_color?: string;
   transactions?: Transaction[];
 }
+
+const fieldLabelStyle: React.CSSProperties = { display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' };
+const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)' };
+
+const mutedSmallStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '13px' };
+const secondaryBodyStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px', margin: 0 };
 
 const BudgetsMinimal = () => {
   const { user } = useAuthStore();
@@ -70,7 +77,9 @@ const BudgetsMinimal = () => {
       // Enrich budgets with category info and transactions
       const budgetsList = overview?.budgets || [];
       const enrichedBudgets = budgetsList.map((budget) => {
-        const category = categoriesData.find((c) => c.id === budget.category_id);
+        // API already returns nested category object; fall back to lookup by id
+        const nestedCat = (budget as any).category as { name?: string; icon?: string; color?: string } | undefined;
+        const category = nestedCat?.name ? nestedCat : categoriesData.find((c) => c.id === budget.category_id);
 
         // Get current period dates based on budget period and selected month
         const referenceDate = selectedMonth;
@@ -115,7 +124,6 @@ const BudgetsMinimal = () => {
 
       setBudgets(enrichedBudgets);
     } catch (error: any) {
-      console.error('Failed to load budgets:', error);
       showToast('Failed to load budgets', 'error');
       setBudgets([]);
       setCategories([]);
@@ -223,8 +231,7 @@ const BudgetsMinimal = () => {
       });
       loadData(); // Refresh budgets
     } catch (error: any) {
-      console.error('Failed to save budget:', error);
-      showToast(error.response?.data?.error || 'Failed to save budget', 'error');
+      showToast((error as any).response?.data?.error || 'Failed to save budget', 'error');
     }
   };
 
@@ -240,7 +247,6 @@ const BudgetsMinimal = () => {
       setEditingBudget(null);
       loadData();
     } catch (error: any) {
-      console.error('Failed to delete budget:', error);
       showToast('Failed to delete budget', 'error');
     }
   };
@@ -281,17 +287,12 @@ const BudgetsMinimal = () => {
 
   if (loading) {
     return (
-      <>
-        <div style={{
-          minHeight: '100vh',
-          padding: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div style={{ color: 'var(--text-primary)', fontSize: '18px' }}>Loading budgets...</div>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <Loader2 size={40} className="animate-spin" style={{ color: 'var(--brand-green-glow)' }} />
+          <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>Loading budgets...</p>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -311,7 +312,7 @@ const BudgetsMinimal = () => {
               }}>
                 Budgets
               </h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
+              <p style={secondaryBodyStyle}>
                 Track your spending against your budgets
               </p>
             </div>
@@ -380,7 +381,7 @@ const BudgetsMinimal = () => {
                     background: 'rgba(134, 239, 172, 0.1)',
                     border: '1px solid rgba(134, 239, 172, 0.3)',
                     borderRadius: '6px',
-                    color: '#86efac',
+                    color: 'var(--brand-light-green)',
                     fontSize: '12px',
                     cursor: 'pointer',
                     transition: 'all 0.3s',
@@ -397,10 +398,10 @@ const BudgetsMinimal = () => {
                 onClick={() => handleOpenBudgetModal()}
                 style={{
                   padding: '10px 20px',
-                  background: '#15803d',
+                  background: 'var(--brand-main-green)',
                   border: 'none',
                   borderRadius: '10px',
-                  color: 'var(--text-primary)',
+                  color: 'white',
                   fontWeight: '600',
                   cursor: 'pointer',
                   display: 'flex',
@@ -409,8 +410,8 @@ const BudgetsMinimal = () => {
                   fontSize: '15px',
                   transition: 'all 0.3s'
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#166534')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#15803d')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-dark-green)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-main-green)')}
               >
                 <Plus size={18} /> New Budget
               </button>
@@ -418,59 +419,62 @@ const BudgetsMinimal = () => {
           </div>
 
           {/* Top Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Budgeted</p>
-              <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(totalBudgeted)}</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Across {budgets.length} categories</p>
-            </div>
-
-            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Total Spent</p>
-              <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(totalSpent)}</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                <div style={{ width: '100%', height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${Math.min((totalSpent/totalBudgeted)*100, 100)}%`,
-                    height: '100%',
-                    background: (totalSpent/totalBudgeted)*100 >= 100 ? '#ef4444' : (totalSpent/totalBudgeted)*100 >= 80 ? '#f59e0b' : '#22c55e',
-                    borderRadius: '3px'
-                  }}></div>
+          {(() => {
+            const spentPct = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
+            const spentColor = spentPct >= 100 ? 'var(--accent-red)' : spentPct >= 80 ? 'var(--accent-yellow)' : 'var(--brand-green-glow)';
+            const onTrack = budgets.filter(b => b.percentage < 80).length;
+            const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
+            const over = budgets.filter(b => b.spent > b.amount).length;
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                <StatCard
+                  label="Total Budgeted"
+                  value={formatCurrency(totalBudgeted)}
+                  accentColor="#3b82f6"
+                  icon={<DollarSign size={24} color="#3b82f6" />}
+                  subtitle={<span style={mutedSmallStyle}>Across {budgets.length} categories</span>}
+                />
+                <StatCard
+                  label="Total Spent"
+                  value={formatCurrency(totalSpent)}
+                  accentColor={spentColor}
+                  icon={<TrendingDown size={24} color={spentColor} />}
+                  subtitle={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                      <div style={{ flex: 1, height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(spentPct, 100)}%`, height: '100%', background: spentColor, borderRadius: '3px' }} />
+                      </div>
+                      <span style={{ color: spentColor, fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                        {spentPct.toFixed(0)}%
+                      </span>
+                    </div>
+                  }
+                />
+                <StatCard
+                  label="Remaining"
+                  value={formatCurrency(Math.abs(totalRemaining))}
+                  accentColor={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
+                  icon={<TrendingUp size={24} color={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'} />}
+                  valueColor={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
+                  subtitle={<span style={mutedSmallStyle}>{daysLeftInMonth()} days left this month</span>}
+                />
+                {/* Budget Health — custom layout, not a simple stat */}
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>Budget Health</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '10px' }}>
+                    <span style={{ color: 'var(--brand-green-glow)' }}>{onTrack} on track</span>
+                    <span style={{ color: 'var(--accent-yellow)' }}>{warning} at risk</span>
+                    <span style={{ color: 'var(--accent-red)' }}>{over} over</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '2px', height: '20px', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{ flex: onTrack || 0.1, background: 'var(--brand-green-glow)' }} />
+                    <div style={{ flex: warning || 0.1, background: 'var(--accent-yellow)' }} />
+                    <div style={{ flex: over || 0.1, background: 'var(--accent-red)' }} />
+                  </div>
                 </div>
-                <span style={{
-                  color: (totalSpent/totalBudgeted)*100 >= 100 ? '#ef4444' : (totalSpent/totalBudgeted)*100 >= 80 ? '#f59e0b' : '#22c55e',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {totalBudgeted > 0 ? ((totalSpent/totalBudgeted)*100).toFixed(0) : 0}%
-                </span>
               </div>
-            </div>
-
-            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Remaining</p>
-              <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: totalRemaining >= 0 ? '#22c55e' : '#ef4444' }}>
-                {formatCurrency(Math.abs(totalRemaining))}
-              </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{daysLeftInMonth()} days left this month</p>
-            </div>
-
-            <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>Budget Health</p>
-              <div style={{ marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                  <span style={{ color: '#22c55e' }}>{budgets.filter(b => b.percentage < 80).length} On Track</span>
-                  <span style={{ color: '#ef4444' }}>{budgets.filter(b => b.spent > b.amount).length} Over</span>
-                </div>
-                <div style={{ display: 'flex', gap: '2px', height: '24px', borderRadius: '6px', overflow: 'hidden' }}>
-                  <div style={{ flex: budgets.filter(b => b.percentage < 80).length || 0.1, background: '#22c55e' }}></div>
-                  <div style={{ flex: budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length || 0.1, background: '#f59e0b' }}></div>
-                  <div style={{ flex: budgets.filter(b => b.spent > b.amount).length || 0.1, background: '#ef4444' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Clean Budget List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -538,7 +542,7 @@ const BudgetsMinimal = () => {
                                 border: '1px solid rgba(239, 68, 68, 0.4)',
                                 borderRadius: '6px',
                                 fontSize: '11px',
-                                color: '#ef4444',
+                                color: 'var(--accent-red)',
                                 fontWeight: '700'
                               }}>
                                 OVER
@@ -550,6 +554,7 @@ const BudgetsMinimal = () => {
                                 e.stopPropagation();
                                 handleOpenBudgetModal(budget);
                               }}
+                              aria-label="Edit budget"
                               style={{
                                 marginLeft: 'auto',
                                 padding: '6px',
@@ -587,10 +592,10 @@ const BudgetsMinimal = () => {
                                 width: `${Math.min(percentage, 100)}%`,
                                 height: '100%',
                                 background: isOver
-                                  ? '#ef4444'
+                                  ? 'var(--accent-red)'
                                   : percentage >= 80
-                                    ? '#f59e0b'
-                                    : budget.category_color || '#22c55e',
+                                    ? 'var(--accent-yellow)'
+                                    : budget.category_color || 'var(--brand-green-glow)',
                                 borderRadius: '4px',
                                 transition: 'width 0.5s ease'
                               }}></div>
@@ -599,14 +604,14 @@ const BudgetsMinimal = () => {
 
                           {/* Spent / Budget */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
+                            <p style={secondaryBodyStyle}>
                               <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
                                 {formatCurrency(budget.spent)}
                               </span>
                               {' '}of {formatCurrency(budget.amount)}
                             </p>
                             <p style={{
-                              color: isOver ? '#ef4444' : '#22c55e',
+                              color: isOver ? 'var(--accent-red)' : 'var(--brand-green-glow)',
                               fontSize: '14px',
                               fontWeight: '600',
                               margin: 0
@@ -717,7 +722,7 @@ const BudgetsMinimal = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Category *
                     </label>
                     <select
@@ -736,9 +741,9 @@ const BudgetsMinimal = () => {
                         cursor: 'pointer'
                       }}
                     >
-                      <option value="" style={{ background: 'var(--bg-secondary)' }}>Select a category</option>
+                      <option value="" style={secondaryBgStyle}>Select a category</option>
                       {categories.filter(cat => !cat.parent_id).map(cat => (
-                        <option key={cat.id} value={cat.id} style={{ background: 'var(--bg-secondary)' }}>
+                        <option key={cat.id} value={cat.id} style={secondaryBgStyle}>
                           {cat.icon} {cat.name}
                         </option>
                       ))}
@@ -746,7 +751,7 @@ const BudgetsMinimal = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Budget Amount *
                     </label>
                     <input
@@ -771,7 +776,7 @@ const BudgetsMinimal = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Period *
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
@@ -785,7 +790,7 @@ const BudgetsMinimal = () => {
                             background: budgetFormData.period === period ? 'rgba(34, 197, 94, 0.2)' : 'var(--input-bg)',
                             border: `1px solid ${budgetFormData.period === period ? 'rgba(34, 197, 94, 0.4)' : 'var(--input-border)'}`,
                             borderRadius: '8px',
-                            color: budgetFormData.period === period ? '#22c55e' : 'var(--text-primary)',
+                            color: budgetFormData.period === period ? 'var(--brand-green-glow)' : 'var(--text-primary)',
                             fontSize: '14px',
                             cursor: 'pointer',
                             fontWeight: '500',
@@ -799,7 +804,7 @@ const BudgetsMinimal = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    <label style={fieldLabelStyle}>
                       Start Date *
                     </label>
                     <input
@@ -839,7 +844,7 @@ const BudgetsMinimal = () => {
                         width: '18px',
                         height: '18px',
                         cursor: 'pointer',
-                        accentColor: '#22c55e'
+                        accentColor: 'var(--brand-green-glow)'
                       }}
                     />
                     <label
@@ -867,7 +872,7 @@ const BudgetsMinimal = () => {
                         background: 'rgba(239, 68, 68, 0.2)',
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         borderRadius: '8px',
-                        color: '#ef4444',
+                        color: 'var(--accent-red)',
                         fontSize: '15px',
                         fontWeight: '600',
                         cursor: 'pointer',
@@ -903,7 +908,7 @@ const BudgetsMinimal = () => {
                     style={{
                       flex: 1,
                       padding: '14px',
-                      background: '#15803d',
+                      background: 'var(--brand-main-green)',
                       border: 'none',
                       borderRadius: '8px',
                       color: 'var(--text-primary)',
