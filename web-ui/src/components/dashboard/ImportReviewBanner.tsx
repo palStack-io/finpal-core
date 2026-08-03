@@ -15,23 +15,59 @@ interface ImportReviewBannerProps {
   onReverted?: () => void;
 }
 
+/** Only recent imports are worth nagging about. */
+const REVIEW_WINDOW_DAYS = 14;
+
+const DISMISSED_KEY = 'import_review_dismissed';
+
+/**
+ * Dismissal has to outlive the component. A heuristic profile keeps
+ * origin='heuristic' for good, so every later file from that bank produces
+ * another batch that wants reviewing — with dismissal held in component state
+ * the only way to clear the banner would be Undo, which deletes the
+ * transactions. Persist the batch ids the user has already seen.
+ */
+const readDismissed = (): number[] => {
+  try {
+    const raw = localStorage.getItem(DISMISSED_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'number') : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeDismissed = (ids: number[]) => {
+  try {
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(ids.slice(-200)));
+  } catch {
+    // Private browsing or a full quota — the banner just reappears next load.
+  }
+};
+
 /**
  * A mapping wants reviewing when it was guessed, or when the parse was shaky.
  *
  * Both halves are needed. profile_origin catches the heuristic path even when it
  * is fully confident — the heuristics legitimately return 1.0 for an unambiguous
  * header — and the confidence test catches a low-confidence import whatever its
- * origin. A reverted batch has already been dealt with.
+ * origin. A reverted batch has already been dealt with, and anything older than
+ * the review window is history the user has had ample chance to look at.
  */
-const needsReview = (batch: ImportBatch) =>
-  batch.status !== 'reverted' &&
-  (batch.profile_origin === 'heuristic' ||
-    (batch.confidence !== null && batch.confidence < 1));
+const needsReview = (batch: ImportBatch) => {
+  if (batch.status === 'reverted') return false;
+  if (batch.created_at) {
+    const ageDays = (Date.now() - new Date(batch.created_at).getTime()) / 86_400_000;
+    if (ageDays > REVIEW_WINDOW_DAYS) return false;
+  }
+  return batch.profile_origin === 'heuristic' ||
+    (batch.confidence !== null && batch.confidence < 1);
+};
 
 export const ImportReviewBanner: React.FC<ImportReviewBannerProps> = ({ onReverted }) => {
   const navigate = useNavigate();
   const [batches, setBatches] = useState<ImportBatch[]>([]);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<number[]>(readDismissed);
   const [isReverting, setIsReverting] = useState(false);
 
   useEffect(() => {
@@ -48,9 +84,16 @@ export const ImportReviewBanner: React.FC<ImportReviewBannerProps> = ({ onRevert
     };
   }, []);
 
-  const batch = batches[0];
+  const pending = batches.filter((b) => !dismissedIds.includes(b.id));
+  const batch = pending[0];
 
-  if (dismissed || !batch) return null;
+  if (!batch) return null;
+
+  const handleDismiss = () => {
+    const next = [...dismissedIds, batch.id];
+    setDismissedIds(next);
+    writeDismissed(next);
+  };
 
   const handleUndo = async () => {
     setIsReverting(true);
@@ -82,7 +125,7 @@ export const ImportReviewBanner: React.FC<ImportReviewBannerProps> = ({ onRevert
       <p style={{ color: 'var(--text-primary)', fontSize: '14px', margin: 0, flex: 1, minWidth: '220px' }}>
         Imported {batch.imported} transaction{batch.imported === 1 ? '' : 's'} from{' '}
         <strong style={{ overflowWrap: 'anywhere' }}>{batch.filename}</strong> using a guessed
-        mapping{batches.length > 1 ? ` (and ${batches.length - 1} more)` : ''}. Check the columns
+        mapping{pending.length > 1 ? ` (and ${pending.length - 1} more)` : ''}. Check the columns
         landed in the right place.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -123,8 +166,8 @@ export const ImportReviewBanner: React.FC<ImportReviewBannerProps> = ({ onRevert
           Undo
         </button>
         <button
-          onClick={() => setDismissed(true)}
-          title="Dismiss"
+          onClick={handleDismiss}
+          title="Dismiss — this import will not be flagged again"
           aria-label="Dismiss import review notice"
           style={{
             display: 'flex',
