@@ -63,7 +63,11 @@ web-ui/coverage/
 *.key
 *.crt
 
-# AI Assistant
+# AI Assistant — intentionally excluded from the published repo, at every depth
+# (unanchored on purpose, unlike the anchored scratch-script rules below).
+# NOTE: finpal_core/CLAUDE.md carries real contributor conventions (repository
+# pattern, the "do not do" list). Those belong in a tracked CONTRIBUTING.md
+# before open-sourcing — do not just un-ignore this file.
 .claude/
 CLAUDE.md
 
@@ -73,10 +77,13 @@ CLAUDE.md
 !backup/entrypoint.sh
 !backup/backup-pg.sh
 
-# Test and check scripts
-test_*.py
-simplefin_*.py
-simplefin_*.json
+# Ad-hoc test and check scripts — root-level only.
+# These MUST stay anchored with a leading slash. Unanchored, `test_*.py` matches
+# recursively and silently excluded the entire tests/ suite, and
+# `simplefin_*.py` excluded src/modules/pointspal/simplefin_bridge.py.
+/test_*.py
+/simplefin_*.py
+/simplefin_*.json
 
 # Data files
 app.db
