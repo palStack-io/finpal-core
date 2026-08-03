@@ -22,9 +22,18 @@ class ImportSource(db.Model):
 
 class ImportProfile(db.Model):
     __tablename__ = 'import_profiles'
+    # Uniqueness is per user, NOT global. Two users can bank with the same
+    # institution, so the same header shape legitimately appears twice and each
+    # owner keeps their own mapping. A global unique here let one user's save
+    # overwrite another's profile — every other access path (find_profile,
+    # /api/v1/import-profiles) is user-scoped.
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'header_fingerprint',
+                            name='uq_import_profiles_user_fingerprint'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    header_fingerprint = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    header_fingerprint = db.Column(db.String(64), nullable=False, index=True)
     mapping = db.Column(db.JSON, nullable=False)
     date_format = db.Column(db.String(40), nullable=False, default='%Y-%m-%d')
     sign_convention = db.Column(db.String(20), nullable=False, default='negative_is_expense')

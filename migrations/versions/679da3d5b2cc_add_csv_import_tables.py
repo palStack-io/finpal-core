@@ -55,11 +55,16 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
         sa.PrimaryKeyConstraint('id'),
+        # Per-user, not global: two users can bank with the same institution, so the
+        # same header shape appears once per owner. A global unique on
+        # header_fingerprint let one user's save overwrite another user's profile.
+        sa.UniqueConstraint('user_id', 'header_fingerprint',
+                            name='uq_import_profiles_user_fingerprint'),
     )
     with op.batch_alter_table('import_profiles', schema=None) as batch_op:
         batch_op.create_index(
             batch_op.f('ix_import_profiles_header_fingerprint'),
-            ['header_fingerprint'], unique=True)
+            ['header_fingerprint'], unique=False)
 
     op.create_table(
         'import_batches',

@@ -48,6 +48,42 @@ def test_find_profile_misses_unknown_headers(db):
     assert find_profile(['Totally', 'Different'], user.id) is None
 
 
+def test_one_users_save_cannot_touch_another_users_profile(db):
+    """Two users can import the same bank's CSV without colliding.
+
+    save_profile looked a profile up by fingerprint alone, so the second user to
+    map a given header shape silently overwrote the first user's mapping, name and
+    date_format — a cross-tenant write. Profiles are per-user everywhere else
+    (find_profile filters on user_id, /api/v1/import-profiles is per-user), so the
+    uniqueness has to be per-user too.
+    """
+    alice = UserFactory()
+    bob = UserFactory()
+    headers = ['Date', 'Description', 'Amount']
+
+    a = save_profile(headers, {'date': 'Date', 'description': 'Description',
+                               'amount': 'Amount'},
+                     alice.id, name='Alice Bank', date_format='%Y-%m-%d',
+                     sign_convention='negative_is_expense', origin='manual')
+    b = save_profile(headers, {'date': 'Date', 'description': 'Description',
+                               'amount': 'Amount'},
+                     bob.id, name='Bob Bank', date_format='%m/%d/%Y',
+                     sign_convention='positive_is_expense', origin='heuristic')
+
+    assert a.id != b.id, 'the second save hijacked the first user\'s profile row'
+    assert b.user_id == bob.id
+
+    alice_profile = find_profile(headers, alice.id)
+    bob_profile = find_profile(headers, bob.id)
+    assert alice_profile is not None and bob_profile is not None
+    assert alice_profile.id == a.id
+    assert bob_profile.id == b.id
+    # Alice's settings must survive Bob's save untouched.
+    assert alice_profile.name == 'Alice Bank'
+    assert alice_profile.date_format == '%Y-%m-%d'
+    assert alice_profile.origin == 'manual'
+
+
 def test_save_profile_updates_an_existing_fingerprint(db):
     user = UserFactory()
     headers = ['Date', 'Desc', 'Amt']

@@ -39,7 +39,10 @@ def save_profile(headers, mapping, user_id, name, date_format,
                  sign_convention, origin, confidence=None) -> ImportProfile:
     """Create or update the profile for this header shape."""
     fp = fingerprint_headers(headers)
-    profile = ImportProfile.query.filter_by(header_fingerprint=fp).first()
+    # Scoped to user_id: without it, the second user to map a given header shape
+    # updates the first user's profile row instead of creating their own.
+    profile = ImportProfile.query.filter_by(
+        header_fingerprint=fp, user_id=user_id).first()
     if profile is None:
         profile = ImportProfile(header_fingerprint=fp, user_id=user_id)
         db.session.add(profile)
