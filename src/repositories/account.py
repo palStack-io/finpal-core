@@ -21,6 +21,13 @@ class AccountRepository:
         """Account owned by a specific user, or None."""
         return Account.query.filter_by(id=account_id, user_id=user_id).first()
 
+    def get_by_name_and_user(self, name, user_id):
+        """Account matched by display name for a user, or None.
+
+        Used by the CSV mapper to resolve an account column to an account id.
+        """
+        return Account.query.filter_by(name=name, user_id=user_id).first()
+
     def get_by_external_id(self, external_id, user_id):
         """Account with a matching SimpleFin / external ID."""
         return Account.query.filter_by(external_id=external_id, user_id=user_id).first()
