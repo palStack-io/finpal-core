@@ -463,6 +463,11 @@ def apple_signin():
         # Build RSA public key and verify the token
         public_key = RSAAlgorithm.from_jwk(apple_key_dict)
         bundle_id = os.getenv('APPLE_CLIENT_ID', '')
+        if not bundle_id:
+            current_app.logger.error(
+                'APPLE_SIGNIN_ENABLED is true but APPLE_CLIENT_ID is unset'
+            )
+            return jsonify({'error': 'Apple Sign In is misconfigured on this server'}), 500
         claims = pyjwt.decode(
             identity_token,
             public_key,
@@ -471,21 +476,42 @@ def apple_signin():
             issuer='https://appleid.apple.com',
         )
 
-        # Extract user info — Apple only sends email on first login
+        # Identity is taken from the signed token ONLY — never from the request
+        # body. Apple omits the email claim on every sign-in after the first
+        # authorization, so a `data.get('email')` fallback here is the normal
+        # path rather than an edge case: any caller holding a valid Apple token
+        # of their own could name someone else's address and, because the user
+        # PK *is* the email, be handed that account. Resolve by `sub` instead.
         sub = claims['sub']
-        token_email = claims.get('email') or data.get('email')
-        if not token_email:
-            return jsonify({'error': 'Could not determine user email from Apple token'}), 400
+        token_email = claims.get('email')
+        # Apple sends email_verified as either a bool or the string "true".
+        email_verified = str(claims.get('email_verified', 'false')).lower() == 'true'
 
+        known = User.query.filter_by(oidc_id=sub, oidc_provider='apple').first()
+        if not known:
+            # First sign-in for this Apple ID: we need a trustworthy email to
+            # create (or link) the account, and only the token can supply one.
+            if not token_email:
+                return jsonify({
+                    'error': 'Apple did not return an email address for this sign-in. '
+                             'On your device, remove finPal under Settings → your name → '
+                             'Sign in with Apple, then try again.'
+                }), 400
+            if not email_verified:
+                return jsonify({'error': 'This Apple account email is not verified'}), 403
+
+        oidc_data = {'sub': sub}
+        if token_email and email_verified:
+            oidc_data['email'] = token_email
+            oidc_data['email_verified'] = True
+        # full_name is display-only. Apple returns the real name once, in the
+        # credential rather than the token, so the client has to relay it — but
+        # it never contributes to identity resolution.
         full_name = data.get('full_name')
-        name = full_name or token_email.split('@')[0]
-
-        oidc_data = {
-            'sub': sub,
-            'email': token_email,
-            'name': name,
-            'email_verified': True,
-        }
+        if full_name:
+            oidc_data['name'] = full_name
+        elif 'email' in oidc_data:
+            oidc_data['name'] = oidc_data['email'].split('@')[0]
 
         # Reuse existing OIDC user creation logic
         # User.from_oidc is added by extend_user_model at startup
