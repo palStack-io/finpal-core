@@ -7,6 +7,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.extensions import db
 from src.services.csv_import import Mapping, MapperConfig, import_rows
+from src.services.csv_import.fingerprint import save_profile
 from src.utils.decorators import demo_restricted
 from werkzeug.datastructures import FileStorage
 
@@ -140,6 +141,9 @@ class CSVImport(Resource):
 
             stream = io.StringIO(file.stream.read().decode('UTF8'), newline=None)
             csv_reader = csv.DictReader(stream)
+            # Read before iterating: DictReader consumes the header row on first
+            # access, and import_rows will have exhausted the reader afterwards.
+            headers = list(csv_reader.fieldnames or [])
 
             outcome = import_rows(
                 csv_reader,
@@ -160,6 +164,22 @@ class CSVImport(Resource):
                 current_user_id,
                 max_rows=CSV_MAX_ROWS,
             )
+
+            # Teach the system this bank's format so folder-watch can auto-map it.
+            if outcome.imported > 0 and headers:
+                try:
+                    save_profile(
+                        headers,
+                        {k: v for k, v in mapping.items() if v},
+                        current_user_id,
+                        name=file.filename.rsplit('.', 1)[0][:120],
+                        date_format=config.get('date_format', '%Y-%m-%d'),
+                        sign_convention='negative_is_expense',
+                        origin='manual',
+                    )
+                except Exception:
+                    # Never fail a successful import because profile saving broke.
+                    logger.exception('Failed to save import profile')
 
             succeeded = outcome.imported > 0 or (outcome.errors == 0 and outcome.skipped > 0)
             return {

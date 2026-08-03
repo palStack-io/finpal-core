@@ -70,12 +70,6 @@ def test_import_rows_counts_outcomes(db):
     assert len(result.error_details) == 1
 
 
-@pytest.mark.xfail(
-    reason='Expense.import_batch_id column is added in Task 6; until then the '
-           'attribute does not exist and raises AttributeError rather than '
-           'returning None. Flips to XPASS once the column lands.',
-    strict=False,
-)
 def test_import_rows_stamps_batch_id(db):
     user = UserFactory()
     rows = [{'Date': '2026-01-15', 'Description': 'A', 'Amount': '-1.00'}]

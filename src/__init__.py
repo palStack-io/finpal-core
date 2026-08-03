@@ -5,8 +5,11 @@ Creates and configures the Flask application
 
 import os
 import logging
+from contextlib import contextmanager
+
 import pytz
 from flask import Flask
+from sqlalchemy import text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from src.config import get_config
 from src.extensions import db, login_manager, mail, migrate, scheduler, init_extensions
@@ -15,6 +18,52 @@ from flask_cors import CORS
 
 # Import models (needed for migrations and relationships)
 from src import models
+
+# Fixed key for the first-boot advisory lock. Every process that runs create_app()
+# against the same database must use this same value for the lock to mean anything.
+_FIRST_BOOT_LOCK_KEY = 8675309
+
+
+@contextmanager
+def _first_boot_lock(app):
+    """Serialise first-boot database initialisation across processes.
+
+    gunicorn runs several workers and every one calls create_app(), so against an
+    empty database they all initialise at once and race. Concurrent
+    db.create_all() collides in the Postgres catalogue ("duplicate key value
+    violates unique constraint pg_type_typname_nsp_index") and kills workers;
+    concurrent demo seeding collides on users_pkey and leaves a half-seeded
+    database. Holding an advisory lock makes the losers wait and then find the work
+    already done.
+
+    Postgres only. SQLite (dev, tests) has no advisory locks and is single-process
+    here, so it just proceeds. Failure to acquire is logged and ignored rather than
+    fatal — a database that cannot take the lock should still be able to boot.
+    """
+    if db.engine.dialect.name != 'postgresql':
+        yield
+        return
+
+    conn = None
+    locked = False
+    try:
+        conn = db.engine.connect()
+        conn.execute(text('SELECT pg_advisory_lock(:key)'), {'key': _FIRST_BOOT_LOCK_KEY})
+        locked = True
+    except Exception as e:
+        app.logger.warning(f"First-boot advisory lock unavailable, continuing without it: {e}")
+
+    try:
+        yield
+    finally:
+        if locked:
+            try:
+                conn.execute(text('SELECT pg_advisory_unlock(:key)'),
+                             {'key': _FIRST_BOOT_LOCK_KEY})
+            except Exception:
+                app.logger.exception("Failed to release the first-boot advisory lock")
+        if conn is not None:
+            conn.close()
 
 def create_app(config_name=None):
     """Create and configure the Flask application"""
@@ -192,32 +241,35 @@ def create_app(config_name=None):
     app.logger.info(f"SimpleFin enabled: {app.config.get('SIMPLEFIN_ENABLED', False)}")
     app.logger.info(f"Investment tracking enabled: {app.config.get('INVESTMENT_TRACKING_ENABLED', False)}")
 
-    # Ensure database tables exist and seed demo data if needed
+    # Ensure database tables exist and seed demo data if needed.
+    # Held under an advisory lock so concurrent gunicorn workers cannot race each
+    # other through create_all() and the demo seeder — see _first_boot_lock.
     with app.app_context():
-        db.create_all()
-        app.logger.info("Database tables verified")
+        with _first_boot_lock(app):
+            db.create_all()
+            app.logger.info("Database tables verified")
 
-        # Module startup hooks (seeding, cache warming, etc.)
-        try:
-            from src.modules.registry import module_registry
-            module_registry.startup(app)
-        except Exception as e:
-            app.logger.warning(f"Module startup failed (non-fatal): {e}")
-
-        if app.config.get('DEMO_MODE', False):
+            # Module startup hooks (seeding, cache warming, etc.)
             try:
-                # Seed default currencies
-                from src.cli import create_default_currencies
-                create_default_currencies()
-
-                from src.services.demo import DemoService
-                result = DemoService.seed_demo_accounts()
-                if result.get('success'):
-                    app.logger.info(f"Demo mode enabled: {result.get('message')}")
-                else:
-                    app.logger.warning(f"Demo seeding issue: {result.get('message', result.get('error'))}")
+                from src.modules.registry import module_registry
+                module_registry.startup(app)
             except Exception as e:
-                app.logger.error(f"Failed to seed demo accounts: {e}")
+                app.logger.warning(f"Module startup failed (non-fatal): {e}")
+
+            if app.config.get('DEMO_MODE', False):
+                try:
+                    # Seed default currencies
+                    from src.cli import create_default_currencies
+                    create_default_currencies()
+
+                    from src.services.demo import DemoService
+                    result = DemoService.seed_demo_accounts()
+                    if result.get('success'):
+                        app.logger.info(f"Demo mode enabled: {result.get('message')}")
+                    else:
+                        app.logger.warning(f"Demo seeding issue: {result.get('message', result.get('error'))}")
+                except Exception as e:
+                    app.logger.error(f"Failed to seed demo accounts: {e}")
 
     return app
 
