@@ -1,3 +1,54 @@
+# Shared backend environment. The API workers and the scheduler process must
+# see identical config, so both reference this one block rather than
+# duplicating it — a drifted copy is how you get a scheduler that cannot
+# reach the database.
+x-backend-env: &backend-env
+  # Database
+  SQLALCHEMY_DATABASE_URI: "postgresql://${DB_USER:-finpal}:${DB_PASSWORD}@db:5432/${DB_NAME:-finpal}"
+
+  # Flask
+  FLASK_APP: "app.py"
+  FLASK_ENV: "production"
+  SECRET_KEY: "${SECRET_KEY:?SECRET_KEY is required}"
+  DEBUG: "False"
+  DEVELOPMENT_MODE: "False"
+  LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+
+  # Encryption (for sensitive fields — generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+  ENCRYPTION_KEY: "${ENCRYPTION_KEY:-}"
+
+  # Application
+  DISABLE_SIGNUPS: "${DISABLE_SIGNUPS:-False}"
+
+  # Feature Flags
+  INVESTMENT_TRACKING_ENABLED: "${INVESTMENT_TRACKING_ENABLED:-true}"
+  SIMPLEFIN_ENABLED: "${SIMPLEFIN_ENABLED:-true}"
+  FMP_API_KEY: "${FMP_API_KEY:-}"
+  POINTSPAL_ENABLED: "${POINTSPAL_ENABLED:-false}"
+  POINTSPAL_SYNC_INTERVAL_HOURS: "${POINTSPAL_SYNC_INTERVAL_HOURS:-24}"
+
+  # Email (optional - for password reset)
+  EMAIL_ENABLED: "${EMAIL_ENABLED:-false}"
+  MAIL_SERVER: "${MAIL_SERVER:-smtp.gmail.com}"
+  MAIL_PORT: "${MAIL_PORT:-587}"
+  MAIL_USE_TLS: "${MAIL_USE_TLS:-True}"
+  MAIL_USE_SSL: "${MAIL_USE_SSL:-False}"
+  MAIL_USERNAME: "${MAIL_USERNAME:-}"
+  MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+  MAIL_DEFAULT_SENDER: "${MAIL_DEFAULT_SENDER:-}"
+
+  # OIDC Single Sign-On (optional)
+  OIDC_ENABLED: "${OIDC_ENABLED:-false}"
+  OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+  OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+  OIDC_ISSUER: "${OIDC_ISSUER:-}"
+  OIDC_DISCOVERY_URL: "${OIDC_DISCOVERY_URL:-}"
+  OIDC_PROVIDER_NAME: "${OIDC_PROVIDER_NAME:-SSO}"
+  OIDC_LOGOUT_URI: "${OIDC_LOGOUT_URI:-}"
+  APP_URL: "${APP_URL:-http://localhost}"
+  LOCAL_LOGIN_DISABLE: "${LOCAL_LOGIN_DISABLE:-False}"
+
+
 services:
   # ===================================
   # PostgreSQL Database
@@ -29,52 +80,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      # Database
-      - SQLALCHEMY_DATABASE_URI=postgresql://${DB_USER:-finpal}:${DB_PASSWORD}@db:5432/${DB_NAME:-finpal}
-
-      # Flask
-      - FLASK_APP=app.py
-      - FLASK_ENV=production
-      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
-      - DEBUG=False
-      - DEVELOPMENT_MODE=False
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-
-      # Encryption (for sensitive fields — generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
-
-      # Application
-      - DISABLE_SIGNUPS=${DISABLE_SIGNUPS:-False}
-
-      # Feature Flags
-      - INVESTMENT_TRACKING_ENABLED=${INVESTMENT_TRACKING_ENABLED:-true}
-      - SIMPLEFIN_ENABLED=${SIMPLEFIN_ENABLED:-true}
-      - FMP_API_KEY=${FMP_API_KEY:-}
-      - POINTSPAL_ENABLED=${POINTSPAL_ENABLED:-false}
-      - POINTSPAL_SYNC_INTERVAL_HOURS=${POINTSPAL_SYNC_INTERVAL_HOURS:-24}
-
-      # Email (optional - for password reset)
-      - EMAIL_ENABLED=${EMAIL_ENABLED:-false}
-      - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
-      - MAIL_PORT=${MAIL_PORT:-587}
-      - MAIL_USE_TLS=${MAIL_USE_TLS:-True}
-      - MAIL_USE_SSL=${MAIL_USE_SSL:-False}
-      - MAIL_USERNAME=${MAIL_USERNAME:-}
-      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
-      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-}
-
-      # OIDC Single Sign-On (optional)
-      - OIDC_ENABLED=${OIDC_ENABLED:-false}
-      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
-      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
-      - OIDC_ISSUER=${OIDC_ISSUER:-}
-      - OIDC_DISCOVERY_URL=${OIDC_DISCOVERY_URL:-}
-      - OIDC_PROVIDER_NAME=${OIDC_PROVIDER_NAME:-SSO}
-      - OIDC_LOGOUT_URI=${OIDC_LOGOUT_URI:-}
-      - APP_URL=${APP_URL:-http://localhost}
-      - LOCAL_LOGIN_DISABLE=${LOCAL_LOGIN_DISABLE:-False}
-
+    environment: *backend-env
     networks:
       - finpal-network
     restart: unless-stopped
@@ -84,6 +90,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # ===================================
+  # Scheduler — the single process that runs cron jobs
+  # ===================================
+  # The backend runs gunicorn --workers=3, and each worker calls create_app().
+  # Without this split every scheduled job fired once per worker: monthly_reports
+  # emailed every user three times. The backend image now sets RUN_SCHEDULER=false
+  # via its gunicorn --env flag, and this one container runs the jobs.
+  scheduler:
+    image: ghcr.io/palstack-io/finpal-backend:latest
+    container_name: finpal-scheduler
+    depends_on:
+      db:
+        condition: service_healthy
+    # create_app() starts APScheduler on background threads; the main thread then
+    # blocks forever. Event().wait() parks with no wakeups and no allocation.
+    command: ["/venv/bin/python", "-c", "from src import create_app; create_app(); import threading; threading.Event().wait()"]
+    environment:
+      <<: *backend-env
+      RUN_SCHEDULER: "true"
+    networks:
+      - finpal-network
+    restart: unless-stopped
 
   # ===================================
   # Web UI
