@@ -73,4 +73,9 @@ EXPOSE 5001
 ARG TARGETPLATFORM
 
 # Use the absolute path to gunicorn from the virtual environment
-CMD ["/venv/bin/gunicorn", "--bind", "0.0.0.0:5001", "--workers=3", "--timeout=120", "--env", "RUN_SCHEDULER=false", "app:app"]
+# RUN_SCHEDULER is deliberately NOT set here. The deployed Portainer stacks
+# (deploy/core/finpal.yml, deploy/premium/finpal-premium.yml) inherit this CMD and
+# have no scheduler service, so disabling the scheduler at the image level would
+# stop every cron job in production. It is set per-service in docker-compose.yml
+# instead, which fails open: an un-updated stack keeps running jobs.
+CMD ["/venv/bin/gunicorn", "--bind", "0.0.0.0:5001", "--workers=3", "--timeout=120", "app:app"]

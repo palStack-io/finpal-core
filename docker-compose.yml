@@ -80,7 +80,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment: *backend-env
+    environment:
+      <<: *backend-env
+      # gunicorn runs --workers=3 and every worker calls create_app(), so leaving
+      # this true starts three schedulers and fires each cron job three times.
+      # The scheduler service below is the one process that runs them.
+      RUN_SCHEDULER: "false"
     networks:
       - finpal-network
     restart: unless-stopped
@@ -96,8 +101,14 @@ services:
   # ===================================
   # The backend runs gunicorn --workers=3, and each worker calls create_app().
   # Without this split every scheduled job fired once per worker: monthly_reports
-  # emailed every user three times. The backend image now sets RUN_SCHEDULER=false
-  # via its gunicorn --env flag, and this one container runs the jobs.
+  # emailed every user three times. The backend service above sets
+  # RUN_SCHEDULER=false and this one container runs the jobs.
+  #
+  # The deployed Portainer stacks (deploy/core/finpal.yml,
+  # deploy/premium/finpal-premium.yml) do NOT yet have this service. Until they do
+  # they keep running one scheduler per worker — the original 3x bug, but jobs do
+  # run. Do not push RUN_SCHEDULER=false into those stacks without adding a
+  # scheduler service in the same change, or all cron jobs stop.
   scheduler:
     image: ghcr.io/palstack-io/finpal-backend:latest
     container_name: finpal-scheduler
