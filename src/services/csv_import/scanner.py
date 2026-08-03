@@ -10,7 +10,8 @@ from datetime import datetime
 from src.extensions import db
 from src.models.import_source import ImportBatch
 from src.services.csv_import.adapters.local_folder import LocalFolderAdapter
-from src.services.csv_import.fingerprint import find_profile
+from src.services.csv_import.fingerprint import find_profile, save_profile
+from src.services.csv_import.heuristics import detect
 from src.services.csv_import.mapper import Mapping, MapperConfig, import_rows
 
 logger = logging.getLogger(__name__)
@@ -90,11 +91,24 @@ def _process(adapter, source, handle) -> ImportBatch | None:
         return None
 
     profile = find_profile(headers, source.user_id)
+    heuristic = None
     if profile is None:
-        # Heuristic fallback arrives in Task 12. Until then, quarantine.
-        _fail(adapter, source, handle, file_hash,
-              'No saved import profile matches this file\'s columns')
-        return None
+        # Re-read: DictReader is a one-shot iterator and detect() needs rows.
+        sample = list(csv.DictReader(io.StringIO(text, newline=None)))[:50]
+        heuristic = detect(headers, sample)
+        if heuristic is None:
+            _fail(adapter, source, handle, file_hash,
+                  'Could not identify a date and amount column in this file')
+            return None
+        profile = save_profile(
+            headers, heuristic.mapping, source.user_id,
+            name=handle.name.rsplit('.', 1)[0][:120],
+            date_format=heuristic.date_format,
+            sign_convention=heuristic.sign_convention,
+            origin='heuristic', confidence=heuristic.confidence,
+        )
+        # The reader was consumed building the sample — start over.
+        reader = csv.DictReader(io.StringIO(text, newline=None))
 
     batch = ImportBatch(
         source_id=source.id, profile_id=profile.id, filename=handle.name,
