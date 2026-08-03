@@ -73,7 +73,7 @@ def handle_jwt_decode_error(error):
     return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
 
 # Import and register namespaces (will be created next)
-from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo
+from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources
 
 # Register namespaces
 api.add_namespace(auth.ns, path='/auth')
@@ -90,6 +90,12 @@ api.add_namespace(users.ns, path='/users')
 api.add_namespace(team.ns, path='/team')
 api.add_namespace(transaction_rules.ns, path='/transaction-rules')
 api.add_namespace(demo.ns, path='/demo')
+# Three separate namespaces: the spec's API table puts batches and profiles at the
+# top level, not under /import-sources. The api_bp blueprint already supplies the
+# /api/v1 prefix, so these paths stay bare.
+api.add_namespace(import_sources.ns, path='/import-sources')
+api.add_namespace(import_sources.batches_ns, path='/import-batches')
+api.add_namespace(import_sources.profiles_ns, path='/import-profiles')
 
 # Module namespaces — self-registering via ModuleRegistry
 try:
