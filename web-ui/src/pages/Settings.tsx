@@ -77,9 +77,6 @@ export const Settings: React.FC = () => {
   const { theme } = useTheme();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const [searchParams] = useSearchParams();
-  // ?tab=integrations lets other pages link straight to a section — the
-  // dashboard's import review banner does.
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -129,6 +126,16 @@ export const Settings: React.FC = () => {
     { id: 'data', label: 'Data & Privacy', icon: <Database size={18} /> },
     { id: 'about', label: 'About', icon: <Info size={18} /> }
   ];
+
+  // ?tab=integrations lets another page link straight to a section — the
+  // dashboard's import review banner does. Validated against the tabs actually
+  // built for this user: `tabs` filters out household/modules by entitlement,
+  // but the render guards below are bare `activeTab === ...` equality, so an
+  // unchecked param would render a section the tab rail deliberately hides.
+  const requestedTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    tabs.some((tab) => tab.id === requestedTab) ? requestedTab! : 'profile'
+  );
 
   const currencies = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD'];
   const timezones = [
