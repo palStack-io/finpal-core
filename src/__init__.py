@@ -326,6 +326,17 @@ def setup_scheduled_tasks(app):
             except Exception as e:
                 app.logger.error(f"SimpleFin sync task failed: {e}")
 
+    @scheduler.task('interval', id='csv_folder_scan', minutes=5)
+    def scheduled_csv_folder_scan():
+        with app.app_context():
+            try:
+                from src.models.import_source import ImportSource
+                from src.services.csv_import.scanner import scan_source
+                for source in ImportSource.query.filter_by(enabled=True).all():
+                    scan_source(source)
+            except Exception:
+                app.logger.exception('CSV folder scan failed')
+
     # Module scheduled tasks (e.g. pointsPal nightly sync)
     try:
         from src.modules.registry import module_registry
