@@ -5,12 +5,9 @@ import io
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from src.models.transaction import Expense
-from src.models.account import Account
-from src.models.category import Category
 from src.extensions import db
+from src.services.csv_import import Mapping, MapperConfig, import_rows
 from src.utils.decorators import demo_restricted
-from datetime import datetime
 from werkzeug.datastructures import FileStorage
 
 import logging
@@ -141,137 +138,41 @@ class CSVImport(Resource):
                     'error': 'Required mappings: date, description, amount'
                 }, 400
 
-            # Read CSV file
-            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            stream = io.StringIO(file.stream.read().decode('UTF8'), newline=None)
             csv_reader = csv.DictReader(stream)
 
-            # Process rows
-            imported_count = 0
-            skipped_count = 0
-            error_count = 0
-            errors = []
+            outcome = import_rows(
+                csv_reader,
+                Mapping(
+                    date=mapping['date'],
+                    description=mapping['description'],
+                    amount=mapping['amount'],
+                    category=mapping.get('category'),
+                    account=mapping.get('account'),
+                    notes=mapping.get('notes'),
+                ),
+                MapperConfig(
+                    date_format=config.get('date_format', '%Y-%m-%d'),
+                    skip_duplicates=config.get('skip_duplicates', True),
+                    amount_multiplier=config.get('amount_multiplier', 1.0),
+                    account_id=config.get('account_id'),
+                ),
+                current_user_id,
+                max_rows=CSV_MAX_ROWS,
+            )
 
-            default_account_id = config.get('account_id')
-            date_format = config.get('date_format', '%Y-%m-%d')
-            skip_duplicates = config.get('skip_duplicates', True)
-            amount_multiplier = config.get('amount_multiplier', 1.0)
-
-            for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (1 is header)
-                if row_num - 2 >= CSV_MAX_ROWS:
-                    errors.append(f"Import limited to {CSV_MAX_ROWS} rows — remaining rows skipped")
-                    break
-                try:
-                    # Extract data based on mapping
-                    date_str = row.get(mapping['date'], '').strip()
-                    description = row.get(mapping['description'], '').strip()
-                    amount_str = row.get(mapping['amount'], '').strip()
-
-                    # Parse date
-                    try:
-                        transaction_date = datetime.strptime(date_str, date_format)
-                    except ValueError as e:
-                        errors.append(f"Row {row_num}: Invalid date format '{date_str}'")
-                        error_count += 1
-                        continue
-
-                    # Parse amount
-                    try:
-                        # Remove currency symbols and commas
-                        amount_str = amount_str.replace('$', '').replace(',', '').strip()
-                        amount = float(amount_str) * amount_multiplier
-                        # Convert to absolute value for storage
-                        abs_amount = abs(amount)
-                    except ValueError:
-                        errors.append(f"Row {row_num}: Invalid amount '{amount_str}'")
-                        error_count += 1
-                        continue
-
-                    # Determine transaction type
-                    transaction_type = 'expense' if amount < 0 else 'income'
-
-                    # Get account
-                    account_id = default_account_id
-                    if 'account' in mapping and mapping['account']:
-                        account_name = row.get(mapping['account'], '').strip()
-                        if account_name:
-                            account = Account.query.filter_by(
-                                name=account_name,
-                                user_id=current_user_id
-                            ).first()
-                            if account:
-                                account_id = account.id
-
-                    # Get category
-                    category_id = None
-                    if 'category' in mapping and mapping['category']:
-                        category_name = row.get(mapping['category'], '').strip()
-                        if category_name:
-                            category = Category.query.filter_by(
-                                name=category_name,
-                                user_id=current_user_id
-                            ).first()
-                            if category:
-                                category_id = category.id
-                            else:
-                                # Create category if it doesn't exist
-                                new_category = Category(
-                                    name=category_name,
-                                    user_id=current_user_id
-                                )
-                                db.session.add(new_category)
-                                db.session.flush()
-                                category_id = new_category.id
-
-                    # Get notes
-                    notes = ''
-                    if 'notes' in mapping and mapping['notes']:
-                        notes = row.get(mapping['notes'], '').strip()
-
-                    # Check for duplicates
-                    if skip_duplicates:
-                        duplicate = Expense.query.filter_by(
-                            user_id=current_user_id,
-                            description=description,
-                            amount=abs_amount,
-                            date=transaction_date
-                        ).first()
-
-                        if duplicate:
-                            skipped_count += 1
-                            continue
-
-                    # Create transaction
-                    transaction = Expense(
-                        description=description,
-                        amount=abs_amount,
-                        date=transaction_date,
-                        transaction_type=transaction_type,
-                        account_id=account_id,
-                        category_id=category_id,
-                        notes=notes,
-                        user_id=current_user_id,
-                        paid_by=current_user_id,
-                        import_source='csv'
-                    )
-
-                    db.session.add(transaction)
-                    imported_count += 1
-
-                except Exception as e:
-                    errors.append(f"Row {row_num}: {str(e)}")
-                    error_count += 1
-                    continue
-
-            # Commit all transactions
-            db.session.commit()
-
+            succeeded = outcome.imported > 0 or (outcome.errors == 0 and outcome.skipped > 0)
             return {
-                'success': True,
-                'imported': imported_count,
-                'skipped': skipped_count,
-                'errors': error_count,
-                'error_details': errors[:10],  # Return first 10 errors
-                'message': f'Imported {imported_count} transactions successfully'
+                'success': succeeded,
+                'imported': outcome.imported,
+                'skipped': outcome.skipped,
+                'errors': outcome.errors,
+                'error_details': outcome.error_details[:10],
+                'message': (
+                    f'Imported {outcome.imported} transactions successfully'
+                    if succeeded else
+                    'No transactions were imported — see error_details'
+                ),
             }, 200
 
         except Exception as e:
