@@ -80,3 +80,28 @@ def test_import_reports_failure_rather_than_false_success(client, db, auth_heade
     assert body['imported'] == 0
     assert body['success'] is False
     assert body['errors'] == 1
+
+
+def test_successful_import_saves_a_profile(client, db, auth_headers):
+    """One manual mapping should teach the system this bank's format."""
+    user = UserFactory()
+    resp = post_csv(client, auth_headers(user), BASIC_CSV, BASIC_MAPPING,
+                    {'date_format': '%Y-%m-%d'})
+    assert resp.status_code == 200
+
+    from src.services.csv_import.fingerprint import find_profile
+    profile = find_profile(['Date', 'Description', 'Amount'], user.id)
+    assert profile is not None
+    assert profile.origin == 'manual'
+    assert profile.mapping['amount'] == 'Amount'
+    assert profile.date_format == '%Y-%m-%d'
+
+
+def test_failed_import_saves_no_profile(client, db, auth_headers):
+    user = UserFactory()
+    post_csv(client, auth_headers(user),
+             "Date,Description,Amount\nbad,X,abc\n",
+             BASIC_MAPPING, {'date_format': '%Y-%m-%d'})
+
+    from src.services.csv_import.fingerprint import find_profile
+    assert find_profile(['Date', 'Description', 'Amount'], user.id) is None
