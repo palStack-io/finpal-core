@@ -9,6 +9,7 @@ import { SimpleFinSettings } from '../components/import/SimpleFinSettings';
 import { InvestmentSettings } from '../components/investment/InvestmentSettings';
 import { RecurringTransactions } from '../components/RecurringTransactions';
 import { TeamManagement } from '../components/settings/TeamManagement';
+import { ImportSources } from '../components/settings/ImportSources';
 import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
@@ -797,6 +798,21 @@ export const Settings: React.FC = () => {
                     <div style={{ marginBottom: '32px', padding: '16px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
                       <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>Investment Tracking</h3>
                       <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Investment tracking is not enabled on this server. Set <code>INVESTMENT_TRACKING_ENABLED=true</code> to activate it.</p>
+                    </div>
+                  )}
+
+                  {/* Automatic CSV import — admin only, mirroring the server's
+                      _require_admin gate on /api/v1/import-sources */}
+                  {user?.is_admin && (
+                    <div style={{ marginBottom: '32px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        Automatic CSV Import
+                      </h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                        Watch a folder on the server and import any CSV dropped into it. Import the
+                        first file of a new bank format manually so the column mapping is learned.
+                      </p>
+                      <ImportSources />
                     </div>
                   )}
                 </div>
