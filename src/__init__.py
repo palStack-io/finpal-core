@@ -151,12 +151,17 @@ def create_app(config_name=None):
     try:
         from integrations.oidc.auth import setup_oidc_config, register_oidc_routes
         from integrations.oidc.user import extend_user_model
+        from src.models.user import User
+
+        # from_oidc is installed unconditionally. Native Apple sign-in
+        # (APPLE_SIGNIN_ENABLED) also depends on it, and that is configured
+        # independently of OIDC_ENABLED — which governs only the web redirect
+        # flow. Installing it inside the `if` below meant APPLE_SIGNIN_ENABLED=true
+        # with OIDC_ENABLED=false raised AttributeError on every Apple sign-in.
+        User = extend_user_model(db, User)
 
         oidc_enabled = setup_oidc_config(app)
         if oidc_enabled:
-            # Extend User model with OIDC methods
-            from src.models.user import User
-            User = extend_user_model(db, User)
             # Register OIDC routes with User model and db
             register_oidc_routes(app, User, db)
             app.logger.info("OIDC authentication enabled")

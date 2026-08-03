@@ -29,11 +29,23 @@ def extend_user_model(db, User):
         # Check if user exists by OIDC ID
         user = cls.query.filter_by(oidc_id=oidc_data.get('sub'), oidc_provider=provider).first()
         
-        # If not found, check by email, but only if we have a verified email
+        # If not found, fall back to matching on email — this is what links an
+        # existing local password account to an OIDC identity.
+        #
+        # TRUST BOUNDARY: `oidc_data` must already be derived from a verified
+        # source — a signature-checked ID token, or a userinfo response fetched
+        # with a token the server obtained itself. Never pass client-supplied
+        # fields in here: the user PK is the email, so an attacker-chosen
+        # `email` at this point is an account takeover.
+        #
+        # email_verified defaults to True because self-hosted IdPs (Authelia,
+        # Keycloak) often omit the claim, and their operator controls the
+        # directory. Public multi-tenant providers DO send it, and callers
+        # using them must check it themselves before calling — see the native
+        # Apple path in src/services/auth/api_routes.py.
         if not user and 'email' in oidc_data:
-            # Many providers include email_verified claim
-            email_verified = oidc_data.get('email_verified', True)  # Default to True for providers that don't send this
-            
+            email_verified = oidc_data.get('email_verified', True)
+
             if email_verified:
                 user = cls.query.filter_by(id=oidc_data['email']).first()
             
@@ -105,8 +117,24 @@ def extend_user_model(db, User):
             # Save to database
             db.session.add(user)
             db.session.commit()
-            from app import create_default_categories  # Import at the top of the file if possible
-            create_default_categories(user.id)
+
+            # Seed default categories. This used to be `from app import
+            # create_default_categories`, which never resolved — app.py has no
+            # such module-level name, it is a method on AuthService. Because the
+            # user is already committed above, the ImportError left every
+            # first-ever OIDC/Apple sign-in returning an error with a
+            # category-less account already in the database.
+            #
+            # Seeding is best-effort on purpose: the account exists and the user
+            # should be let in even if the defaults fail.
+            try:
+                from src.services.auth.service import AuthService
+                AuthService().create_default_categories(user.id)
+            except Exception:
+                current_app.logger.exception(
+                    f"Failed to seed default categories for new OIDC user {user.id}"
+                )
+
             # Add a log entry
             current_app.logger.info(f"New user created via OIDC: {user.id}, Admin: {is_first_user}")
             
