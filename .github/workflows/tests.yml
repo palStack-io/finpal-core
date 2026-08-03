@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same branch makes the in-flight run irrelevant.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 3.8 is what production actually runs: the Dockerfile is built on
+          # ubuntu:20.04, whose `python3` is 3.8.10. This leg is the one that
+          # matters for "will it work when deployed".
+          # Pinned to ubuntu-22.04 because setup-python has no 3.8 build for the
+          # 24.04 runners that ubuntu-latest now resolves to.
+          - python-version: '3.8'
+            runner: ubuntu-22.04
+          # 3.12 is what local development uses. Running both stops the two
+          # environments drifting apart unnoticed.
+          - python-version: '3.12'
+            runner: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-test.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+
+      - name: Run test suite
+        # The suite is self-contained: tests/conftest.py points SQLAlchemy at
+        # sqlite:///:memory: and builds the schema itself, so no database
+        # service is needed. Secrets are stubbed in conftest.
+        run: python -m pytest
