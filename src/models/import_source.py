@@ -64,3 +64,8 @@ class ImportBatch(db.Model):
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     reverted_at = db.Column(db.DateTime, nullable=True)
+
+    # ImportProfile lives in this same file, so this is not the cross-model
+    # import CLAUDE.md forbids. Eager-loaded because the batch history endpoint
+    # serialises a whole page at once and would otherwise emit a query per row.
+    profile = db.relationship('ImportProfile', lazy='joined')
