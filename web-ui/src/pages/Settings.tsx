@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
@@ -9,6 +9,7 @@ import { SimpleFinSettings } from '../components/import/SimpleFinSettings';
 import { InvestmentSettings } from '../components/investment/InvestmentSettings';
 import { RecurringTransactions } from '../components/RecurringTransactions';
 import { TeamManagement } from '../components/settings/TeamManagement';
+import { ImportSources } from '../components/settings/ImportSources';
 import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
@@ -75,7 +76,7 @@ export const Settings: React.FC = () => {
   const { user, features } = useAuthStore();
   const { theme } = useTheme();
   const branding = getBranding(user?.default_currency_code || 'USD');
-  const [activeTab, setActiveTab] = useState('profile');
+  const [searchParams] = useSearchParams();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -125,6 +126,16 @@ export const Settings: React.FC = () => {
     { id: 'data', label: 'Data & Privacy', icon: <Database size={18} /> },
     { id: 'about', label: 'About', icon: <Info size={18} /> }
   ];
+
+  // ?tab=integrations lets another page link straight to a section — the
+  // dashboard's import review banner does. Validated against the tabs actually
+  // built for this user: `tabs` filters out household/modules by entitlement,
+  // but the render guards below are bare `activeTab === ...` equality, so an
+  // unchecked param would render a section the tab rail deliberately hides.
+  const requestedTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    tabs.some((tab) => tab.id === requestedTab) ? requestedTab! : 'profile'
+  );
 
   const currencies = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD'];
   const timezones = [
@@ -797,6 +808,21 @@ export const Settings: React.FC = () => {
                     <div style={{ marginBottom: '32px', padding: '16px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
                       <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>Investment Tracking</h3>
                       <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Investment tracking is not enabled on this server. Set <code>INVESTMENT_TRACKING_ENABLED=true</code> to activate it.</p>
+                    </div>
+                  )}
+
+                  {/* Automatic CSV import — admin only, mirroring the server's
+                      _require_admin gate on /api/v1/import-sources */}
+                  {user?.is_admin && (
+                    <div style={{ marginBottom: '32px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        Automatic CSV Import
+                      </h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                        Watch a folder on the server and import any CSV dropped into it. Import the
+                        first file of a new bank format manually so the column mapping is learned.
+                      </p>
+                      <ImportSources />
                     </div>
                   )}
                 </div>

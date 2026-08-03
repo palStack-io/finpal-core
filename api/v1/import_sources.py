@@ -53,6 +53,10 @@ def _serialize_batch(b):
         'imported': b.imported_count, 'skipped': b.skipped_count,
         'errors': b.error_count, 'error_details': b.errors or [],
         'mapping_used': b.mapping_used,
+        # 'heuristic' means the columns were guessed and want a human's eyes.
+        # confidence cannot carry that: the heuristics return 1.0 for an
+        # unambiguous header, so it looks identical to a learned mapping.
+        'profile_origin': b.profile.origin if b.profile else None,
         'created_at': b.created_at.isoformat() if b.created_at else None,
         'reverted_at': b.reverted_at.isoformat() if b.reverted_at else None,
     }

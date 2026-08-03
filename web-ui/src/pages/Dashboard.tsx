@@ -12,6 +12,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { CHART_COLORS } from '../config/theme';
 import { StatCard } from '../components/StatCard';
 import { SectionCard } from '../components/SectionCard';
+import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 
 const tableCellMuted: React.CSSProperties = { padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' };
@@ -285,6 +286,9 @@ export const Dashboard = () => {
           <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-primary)' }}>Dashboard</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Welcome back!</p>
         </div>
+
+        {/* Flags an auto-import whose columns were guessed */}
+        <ImportReviewBanner onReverted={loadDashboardData} />
 
         {/* Stat Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>

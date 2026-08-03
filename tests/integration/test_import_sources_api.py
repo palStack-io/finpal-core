@@ -1,6 +1,6 @@
 """Integration tests for the import source API."""
 from src.extensions import db
-from src.models.import_source import ImportBatch, ImportSource
+from src.models.import_source import ImportBatch, ImportProfile, ImportSource
 from src.models.transaction import Expense
 from tests.factories import UserFactory
 
@@ -62,6 +62,42 @@ def test_delete_batch_reverts_it(client, db, auth_headers):
     assert resp.status_code == 200
     assert resp.get_json()['reverted'] == 1
     assert Expense.query.filter_by(import_batch_id=batch.id).count() == 0
+
+
+def test_batch_list_reports_whether_the_mapping_was_guessed(client, db, auth_headers):
+    """The UI needs to tell a learned mapping from a guessed one.
+
+    `confidence` alone cannot: the heuristics legitimately return 1.0 for an
+    unambiguous header, so a guessed batch and a manually-mapped one are
+    indistinguishable by confidence. Expose the profile's origin instead.
+    """
+    user = _admin(db)
+    mapping = {'date': 'D', 'description': 'M', 'amount': 'V'}
+    guessed = ImportProfile(name='guessed', header_fingerprint='fp-guessed',
+                            mapping=mapping, origin='heuristic', confidence=1.0,
+                            user_id=user.id)
+    learned = ImportProfile(name='learned', header_fingerprint='fp-learned',
+                            mapping=mapping, origin='manual', user_id=user.id)
+    db.session.add_all([guessed, learned])
+    db.session.flush()
+    db.session.add_all([
+        ImportBatch(filename='guessed.csv', file_hash='h11', status='success',
+                    user_id=user.id, profile_id=guessed.id, confidence=1.0),
+        ImportBatch(filename='learned.csv', file_hash='h12', status='success',
+                    user_id=user.id, profile_id=learned.id),
+        ImportBatch(filename='orphan.csv', file_hash='h13', status='failed',
+                    user_id=user.id),
+    ])
+    db.session.commit()
+
+    resp = client.get('/api/v1/import-batches', headers=auth_headers(user))
+    assert resp.status_code == 200
+    origins = {b['filename']: b['profile_origin'] for b in resp.get_json()['batches']}
+    assert origins == {
+        'guessed.csv': 'heuristic',
+        'learned.csv': 'manual',
+        'orphan.csv': None,
+    }
 
 
 def test_delete_another_users_batch_is_404(client, db, auth_headers):
