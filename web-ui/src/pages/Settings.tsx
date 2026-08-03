@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
@@ -76,7 +76,10 @@ export const Settings: React.FC = () => {
   const { user, features } = useAuthStore();
   const { theme } = useTheme();
   const branding = getBranding(user?.default_currency_code || 'USD');
-  const [activeTab, setActiveTab] = useState('profile');
+  const [searchParams] = useSearchParams();
+  // ?tab=integrations lets other pages link straight to a section — the
+  // dashboard's import review banner does.
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
