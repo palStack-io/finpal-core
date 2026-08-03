@@ -194,8 +194,16 @@ class DemoService:
 
         # Seed pointsPal wallet cards + spend history
         if POINTSPAL_AVAILABLE:
+            # SAVEPOINT, not a bare try. pointsPal's tables only exist when the
+            # module is enabled, so this step legitimately fails when it is off. On
+            # Postgres a failed statement aborts the entire transaction, so catching
+            # the error without rolling back left every later insert failing with
+            # InFailedSqlTransaction — the final commit then died and the demo user
+            # ended up with no accounts, expenses, groups or budgets at all. The
+            # savepoint confines the failure to this optional step.
             try:
-                DemoService._seed_pointspal_data(user, account_data)
+                with db.session.begin_nested():
+                    DemoService._seed_pointspal_data(user, account_data)
             except Exception as e:
                 logger.warning(f"pointsPal seeding skipped for {email}: {e}")
 
