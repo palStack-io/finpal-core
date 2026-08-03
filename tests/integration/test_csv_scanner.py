@@ -84,3 +84,43 @@ def test_scan_updates_last_scanned_at(source, tmp_path):
     assert source.last_scanned_at is None
     scan_source(source)
     assert source.last_scanned_at is not None
+
+
+def test_unknown_format_is_imported_via_heuristics(source, tmp_path):
+    drop(tmp_path, 'newbank.csv',
+         "Posting Date,Narrative,Amount\n"
+         "2026-01-15,CARD PURCHASE COFFEE SHOP,-4.50\n"
+         "2026-01-16,SALARY PAYMENT,2000.00\n")
+    scan_source(source)
+    batches = scan_source(source)
+
+    assert len(batches) == 1
+    assert batches[0].imported_count == 2
+    assert batches[0].confidence == 1.0
+    assert Expense.query.filter_by(user_id=source.user_id).count() == 2
+
+
+def test_heuristic_result_is_saved_as_a_profile(source, tmp_path):
+    drop(tmp_path, 'newbank.csv',
+         "Posting Date,Narrative,Amount\n"
+         "2026-01-15,CARD PURCHASE COFFEE SHOP,-4.50\n")
+    scan_source(source)
+    scan_source(source)
+
+    from src.services.csv_import.fingerprint import find_profile
+    profile = find_profile(['Posting Date', 'Narrative', 'Amount'],
+                           source.user_id)
+    assert profile is not None
+    assert profile.origin == 'heuristic'
+
+
+def test_unmappable_file_fails_without_touching_the_ledger(source, tmp_path):
+    drop(tmp_path, 'junk.csv', "Foo,Bar\nhello,world\n")
+    scan_source(source)
+    batches = scan_source(source)
+
+    assert batches == []
+    assert Expense.query.filter_by(user_id=source.user_id).count() == 0
+    batch = ImportBatch.query.filter_by(filename='junk.csv').one()
+    assert batch.status == 'failed'
+    assert (tmp_path / 'failed' / 'junk.csv').exists()
