@@ -24,6 +24,14 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Largest request body Flask will accept, in bytes (default 10 MB). Werkzeug
+    # rejects anything larger with 413 before the handler reads it. Without this
+    # the CSV import's row cap only applies *after* the whole upload has been read
+    # into memory, and the only other bound was client_max_body_size in the
+    # optional nginx proxy — which self-hosters running the backend directly do
+    # not have (AUDIT.md S-10).
+    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))
+
     # Application settings
     DEVELOPMENT_MODE = os.getenv('DEVELOPMENT_MODE', 'True').lower() == 'true'
     DISABLE_SIGNUPS = os.getenv('DISABLE_SIGNUPS', 'False').lower() == 'true'
