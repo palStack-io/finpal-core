@@ -114,3 +114,30 @@ def test_sync_returns_200_when_authed(client, db, auth_headers):
 def test_sync_returns_401_when_unauthenticated(client, db):
     resp = client.post('/api/v1/auth/sync')
     assert resp.status_code == 401
+
+
+def test_internal_errors_do_not_leak_exception_text(client, db, auth_headers, monkeypatch):
+    """A 500 must not hand the client the exception string.
+
+    finpal_core/CLAUDE.md: "never return str(e) to the client — log the
+    exception, return a sanitized message". Exception text routinely carries
+    table names, DSNs and internal hostnames.
+    """
+    user = UserFactory()
+
+    def boom(*args, **kwargs):
+        raise RuntimeError(
+            'psycopg2.errors.UndefinedTable: relation "users_v2" does not exist'
+            ' (host=10.0.0.5 port=5432 user=finpal_admin)'
+        )
+
+    # get_jwt_identity is imported into the module's namespace, so patching it
+    # there makes the /me handler raise inside its own try block.
+    monkeypatch.setattr('src.services.auth.api_routes.get_jwt_identity', boom)
+
+    resp = client.get('/api/v1/auth/me', headers=auth_headers(user))
+
+    assert resp.status_code == 500
+    body = resp.get_data(as_text=True)
+    for leak in ('users_v2', '10.0.0.5', '5432', 'finpal_admin', 'psycopg2', 'UndefinedTable'):
+        assert leak not in body, f'response leaked {leak!r}: {body}'

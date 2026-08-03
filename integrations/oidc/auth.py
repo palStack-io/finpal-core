@@ -46,6 +46,62 @@ def get_oidc_session(key, default=None, delete=False):
         del session[session_key]
     return value
 
+class NonceMismatchError(Exception):
+    """Raised when an ID token's nonce does not match the one we issued."""
+
+
+def verify_id_token_nonce(id_token, expected_nonce, jwks_uri=None,
+                          issuer=None, audience=None):
+    """Check that `id_token` carries the nonce we put in the auth request.
+
+    Pure function of its arguments so it can be tested without a provider.
+
+    Signature verification happens only when `jwks_uri` is set. Deployments that
+    configure OIDC endpoints by hand (no discovery document) have no jwks_uri, and
+    refusing to log those users in would break working installs — so the nonce is
+    still compared, which is what closes the replay gap this function exists for.
+    An unsigned comparison is weaker but not worthless: the token reached us from
+    the token endpoint over TLS, in exchange for a PKCE verifier only this session
+    holds. Full ID token validation for the no-JWKS case is a separate piece of
+    work; it is not silently assumed here.
+
+    Raises NonceMismatchError on any mismatch or unreadable token. Never returns
+    False — callers must not be able to ignore the result by accident.
+    """
+    import jwt as pyjwt
+
+    if not expected_nonce:
+        raise NonceMismatchError('No nonce was stored for this session')
+    if not id_token:
+        raise NonceMismatchError('Provider returned no ID token to check')
+
+    try:
+        if jwks_uri:
+            signing_key = pyjwt.PyJWKClient(jwks_uri).get_signing_key_from_jwt(id_token)
+            claims = pyjwt.decode(
+                id_token,
+                signing_key.key,
+                algorithms=['RS256', 'RS384', 'RS512', 'ES256', 'ES384'],
+                audience=audience,
+                issuer=issuer,
+                options={'verify_aud': bool(audience), 'verify_iss': bool(issuer)},
+            )
+        else:
+            claims = pyjwt.decode(id_token, options={'verify_signature': False})
+    except NonceMismatchError:
+        raise
+    except Exception as exc:
+        raise NonceMismatchError(f'ID token could not be validated: {type(exc).__name__}')
+
+    token_nonce = claims.get('nonce')
+    if not token_nonce:
+        raise NonceMismatchError('ID token carried no nonce claim')
+    # Constant-time: the nonce is a secret tied to this session.
+    if not secrets.compare_digest(str(token_nonce), str(expected_nonce)):
+        raise NonceMismatchError('ID token nonce did not match the stored nonce')
+    return True
+
+
 def is_oidc_enabled():
     """Check if OIDC authentication is enabled"""
     return current_app.config.get('OIDC_ENABLED', False)
@@ -172,6 +228,12 @@ def register_oidc_routes(app, User, db):
             # Generate state parameter to prevent CSRF
             state = generate_state_token()
             set_oidc_session('state', state)
+
+            # Nonce binds the ID token to this browser session. It is only
+            # worth anything if it is stored now and compared on the way back —
+            # see verify_id_token_nonce and its use in the callback.
+            nonce = secrets.token_urlsafe(16)
+            set_oidc_session('nonce', nonce)
             
             # Store the original URL to redirect after authentication
             redirect_to = request.args.get('next', '/')
@@ -190,7 +252,7 @@ def register_oidc_routes(app, User, db):
                 'state': state,
                 'code_challenge': code_challenge,
                 'code_challenge_method': 'S256',
-                'nonce': secrets.token_urlsafe(16)  # Prevents replay attacks
+                'nonce': nonce,
             }
             
             # Add optional prompt parameter if provided
@@ -264,11 +326,31 @@ def register_oidc_routes(app, User, db):
                 return redirect('/')
             
             tokens = token_response.json()
-            
-            # Get user info from ID token or userinfo endpoint
+
+            # Check the nonce before trusting anything in this response. Consume
+            # the stored value either way so it cannot be replayed.
+            expected_nonce = get_oidc_session('nonce', delete=True)
             if 'id_token' in tokens:
+                try:
+                    verify_id_token_nonce(
+                        tokens['id_token'],
+                        expected_nonce,
+                        jwks_uri=current_app.config.get('OIDC_JWKS_URI'),
+                        issuer=current_app.config.get('OIDC_ISSUER'),
+                        audience=current_app.config.get('OIDC_CLIENT_ID'),
+                    )
+                except NonceMismatchError as exc:
+                    current_app.logger.warning(f"OIDC nonce check failed: {exc}")
+                    return redirect('/login?error=SSO+authentication+failed:+token+could+not+be+verified')
+
                 # Save the ID token for logout
                 set_oidc_session('id_token', tokens['id_token'])
+            else:
+                # No ID token means nothing binds this response to our nonce.
+                # PKCE and state still held, so this is logged rather than fatal —
+                # a provider that omits id_token is misconfigured, not an attacker.
+                current_app.logger.warning(
+                    'OIDC provider returned no id_token; nonce could not be verified')
             
             # Get user info from userinfo endpoint
             userinfo_response = requests.get(

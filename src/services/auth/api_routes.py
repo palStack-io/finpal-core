@@ -16,6 +16,10 @@ from src.models.invitation import Invitation
 from src.extensions import db
 from werkzeug.security import generate_password_hash
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Create API Blueprint
 api_bp = Blueprint('auth_api', __name__, url_prefix='/api/v1/auth')
 
@@ -97,7 +101,7 @@ def register():
             )
         except Exception as e:
             # Log error but don't fail registration
-            print(f"Failed to send verification email: {str(e)}")
+            logger.exception('Failed to send verification email')
 
         # Create tokens
         access_token = create_access_token(identity=email, additional_claims={'email': email})
@@ -122,7 +126,8 @@ def register():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/login', methods=['POST'])
@@ -170,7 +175,8 @@ def login():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/refresh', methods=['POST'])
@@ -186,7 +192,8 @@ def refresh():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/me', methods=['GET'])
@@ -220,7 +227,8 @@ def get_current_user():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/logout', methods=['POST'])
@@ -290,7 +298,8 @@ def complete_onboarding():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/verify-email', methods=['POST'])
@@ -329,7 +338,8 @@ def verify_email():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/resend-verification', methods=['POST'])
@@ -372,7 +382,8 @@ def resend_verification():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/forgot-password', methods=['POST'])
@@ -412,7 +423,8 @@ def forgot_password():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/config', methods=['GET'])
@@ -518,6 +530,11 @@ def apple_signin():
         try:
             user = User.from_oidc(oidc_data, provider='apple')
         except ValueError as e:
+            # Deliberately surfaced: from_oidc raises ValueError only with an
+            # authored, user-facing message ("This account is already linked to
+            # X. Please sign in with X instead."). This is not the str(e) leak
+            # CLAUDE.md forbids — that rule is about unhandled exceptions, whose
+            # text carries table names and DSNs.
             return jsonify({'error': str(e)}), 409
         if not user:
             return jsonify({'error': 'Failed to create or find user'}), 500
@@ -587,4 +604,5 @@ def reset_password():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.exception('Unhandled error in auth endpoint')
+        return jsonify({'success': False, 'error': 'An internal error occurred'}), 500
