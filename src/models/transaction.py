@@ -29,6 +29,7 @@ class Expense(db.Model):
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.id', name='fk_expense_account'), nullable=True)
     external_id = db.Column(db.String(200), nullable=True)  # For tracking external transaction IDs
     import_source = db.Column(db.String(50), nullable=True)  # 'csv', 'simplefin', 'manual'
+    notes = db.Column(db.Text, nullable=True)
     destination_account_id = db.Column(db.Integer, db.ForeignKey('accounts.id', name='fk_destination_account'), nullable=True)
     has_category_splits = db.Column(db.Boolean, default=False)
     

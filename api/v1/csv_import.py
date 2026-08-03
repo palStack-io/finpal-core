@@ -251,7 +251,12 @@ class CSVImport(Resource):
                         notes=notes,
                         user_id=current_user_id,
                         paid_by=current_user_id,
-                        import_source='csv'
+                        import_source='csv',
+                        # card_used and split_method are legacy NOT NULL columns
+                        # with no server default. Match the values other creation
+                        # paths use (src/services/demo/service.py:282-283).
+                        card_used='',
+                        split_method='equal',
                     )
 
                     db.session.add(transaction)
@@ -265,13 +270,18 @@ class CSVImport(Resource):
             # Commit all transactions
             db.session.commit()
 
+            succeeded = imported_count > 0 or (error_count == 0 and skipped_count > 0)
             return {
-                'success': True,
+                'success': succeeded,
                 'imported': imported_count,
                 'skipped': skipped_count,
                 'errors': error_count,
                 'error_details': errors[:10],  # Return first 10 errors
-                'message': f'Imported {imported_count} transactions successfully'
+                'message': (
+                    f'Imported {imported_count} transactions successfully'
+                    if succeeded else
+                    'No transactions were imported — see error_details'
+                ),
             }, 200
 
         except Exception as e:
