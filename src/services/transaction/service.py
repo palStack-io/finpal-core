@@ -14,6 +14,7 @@ from src.models.user import User
 from src.models.group import Group
 from src.models.currency import Currency
 from src.models.category import Tag
+from src.utils.split_with import split_with_filter
 
 
 class TransactionService:
@@ -398,7 +399,7 @@ class TransactionService:
         expenses = Expense.query.filter(
             or_(
                 Expense.user_id == user_id,
-                Expense.split_with.like(f'%{user_id}%')
+                split_with_filter(Expense.split_with, user_id)
             )
         ).order_by(Expense.date.desc()).all()
 

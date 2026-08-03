@@ -8,6 +8,7 @@ from flask import current_app
 from src.extensions import db
 from src.models.recurring import RecurringExpense, IgnoredRecurringPattern
 from src.models.transaction import Expense
+from src.utils.split_with import split_with_filter
 
 
 class RecurringService:
@@ -22,7 +23,7 @@ class RecurringService:
         return RecurringExpense.query.filter(
             or_(
                 RecurringExpense.user_id == user_id,
-                RecurringExpense.split_with.like(f'%{user_id}%')
+                split_with_filter(RecurringExpense.split_with, user_id)
             )
         ).all()
 

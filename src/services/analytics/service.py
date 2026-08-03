@@ -10,6 +10,7 @@ from src.models.currency import Currency
 from src.models.account import Account
 from src.models.associations import group_users
 from src.extensions import db
+from src.utils.split_with import split_with_filter
 
 class AnalyticsService:
     def __init__(self):
@@ -32,7 +33,7 @@ class AnalyticsService:
         expenses = Expense.query.filter(
             or_(
                 Expense.user_id.in_(household_ids),
-                Expense.split_with.like(f'%{user_id}%')
+                split_with_filter(Expense.split_with, user_id)
             ),
             Expense.date >= dashboard_start
         ).order_by(Expense.date.desc()).all()
@@ -410,7 +411,7 @@ class AnalyticsService:
         expenses = Expense.query.filter(
             or_(
                 Expense.user_id.in_(household_ids),
-                Expense.split_with.like(f'%{user_id}%')
+                split_with_filter(Expense.split_with, user_id)
             )
         ).all()
 
@@ -500,7 +501,7 @@ class AnalyticsService:
         expenses = Expense.query.filter(
             or_(
                 Expense.user_id.in_(household_ids),
-                Expense.split_with.like(f'%{user_id}%')
+                split_with_filter(Expense.split_with, user_id)
             )
         ).all()
 
