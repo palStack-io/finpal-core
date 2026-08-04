@@ -9,6 +9,7 @@ from src.models.category import CategoryMapping
 from src.models.group import Settlement
 from src.models.user import User
 from src.extensions import db
+from src.utils.split_with import split_with_filter
 
 def auto_categorize_transaction(description, user_id):
     """
@@ -81,7 +82,7 @@ def calculate_balances(user_id):
     expenses = Expense.query.filter(
         or_(
             Expense.paid_by == user_id,
-            Expense.split_with.like(f'%{user_id}%')
+            split_with_filter(Expense.split_with, user_id)
         )
     ).all()
     

@@ -105,3 +105,27 @@ def test_failed_import_saves_no_profile(client, db, auth_headers):
 
     from src.services.csv_import.fingerprint import find_profile
     assert find_profile(['Date', 'Description', 'Amount'], user.id) is None
+
+
+def test_oversized_upload_is_rejected_before_it_is_read(client, db, auth_headers, app):
+    """S-10: the row cap only applies after the whole file is read.
+
+    MAX_CONTENT_LENGTH makes Werkzeug answer 413 without the handler running, so a
+    multi-gigabyte upload cannot be used to exhaust memory.
+    """
+    import io
+    user = UserFactory()
+    app.config['MAX_CONTENT_LENGTH'] = 1024  # 1 KB, to keep the test fast
+
+    try:
+        payload = b'date,description,amount\n' + b'2026-01-01,x,1.00\n' * 500
+        assert len(payload) > 1024
+        resp = client.post(
+            '/api/v1/csv-import/preview',
+            data={'file': (io.BytesIO(payload), 'big.csv')},
+            content_type='multipart/form-data',
+            headers=auth_headers(user))
+        assert resp.status_code == 413, (
+            f'expected 413 for an oversized upload, got {resp.status_code}')
+    finally:
+        app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024

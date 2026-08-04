@@ -14,15 +14,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _split_with_filter(column, user_id: str):
-    """Return a filter that correctly matches user_id in a comma-separated split_with column.
-    Replaces the buggy LIKE '%user_id%' which false-positives on IDs that are substrings of others."""
-    return or_(
-        column == user_id,
-        column.like(f'{user_id},%'),
-        column.like(f'%,{user_id},%'),
-        column.like(f'%,{user_id}'),
-    )
+from src.utils.split_with import split_with_filter as _split_with_filter  # noqa: E402
+# Was a local copy. Moved to src/utils/split_with.py so the six other query sites
+# share one implementation — the duplication is why S-06 stayed open while being
+# marked closed.
 
 
 def _transactions_for_user(user_id):

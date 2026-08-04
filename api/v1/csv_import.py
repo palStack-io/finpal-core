@@ -10,6 +10,7 @@ from src.services.csv_import import Mapping, MapperConfig, import_rows
 from src.services.csv_import.fingerprint import save_profile
 from src.utils.decorators import demo_restricted
 from werkzeug.datastructures import FileStorage
+from werkzeug.exceptions import HTTPException
 
 import logging
 
@@ -97,7 +98,12 @@ class CSVPreview(Resource):
                 }
             }, 200
 
-        except Exception as e:
+        except HTTPException:
+            # e.g. 413 from MAX_CONTENT_LENGTH — let Flask answer with the real
+            # status instead of relabelling it as a malformed CSV.
+            raise
+        except Exception:
+            logger.exception('Failed to preview CSV')
             return {'success': False, 'error': 'Error reading CSV'}, 400
 
 
@@ -195,7 +201,10 @@ class CSVImport(Resource):
                 ),
             }, 200
 
-        except Exception as e:
+        except HTTPException:
+            db.session.rollback()
+            raise  # e.g. 413 — do not relabel it as an import failure
+        except Exception:
             db.session.rollback()
             logger.exception("CSV import failed")
             return {'success': False, 'error': 'Import failed'}, 500

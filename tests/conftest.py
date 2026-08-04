@@ -35,7 +35,16 @@ def app():
         # Disable background tasks during tests
         'SCHEDULER_API_ENABLED': False,
         'APSCHEDULER_DAEMON': False,
+        # Login is rate limited to 10/min in production. The app fixture is
+        # session-scoped and the limiter stores counters in memory, so leaving it
+        # on would make the 11th test that calls auth_headers() fail with 429 —
+        # the limit is real, the shared fixture is the problem. Tests that assert
+        # on rate limiting turn it back on explicitly; see
+        # tests/integration/test_live_auth_hardening.py.
+        'RATELIMIT_ENABLED': False,
     })
+    from src.extensions import limiter
+    limiter.enabled = False
     return application
 
 

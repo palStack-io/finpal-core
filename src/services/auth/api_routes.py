@@ -11,9 +11,9 @@ from flask_jwt_extended import (
     get_jwt_identity,
     get_jwt
 )
-from src.models.user import User
+from src.models.user import User, RevokedToken
 from src.models.invitation import Invitation
-from src.extensions import db
+from src.extensions import db, limiter
 from werkzeug.security import generate_password_hash
 
 import logging
@@ -38,6 +38,7 @@ def _get_user_modules(user_id: str) -> list:
 
 
 @api_bp.route('/register', methods=['POST'])
+@limiter.limit("10 per minute")
 def register():
     """Register a new user"""
     try:
@@ -51,9 +52,10 @@ def register():
         password = data['password']
         username = data.get('username', email.split('@')[0])
 
-        # Check if user exists
+        # Deliberately does not say the address is taken: that turns register
+        # into an account-existence oracle (S-13).
         if User.query.filter_by(id=email).first():
-            return jsonify({'error': 'User already exists'}), 400
+            return jsonify({'error': 'Unable to create account'}), 400
 
         # Check invitation requirement: if other users exist, require an invitation
         user_count = User.query.filter_by(is_demo_user=False).count()
@@ -131,6 +133,7 @@ def register():
 
 
 @api_bp.route('/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     """Login user"""
     try:
@@ -234,9 +237,16 @@ def get_current_user():
 @api_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    """Logout user (client-side token removal)"""
-    # In a production app, you might want to blacklist the token
-    # For now, we just return success and let the client remove the token
+    """Logout — revoke the access token so it cannot be reused."""
+    jti = get_jwt()['jti']
+    try:
+        if not RevokedToken.is_revoked(jti):
+            db.session.add(RevokedToken(jti=jti))
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('Failed to revoke token on logout')
+        return jsonify({'error': 'Logout failed'}), 500
     return jsonify({'message': 'Logged out successfully'}), 200
 
 
