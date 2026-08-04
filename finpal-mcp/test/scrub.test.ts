@@ -180,3 +180,37 @@ describe('scrub against real API responses', () => {
     expect(after).not.toContain('notes');
   });
 });
+
+describe('person names versus account labels', () => {
+  it('pseudonymises a name that belongs to a person', () => {
+    // `name` inside a split payer is a real human name, not an account label.
+    const out = scrub({
+      splits: { payer: { email: 'flat@example.com', name: 'Alex Smith', amount: 10 } },
+    }, ctx) as { splits: { payer: { name: string; email: string } } };
+    expect(out.splits.payer.name).not.toBe('Alex Smith');
+    expect(out.splits.payer.name).not.toContain('Alex');
+  });
+
+  it('replaces a person name with a pseudonym, not with the raw name', () => {
+    // Name and email hash to different pseudonyms because the map is keyed by
+    // string, which is fine: the requirement is that neither identifies the
+    // person, not that they collide.
+    const out = scrub({
+      payer: { email: 'flat@example.com', name: 'Alex Smith' },
+    }, ctx) as { payer: { name: string; email: string } };
+    expect(out.payer.name).toMatch(/^member-\d+$/);
+    expect(out.payer.email).toMatch(/^member-\d+$/);
+  });
+
+  it('still digit-masks an account name rather than pseudonymising it', () => {
+    // No identity field here, so this `name` is an account label and must stay
+    // readable.
+    const out = scrub({ name: 'Chase Checking ...4242', balance: 10 }, ctx) as Record<string, string>;
+    expect(out.name).toBe('Chase Checking ...••••');
+  });
+
+  it('leaves no real name in a captured transactions response', () => {
+    const out = JSON.stringify(scrub(transactionsFixture, ctx));
+    expect(out).not.toContain('Claude Test');
+  });
+});

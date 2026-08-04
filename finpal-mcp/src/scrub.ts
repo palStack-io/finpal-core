@@ -51,6 +51,22 @@ const LABEL_KEYS = new Set(['name', 'card_used', 'institution', 'description']);
 /** Values that are identities needing pseudonymising. */
 const IDENTITY_KEYS = new Set(['user_id', 'paid_by', 'email', 'id_email', 'owner']);
 
+/**
+ * `name` means two different things depending on where it appears: an account
+ * label ("Chase Checking ...4242") at the top level, but a *person's real name*
+ * ("Claude Test") inside a split's payer. Key-based rules cannot tell them
+ * apart, so decide from the object: anything carrying an identity field is a
+ * person, and their name is pseudonymised rather than digit-masked.
+ */
+function describesAPerson(obj: Record<string, unknown>): boolean {
+  return Object.keys(obj).some((k) => {
+    const lower = k.toLowerCase();
+    return (lower === 'email' || lower === 'id')
+      && typeof obj[k] === 'string'
+      && (obj[k] as string).includes('@');
+  });
+}
+
 export function scrubDigits(text: string): string {
   return text.replace(DIGIT_RUN, '••••');
 }
@@ -84,14 +100,22 @@ export function scrub(value: unknown, ctx: ScrubContext): unknown {
   if (typeof value === 'string') return scrubString(value, ctx);
   if (typeof value !== 'object') return value;
 
+  const record = value as Record<string, unknown>;
+  const isPerson = describesAPerson(record);
   const out: Record<string, unknown> = {};
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+  for (const [key, raw] of Object.entries(record)) {
     const lower = key.toLowerCase();
     if (DROP_KEYS.has(lower) || CREDENTIAL_KEY.test(lower)) continue;
 
     if (typeof raw === 'string') {
       if (IDENTITY_KEYS.has(lower)) {
         out[key] = raw.includes('@') ? pseudonym(raw, ctx) : scrubString(raw, ctx);
+        continue;
+      }
+      if (lower === 'name' && isPerson) {
+        // A household member's real name. The email on the same object has
+        // already been pseudonymised; leaving the name would undo that.
+        out[key] = pseudonym(raw, ctx);
         continue;
       }
       if (LABEL_KEYS.has(lower)) {
