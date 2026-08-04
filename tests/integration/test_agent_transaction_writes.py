@@ -18,7 +18,9 @@ table rather than in this feature. `PUT /api/v1/transactions/<id>` is served by
     `undo_state` of `{'category_id': N}` can restore. Marking that write SAFE
     would make the guardrail's reversibility promise false.
 
-Un-xfail these once the detail route resolves to `TransactionDetail`; nothing in
+The route now resolves to `TransactionDetail` (the legacy detail handlers were
+retired), so these run for real. They were xfail(strict=True) until then, which is
+what forced this to be finished rather than forgotten. Nothing in
 the assertions below needs to change.
 """
 from datetime import datetime, timedelta
@@ -54,9 +56,6 @@ def _setup(db, scopes=SCOPE_READ_WRITE):
     return user, expense, old, new, plaintext
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    'PUT /api/v1/transactions/<id> resolves to the legacy blueprint, not the '
-    'flask-restx handler the guard decorates - see the module docstring'))
 def test_agent_recategorises_and_the_change_is_reversible(client, db):
     user, expense, old, new, plaintext = _setup(db)
 
@@ -75,9 +74,6 @@ def test_agent_recategorises_and_the_change_is_reversible(client, db):
         'undo_state must hold the PRIOR category or the change cannot be reversed')
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    'PUT /api/v1/transactions/<id> resolves to the legacy blueprint, not the '
-    'flask-restx handler the guard decorates - see the module docstring'))
 def test_reverting_restores_the_previous_category(client, db, auth_headers):
     user, expense, old, new, plaintext = _setup(db)
     client.put('/api/v1/transactions/%d/' % expense.id,
@@ -99,9 +95,6 @@ def test_reverting_restores_the_previous_category(client, db, auth_headers):
     assert again.status_code == 409, 'revert must not be repeatable'
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    'PUT /api/v1/transactions/<id> resolves to the legacy blueprint, not the '
-    'flask-restx handler the guard decorates - see the module docstring'))
 def test_a_read_token_cannot_recategorise(client, db):
     user, expense, old, new, plaintext = _setup(db, scopes=SCOPE_READ)
 

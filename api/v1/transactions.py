@@ -14,12 +14,27 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+from src.models.personal_access_token import SCOPE_READ_WRITE  # noqa: E402
+from src.services.agent_guard.guard import guarded_write  # noqa: E402
 from src.utils.split_with import split_with_filter as _split_with_filter  # noqa: E402
 from src.models.personal_access_token import SCOPE_READ
 from src.utils.api_auth import api_auth_required
 # Was a local copy. Moved to src/utils/split_with.py so the six other query sites
 # share one implementation — the duplication is why S-06 stayed open while being
 # marked closed.
+
+
+def _prior_category(transaction_id):
+    """The category a transaction had before an agent changed it.
+
+    Captured BEFORE the write, because afterwards it is gone — and without it
+    DELETE /api/v1/agent-actions/<id> has nothing to restore and would report
+    success having reverted nothing.
+    """
+    from flask_jwt_extended import get_jwt_identity as _identity
+    expense = Expense.query.filter_by(
+        id=transaction_id, user_id=_identity()).first()
+    return {'category_id': expense.category_id} if expense else None
 
 
 def _transactions_for_user(user_id):
@@ -191,7 +206,13 @@ class TransactionDetail(Resource):
 
     @ns.doc('update_transaction', security='Bearer')
     @ns.expect(transaction_model)
-    @jwt_required()
+    # Order matters: api_auth_required resolves the caller and sets g.pat, which
+    # guarded_write then reads. Reversed, every caller looks like a human.
+    @api_auth_required(scope=SCOPE_READ_WRITE)
+    @guarded_write(
+        action='update_transaction_category',
+        undo_state=lambda **kw: _prior_category(kw.get('id')),
+    )
     def put(self, id):
         """Update a transaction"""
         current_user_id = get_jwt_identity()

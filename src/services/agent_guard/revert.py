@@ -22,10 +22,23 @@ def revert_action(row):
         return
 
     if row.undo_state and 'category_id' in row.undo_state:
-        target = (row.payload or {}).get('transaction_id')
+        payload = row.payload or {}
+        # The URL parameter is named `id` on the flask-restx handler and
+        # `transaction_id` on the older one, and guarded_write records whichever
+        # the route used. Reading only one name meant the lookup found nothing
+        # and this returned quietly — so DELETE /agent-actions/<id> answered 200
+        # having restored nothing. Undo that lies is worse than no undo.
+        target = payload.get('transaction_id') or payload.get('id')
+        if target is None:
+            raise NotReversible(
+                'no transaction id recorded for %s' % row.action)
         expense = Expense.query.filter_by(id=target, user_id=row.user_id).first()
-        if expense:
-            expense.category_id = row.undo_state['category_id']
+        if expense is None:
+            # Already deleted, or never belonged to this user. Either way there
+            # is nothing to restore and saying so beats reporting success.
+            raise NotReversible(
+                'the transaction this action changed no longer exists')
+        expense.category_id = row.undo_state['category_id']
         return
 
     raise NotReversible(row.action)
