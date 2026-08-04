@@ -20,16 +20,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # 3.8 is what production actually runs: the Dockerfile is built on
-          # ubuntu:20.04, whose `python3` is 3.8.10. This leg is the one that
-          # matters for "will it work when deployed".
-          # Pinned to ubuntu-22.04 because setup-python has no 3.8 build for the
-          # 24.04 runners that ubuntu-latest now resolves to.
-          - python-version: '3.8'
-            runner: ubuntu-22.04
-          # 3.12 is what local development uses. Running both stops the two
-          # environments drifting apart unnoticed.
+          # 3.12 is what production runs: the Dockerfile is built on
+          # python:3.12-slim. This leg is the one that matters for "will it work
+          # when deployed".
+          #
+          # This used to be a 3.8 leg, because the image was built on ubuntu:20.04
+          # whose `python3` is 3.8.10. That base is gone and 3.8 reached end of
+          # life in October 2024, so testing it no longer described anything we
+          # ship — and supporting it forced yfinance and multitasking to stay on
+          # releases predating Python 3.9.
           - python-version: '3.12'
+            runner: ubuntu-latest
+          # A second supported version, so a 3.12-only assumption cannot creep in
+          # unnoticed. finpal_core is self-hosted, and self-hosters will not all
+          # be on the same interpreter as the shipped image.
+          - python-version: '3.11'
             runner: ubuntu-latest
 
     steps:
