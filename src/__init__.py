@@ -258,12 +258,10 @@ def create_app(config_name=None):
             except Exception as e:
                 app.logger.warning(f"Module startup failed (non-fatal): {e}")
 
+            _seed_reference_data(app)
+
             if app.config.get('DEMO_MODE', False):
                 try:
-                    # Seed default currencies
-                    from src.cli import create_default_currencies
-                    create_default_currencies()
-
                     from src.services.demo import DemoService
                     result = DemoService.seed_demo_accounts()
                     if result.get('success'):
@@ -276,6 +274,33 @@ def create_app(config_name=None):
     _assert_no_new_duplicate_routes(app)
 
     return app
+
+
+def _seed_reference_data(app):
+    """Seed rows the application cannot function without.
+
+    Currencies are reference data, not demo data. `users.default_currency_code`
+    is a foreign key into `currencies`, and `register()` hardcodes 'USD', so an
+    empty currencies table makes the *first signup on a fresh install* fail with
+    a ForeignKeyViolation. Nothing else in the product recovers from that: you
+    cannot create the admin account, so you cannot reach any UI that would let
+    you add a currency.
+
+    This used to be called only under `DEMO_MODE`, which is why it went unnoticed
+    — every demo instance seeded 22 currencies and every real self-hosted install
+    had none. Found on the first genuinely fresh non-demo deploy.
+
+    Safe to call on every boot: create_default_currencies() skips codes that
+    already exist, and the caller holds the first-boot advisory lock so
+    concurrent gunicorn workers cannot race each other through it.
+    """
+    try:
+        from src.cli import create_default_currencies
+        create_default_currencies()
+    except Exception:
+        # Non-fatal by choice: an existing install with currencies already
+        # present should still boot if this fails for an unrelated reason.
+        app.logger.exception('Failed to seed default currencies')
 
 
 # Paths where two blueprints legitimately claim the same rule today. Werkzeug
