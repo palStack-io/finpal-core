@@ -15,18 +15,25 @@ from src.models.user import RevokedToken
 from tests.factories import UserFactory
 
 
-def test_the_live_route_is_the_one_under_test(app):
-    """Documents the shadowing, and fails loudly if it changes."""
-    adapter = app.url_map.bind('localhost')
-    endpoint, _ = adapter.match('/api/v1/auth/logout', method='POST')
-    duplicates = [r.endpoint for r in app.url_map.iter_rules()
-                  if str(r.rule) == '/api/v1/auth/logout']
-    assert len(duplicates) > 1, (
-        'the duplicate registration is gone — good, but re-read these tests: '
-        f'endpoints now {duplicates}')
-    assert endpoint == 'auth_api.logout', (
-        f'live logout endpoint changed to {endpoint}; the assertions below '
-        'target whichever handler serves the URL')
+def test_auth_routes_are_no_longer_duplicated(app):
+    """The six shadowed restx Resources are gone; one handler per auth rule.
+
+    This test previously asserted the *opposite* — that duplicates existed — so
+    that the assertions below could not silently drift onto dead code. The
+    duplicates have since been deleted, so it now pins the cleaned-up state.
+    """
+    auth_rules = {}
+    for rule in app.url_map.iter_rules():
+        path = str(rule.rule)
+        if path.startswith('/api/v1/auth'):
+            auth_rules.setdefault(path, set()).add(rule.endpoint)
+
+    duplicated = {p: sorted(eps) for p, eps in auth_rules.items() if len(eps) > 1}
+    assert not duplicated, f'auth rules are shadowed again: {duplicated}'
+
+    endpoint, _ = app.url_map.bind('localhost').match(
+        '/api/v1/auth/logout', method='POST')
+    assert endpoint == 'auth_api.logout'
 
 
 # --- S-08: logout must revoke the token -------------------------------------
@@ -99,3 +106,36 @@ def test_login_is_rate_limited(client, db, rate_limiting_on):
 
     assert 429 in statuses, (
         f'25 failed logins drew no 429; statuses seen: {sorted(set(statuses))}')
+
+
+# --- the guard that makes this class of bug impossible to reintroduce ---------
+
+def test_startup_rejects_a_new_duplicate_route(app):
+    """A new shadowed handler must break the boot, not hide.
+
+    Three security fixes were once written on handlers a duplicate rule had made
+    unreachable. This is the check that would have caught it.
+    """
+    from flask import Flask
+
+    from src import _assert_no_new_duplicate_routes
+
+    probe = Flask('probe')
+    probe.add_url_rule('/api/v1/thing', endpoint='first', view_func=lambda: '')
+    probe.add_url_rule('/api/v1/thing', endpoint='second', view_func=lambda: '')
+
+    with pytest.raises(RuntimeError, match='Duplicate URL rules'):
+        _assert_no_new_duplicate_routes(probe)
+
+
+def test_known_duplicates_are_tolerated_but_recorded(app):
+    """The pre-existing duplicates must not break the boot — they are load-bearing.
+
+    web-ui calls /api/v1/transactions and gets the blueprint; mobile calls
+    /api/v1/transactions/ and gets restx. Deleting either side breaks a client.
+    """
+    from src import _KNOWN_DUPLICATE_RULES, _assert_no_new_duplicate_routes
+
+    assert '/api/v1/transactions' in _KNOWN_DUPLICATE_RULES
+    # The real app boots, which means every actual duplicate is accounted for.
+    _assert_no_new_duplicate_routes(app)
