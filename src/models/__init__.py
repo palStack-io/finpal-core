@@ -16,6 +16,7 @@ from src.models.budget import Budget
 from src.models.investment import Portfolio, Investment, InvestmentTransaction
 from src.models.invitation import Invitation
 from src.models.import_source import ImportSource, ImportProfile, ImportBatch
+from src.models.personal_access_token import PersonalAccessToken  # noqa: F401
 
 # Module access control (always imported — table exists regardless of feature flags)
 from src.modules.access import UserModuleAccess  # noqa: F401
@@ -58,4 +59,5 @@ __all__ = [
     'ImportSource',
     'ImportProfile',
     'ImportBatch',
+    'PersonalAccessToken',
 ]
