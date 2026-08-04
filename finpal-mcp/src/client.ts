@@ -35,8 +35,12 @@ const MESSAGES: Record<string, string> = {
   invalid_token:
     'finPal did not recognise this token. Check FINPAL_TOKEN matches a token ' +
     'you minted on this instance.',
+  // This client only issues GETs, so a 403 here means the token lacks READ
+  // access — not that a write was refused. Telling the user to stop writing
+  // would send them looking for a problem that is not there.
   insufficient_scope:
-    'This finPal token is read-only, so it cannot make that change.',
+    'This finPal token cannot read that data. Mint one with the read scope ' +
+    'under Settings → Integrations → Agent Access.',
 };
 
 export class FinpalClient {

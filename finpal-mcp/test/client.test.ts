@@ -64,9 +64,13 @@ describe('FinpalClient', () => {
     await expect(client().get('/api/v1/accounts')).rejects.toThrow(matcher);
   });
 
-  it('reports insufficient_scope as read-only', async () => {
+  it('reports insufficient_scope as a missing read scope, not a refused write', async () => {
+    // The client only issues GETs. A message about "cannot make that change"
+    // sends the user hunting for a write they never attempted.
     stubFetch(403, { error: 'insufficient_scope' });
-    await expect(client().get('/api/v1/accounts')).rejects.toThrow(/read-only/i);
+    const call = client().get('/api/v1/accounts');
+    await expect(call).rejects.toThrow(/cannot read/i);
+    await expect(call).rejects.toThrow(/read scope/i);
   });
 
   it('carries the code on the error for programmatic checks', async () => {
