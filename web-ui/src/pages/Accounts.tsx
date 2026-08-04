@@ -3,6 +3,7 @@ import { Plus, Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Edit2, T
 import { accountService } from '../services/accountService';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
+import { formatMoney, Money, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddAccountForm } from '../components/forms/AddAccountForm';
@@ -81,9 +82,12 @@ export const Accounts = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(amount));
-  };
+  // One formatter for the whole app. This copy also hardcoded USD and took
+  // Math.abs, so a negative balance rendered as positive — the sign is the
+  // caller's business, since a credit card balance means the opposite of a
+  // current account's.
+  const currency = user?.default_currency_code || 'USD';
+  const formatCurrency = (amount: number) => formatMoney(Math.abs(amount), { currency });
 
   const handleDeleteAccount = async (accountId: number, e: React.MouseEvent) => {
     e.stopPropagation();

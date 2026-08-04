@@ -7,6 +7,7 @@ import { transactionService } from '../services/transactionService';
 import { budgetService } from '../services/budgetService';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
+import { formatMoney, Money, moneyStyle, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
 import { useTheme } from '../contexts/ThemeContext';
 import { CHART_COLORS } from '../config/theme';
@@ -227,8 +228,10 @@ export const Dashboard = () => {
     }
   };
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+  // One formatter for the whole app, and it honours the user's currency rather
+  // than hardcoding USD as this local copy did.
+  const currency = user?.default_currency_code || 'USD';
+  const formatCurrency = (amount: number) => formatMoney(amount, { currency });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

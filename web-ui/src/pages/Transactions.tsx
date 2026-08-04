@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, ArrowUpRight, ArrowDownRight, Calendar, Edit, Trash2, Loader2 } from 'lucide-react';
 import { transactionsApi, Transaction } from '../services/api/transactions';
 import { useAuthStore } from '../store/authStore';
+import { formatMoney, Money, moneyStyle, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
@@ -26,8 +27,10 @@ export const Transactions: React.FC = () => {
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+  // One formatter for the whole app, and it honours the user's currency rather
+  // than hardcoding USD as this local copy did.
+  const currency = user?.default_currency_code || 'USD';
+  const formatCurrency = (amount: number) => formatMoney(amount, { currency });
 
   const fetchTransactions = async () => {
     try {
@@ -145,21 +148,21 @@ export const Transactions: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                 <StatCard
                   label="Total Income"
-                  value={`+${formatCurrency(totalIncome)}`}
+                  value={formatMoney(totalIncome, { currency, signed: true })}
                   accentColor="#22c55e"
                   icon={<ArrowUpRight size={24} color="#22c55e" />}
                   valueColor="#22c55e"
                 />
                 <StatCard
                   label="Total Expenses"
-                  value={`-${formatCurrency(totalExpense)}`}
+                  value={formatMoney(-Math.abs(totalExpense), { currency })}
                   accentColor="#ef4444"
                   icon={<ArrowDownRight size={24} color="#ef4444" />}
                   valueColor="#ef4444"
                 />
                 <StatCard
                   label="Net Balance"
-                  value={`${netBalance >= 0 ? '+' : ''}${formatCurrency(netBalance)}`}
+                  value={formatMoney(netBalance, { currency, signed: true })}
                   accentColor="#fbbf24"
                   icon={<Calendar size={24} color="#fbbf24" />}
                   valueColor={netBalance >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
@@ -259,15 +262,24 @@ export const Transactions: React.FC = () => {
                                 </div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                                {/* The ledger column. Tabular figures and a real
+                                    minus sign so the amounts line up down the
+                                    list; previously a hyphen was glued on outside
+                                    the number, which knocked every negative row
+                                    a fraction out of alignment. */}
                                 <p style={{
-                                  fontSize: '15px', fontWeight: '700',
+                                  fontSize: '15px', fontWeight: 700, margin: 0,
+                                  ...tabular,
                                   color: transaction.transaction_type === 'income' ? 'var(--brand-green-glow)'
                                     : transaction.transaction_type === 'transfer' ? 'var(--accent-blue)'
                                     : 'var(--accent-red)',
                                 }}>
-                                  {transaction.transaction_type === 'income' && '+'}
-                                  {transaction.transaction_type === 'expense' && '-'}
-                                  {formatCurrency(Math.abs(transaction.amount))}
+                                  {formatMoney(
+                                    transaction.transaction_type === 'expense'
+                                      ? -Math.abs(transaction.amount)
+                                      : Math.abs(transaction.amount),
+                                    { currency, signed: transaction.transaction_type === 'income' },
+                                  )}
                                 </p>
                                 <div style={{ display: 'flex', gap: '6px' }}>
                                   <button

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { tabular } from '../styles/money';
 
 interface StatCardProps {
   label: string;
@@ -31,7 +32,16 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, i
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
         <div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>{label}</p>
-          <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: valueColor || 'var(--text-primary)', margin: 0 }}>{value}</h3>
+          {/* Tabular figures: every stat card on every page holds a money
+              value, so one change here makes the whole app's numbers align in a
+              column instead of reading as a ragged edge. */}
+          <h3 style={{
+            fontSize: '28px',
+            fontWeight: 'bold',
+            color: valueColor || 'var(--text-primary)',
+            margin: 0,
+            ...tabular,
+          }}>{value}</h3>
         </div>
         <div style={{
           width: '48px',

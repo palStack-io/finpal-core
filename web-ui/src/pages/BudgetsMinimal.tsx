@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, ChevronDown, ChevronUp, Edit2, Trash2, Calendar, ChevronLeft, ChevronRight, Loader2, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { formatMoney, Money } from '../styles/money';
 import { getBranding } from '../config/branding';
 import { budgetService, type Budget } from '../services/budgetService';
 import { transactionsApi, type Transaction } from '../services/api/transactions';
@@ -47,13 +48,12 @@ const BudgetsMinimal = () => {
   });
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: user?.default_currency_code || 'USD',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  // Was a local copy that used the user's currency with ZERO decimal places,
+  // while every other page hardcoded USD with two — so a user set to EUR saw €
+  // here and $ elsewhere, whole units here and cents elsewhere. One formatter
+  // now, and it respects the user's currency everywhere.
+  const currency = user?.default_currency_code || 'USD';
+  const formatCurrency = (amount: number) => formatMoney(amount, { currency });
 
   useEffect(() => {
     loadData();
