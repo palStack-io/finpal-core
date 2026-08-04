@@ -1,6 +1,11 @@
 /**
  * Categories Page
  * Manage categories and subcategories
+ *
+ * Inline styles with CSS variables (the house pattern — see
+ * components/settings/ImportSources.tsx). Tailwind's config hardcodes its dark
+ * background with no `data-theme` awareness, so the classes this page used could
+ * not follow the light/dark toggle.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +24,70 @@ import {
   Search,
   MoreVertical,
 } from 'lucide-react';
+
+const stackStyle = (gap: string): React.CSSProperties => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap,
+});
+
+/** Responsive columns without media queries, matching the repo's auto-fit grids. */
+const autoGridStyle = (min: string, gap: string): React.CSSProperties => ({
+  display: 'grid',
+  gridTemplateColumns: `repeat(auto-fit, minmax(${min}, 1fr))`,
+  gap,
+});
+
+const statIconStyle = (background: string): React.CSSProperties => ({
+  width: '40px',
+  height: '40px',
+  borderRadius: '50%',
+  background,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+});
+
+const statLabelStyle: React.CSSProperties = {
+  color: 'var(--text-secondary)',
+  fontSize: '14px',
+};
+
+const statValueStyle: React.CSSProperties = {
+  color: 'var(--text-primary)',
+  fontSize: '24px',
+  fontWeight: '700',
+  margin: 0,
+};
+
+const statHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  marginBottom: '8px',
+};
+
+const subRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  padding: '12px',
+  borderRadius: '8px',
+  background: 'var(--surface-hover)',
+  transition: 'background 0.2s',
+};
+
+const suggestionTileStyle: React.CSSProperties = {
+  padding: '16px',
+  borderRadius: '8px',
+  background: 'var(--surface-hover)',
+  border: '1px solid var(--border-light)',
+  textAlign: 'center',
+  cursor: 'pointer',
+  transition: 'border-color 0.2s',
+};
 
 export const Categories: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -91,53 +160,68 @@ export const Categories: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div style={stackStyle('24px')}>
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+        }}>
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Categories</h1>
-            <p className="text-gray-400">
+            <h1 style={{
+              color: 'var(--text-primary)',
+              fontSize: '30px',
+              fontWeight: '700',
+              margin: '0 0 8px',
+            }}>
+              Categories
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
               Organize your transactions with categories
             </p>
           </div>
           <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus size={20} />
             New Category
           </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div style={autoGridStyle('250px', '24px')}>
           <Card hover>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Folder className="h-5 w-5 text-blue-500" />
+            <div style={statHeaderStyle}>
+              <div style={statIconStyle('rgba(59, 130, 246, 0.2)')}>
+                <Folder size={20} style={{ color: '#3b82f6' }} />
               </div>
-              <span className="text-gray-400 text-sm">Total Categories</span>
+              <span style={statLabelStyle}>Total Categories</span>
             </div>
-            <p className="text-2xl font-bold text-white">{parentCategories.length}</p>
+            <p style={statValueStyle}>{parentCategories.length}</p>
           </Card>
 
           <Card hover>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Tag className="h-5 w-5 text-purple-500" />
+            <div style={statHeaderStyle}>
+              {/* Purple has no CSS-variable equivalent; kept literal like the other
+                  semantic accents. */}
+              <div style={statIconStyle('rgba(168, 85, 247, 0.2)')}>
+                <Tag size={20} style={{ color: '#a855f7' }} />
               </div>
-              <span className="text-gray-400 text-sm">Subcategories</span>
+              <span style={statLabelStyle}>Subcategories</span>
             </div>
-            <p className="text-2xl font-bold text-white">
+            <p style={statValueStyle}>
               {categories.filter((c) => c.parent_id).length}
             </p>
           </Card>
 
           <Card hover>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <Search className="h-5 w-5 text-green-500" />
+            <div style={statHeaderStyle}>
+              <div style={statIconStyle('rgba(34, 197, 94, 0.2)')}>
+                <Search size={20} style={{ color: '#22c55e' }} />
               </div>
-              <span className="text-gray-400 text-sm">Total Items</span>
+              <span style={statLabelStyle}>Total Items</span>
             </div>
-            <p className="text-2xl font-bold text-white">{categories.length}</p>
+            <p style={statValueStyle}>{categories.length}</p>
           </Card>
         </div>
 
@@ -148,18 +232,23 @@ export const Categories: React.FC = () => {
             placeholder="Search categories..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            leftIcon={<Search className="h-5 w-5" />}
+            leftIcon={<Search size={20} />}
             fullWidth
           />
         </Card>
 
         {/* Categories List */}
-        <div className="space-y-4">
+        <div style={stackStyle('16px')}>
           {parentCategories.length === 0 ? (
             <Card>
-              <div className="text-center py-12">
-                <Tag className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 mb-4">No categories found</p>
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <Tag
+                  size={64}
+                  style={{ color: 'var(--text-muted)', display: 'block', margin: '0 auto 16px' }}
+                />
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                  No categories found
+                </p>
                 <Button variant="primary" onClick={() => setShowCreateModal(true)}>
                   Create Your First Category
                 </Button>
@@ -173,26 +262,42 @@ export const Categories: React.FC = () => {
               return (
                 <Card key={category.id} hover>
                   {/* Parent Category */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="text-4xl">{categoryIcon}</div>
-                      <div>
-                        <h3 className="text-lg font-bold text-white">
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    flexWrap: 'wrap',
+                    marginBottom: '16px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+                      <div style={{ fontSize: '36px', lineHeight: 1 }}>{categoryIcon}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <h3 style={{
+                          color: 'var(--text-primary)',
+                          fontSize: '18px',
+                          fontWeight: '700',
+                          margin: 0,
+                        }}>
                           {category.name}
                         </h3>
-                        <p className="text-gray-400 text-sm">
+                        <p style={{
+                          color: 'var(--text-secondary)',
+                          fontSize: '14px',
+                          margin: '4px 0 0',
+                        }}>
                           {subcategories.length} subcategories
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <Button
                         variant="outline"
                         size="sm"
                         aria-label="Edit category"
                         onClick={() => setEditingCategory(category)}
                       >
-                        <Edit2 className="h-4 w-4" />
+                        <Edit2 size={16} />
                       </Button>
                       <Button
                         variant="outline"
@@ -200,31 +305,43 @@ export const Categories: React.FC = () => {
                         aria-label="Delete category"
                         onClick={() => handleDeleteCategory(category.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 size={16} />
                       </Button>
                     </div>
                   </div>
 
                   {/* Subcategories */}
                   {subcategories.length > 0 && (
-                    <div className="pl-12 space-y-2 border-l-2 border-gray-800">
+                    <div style={{
+                      ...stackStyle('8px'),
+                      paddingLeft: '48px',
+                      borderLeft: '2px solid var(--border-light)',
+                    }}>
                       {subcategories.map((sub) => (
                         <div
                           key={sub.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-background-darker/50 hover:bg-background-darker transition-colors"
+                          style={subRowStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--surface-active)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--surface-hover)';
+                          }}
                         >
-                          <div className="flex items-center gap-3">
-                            <Tag className="h-4 w-4 text-gray-400" />
-                            <span className="text-white">{sub.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                            <Tag size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>
+                              {sub.name}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                             <Button
                               variant="outline"
                               size="sm"
                               aria-label="Edit subcategory"
                               onClick={() => setEditingCategory(sub)}
                             >
-                              <Edit2 className="h-3 w-3" />
+                              <Edit2 size={12} />
                             </Button>
                             <Button
                               variant="outline"
@@ -232,7 +349,7 @@ export const Categories: React.FC = () => {
                               aria-label="Delete subcategory"
                               onClick={() => handleDeleteCategory(sub.id)}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 size={12} />
                             </Button>
                           </div>
                         </div>
@@ -241,7 +358,7 @@ export const Categories: React.FC = () => {
                   )}
 
                   {/* Add Subcategory Button */}
-                  <div className="mt-4 pl-12">
+                  <div style={{ marginTop: '16px', paddingLeft: '48px' }}>
                     <Button
                       variant="outline"
                       size="sm"
@@ -255,7 +372,7 @@ export const Categories: React.FC = () => {
                         setShowCreateModal(true);
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus size={16} />
                       Add Subcategory
                     </Button>
                   </div>
@@ -267,14 +384,25 @@ export const Categories: React.FC = () => {
 
         {/* Default Categories Info */}
         <Card>
-          <h2 className="text-xl font-bold text-white mb-4">
+          <h2 style={{
+            color: 'var(--text-primary)',
+            fontSize: '20px',
+            fontWeight: '700',
+            margin: '0 0 16px',
+          }}>
             Suggested Categories
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div style={autoGridStyle('120px', '12px')}>
             {Object.entries(categoryIcons).map(([name, icon]) => (
               <div
                 key={name}
-                className="p-4 rounded-lg bg-background-darker/50 border border-gray-800 hover:border-gray-700 transition-colors text-center cursor-pointer"
+                style={suggestionTileStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-medium)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-light)';
+                }}
                 onClick={() => {
                   setEditingCategory({
                     id: 0,
@@ -284,8 +412,15 @@ export const Categories: React.FC = () => {
                   setShowCreateModal(true);
                 }}
               >
-                <div className="text-3xl mb-2">{icon}</div>
-                <p className="text-white text-xs font-medium">{name}</p>
+                <div style={{ fontSize: '30px', marginBottom: '8px' }}>{icon}</div>
+                <p style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  margin: 0,
+                }}>
+                  {name}
+                </p>
               </div>
             ))}
           </div>

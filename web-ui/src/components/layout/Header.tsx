@@ -26,80 +26,164 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
     navigate('/login');
   };
 
+  // Inline styles with CSS variables. Previously Tailwind, so the whole header
+  // was a fixed dark bar with white text regardless of theme.
+  const iconButtonStyle: React.CSSProperties = {
+    padding: '8px',
+    borderRadius: '8px',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'background 0.2s ease, color 0.2s ease',
+  };
+
+  const hoverIn = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.background = 'var(--surface-hover)';
+    e.currentTarget.style.color = 'var(--text-primary)';
+  };
+  const hoverOut = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.background = 'transparent';
+    e.currentTarget.style.color = 'var(--text-secondary)';
+  };
+
+  const menuItemStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    width: '100%',
+    padding: '8px 16px',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-secondary)',
+    fontSize: '14px',
+    cursor: 'pointer',
+    textAlign: 'left',
+    transition: 'background 0.2s ease, color 0.2s ease',
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-background-dark/80 backdrop-blur-lg border-b border-gray-800">
-      <div className="flex items-center justify-between h-16 px-4 sm:px-6">
-        {/* Left side - Menu toggle and Logo */}
-        <div className="flex items-center gap-4">
+    <header style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+      background: 'var(--bg-card)',
+      backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid var(--border-light)',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        height: '64px', padding: '0 16px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button
             onClick={onMenuToggle}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-800 transition-colors text-white"
+            aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
+            style={iconButtonStyle}
+            onMouseEnter={hoverIn}
+            onMouseLeave={hoverOut}
           >
-            {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
 
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">{user?.profile_emoji || '😊'}</span>
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-white">{user?.name || 'User'}</h1>
-              <p className="text-xs text-gray-400">{branding.appName}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '30px' }}>{user?.profile_emoji || '\u{1F60A}'}</span>
+            <div>
+              <h1 style={{
+                fontSize: '18px', fontWeight: 700, margin: 0,
+                color: 'var(--text-primary)',
+              }}>
+                {user?.name || 'User'}
+              </h1>
+              <p style={{
+                fontSize: '12px', margin: 0, color: 'var(--text-muted)',
+              }}>
+                {branding.appName}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Right side - User menu */}
-        <div className="flex items-center gap-4">
-          {/* Notifications */}
-          <button className="p-2 rounded-lg hover:bg-gray-800 transition-colors text-gray-400 hover:text-white relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-accent rounded-full"></span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            aria-label="Notifications"
+            style={{ ...iconButtonStyle, position: 'relative' }}
+            onMouseEnter={hoverIn}
+            onMouseLeave={hoverOut}
+          >
+            <Bell size={20} />
+            <span style={{
+              position: 'absolute', top: '4px', right: '4px',
+              height: '8px', width: '8px', borderRadius: '50%',
+              background: 'var(--brand-accent-gold)',
+            }} />
           </button>
 
-          {/* User menu */}
-          <div className="relative">
+          <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800 transition-colors"
+              style={{ ...iconButtonStyle, gap: '8px' }}
+              onMouseEnter={hoverIn}
+              onMouseLeave={hoverOut}
             >
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <span className="text-lg leading-none">
+              <div style={{
+                height: '32px', width: '32px', borderRadius: '50%',
+                background: 'linear-gradient(to bottom right, var(--brand-main-green), var(--brand-accent-gold))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: '18px', lineHeight: 1 }}>
                   {user?.profile_emoji || user?.name?.[0]?.toUpperCase() || 'U'}
                 </span>
               </div>
-              <span className="hidden sm:block text-white font-medium">{user?.name || 'User'}</span>
+              <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                {user?.name || 'User'}
+              </span>
             </button>
 
-            {/* Dropdown menu */}
             {showUserMenu && (
               <>
                 <div
-                  className="fixed inset-0 z-10"
+                  style={{ position: 'fixed', inset: 0, zIndex: 10 }}
                   onClick={() => setShowUserMenu(false)}
-                ></div>
-                <div className="absolute right-0 mt-2 w-56 bg-background-dark border border-gray-800 rounded-lg shadow-xl z-20 overflow-hidden">
-                  <div className="p-4 border-b border-gray-800">
-                    <p className="text-white font-medium">{user?.name}</p>
-                    <p className="text-gray-400 text-sm">{user?.email}</p>
+                />
+                <div style={{
+                  position: 'absolute', right: 0, marginTop: '8px', width: '224px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--card-shadow)',
+                  zIndex: 20, overflow: 'hidden',
+                }}>
+                  <div style={{ padding: '16px', borderBottom: '1px solid var(--border-light)' }}>
+                    <p style={{ fontWeight: 500, margin: 0, color: 'var(--text-primary)' }}>
+                      {user?.name}
+                    </p>
+                    <p style={{ fontSize: '14px', margin: 0, color: 'var(--text-muted)' }}>
+                      {user?.email}
+                    </p>
                   </div>
-                  <div className="py-2">
+                  <div style={{ padding: '8px 0' }}>
                     <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        navigate('/profile');
-                      }}
-                      className="flex items-center gap-3 w-full px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                      onClick={() => { setShowUserMenu(false); navigate('/profile'); }}
+                      style={menuItemStyle}
+                      onMouseEnter={hoverIn}
+                      onMouseLeave={hoverOut}
                     >
-                      <User className="h-4 w-4" />
+                      <User size={16} />
                       <span>Profile</span>
                     </button>
                     <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        handleLogout();
+                      onClick={() => { setShowUserMenu(false); handleLogout(); }}
+                      style={menuItemStyle}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--surface-hover)';
+                        e.currentTarget.style.color = 'var(--accent-red)';
                       }}
-                      className="flex items-center gap-3 w-full px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-red-400 transition-colors"
+                      onMouseLeave={hoverOut}
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut size={16} />
                       <span>Logout</span>
                     </button>
                   </div>

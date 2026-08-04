@@ -1,6 +1,11 @@
 /**
  * Team Management Component
  * Team collaboration with invitations and member management
+ *
+ * Inline styles with CSS variables (the house pattern — see
+ * components/settings/ImportSources.tsx). It previously used Tailwind, whose config
+ * hardcodes `background.dark` with no `data-theme` awareness, so this panel rendered
+ * as a dark card on a light page and could not follow the theme toggle.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,6 +28,144 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { TeamMember, Invitation, TeamRole } from '../../types/team';
+
+/** Semantic accent colours; deliberately not variablised — see CLAUDE.md. */
+const GREEN = '#22c55e';
+const RED = '#ef4444';
+const BLUE = '#3b82f6';
+const AMBER = '#f59e0b';
+
+const stackStyle = (gap: string): React.CSSProperties => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap,
+});
+
+const sectionTitleStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  color: 'var(--text-primary)',
+  fontSize: '20px',
+  fontWeight: '700',
+  margin: 0,
+};
+
+/** Inset panel on top of a Card, matching ImportSources' panelStyle. */
+const panelStyle: React.CSSProperties = {
+  padding: '16px',
+  background: 'var(--surface-hover)',
+  border: '1px solid var(--border-light)',
+  borderRadius: '12px',
+};
+
+const rowStyle: React.CSSProperties = {
+  ...panelStyle,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '16px',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  color: 'var(--text-primary)',
+  fontSize: '14px',
+  fontWeight: '500',
+  marginBottom: '8px',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 16px',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--input-border)',
+  borderRadius: '12px',
+  color: 'var(--text-primary)',
+  fontSize: '14px',
+  outline: 'none',
+  boxSizing: 'border-box',
+  transition: 'border-color 0.2s',
+};
+
+const focusHandlers = {
+  onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+  },
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    e.currentTarget.style.borderColor = 'var(--input-border)';
+  },
+};
+
+const badgeStyle = (background: string, color: string): React.CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
+  padding: '4px 8px',
+  borderRadius: '6px',
+  fontSize: '12px',
+  background,
+  color,
+});
+
+const metaRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '16px',
+  flexWrap: 'wrap',
+  fontSize: '14px',
+  color: 'var(--text-secondary)',
+};
+
+const spinnerWrapStyle: React.CSSProperties = {
+  textAlign: 'center',
+  padding: '32px 0',
+};
+
+/** `.animate-spin` is hand-defined in src/index.css, not Tailwind. */
+const spinnerStyle: React.CSSProperties = {
+  width: '32px',
+  height: '32px',
+  borderRadius: '50%',
+  borderBottom: '2px solid var(--brand-main-green)',
+  margin: '0 auto',
+};
+
+const emptyStateStyle: React.CSSProperties = {
+  textAlign: 'center',
+  padding: '32px 0',
+  color: 'var(--text-muted)',
+};
+
+/**
+ * Destructive outline button. common/Button sets `style` before spreading props, so
+ * a `style` passed in replaces its computed style outright — this has to restate the
+ * whole box (Button's `sm` size + `outline` variant) rather than just the colours.
+ */
+const dangerButtonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  padding: '6px 12px',
+  fontSize: '14px',
+  fontWeight: 500,
+  borderRadius: '8px',
+  background: 'transparent',
+  color: RED,
+  border: '2px solid rgba(239, 68, 68, 0.3)',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+};
+
+const dangerHoverHandlers = {
+  onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+  },
+  onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = 'transparent';
+  },
+};
 
 export const TeamManagement: React.FC = () => {
   const { showToast } = useToast();
@@ -143,26 +286,26 @@ export const TeamManagement: React.FC = () => {
   const getRoleIcon = (role: TeamRole) => {
     switch (role) {
       case 'owner':
-        return <Crown className="w-4 h-4 text-yellow-500" />;
+        return <Crown size={16} style={{ color: AMBER }} />;
       case 'admin':
-        return <Shield className="w-4 h-4 text-blue-500" />;
+        return <Shield size={16} style={{ color: BLUE }} />;
       case 'viewer':
-        return <Eye className="w-4 h-4 text-gray-400" />;
+        return <Eye size={16} style={{ color: 'var(--text-muted)' }} />;
       default:
-        return <Users className="w-4 h-4 text-green-500" />;
+        return <Users size={16} style={{ color: GREEN }} />;
     }
   };
 
-  const getRoleBadgeColor = (role: TeamRole) => {
+  const getRoleBadgeStyle = (role: TeamRole): React.CSSProperties => {
     switch (role) {
       case 'owner':
-        return 'bg-yellow-500/10 text-yellow-500';
+        return badgeStyle('rgba(245, 158, 11, 0.1)', AMBER);
       case 'admin':
-        return 'bg-blue-500/10 text-blue-500';
+        return badgeStyle('rgba(59, 130, 246, 0.1)', BLUE);
       case 'viewer':
-        return 'bg-gray-500/10 text-gray-400';
+        return badgeStyle('var(--surface-active)', 'var(--text-muted)');
       default:
-        return 'bg-green-500/10 text-green-500';
+        return badgeStyle('rgba(34, 197, 94, 0.1)', GREEN);
     }
   };
 
@@ -170,29 +313,29 @@ export const TeamManagement: React.FC = () => {
     switch (status) {
       case 'accepted':
         return (
-          <span className="px-2 py-1 bg-green-500/10 text-green-500 text-xs rounded flex items-center gap-1">
-            <CheckCircle className="w-3 h-3" />
+          <span style={badgeStyle('rgba(34, 197, 94, 0.1)', GREEN)}>
+            <CheckCircle size={12} />
             Accepted
           </span>
         );
       case 'expired':
         return (
-          <span className="px-2 py-1 bg-red-500/10 text-red-500 text-xs rounded flex items-center gap-1">
-            <XCircle className="w-3 h-3" />
+          <span style={badgeStyle('rgba(239, 68, 68, 0.1)', RED)}>
+            <XCircle size={12} />
             Expired
           </span>
         );
       case 'cancelled':
         return (
-          <span className="px-2 py-1 bg-gray-500/10 text-gray-400 text-xs rounded flex items-center gap-1">
-            <XCircle className="w-3 h-3" />
+          <span style={badgeStyle('var(--surface-active)', 'var(--text-muted)')}>
+            <XCircle size={12} />
             Cancelled
           </span>
         );
       default:
         return (
-          <span className="px-2 py-1 bg-yellow-500/10 text-yellow-500 text-xs rounded flex items-center gap-1">
-            <Clock className="w-3 h-3" />
+          <span style={badgeStyle('rgba(245, 158, 11, 0.1)', AMBER)}>
+            <Clock size={12} />
             Pending
           </span>
         );
@@ -200,34 +343,38 @@ export const TeamManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div style={stackStyle('24px')}>
       {/* Invite Users Section */}
       <Card>
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <UserPlus className="h-5 w-5" />
+        <h2 style={{ ...sectionTitleStyle, marginBottom: '24px' }}>
+          <UserPlus size={20} />
           Invite Team Member
         </h2>
-        <p className="text-gray-400 mb-6">
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
           Invite others to collaborate on your financial management
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="md:col-span-2">
-            <label className="block text-white font-medium mb-2">Email Address</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ flex: '2 1 260px', minWidth: 0 }}>
+            <label style={labelStyle} htmlFor="team-invite-email">Email Address</label>
             <input
+              id="team-invite-email"
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-background-darker border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-colors"
+              style={inputStyle}
               placeholder="colleague@example.com"
+              {...focusHandlers}
             />
           </div>
-          <div>
-            <label className="block text-white font-medium mb-2">Role</label>
+          <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+            <label style={labelStyle} htmlFor="team-invite-role">Role</label>
             <select
+              id="team-invite-role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as TeamRole)}
-              className="w-full px-4 py-3 bg-background-darker border border-gray-800 rounded-xl text-white focus:outline-none focus:border-primary transition-colors"
+              style={inputStyle}
+              {...focusHandlers}
             >
               <option value="viewer">Viewer</option>
               <option value="member">Member</option>
@@ -236,19 +383,21 @@ export const TeamManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-background-darker border border-gray-800 rounded-xl p-4 mb-4">
-          <p className="text-white font-medium mb-2">Role Permissions:</p>
-          <div className="space-y-2 text-sm text-gray-400">
-            <p>
-              <strong className="text-white">Viewer:</strong> Can view all data but cannot make
+        <div style={{ ...panelStyle, marginBottom: '16px' }}>
+          <p style={{ color: 'var(--text-primary)', fontWeight: '500', marginBottom: '8px' }}>
+            Role Permissions:
+          </p>
+          <div style={{ ...stackStyle('8px'), fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Viewer:</strong> Can view all data but cannot make
               changes
             </p>
-            <p>
-              <strong className="text-white">Member:</strong> Can add/edit transactions and view
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Member:</strong> Can add/edit transactions and view
               reports
             </p>
-            <p>
-              <strong className="text-white">Admin:</strong> Full access except transferring
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Admin:</strong> Full access except transferring
               ownership
             </p>
           </div>
@@ -259,16 +408,23 @@ export const TeamManagement: React.FC = () => {
           onClick={handleSendInvite}
           isLoading={isSendingInvite}
         >
-          <Send className="h-4 w-4 mr-2" />
+          <Send size={16} />
           Send Invitation
         </Button>
       </Card>
 
       {/* Pending Invitations */}
       <Card>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap',
+          marginBottom: '24px',
+        }}>
+          <h2 style={sectionTitleStyle}>
+            <Mail size={20} />
             Pending Invitations
           </h2>
           <Button
@@ -277,54 +433,60 @@ export const TeamManagement: React.FC = () => {
             onClick={loadInvitations}
             disabled={isLoadingInvitations}
           >
-            <RefreshCw className="h-4 w-4 mr-1" />
+            <RefreshCw size={16} />
             Refresh
           </Button>
         </div>
 
         {isLoadingInvitations ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <div style={spinnerWrapStyle}>
+            <div className="animate-spin" style={spinnerStyle}></div>
           </div>
         ) : invitations.length > 0 ? (
-          <div className="space-y-3">
+          <div style={stackStyle('12px')}>
             {invitations.map((invitation) => (
-              <div
-                key={invitation.id}
-                className="p-4 bg-background-darker border border-gray-800 rounded-xl flex items-center justify-between"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-white font-medium">{invitation.email}</span>
+              <div key={invitation.id} style={rowStyle}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    flexWrap: 'wrap',
+                    marginBottom: '4px',
+                  }}>
+                    <Mail size={16} style={{ color: 'var(--text-secondary)' }} />
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '500', overflowWrap: 'anywhere' }}>
+                      {invitation.email}
+                    </span>
                     {getStatusBadge(invitation.status)}
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-400">
-                    <span className="flex items-center gap-1">
+                  <div style={metaRowStyle}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {getRoleIcon(invitation.role)}
-                      <span className="capitalize">{invitation.role}</span>
+                      <span style={{ textTransform: 'capitalize' }}>{invitation.role}</span>
                     </span>
                     <span>Sent: {new Date(invitation.sentAt).toLocaleDateString()}</span>
                     <span>Expires: {new Date(invitation.expiresAt).toLocaleDateString()}</span>
                   </div>
                 </div>
                 {invitation.status === 'pending' && (
-                  <div className="flex gap-2">
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleResendInvitation(invitation.id)}
                     >
-                      <RefreshCw className="h-3 w-3 mr-1" />
+                      <RefreshCw size={12} />
                       Resend
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleCancelInvitation(invitation.id)}
-                      className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                      style={dangerButtonStyle}
+                      {...dangerHoverHandlers}
                     >
-                      <Trash2 className="h-3 w-3 mr-1" />
+                      <Trash2 size={12} />
                       Cancel
                     </Button>
                   </div>
@@ -333,15 +495,22 @@ export const TeamManagement: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">No pending invitations</div>
+          <div style={emptyStateStyle}>No pending invitations</div>
         )}
       </Card>
 
       {/* Team Members */}
       <Card>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Users className="h-5 w-5" />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap',
+          marginBottom: '24px',
+        }}>
+          <h2 style={sectionTitleStyle}>
+            <Users size={20} />
             Team Members
           </h2>
           <Button
@@ -350,44 +519,80 @@ export const TeamManagement: React.FC = () => {
             onClick={loadMembers}
             disabled={isLoadingMembers}
           >
-            <RefreshCw className="h-4 w-4 mr-1" />
+            <RefreshCw size={16} />
             Refresh
           </Button>
         </div>
 
         {isLoadingMembers ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <div style={spinnerWrapStyle}>
+            <div className="animate-spin" style={spinnerStyle}></div>
           </div>
         ) : members.length > 0 ? (
-          <div className="space-y-3">
+          <div style={stackStyle('12px')}>
             {members.map((member) => (
-              <div
-                key={member.id}
-                className="p-4 bg-background-darker border border-gray-800 rounded-xl flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-background-darker border-2 border-gray-800 overflow-hidden flex items-center justify-center">
+              <div key={member.id} style={rowStyle}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'var(--surface-active)',
+                    border: '2px solid var(--border-light)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
                     {member.avatar ? (
                       <img
                         src={member.avatar}
                         alt={member.name}
-                        className="w-full h-full object-cover"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
-                      <Users className="w-6 h-6 text-gray-600" />
+                      <Users size={24} style={{ color: 'var(--text-muted)' }} />
                     )}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-white font-semibold">{member.name}</h3>
-                      <span className={`px-2 py-0.5 text-xs rounded flex items-center gap-1 ${getRoleBadgeColor(member.role)}`}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                      marginBottom: '4px',
+                    }}>
+                      <h3 style={{
+                        color: 'var(--text-primary)',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        margin: 0,
+                      }}>
+                        {member.name}
+                      </h3>
+                      <span style={{ ...getRoleBadgeStyle(member.role), padding: '2px 8px' }}>
                         {getRoleIcon(member.role)}
-                        <span className="capitalize">{member.role}</span>
+                        <span style={{ textTransform: 'capitalize' }}>{member.role}</span>
                       </span>
                     </div>
-                    <p className="text-gray-400 text-sm">{member.email}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                    <p style={{
+                      color: 'var(--text-secondary)',
+                      fontSize: '14px',
+                      margin: 0,
+                      overflowWrap: 'anywhere',
+                    }}>
+                      {member.email}
+                    </p>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      flexWrap: 'wrap',
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                      marginTop: '4px',
+                    }}>
                       <span>Joined: {new Date(member.joinedAt).toLocaleDateString()}</span>
                       {member.lastActive && (
                         <span>Last active: {new Date(member.lastActive).toLocaleDateString()}</span>
@@ -396,11 +601,17 @@ export const TeamManagement: React.FC = () => {
                   </div>
                 </div>
                 {member.role !== 'owner' && (
-                  <div className="flex gap-2">
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                     <select
                       value={member.role}
                       onChange={(e) => handleUpdateRole(member.id, e.target.value as TeamRole)}
-                      className="px-3 py-2 bg-background-darker border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-primary"
+                      style={{
+                        ...inputStyle,
+                        width: 'auto',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                      }}
+                      {...focusHandlers}
                     >
                       <option value="viewer">Viewer</option>
                       <option value="member">Member</option>
@@ -410,9 +621,10 @@ export const TeamManagement: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemoveMember(member.id, member.name)}
-                      className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                      style={dangerButtonStyle}
+                      {...dangerHoverHandlers}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 size={16} />
                     </Button>
                   </div>
                 )}
@@ -420,24 +632,32 @@ export const TeamManagement: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">No team members</div>
+          <div style={emptyStateStyle}>No team members</div>
         )}
       </Card>
 
       {/* Transfer Ownership (Future) */}
       <Card>
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <Crown className="h-5 w-5" />
+        <h2 style={{ ...sectionTitleStyle, marginBottom: '24px' }}>
+          <Crown size={20} />
           Transfer Ownership
         </h2>
-        <p className="text-gray-400 mb-4">
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
           Transfer account ownership to another team member (This action cannot be undone)
         </p>
-        <div className="p-6 bg-background-darker border border-gray-800 rounded-xl text-center">
-          <p className="text-gray-500">
+        <div style={{ ...panelStyle, padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
             Only the account owner can transfer ownership to another admin
           </p>
-          <span className="inline-block mt-2 px-3 py-1 bg-yellow-500/10 text-yellow-500 text-sm rounded">
+          <span style={{
+            display: 'inline-block',
+            marginTop: '8px',
+            padding: '4px 12px',
+            background: 'rgba(245, 158, 11, 0.1)',
+            color: AMBER,
+            fontSize: '14px',
+            borderRadius: '6px',
+          }}>
             Admin Only
           </span>
         </div>

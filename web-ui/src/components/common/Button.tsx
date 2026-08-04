@@ -28,33 +28,78 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-darker disabled:opacity-50 disabled:cursor-not-allowed';
-
-  const variantClasses = {
-    primary: 'bg-primary hover:bg-primary-dark text-white shadow-lg hover:shadow-xl focus:ring-primary',
-    secondary: 'bg-accent hover:bg-accent-gold text-background-darker shadow-lg hover:shadow-xl focus:ring-accent',
-    outline: 'border-2 border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary',
-    danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl focus:ring-red-500',
+  // Inline styles with CSS variables. Tailwind could not follow the theme
+  // toggle — its config hardcodes background.dark, so a "secondary" button had a
+  // fixed dark foreground regardless of theme.
+  const SIZES = {
+    sm: { padding: '6px 12px', fontSize: '14px' },
+    md: { padding: '8px 16px', fontSize: '16px' },
+    lg: { padding: '12px 24px', fontSize: '18px' },
   };
 
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+  // Semantic accents stay literal per CLAUDE.md, as does `color: 'white'` on a
+  // coloured button — both are correct on either theme.
+  const VARIANTS: Record<ButtonVariant, React.CSSProperties> = {
+    primary: {
+      background: 'var(--brand-main-green)',
+      color: 'white',
+      border: '1px solid transparent',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    },
+    secondary: {
+      background: 'var(--btn-secondary-bg)',
+      color: 'var(--text-primary)',
+      border: '1px solid var(--btn-secondary-border)',
+    },
+    outline: {
+      background: 'transparent',
+      color: 'var(--brand-main-green)',
+      border: '2px solid var(--brand-main-green)',
+    },
+    danger: {
+      background: '#ef4444',
+      color: 'white',
+      border: '1px solid transparent',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    },
   };
 
-  const widthClass = fullWidth ? 'w-full' : '';
+  const isDisabled = disabled || isLoading;
+
+  const style: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    fontWeight: 500,
+    borderRadius: '8px',
+    cursor: isDisabled ? 'not-allowed' : 'pointer',
+    opacity: isDisabled ? 0.5 : 1,
+    transition: 'all 0.2s ease',
+    width: fullWidth ? '100%' : undefined,
+    ...SIZES[size],
+    ...VARIANTS[variant],
+  };
+
+  // Merged, and applied AFTER the props spread, so a caller can override an
+  // individual property (a colour, say) without losing the padding, radius and
+  // inline-flex layout. Written the other way round — `style={style}` before the
+  // spread — a caller's `style` REPLACED the whole computed box, silently, since
+  // TypeScript cannot tell the difference.
+  const mergedStyle: React.CSSProperties = { ...style, ...props.style };
 
   return (
     <Component
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className}`}
+      className={className}
       {...(Component === 'button' ? { disabled: disabled || isLoading } : {})}
       {...props}
+      style={mergedStyle}
     >
       {isLoading ? (
         <>
           <svg
-            className="animate-spin -ml-1 mr-2 h-4 w-4"
+            className="animate-spin"
+            style={{ width: 16, height: 16 }}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

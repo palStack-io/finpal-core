@@ -26,50 +26,70 @@ export const Input: React.FC<InputProps> = ({
   ...props
 }) => {
   const inputId = id || `input-${Math.random().toString(36).substring(2, 11)}`;
-  const widthClass = fullWidth ? 'w-full' : '';
+
+  // Inline styles with CSS variables. Previously Tailwind, so the field had a
+  // fixed dark background and white text — unreadable on a light theme. Error
+  // red stays literal per CLAUDE.md.
+  const iconStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    display: 'flex',
+    alignItems: 'center',
+    pointerEvents: 'none',
+    color: 'var(--text-muted)',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    display: 'block',
+    width: '100%',
+    padding: '10px 16px',
+    paddingLeft: leftIcon ? '40px' : '16px',
+    paddingRight: rightIcon ? '40px' : '16px',
+    background: 'var(--input-bg)',
+    border: `1px solid ${error ? '#ef4444' : 'var(--input-border)'}`,
+    borderRadius: '8px',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
+    transition: 'border-color 0.2s ease',
+    boxSizing: 'border-box',
+  };
+
+  const messageStyle: React.CSSProperties = {
+    marginTop: '6px',
+    fontSize: '14px',
+  };
 
   return (
-    <div className={`${widthClass} ${className}`}>
+    <div className={className} style={{ width: fullWidth ? '100%' : undefined }}>
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-white mb-1.5"
+          style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: 500,
+            color: 'var(--text-secondary)',
+            marginBottom: '6px',
+          }}
         >
           {label}
         </label>
       )}
-      <div className="relative">
-        {leftIcon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            {leftIcon}
-          </div>
-        )}
+      <div style={{ position: 'relative' }}>
+        {leftIcon && <div style={{ ...iconStyle, left: 0, paddingLeft: '12px' }}>{leftIcon}</div>}
         <input
           id={inputId}
-          className={`
-            block w-full px-4 py-2.5
-            bg-background-dark border rounded-lg
-            text-white placeholder-gray-400
-            transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-            disabled:bg-gray-800 disabled:cursor-not-allowed
-            ${error ? 'border-red-500' : 'border-gray-700 hover:border-gray-600'}
-            ${leftIcon ? 'pl-10' : ''}
-            ${rightIcon ? 'pr-10' : ''}
-          `}
+          style={inputStyle}
           {...props}
         />
-        {rightIcon && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
-            {rightIcon}
-          </div>
-        )}
+        {rightIcon && <div style={{ ...iconStyle, right: 0, paddingRight: '12px' }}>{rightIcon}</div>}
       </div>
       {error && (
-        <p className="mt-1.5 text-sm text-red-500">{error}</p>
+        <p style={{ ...messageStyle, color: '#ef4444' }}>{error}</p>
       )}
       {helperText && !error && (
-        <p className="mt-1.5 text-sm text-gray-400">{helperText}</p>
+        <p style={{ ...messageStyle, color: 'var(--text-muted)' }}>{helperText}</p>
       )}
     </div>
   );

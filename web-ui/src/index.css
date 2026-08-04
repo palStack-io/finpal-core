@@ -1,28 +1,19 @@
-/* Tailwind v4.
+/* finPal web UI global styles.
  *
- * This file used the v3 directives (@tailwind base/components/utilities), which
- * @tailwindcss/postcss v4 does not process — so NO utilities were generated and
- * every Tailwind class in the app was inert. The built CSS was 19KB with zero
- * utility classes in it. Components written against Tailwind (Card, Button,
- * Input, Toast, Header, Layout, Loading, TeamManagement) rendered completely
- * unstyled; the Household settings tab is where it was first noticed.
+ * No Tailwind. The app converged on inline styles with the CSS variables in
+ * styles/finpal-theme.css, because Tailwind's config hardcoded a dark palette
+ * with no `data-theme` awareness and so could not follow the light/dark toggle.
+ * The toolchain was removed once the last consumer was converted — leaving it
+ * installed meant the next added class would silently work and the mix would
+ * return.
  *
- * Utilities and theme are imported WITHOUT Preflight on purpose. Preflight is
- * Tailwind's own CSS reset, and this file already carries a hand-rolled one
- * below (`* { margin: 0; padding: 0 }`). The rest of the app is built from
- * inline styles that were developed against that reset, so adding a second one
- * would restyle every page — a much larger change than fixing the components
- * that were actually broken.
+ * The reset below is hand-rolled and load-bearing; Tailwind's Preflight was
+ * deliberately never imported, which is what made removal clean.
  *
- * If Preflight is ever wanted, replace these three lines with
- * `@import "tailwindcss";` and expect to re-check every page.
+ * .animate-spin, .animate-in, .slide-in-from-right and .animate-pulse are all
+ * defined further down in this file. They look like Tailwind utilities and are
+ * not.
  */
-@layer theme, base, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
-/* v4 reads CSS-based @theme config by default; this opts into the existing
-   JS config so the custom primary/accent/background colours keep working. */
-@config "../tailwind.config.js";
 
 :root {
   --primary-green: #15803d;
@@ -45,8 +36,14 @@
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: linear-gradient(to bottom right, var(--primary-green), var(--bg-dark), var(--bg-darker));
-  color: white;
+  /* Theme-aware. This was a hardcoded dark green gradient with `color: white`,
+     which contradicted the theme variables on every page: light theme says
+     --bg-primary #fdfdf9 with --text-primary #111827, so the page behind the
+     content was dark while the content was light. Anything that relied on
+     inheriting white text will now inherit the theme's own foreground, which is
+     the point. */
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -64,24 +61,24 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: var(--bg-secondary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--border-medium);
   border-radius: 4px;
   transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2d3748;
+  background: var(--text-muted);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1e293b #111827;
+  scrollbar-color: var(--border-medium) var(--bg-secondary);
 }
 
 /* Smooth transitions */
@@ -165,6 +162,12 @@ textarea:focus-visible {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* The keyframes above existed but this utility did not — it came from Tailwind,
+   which is being removed. Hand-defined now, like .animate-spin and .animate-in. */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* Money background pattern */
