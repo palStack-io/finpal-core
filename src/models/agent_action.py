@@ -24,7 +24,10 @@ class AgentAction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False,
                         index=True)
-    # Nullable so revoking or deleting a token does not erase its history.
+    # Nullable so a revoked token's history survives. Note there is no
+    # ondelete='SET NULL': tokens are *soft* revoked (revoked_at), never
+    # deleted. A hard DELETE of a token row would raise IntegrityError on
+    # Postgres — if one is ever wanted, add ondelete='SET NULL' first.
     token_id = db.Column(db.Integer,
                          db.ForeignKey('personal_access_tokens.id'), nullable=True)
     action = db.Column(db.String(40), nullable=False)

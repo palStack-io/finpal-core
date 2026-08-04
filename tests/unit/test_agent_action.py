@@ -56,8 +56,13 @@ def test_expiry_is_reported(db):
     assert action.is_pending is True  # status unchanged until someone acts
 
 
-def test_token_id_survives_the_token_being_deleted(db):
-    """History must not vanish when a credential is cleaned up."""
+def test_token_id_is_retained_for_history(db):
+    """An action records which credential asked for it.
+
+    Named for what it actually checks. Tokens are soft revoked, never
+    deleted, so there is no hard-delete path to exercise — see the note on
+    AgentAction.token_id.
+    """
     from src.models.personal_access_token import SCOPE_READ, PersonalAccessToken
     user = UserFactory()
     token, _ = PersonalAccessToken.generate(
