@@ -45,8 +45,14 @@
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: linear-gradient(to bottom right, var(--primary-green), var(--bg-dark), var(--bg-darker));
-  color: white;
+  /* Theme-aware. This was a hardcoded dark green gradient with `color: white`,
+     which contradicted the theme variables on every page: light theme says
+     --bg-primary #fdfdf9 with --text-primary #111827, so the page behind the
+     content was dark while the content was light. Anything that relied on
+     inheriting white text will now inherit the theme's own foreground, which is
+     the point. */
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -64,24 +70,24 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: var(--bg-secondary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--border-medium);
   border-radius: 4px;
   transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2d3748;
+  background: var(--text-muted);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1e293b #111827;
+  scrollbar-color: var(--border-medium) var(--bg-secondary);
 }
 
 /* Smooth transitions */
