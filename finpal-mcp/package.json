@@ -1,0 +1,23 @@
+{
+  "name": "finpal-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for finPal — ask an LLM about your own finances",
+  "license": "AGPL-3.0",
+  "type": "module",
+  "bin": { "finpal-mcp": "./dist/index.js" },
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
