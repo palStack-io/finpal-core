@@ -48,6 +48,15 @@ def _background_sync(app, user_id: str) -> None:
             except Exception as e:
                 logger.warning(f"Module background sync failed for {user_id}: {e}")
 
+    if app.config.get('TESTING'):
+        # A daemon thread outlives the request, and the test db fixture drops
+        # every table after each test — so a sync spawned by one test hits the
+        # next test's half-built schema and errors with "no such table: users".
+        # Non-deterministic by nature: it passed on CI's 3.8 leg and failed on
+        # 3.12 in the same run.
+        logger.debug('Background sync skipped under TESTING')
+        return
+
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
 

@@ -315,15 +315,18 @@ def _seed_reference_data(app):
 # to be fixed for mobile and still broken for the web. Untangling that needs
 # client changes, so it is tracked in ROADMAP.md rather than done here.
 _KNOWN_DUPLICATE_RULES = {
+    # Compared by URL *shape* (converter parameter names stripped) — see _shape.
     '/api/v1/categories',
-    '/api/v1/categories/<int:category_id>',
+    '/api/v1/categories/<int>',
     '/api/v1/groups',
-    '/api/v1/groups/<int:group_id>',
+    '/api/v1/groups/<int>',
+    '/api/v1/groups/<int>/balances',
+    '/api/v1/groups/<int>/members',
     '/api/v1/transaction-rules',
-    '/api/v1/transaction-rules/<int:rule_id>',
+    '/api/v1/transaction-rules/<int>',
     '/api/v1/transaction-rules/test',
     '/api/v1/transactions',
-    '/api/v1/transactions/<int:transaction_id>',
+    '/api/v1/transactions/<int>',
 }
 
 
@@ -335,11 +338,24 @@ def _assert_no_new_duplicate_routes(app):
     handlers that had been shadowed this way, so they were committed, reviewed and
     never executed. Startup is the only place this is cheap to notice.
     """
+    import re
     from collections import defaultdict
+
+    def _shape(rule):
+        """Rule with converter parameter NAMES stripped.
+
+        `/x/<int:id>` and `/x/<int:transaction_id>` are different strings but the
+        same URL shape, so both match the same requests and one of them is dead.
+        Comparing raw strings missed exactly that: the flask-restx transaction
+        detail handler was shadowed by the legacy blueprint for months, and this
+        guard — written to catch shadowing — said nothing.
+        """
+        return re.sub(r'<([^:<>]+):[^<>]+>', r'<\1>',
+                      re.sub(r'<(?![^:<>]+:)([^<>]+)>', r'<string>', str(rule.rule)))
 
     by_rule = defaultdict(set)
     for rule in app.url_map.iter_rules():
-        by_rule[str(rule.rule)].add(rule.endpoint)
+        by_rule[_shape(rule)].add(rule.endpoint)
 
     duplicates = {r: eps for r, eps in by_rule.items() if len(eps) > 1}
     unexpected = {r: eps for r, eps in duplicates.items()

@@ -73,7 +73,7 @@ def handle_jwt_decode_error(error):
     return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
 
 # Import and register namespaces (will be created next)
-from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources
+from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources, agent_actions, access_tokens
 
 # Register namespaces
 api.add_namespace(auth.ns, path='/auth')
@@ -96,6 +96,8 @@ api.add_namespace(demo.ns, path='/demo')
 api.add_namespace(import_sources.ns, path='/import-sources')
 api.add_namespace(import_sources.batches_ns, path='/import-batches')
 api.add_namespace(import_sources.profiles_ns, path='/import-profiles')
+api.add_namespace(agent_actions.ns, path='/agent-actions')
+api.add_namespace(access_tokens.ns, path='/access-tokens')
 
 # Module namespaces — self-registering via ModuleRegistry
 try:

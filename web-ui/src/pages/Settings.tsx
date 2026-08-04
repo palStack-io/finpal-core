@@ -10,6 +10,7 @@ import { InvestmentSettings } from '../components/investment/InvestmentSettings'
 import { RecurringTransactions } from '../components/RecurringTransactions';
 import { TeamManagement } from '../components/settings/TeamManagement';
 import { ImportSources } from '../components/settings/ImportSources';
+import { AgentAccess } from '../components/settings/AgentAccess';
 import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
@@ -825,6 +826,20 @@ export const Settings: React.FC = () => {
                       <ImportSources />
                     </div>
                   )}
+
+                  {/* Agent access — deliberately not admin-gated: tokens are
+                      per-user and reach only that user's own data */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                      Agent Access
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                      Give an LLM or a script read access to your data, and let it
+                      propose corrections. Changes that create transactions or move
+                      budgets wait for your approval.
+                    </p>
+                    <AgentAccess />
+                  </div>
                 </div>
               )}
 

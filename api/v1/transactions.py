@@ -132,43 +132,16 @@ class TransactionList(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        validated, errors = validate_request(transaction_input, data)
-        if errors:
-            return validation_error_response(errors)
-
         try:
-            # Prepare transaction data for rule engine
-            transaction_data = {
-                'description': data.get('description', ''),
-                'amount': data.get('amount', 0),
-                'transaction_type': data.get('transaction_type', 'expense'),
-                'category_id': data.get('category_id'),
-                'account_id': data.get('account_id'),
-                'notes': data.get('notes', ''),
-                'tags': data.get('tags', [])
-            }
-
-            # Auto-categorize if no category provided using new rule system
-            if not transaction_data.get('category_id'):
-                from src.utils.rule_engine import apply_transaction_rules
-                transaction_data = apply_transaction_rules(transaction_data, current_user_id)
-
-            # Create new transaction using data from rule engine
-            new_transaction = Expense(
-                description=data.get('description'),
-                amount=data.get('amount'),
-                date=datetime.fromisoformat(data.get('date')) if isinstance(data.get('date'), str) else data.get('date'),
-                currency_code=data.get('currency_code', 'USD'),
-                card_used=data.get('card_used', 'Cash'),
-                category_id=transaction_data.get('category_id'),  # May be set by rules
-                account_id=transaction_data.get('account_id', data.get('account_id')),  # May be set by rules
-                transaction_type=transaction_data.get('transaction_type', data.get('transaction_type', 'expense')),
-                notes=transaction_data.get('notes', data.get('notes')),  # May be appended by rules
-                split_method=data.get('split_method', 'equal'),
-                split_with=data.get('split_with', ''),
-                paid_by=data.get('paid_by', current_user_id),
-                user_id=current_user_id
-            )
+            # Shared with agent-proposal approval so an approved proposal builds
+            # the same transaction a direct POST would — see
+            # src/services/transaction/creation.py. Validation lives in there.
+            from src.services.transaction.creation import (
+                TransactionPayloadInvalid, build_transaction)
+            try:
+                new_transaction = build_transaction(data, current_user_id)
+            except TransactionPayloadInvalid as exc:
+                return validation_error_response(exc.errors)
 
             db.session.add(new_transaction)
             db.session.commit()
