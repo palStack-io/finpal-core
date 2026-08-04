@@ -50,6 +50,25 @@ export class FinpalClient {
     path: string,
     params: Record<string, string | number | undefined> = {},
   ): Promise<unknown> {
+    return this.request('GET', path, params);
+  }
+
+  /**
+   * A write. finpal_core decides what a token may actually change: safe edits
+   * apply, riskier ones come back as a 202 proposal awaiting the user's
+   * approval, and anything not permitted is a 403. This client does not
+   * second-guess that — it forwards the answer.
+   */
+  async put(path: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request('PUT', path, {}, body);
+  }
+
+  private async request(
+    method: 'GET' | 'PUT',
+    path: string,
+    params: Record<string, string | number | undefined> = {},
+    body?: Record<string, unknown>,
+  ): Promise<unknown> {
     const url = new URL(this.baseUrl + path);
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== '') {
@@ -60,7 +79,13 @@ export class FinpalClient {
     let response: Response;
     try {
       response = await fetch(url.toString(), {
-        headers: { 'X-API-Key': this.token, Accept: 'application/json' },
+        method,
+        headers: {
+          'X-API-Key': this.token,
+          Accept: 'application/json',
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
       });
     } catch {
       // Deliberately not including the caught error: its message varies by
@@ -72,15 +97,15 @@ export class FinpalClient {
       );
     }
 
-    let body: unknown = null;
+    let parsed: unknown = null;
     try {
-      body = await response.json();
+      parsed = await response.json();
     } catch {
-      body = null;
+      parsed = null;
     }
 
     if (!response.ok) {
-      const code = (body as { error?: string } | null)?.error ?? '';
+      const code = (parsed as { error?: string } | null)?.error ?? '';
       if (code in MESSAGES) {
         throw new FinpalError(code as FinpalErrorCode, MESSAGES[code]);
       }
@@ -90,6 +115,6 @@ export class FinpalClient {
       );
     }
 
-    return body;
+    return parsed;
   }
 }
