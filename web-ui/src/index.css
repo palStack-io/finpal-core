@@ -167,6 +167,12 @@ textarea:focus-visible {
   animation: spin 1s linear infinite;
 }
 
+/* The keyframes above existed but this utility did not — it came from Tailwind,
+   which is being removed. Hand-defined now, like .animate-spin and .animate-in. */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Money background pattern */
 .money-bg {
   background-image:

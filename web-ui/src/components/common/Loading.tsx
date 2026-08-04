@@ -1,6 +1,10 @@
 /**
  * Loading Component
  * Loading spinner with optional text
+ *
+ * Inline styles with CSS variables. It previously used Tailwind, so the spinner
+ * track was a fixed dark grey and the caption was white — invisible on a light
+ * background. 8 files import this; the prop signature is unchanged.
  */
 
 import React from 'react';
@@ -11,41 +15,88 @@ interface LoadingProps {
   fullScreen?: boolean;
 }
 
+const SIZES = {
+  sm: 24,
+  md: 40,
+  lg: 64,
+  xl: 96,
+};
+
+const wrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '16px',
+};
+
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'var(--overlay-bg)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 50,
+};
+
 export const Loading: React.FC<LoadingProps> = ({
   size = 'md',
   text,
   fullScreen = false,
 }) => {
-  const sizeClasses = {
-    sm: 'h-6 w-6',
-    md: 'h-10 w-10',
-    lg: 'h-16 w-16',
-    xl: 'h-24 w-24',
+  const px = SIZES[size];
+
+  // Two counter-rotating rings. `.animate-spin` is hand-defined in index.css,
+  // not a Tailwind utility.
+  const ringBase: React.CSSProperties = {
+    width: px,
+    height: px,
+    borderWidth: '4px',
+    borderStyle: 'solid',
+    borderRadius: '50%',
   };
 
   const spinner = (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <div className="relative">
+    <div style={wrapperStyle}>
+      <div style={{ position: 'relative', width: px, height: px }}>
         <div
-          className={`${sizeClasses[size]} border-4 border-gray-700 border-t-primary rounded-full animate-spin`}
-        ></div>
+          className="animate-spin"
+          style={{
+            ...ringBase,
+            borderColor: 'var(--progress-track)',
+            borderTopColor: 'var(--brand-main-green)',
+          }}
+        />
         <div
-          className={`${sizeClasses[size]} border-4 border-transparent border-t-accent rounded-full animate-spin absolute top-0 left-0`}
-          style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
-        ></div>
+          className="animate-spin"
+          style={{
+            ...ringBase,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            borderColor: 'transparent',
+            borderTopColor: 'var(--brand-accent-gold)',
+            animationDirection: 'reverse',
+            animationDuration: '1.5s',
+          }}
+        />
       </div>
       {text && (
-        <p className="text-white/80 text-sm font-medium">{text}</p>
+        <p style={{
+          color: 'var(--text-secondary)',
+          fontSize: '14px',
+          fontWeight: 500,
+          margin: 0,
+        }}>
+          {text}
+        </p>
       )}
     </div>
   );
 
   if (fullScreen) {
-    return (
-      <div className="fixed inset-0 bg-background-darker/90 backdrop-blur-sm flex items-center justify-center z-50">
-        {spinner}
-      </div>
-    );
+    return <div style={overlayStyle}>{spinner}</div>;
   }
 
   return spinner;
