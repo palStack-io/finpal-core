@@ -154,25 +154,59 @@ class Trends(Resource):
 
 @ns.route('/categories/top')
 class TopCategories(Resource):
-    @ns.doc('get_top_spending_categories', security='Bearer')
+    @ns.doc('get_top_spending_categories', security='Bearer',
+            params={
+                'limit': 'Maximum categories to return (default 8, max 50)',
+                'start_date': 'Inclusive ISO start date, e.g. 2026-03-01',
+                'end_date': 'Inclusive ISO end date',
+                'type': "'expense' (default) or 'income'",
+            })
     @jwt_required()
     def get(self):
-        """Get top spending categories"""
+        """Get top categories by total, for a date range and direction"""
         current_user_id = get_jwt_identity()
 
+        # These three were always sent by the web UI and always discarded: the
+        # handler called get_dashboard_data(), whose category figures are pinned
+        # to the current calendar month. Week and Year therefore rendered the
+        # same numbers as Month.
         try:
-            # Get dashboard data which includes top categories
-            dashboard_data = analytics_service.get_dashboard_data(current_user_id)
-            top_categories = dashboard_data.get('top_categories', [])
+            limit = min(max(int(request.args.get('limit', 8)), 1), 50)
+        except (TypeError, ValueError):
+            return {'success': False, 'error': 'limit must be an integer'}, 400
 
-            # top_categories is already a list of dicts from the service
-            # Just return it directly
+        try:
+            start = parse_date(request.args['start_date'], 'start_date') \
+                if request.args.get('start_date') else None
+            end = parse_date(request.args['end_date'], 'end_date') \
+                if request.args.get('end_date') else None
+        except InvalidSummaryRequest as exc:
+            return {'success': False, 'error': str(exc)}, 400
+
+        if start and end and end < start:
+            return {'success': False,
+                    'error': 'end_date must not precede start_date'}, 400
+
+        if end is not None:
+            end = end.replace(hour=23, minute=59, second=59)
+
+        transaction_type = request.args.get('type', 'expense')
+        if transaction_type not in ('expense', 'income'):
+            return {'success': False,
+                    'error': "type must be 'expense' or 'income'"}, 400
+
+        try:
+            categories = analytics_service.get_top_categories(
+                current_user_id, limit=limit, start=start, end=end,
+                transaction_type=transaction_type)
+
             return {
                 'success': True,
-                'categories': top_categories
+                'categories': categories
             }, 200
 
-        except Exception as e:
+        except Exception:
+            logger.exception('Failed to load top categories')
             return {
                 'success': False,
                 'error': 'Internal server error'
