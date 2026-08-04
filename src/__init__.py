@@ -273,7 +273,66 @@ def create_app(config_name=None):
                 except Exception as e:
                     app.logger.error(f"Failed to seed demo accounts: {e}")
 
+    _assert_no_new_duplicate_routes(app)
+
     return app
+
+
+# Paths where two blueprints legitimately claim the same rule today. Werkzeug
+# resolves duplicates to the first registered, so for each of these the older
+# blueprint wins and the flask-restx handler is dead code.
+#
+# These are NOT approved — they are recorded so that no *new* ones can appear
+# unnoticed. Removing them is not a matter of deleting the loser: web-ui calls
+# `/api/v1/transactions` (no slash) and hits the blueprint, while mobile calls
+# `/api/v1/transactions/` (trailing slash) and hits restx. The two clients run on
+# different implementations of the same resource, which is exactly how S-06 came
+# to be fixed for mobile and still broken for the web. Untangling that needs
+# client changes, so it is tracked in ROADMAP.md rather than done here.
+_KNOWN_DUPLICATE_RULES = {
+    '/api/v1/categories',
+    '/api/v1/categories/<int:category_id>',
+    '/api/v1/groups',
+    '/api/v1/groups/<int:group_id>',
+    '/api/v1/transaction-rules',
+    '/api/v1/transaction-rules/<int:rule_id>',
+    '/api/v1/transaction-rules/test',
+    '/api/v1/transactions',
+    '/api/v1/transactions/<int:transaction_id>',
+}
+
+
+def _assert_no_new_duplicate_routes(app):
+    """Fail fast if two handlers claim the same URL rule.
+
+    A duplicate rule means one handler is silently unreachable. That is not
+    hypothetical here: the S-07, S-08 and S-13 security fixes were written on
+    handlers that had been shadowed this way, so they were committed, reviewed and
+    never executed. Startup is the only place this is cheap to notice.
+    """
+    from collections import defaultdict
+
+    by_rule = defaultdict(set)
+    for rule in app.url_map.iter_rules():
+        by_rule[str(rule.rule)].add(rule.endpoint)
+
+    duplicates = {r: eps for r, eps in by_rule.items() if len(eps) > 1}
+    unexpected = {r: eps for r, eps in duplicates.items()
+                  if r not in _KNOWN_DUPLICATE_RULES}
+
+    if unexpected:
+        detail = '; '.join(f'{r} -> {sorted(eps)}' for r, eps in sorted(unexpected.items()))
+        raise RuntimeError(
+            'Duplicate URL rules detected, so one handler per rule is '
+            f'unreachable: {detail}. Either remove the duplicate or, if it is '
+            'deliberate, add the path to _KNOWN_DUPLICATE_RULES with a reason.')
+
+    stale = _KNOWN_DUPLICATE_RULES - set(duplicates)
+    if stale:
+        # Not fatal: a cleaned-up duplicate is good news, the list is just behind.
+        app.logger.info(
+            'These rules are no longer duplicated and can be dropped from '
+            f'_KNOWN_DUPLICATE_RULES: {sorted(stale)}')
 
 
 def setup_scheduled_tasks(app):
