@@ -352,6 +352,11 @@ finPal can be configured via environment variables in your `.env` file:
 | `CSV_IMPORT_MAX_BYTES` | `10485760` | Largest CSV accepted (10 MB). Bigger files are quarantined, not imported |
 | `RUN_SCHEDULER` | `true` | Must be `true` in exactly one process for folder scanning to run at all |
 
+#### Rate limiting
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RATELIMIT_STORAGE_URI` | `memory://` | Where login/register rate-limit counters live. The default is **per-worker**, so with `--workers=3` a "10 per minute" limit is really ~30/min. Set to e.g. `redis://redis:6379/0` to enforce it exactly (needs the `redis` package) |
+
 #### Backup
 | Variable | Default | Description |
 |----------|---------|-------------|
