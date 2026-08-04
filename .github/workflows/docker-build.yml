@@ -49,7 +49,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          no-cache: true
+          # Layer cache, scoped per image so the four builds do not evict one
+          # another. This replaced no-cache: true, which rebuilt every layer from
+          # scratch on every run — the backend spent ~14 minutes reinstalling the
+          # same apt packages and a single mirror hiccup failed the release.
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
   build-web:
     name: Build Web UI
@@ -88,7 +93,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          no-cache: true
+          # Layer cache, scoped per image so the four builds do not evict one
+          # another. This replaced no-cache: true, which rebuilt every layer from
+          # scratch on every run — the backend spent ~14 minutes reinstalling the
+          # same apt packages and a single mirror hiccup failed the release.
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
 
   build-nginx:
     name: Build Nginx
@@ -127,7 +137,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          no-cache: true
+          # Layer cache, scoped per image so the four builds do not evict one
+          # another. This replaced no-cache: true, which rebuilt every layer from
+          # scratch on every run — the backend spent ~14 minutes reinstalling the
+          # same apt packages and a single mirror hiccup failed the release.
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,mode=max,scope=nginx
 
   build-backup:
     name: Build Backup
@@ -166,4 +181,9 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          no-cache: true
+          # Layer cache, scoped per image so the four builds do not evict one
+          # another. This replaced no-cache: true, which rebuilt every layer from
+          # scratch on every run — the backend spent ~14 minutes reinstalling the
+          # same apt packages and a single mirror hiccup failed the release.
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,mode=max,scope=backup
