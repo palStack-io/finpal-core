@@ -54,3 +54,34 @@ def test_expense_carries_a_batch_id(db):
     db.session.add(exp)
     db.session.commit()
     assert Expense.query.one().import_batch_id == batch.id
+
+
+def test_from_oidc_is_a_real_method_not_a_monkeypatch():
+    """from_oidc must be defined on User, not attached at startup.
+
+    It used to be installed by integrations.oidc.user.extend_user_model(), which
+    made it ungreppable — and that is exactly how the OIDC_ENABLED bug hid: the
+    attach happened inside `if oidc_enabled`, so with OIDC off every native Apple
+    sign-in raised AttributeError. A real classmethod cannot be conditionally
+    absent.
+    """
+    from src.models.user import User
+
+    assert hasattr(User, 'from_oidc'), 'User.from_oidc is missing'
+    assert isinstance(vars(User).get('from_oidc'), classmethod)
+    # The discriminator: a monkeypatched method also lands in vars(User), but it
+    # carries the module it was *defined* in.
+    defined_in = User.from_oidc.__func__.__module__
+    assert defined_in == 'src.models.user', (
+        f'from_oidc is defined in {defined_in}, so it is still being attached '
+        'from outside src/models/user.py')
+
+
+def test_nothing_still_monkeypatches_the_user_model():
+    """The shim must not reintroduce the attach."""
+    import inspect
+    from integrations.oidc import user as oidc_user
+
+    source = inspect.getsource(oidc_user)
+    assert 'User.from_oidc =' not in source, (
+        'integrations/oidc/user.py still assigns User.from_oidc')
