@@ -5,17 +5,13 @@
  * Launched by an MCP client, which shows the user stderr and nothing else — so a
  * configuration problem must print a sentence, not a stack trace.
  */
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
 
 import { FinpalClient, FinpalError } from './client.js';
 import { type Config, ConfigError, loadConfig } from './config.js';
 import type { ScrubContext } from './scrub.js';
-import { TOOLS } from './tools.js';
+import { httpOptionsFromEnv, serveHttp } from './http.js';
+import { buildServer } from './server.js';
 
 /**
  * Identity endpoint, which doubles as the startup credential check.
@@ -64,41 +60,24 @@ async function main(): Promise<void> {
 
   const ctx: ScrubContext = { ownerId };
 
-  const server = new Server(
-    { name: 'finpal', version: '0.1.0' },
-    { capabilities: { tools: {} } },
-  );
+  // stdio unless asked otherwise: it is what Claude Desktop and local runners
+  // use, and it opens no socket.
+  const transport = (process.env.FINPAL_MCP_TRANSPORT ?? 'stdio').trim().toLowerCase();
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: TOOLS.map(({ name, description, inputSchema }) => ({
-      name, description, inputSchema,
-    })),
-  }));
+  if (transport === 'http') {
+    const options = httpOptionsFromEnv(process.env, (m) => process.stderr.write(m + '\n'));
+    await serveHttp(client, ctx, options, (m) => process.stderr.write(m + '\n'));
+    return;
+  }
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const tool = TOOLS.find((t) => t.name === request.params.name);
-    if (!tool) {
-      return {
-        isError: true,
-        content: [{ type: 'text', text: `Unknown tool: ${request.params.name}` }],
-      };
-    }
-    try {
-      const result = await tool.run(
-        client, (request.params.arguments ?? {}) as Record<string, unknown>, ctx,
-      );
-      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-    } catch (err) {
-      // FinpalError messages are written for a person to act on; anything else
-      // is reported without its internals.
-      const text = err instanceof FinpalError
-        ? err.message
-        : `finPal request failed while running ${tool.name}.`;
-      return { isError: true, content: [{ type: 'text', text }] };
-    }
-  });
+  if (transport !== 'stdio') {
+    process.stderr.write(
+      `finpal-mcp: FINPAL_MCP_TRANSPORT must be "stdio" or "http" (got "${transport}")\n`,
+    );
+    process.exit(1);
+  }
 
-  await server.connect(new StdioServerTransport());
+  await buildServer(client, ctx).connect(new StdioServerTransport());
 }
 
 main().catch((err) => {

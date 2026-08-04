@@ -53,6 +53,32 @@ If you reach finPal through a reverse proxy or tunnel, use that external URL.
 
 **3. Restart the client.**
 
+### If finPal runs in Docker and your client is elsewhere
+
+stdio needs the client to spawn this process, which is awkward across a container
+boundary. In that case run it as an HTTP server instead:
+
+```bash
+FINPAL_URL=http://finpal:8094 FINPAL_TOKEN=fp_live_... \
+  FINPAL_MCP_TRANSPORT=http node dist/index.js
+```
+
+| Variable | Default | Notes |
+|---|---|---|
+| `FINPAL_MCP_TRANSPORT` | `stdio` | Set to `http` for the streamable HTTP transport |
+| `FINPAL_MCP_PORT` | `8095` | |
+| `FINPAL_MCP_HOST` | `127.0.0.1` | Loopback only. See the warning below |
+
+**It binds to loopback for a reason.** This process holds your finPal token, so it
+does not ask callers for credentials of their own — anything that can reach the
+port can read your finances. Setting `FINPAL_MCP_HOST` to `0.0.0.0` is possible
+because bridging container networks sometimes needs it, and it prints a warning
+every time. Do it only on a network you trust, and prefer publishing the port to a
+specific interface in Docker over binding wide.
+
+Cross-origin requests are refused, so a page in your browser cannot drive the
+server.
+
 ## Tools
 
 | Tool | What it does |
