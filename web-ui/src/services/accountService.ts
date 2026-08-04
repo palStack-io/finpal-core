@@ -138,6 +138,26 @@ export const accountService = {
   },
 
   /**
+   * Sync every connected SimpleFin account.
+   *
+   * The backend route existed and nothing called it: the Accounts page's "Sync
+   * All" button had a `// TODO: Implement sync` and then toasted "Accounts synced
+   * successfully" regardless.
+   */
+  async syncAllSimpleFin(): Promise<{
+    success: boolean;
+    message: string;
+    results?: unknown;
+  }> {
+    const response = await api.post<{
+      success: boolean;
+      message: string;
+      results?: unknown;
+    }>('/api/v1/accounts/simplefin/sync-all');
+    return response.data;
+  },
+
+  /**
    * Get SimpleFin connection status
    */
   async getSimpleFinStatus(): Promise<SimpleFinStatus> {

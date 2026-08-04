@@ -160,7 +160,6 @@ export const Dashboard = () => {
           name: acc.name,
           balance: acc.balance || 0,
           type: acc.account_type || 'checking',
-          trend: 2.3
         }))
       );
 
@@ -471,13 +470,10 @@ export const Dashboard = () => {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{formatCurrency(Math.abs(account.balance))}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
-                    {account.trend > 0 ? <TrendingUp size={14} color="#22c55e" /> : <TrendingDown size={14} color="#ef4444" />}
-                    <span style={{ color: account.trend > 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '12px' }}>
-                      {Math.abs(account.trend)}%
-                    </span>
-                  </div>
+                  {/* The green "▲ 2.3%" that used to sit under each balance came
+                      from a literal, identical on every account. There is no
+                      per-account balance history to compute a trend from. */}
+                  <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: 0, ...tabular }}>{formatCurrency(Math.abs(account.balance))}</p>
                 </div>
               </div>
             )) : (
