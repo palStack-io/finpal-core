@@ -1,0 +1,95 @@
+{
+  "pagination": {
+    "has_next": false,
+    "has_prev": false,
+    "page": 1,
+    "pages": 1,
+    "per_page": 5,
+    "total": 2
+  },
+  "success": true,
+  "transactions": [
+    {
+      "account": {
+        "account_type": "checking",
+        "balance": 1284.55,
+        "color": "#3b82f6",
+        "currency_code": "USD",
+        "current_balance": 1284.55,
+        "id": 1,
+        "institution": "Chase",
+        "name": "Chase Checking ...4242",
+        "status": null,
+        "user_id": "owner@example.com"
+      },
+      "account_id": 1,
+      "amount": 82.4,
+      "card_used": "Amex ...9876",
+      "category": null,
+      "category_id": null,
+      "currency_code": "USD",
+      "date": "2026-03-01T00:00:00",
+      "description": "Tesco Extra",
+      "id": 1,
+      "notes": "acct 5555666677778888 routing 021000021",
+      "paid_by": "owner@example.com",
+      "recurring_id": null,
+      "split_method": "equal",
+      "split_with": "",
+      "splits": {
+        "payer": {
+          "amount": 82.4,
+          "currency_code": "USD",
+          "email": "owner@example.com",
+          "id": "owner@example.com",
+          "name": "Claude Test",
+          "original_amount": 82.4
+        },
+        "splits": []
+      },
+      "transaction_type": "expense",
+      "user_id": "owner@example.com"
+    },
+    {
+      "account": {
+        "account_type": "credit",
+        "balance": 612.4,
+        "color": "#ef4444",
+        "currency_code": "USD",
+        "current_balance": 612.4,
+        "id": 2,
+        "institution": "American Express",
+        "name": "Amex Platinum ...9876",
+        "status": null,
+        "user_id": "owner@example.com"
+      },
+      "account_id": 2,
+      "amount": 46.0,
+      "card_used": "Visa ...1111",
+      "category": null,
+      "category_id": null,
+      "currency_code": "USD",
+      "date": "2026-02-27T00:00:00",
+      "description": "Dinner split with flatmate@example.com",
+      "id": 2,
+      "notes": "reimburse to 12345678",
+      "paid_by": "owner@example.com",
+      "recurring_id": null,
+      "split_method": "equal",
+      "split_with": "",
+      "splits": {
+        "payer": {
+          "amount": 46.0,
+          "currency_code": "USD",
+          "email": "owner@example.com",
+          "id": "owner@example.com",
+          "name": "Claude Test",
+          "original_amount": 46.0
+        },
+        "splits": []
+      },
+      "transaction_type": "expense",
+      "user_id": "owner@example.com"
+    }
+  ]
+}

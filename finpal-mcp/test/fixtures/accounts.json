@@ -1,0 +1,29 @@
+{
+  "accounts": [
+    {
+      "account_type": "checking",
+      "balance": 1284.55,
+      "color": "#3b82f6",
+      "currency_code": "USD",
+      "current_balance": 1284.55,
+      "id": 1,
+      "institution": "Chase",
+      "name": "Chase Checking ...4242",
+      "status": null,
+      "user_id": "owner@example.com"
+    },
+    {
+      "account_type": "credit",
+      "balance": 612.4,
+      "color": "#ef4444",
+      "currency_code": "USD",
+      "current_balance": 612.4,
+      "id": 2,
+      "institution": "American Express",
+      "name": "Amex Platinum ...9876",
+      "status": null,
+      "user_id": "owner@example.com"
+    }
+  ],
+  "success": true
+}
