@@ -39,13 +39,16 @@ def test_a_token_cannot_reach_any_agent_action_endpoint(client, db, auth_headers
     plaintext = _write_token(user)
     hdr = {'X-API-Key': plaintext}
 
-    assert client.get('/api/v1/agent-actions', headers=hdr).status_code >= 400
+    # 401 specifically, not >= 400: a 404 (route missing) or 500 (handler
+    # broken) would also satisfy >= 400 while proving nothing about refusal.
+    # This assertion guards the rule the whole feature rests on.
+    assert client.get('/api/v1/agent-actions', headers=hdr).status_code == 401
     assert client.post('/api/v1/agent-actions/%d/approve' % row.id,
-                       headers=hdr).status_code >= 400
+                       headers=hdr).status_code == 401
     assert client.post('/api/v1/agent-actions/%d/reject' % row.id,
-                       headers=hdr).status_code >= 400
+                       headers=hdr).status_code == 401
     assert client.delete('/api/v1/agent-actions/%d' % row.id,
-                         headers=hdr).status_code >= 400
+                         headers=hdr).status_code == 401
 
     db.session.refresh(row)
     assert row.status == STATUS_PENDING, 'a token changed a proposal'

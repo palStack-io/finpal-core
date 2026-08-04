@@ -107,6 +107,9 @@ def test_a_token_cannot_mint_or_list_tokens(client, db):
     db.session.commit()
     hdr = {'X-API-Key': plaintext}
 
-    assert client.get('/api/v1/access-tokens', headers=hdr).status_code >= 400
+    # 401 specifically, not >= 400: a 404 (route missing) or 500 (handler
+    # broken) would also satisfy >= 400 while proving nothing about refusal.
+    # This assertion guards the rule the whole feature rests on.
+    assert client.get('/api/v1/access-tokens', headers=hdr).status_code == 401
     assert client.post('/api/v1/access-tokens', json={'name': 'x'},
-                       headers=hdr).status_code >= 400
+                       headers=hdr).status_code == 401
