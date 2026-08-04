@@ -338,6 +338,9 @@ finPal can be configured via environment variables in your `.env` file:
 #### Authentication
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `GOOGLE_CLIENT_ID` | - | Google OAuth client ID. Enables native Google sign-in via `POST /api/v1/auth/oidc` and makes the button appear in the mobile app |
+| `APPLE_SIGNIN_ENABLED` | `false` | Enable native Apple Sign In |
+| `APPLE_CLIENT_ID` | - | Your app's bundle ID — the audience Apple mints tokens for. Required when Apple sign-in is enabled |
 | `OIDC_ENABLED` | `false` | Enable OIDC/SSO authentication |
 | `OIDC_CLIENT_ID` | - | OAuth2 client ID |
 | `OIDC_CLIENT_SECRET` | - | OAuth2 client secret |
