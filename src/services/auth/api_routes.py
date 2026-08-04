@@ -23,6 +23,10 @@ logger = logging.getLogger(__name__)
 # Create API Blueprint
 api_bp = Blueprint('auth_api', __name__, url_prefix='/api/v1/auth')
 
+# Matches the value the (shadowed) marshmallow schema declared, so the two
+# surfaces agree if the restx handler is ever unshadowed.
+MIN_PASSWORD_LENGTH = 8
+
 
 def _get_user_modules(user_id: str) -> list:
     """Return list of module slugs enabled for this user."""
@@ -44,12 +48,30 @@ def register():
     try:
         data = request.get_json()
 
-        # Validate required fields
+        # Enforced here, not by a marshmallow schema. The MIN_PASSWORD_LENGTH
+        # schema lives on the flask-restx register handler, which the legacy
+        # blueprint shadows — so it never ran and any non-empty string was
+        # accepted, including a single character.
         if not data or not data.get('email') or not data.get('password'):
             return jsonify({'error': 'Email and password are required'}), 400
 
         email = data['email']
         password = data['password']
+
+        if len(password) < MIN_PASSWORD_LENGTH:
+            return jsonify({
+                'error': 'Password must be at least %d characters'
+                         % MIN_PASSWORD_LENGTH,
+            }), 400
+
+        # DISABLE_SIGNUPS was read into config and never referenced anywhere, so
+        # a self-hoster who set it got no protection and no warning. Checked
+        # before the invitation path on purpose: "signups disabled" that still
+        # admitted anyone holding an invitation would not mean what it says.
+        if current_app.config.get('DISABLE_SIGNUPS'):
+            return jsonify({
+                'error': 'Registration is disabled on this server.',
+            }), 403
         username = data.get('username', email.split('@')[0])
 
         # Deliberately does not say the address is taken: that turns register
