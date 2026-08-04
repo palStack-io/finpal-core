@@ -47,7 +47,18 @@ def _probe_route(app):
     def needs_write():
         return jsonify({'ok': True})
 
-    app.register_blueprint(bp)
+    # Flask 2.2's _check_setup_finished raises once the app has served a
+    # request, and the `app` fixture is session-scoped — so this fails whenever
+    # any earlier-sorting integration file has already made one. It passed only
+    # because this was alphabetically first, until Task 5 added
+    # test_agent_actions_api.py. Registering a throwaway probe blueprint after
+    # startup is safe, so the flag is restored immediately.
+    served = app._got_first_request
+    app._got_first_request = False
+    try:
+        app.register_blueprint(bp)
+    finally:
+        app._got_first_request = served
 
 
 def test_get_jwt_identity_works_under_token_auth(client, db, app):
