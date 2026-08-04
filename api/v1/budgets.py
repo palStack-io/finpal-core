@@ -10,6 +10,8 @@ from src.utils.validation import validate_request, validation_error_response
 from src.services.budget.service import BudgetService
 from datetime import datetime
 import logging
+from src.models.personal_access_token import SCOPE_READ
+from src.utils.api_auth import api_auth_required
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,10 @@ budget_model = ns.model('Budget', {
 @ns.route('/')
 class BudgetList(Resource):
     @ns.doc('list_budgets', security='Bearer')
-    @jwt_required()
+    # Accepts a personal access token as well as a session, so an MCP
+    # client or script can read. Reads need authentication only; the
+    # write tiering is separate and unchanged.
+    @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get all budgets for household"""
         from src.utils.household import get_all_user_ids
