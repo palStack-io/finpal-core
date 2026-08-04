@@ -90,11 +90,17 @@ export const Dashboard = () => {
       ]);
 
       setNetWorth(dashboardData.net_worth || 0);
-      setMonthlyIncome(dashboardData.total_income || 0);
-      setMonthlyExpenses(Math.abs(dashboardData.total_expenses_only || 0));
 
-      const income = dashboardData.total_income || 0;
-      const expenses = Math.abs(dashboardData.total_expenses_only || 0);
+      // current_month_*, not total_*. These feed cards labelled "Monthly Income"
+      // and "Monthly Expenses", and total_income/total_expenses_only are
+      // year-to-date — so in December the "monthly" figures were roughly twelve
+      // times the truth, and the savings rate below them was computed from the
+      // same mismatch.
+      setMonthlyIncome(dashboardData.current_month_income || 0);
+      setMonthlyExpenses(Math.abs(dashboardData.current_month_expenses_only || 0));
+
+      const income = dashboardData.current_month_income || 0;
+      const expenses = Math.abs(dashboardData.current_month_expenses_only || 0);
       const savings = income - expenses;
       setSavingsRate(income > 0 ? Math.max(0, (savings / income) * 100) : 0);
 

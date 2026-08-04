@@ -116,11 +116,19 @@ class AnalyticsService:
             monthly_labels.append(month)
             monthly_amounts.append(data['total'])
 
-        # Calculate totals for each transaction type
+        # Calculate totals for each transaction type.
+        #
+        # current_month_income is the counterpart to current_month_expenses_only
+        # below, which already existed. Without it the Dashboard had no monthly
+        # income figure available and its "Monthly Income" card was displaying
+        # total_income — a year-to-date number under a monthly label.
+        current_month_income = 0
         for expense in expenses:
             if hasattr(expense, 'transaction_type'):
                 if expense.transaction_type == 'income':
                     total_income += expense.amount
+                    if expense.date.month == now.month and expense.date.year == now.year:
+                        current_month_income += expense.amount
                 elif expense.transaction_type == 'transfer':
                     total_transfers += expense.amount
 
@@ -194,6 +202,7 @@ class AnalyticsService:
             'total_expenses_only': total_expenses_only,
             'current_month_total': current_month_total,
             'current_month_expenses_only': current_month_expenses_only,
+            'current_month_income': current_month_income,
             'unique_cards': list(unique_cards),
             'users': users,
             'groups': groups,
