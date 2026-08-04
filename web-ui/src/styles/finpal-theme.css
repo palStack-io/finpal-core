@@ -170,11 +170,26 @@ body {
 
 /* Main content wrapper */
 .main-content {
+  /* The sidebar is position: fixed, so it is out of flow and contributes no
+     width — the margin is what reserves its space. */
   margin-left: var(--sidebar-width);
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 100vh;
-  width: calc(100% - var(--sidebar-width));
+
+  /* min-width: 0 is the fix, not a tidy-up. A flex item defaults to
+     `min-width: auto`, which refuses to shrink below its content's intrinsic
+     width — so a wide grid or table pushed this wider than the viewport and the
+     right-hand column was clipped with no scrollbar to reveal it. The fourth stat
+     card on Dashboard and Budgets, and the third on Transactions, were cut in
+     half by exactly this. */
+  min-width: 0;
+
+  /* No `width: calc(100% - var(--sidebar-width))`. It was redundant — flex-basis
+     already sizes this — and actively harmful: 100% resolves against the flex
+     container's full width, so the calc plus the 250px margin added up to more
+     than the viewport. */
   box-sizing: border-box;
+  overflow-x: hidden;
   transition: background-color 0.3s ease;
 }
 

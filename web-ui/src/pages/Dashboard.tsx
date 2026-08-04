@@ -341,6 +341,20 @@ export const Dashboard = () => {
               </select>
             }
           >
+            {cashFlowData.length === 0 ? (
+              /* Was rendering 280px of empty axes, which reads as a broken chart
+                 rather than an empty one — the Spending by Category card beside it
+                 already handled this. An empty state should point at the next
+                 action, so it names the thing to do. */
+              <div style={{ ...emptyStateStyle, padding: '72px 0' }}>
+                <p style={{ margin: 0, fontWeight: 500, color: 'var(--text-primary)' }}>
+                  No activity in this period
+                </p>
+                <p style={{ margin: '6px 0 0', fontSize: '14px' }}>
+                  Add a transaction or import a CSV to see money moving in and out.
+                </p>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={280} key={`cashflow-${timeRange}`}>
               <BarChart data={cashFlowData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
@@ -352,6 +366,7 @@ export const Dashboard = () => {
                 <Bar dataKey="expenses" fill="#ef4444" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </SectionCard>
 
           <SectionCard title="Spending by Category">
