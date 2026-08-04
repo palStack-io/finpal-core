@@ -20,7 +20,19 @@ login_manager = LoginManager()
 mail = Mail()
 migrate = Migrate()
 scheduler = APScheduler()
-limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
+def rate_limit_storage_uri() -> str:
+    """Where flask-limiter keeps its counters.
+
+    `memory://` is per-process. The production image runs `gunicorn --workers=3`,
+    so each worker holds its own counters and a "10 per minute" limit is really
+    ~30/minute — measured on a live deployment: 45 login attempts drew 28 429s
+    rather than 35. Point RATELIMIT_STORAGE_URI at a shared store (e.g.
+    redis://redis:6379/0) to make the configured limit the actual limit.
+    """
+    return os.getenv('RATELIMIT_STORAGE_URI', 'memory://').strip() or 'memory://'
+
+
+limiter = Limiter(key_func=get_remote_address, storage_uri=rate_limit_storage_uri())
 
 # Configure scheduler timezone
 scheduler.timezone = pytz.timezone('EST')
@@ -44,8 +56,32 @@ def init_extensions(app):
     mail.init_app(app)
     migrate.init_app(app, db)
     limiter.init_app(app)
+    _warn_if_rate_limits_are_per_process(app)
     scheduler.init_app(app)
     if scheduler_enabled():
         scheduler.start()
     else:
         app.logger.info("Scheduler disabled in this process (RUN_SCHEDULER)")
+
+
+def _warn_if_rate_limits_are_per_process(app):
+    """Say so out loud when the configured limit is not the effective limit.
+
+    Silently enforcing 3x the documented limit is worse than either enforcing it
+    or not having it, because it looks fixed. This is deliberately a warning and
+    not an error: a single-worker or single-process deployment is fine on
+    memory://, and self-hosters should not be forced to run Redis.
+    """
+    uri = rate_limit_storage_uri()
+    if not uri.startswith('memory:'):
+        app.logger.info(f"Rate limit storage: {uri.split('://')[0]}:// (shared)")
+        return
+
+    workers = os.getenv('GUNICORN_WORKERS') or os.getenv('WEB_CONCURRENCY')
+    detail = f' with {workers} workers' if workers else ''
+    app.logger.warning(
+        'Rate limits are stored in process memory%s. With more than one worker '
+        'each holds its own counters, so the effective limit is the configured '
+        'limit multiplied by the worker count. Set RATELIMIT_STORAGE_URI to a '
+        'shared store (e.g. redis://host:6379/0) to enforce it exactly.' % detail
+    )
