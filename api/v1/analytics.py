@@ -78,6 +78,7 @@ class Dashboard(Resource):
                 'total_expenses': dashboard_data.get('total_expenses', 0) or 0,
                 'current_month_total': dashboard_data.get('current_month_total', 0) or 0,
                 'current_month_expenses_only': dashboard_data.get('current_month_expenses_only', 0) or 0,
+                'current_month_income': dashboard_data.get('current_month_income', 0) or 0,
                 'net_cash_flow': dashboard_data.get('net_cash_flow', 0) or 0,
                 'savings_rate': dashboard_data.get('savings_rate', 0) or 0,
                 'total_assets': dashboard_data.get('total_assets', 0) or 0,

@@ -46,7 +46,7 @@ token. Status is based on returned payloads, not on HTTP codes — every bug in 
 
 | Section | Source | Status |
 |---|---|---|
-| Stat cards | `/analytics/dashboard` | ❌ **LIVE but mislabelled.** Cards say "Monthly Income"/"Monthly Expenses" and are fed year-to-date `total_income` / `total_expenses_only`. Same class of bug as Analytics Overview, **not yet fixed here.** |
+| Stat cards | `/analytics/dashboard` | ✅ was **LIVE but mislabelled** — cards saying "Monthly Income"/"Monthly Expenses" were fed year-to-date `total_income` / `total_expenses_only`, so by December they were ~12× the truth and the savings rate below them inherited the error. `current_month_expenses_only` already existed; `current_month_income` did not, so it was added to the service and payload and the cards now read both. |
 | Cash flow + monthly breakdown | `dashboardData.expenses`, filtered client-side | ❌ **LIVE, truncated.** The query is bounded to `Jan 1 of current year − 31 days`, so the "Year" toggle can never see 12 months. |
 | Spending by Category | `dashboardData.top_categories` | ⚠️ Now includes uncategorised spending, but still current-month-only by design. Fine for a "this month" card; wrong if the range toggle is meant to apply. |
 | Budget Progress | `/budgets` | ✅ **LIVE** — `BudgetSchema.spent` is a dumped `fields.Method`, key matches |
