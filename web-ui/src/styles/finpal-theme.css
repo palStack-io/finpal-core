@@ -1,4 +1,14 @@
 :root {
+  /* Typography. Declared once, as a token: body font-family was previously set
+     in BOTH index.css (system-ui) and here (SF Pro Display). This file loads
+     second so SF Pro won, which meant the app rendered in one face on macOS and
+     another everywhere else — the kind of split that only shows up on someone
+     else's machine.
+     system-ui resolves to SF on Apple platforms anyway, and to the correct native
+     face on Windows and Linux, so it is strictly better than naming SF directly. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
   /* finPal Brand Colors */
   --brand-main-green: #15803d;
   --brand-dark-green: #166534;
@@ -140,7 +150,7 @@
 }
 
 body {
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
