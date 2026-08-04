@@ -33,8 +33,14 @@ flask-restx==1.3.0  # REST API with Swagger documentation
 flask-limiter==3.5.0  # Rate limiting for auth endpoints
 
 # Investment integrations
-multitasking==0.0.11  # Required by yfinance, 0.0.12+ requires Python 3.9+
-yfinance==0.2.18  # Yahoo Finance stock data (0.2.28+ requires Python 3.9+)
+# These two were pinned this low to stay Python 3.8 compatible. That constraint
+# is gone — the image is python:3.12-slim now — so the pins are only conservatism.
+# yfinance is at 1.5.x; we are on 0.2.18, roughly two years and a major version
+# behind, which matters because old yfinance breaks as Yahoo changes its API.
+# Upgrading needs the three call sites in integrations/investments/yfinance.py
+# (yf.Ticker, .info, .history) checked against live data, so it is its own change.
+multitasking==0.0.11
+yfinance==0.2.18
 
 # pointsPal fuzzy matching
 rapidfuzz>=3.6.0
