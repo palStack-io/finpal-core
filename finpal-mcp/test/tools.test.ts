@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PAGE_SIZE, TOOLS } from '../src/tools.js';
+import { ALL_TOOLS, MAX_PAGE_SIZE, TOOLS, WRITE_TOOLS } from '../src/tools.js';
 import type { ScrubContext } from '../src/scrub.js';
 
 const ctx: ScrubContext = { ownerId: 'owner@example.com' };
@@ -124,5 +124,84 @@ describe('the remaining read tools', () => {
     const out = JSON.stringify(await tool('list_accounts').run(client, {}, ctx));
     expect(out).not.toContain('4242');
     expect(out).toContain('Chase');
+  });
+});
+
+describe('write tools', () => {
+  function writeClient(body: unknown = {}) {
+    const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+    return {
+      calls,
+      get: async (path: string) => { calls.push({ method: 'GET', path }); return body; },
+      put: async (path: string, b: Record<string, unknown>) => {
+        calls.push({ method: 'PUT', path, body: b });
+        return body;
+      },
+    };
+  }
+
+  const writeTool = (name: string) => {
+    const found = ALL_TOOLS.find((t) => t.name === name);
+    if (!found) throw new Error(`no tool named ${name}`);
+    return found;
+  };
+
+  it('exposes exactly one write tool', () => {
+    // Six other actions exist in finpal_core's tier map but have no live
+    // endpoint, so a tool for them would always 403. A tool that always fails is
+    // worse than no tool: the model keeps trying and blames the user.
+    expect(WRITE_TOOLS.map((t) => t.name)).toEqual(['set_transaction_category']);
+  });
+
+  it('is served alongside the read tools', () => {
+    expect(ALL_TOOLS).toHaveLength(TOOLS.length + WRITE_TOOLS.length);
+    expect(ALL_TOOLS.map((t) => t.name)).toContain('set_transaction_category');
+  });
+
+  it('PUTs the category to the transaction detail route', async () => {
+    const client = writeClient({ success: true });
+    await writeTool('set_transaction_category').run(
+      client, { transaction_id: 7, category_id: 3 }, ctx);
+    expect(client.calls[0]).toEqual({
+      method: 'PUT', path: '/api/v1/transactions/7', body: { category_id: 3 },
+    });
+  });
+
+  it('sends only the category, so nothing else is overwritten', async () => {
+    const client = writeClient({});
+    await writeTool('set_transaction_category').run(
+      client, { transaction_id: 7, category_id: 3 }, ctx);
+    expect(Object.keys(client.calls[0].body as object)).toEqual(['category_id']);
+  });
+
+  it('rejects a non-numeric id rather than building a nonsense URL', async () => {
+    const client = writeClient({});
+    await expect(writeTool('set_transaction_category').run(
+      client, { transaction_id: 'me', category_id: 3 }, ctx),
+    ).rejects.toThrow(/transaction_id/);
+    expect(client.calls).toHaveLength(0);
+  });
+
+  it('rejects a missing category_id', async () => {
+    const client = writeClient({});
+    await expect(writeTool('set_transaction_category').run(
+      client, { transaction_id: 7 }, ctx),
+    ).rejects.toThrow(/category_id/);
+  });
+
+  it('scrubs the response like every other tool', async () => {
+    const client = writeClient({ transaction: { card_used: 'Visa ...4242' } });
+    const out = JSON.stringify(await writeTool('set_transaction_category').run(
+      client, { transaction_id: 7, category_id: 3 }, ctx));
+    expect(out).not.toContain('4242');
+  });
+
+  it('tells the model what to do when the token is read-only', () => {
+    expect(writeTool('set_transaction_category').description)
+      .toMatch(/read_write/);
+  });
+
+  it('says the change is undoable, so the model can reassure the user', () => {
+    expect(writeTool('set_transaction_category').description).toMatch(/undo/i);
   });
 });

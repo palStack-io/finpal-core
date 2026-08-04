@@ -15,6 +15,7 @@ export const MAX_PAGE_SIZE = 100;
 
 export interface ToolClient {
   get(path: string, params?: Record<string, string | number | undefined>): Promise<unknown>;
+  put(path: string, body: Record<string, unknown>): Promise<unknown>;
 }
 
 export interface ToolDefinition {
@@ -155,3 +156,53 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
 ];
+
+/**
+ * Write tools.
+ *
+ * Deliberately one, not seven. Six other actions appear in finpal_core's
+ * AGENT_WRITE_TIERS, but only `update_transaction_category` is wired to a live
+ * endpoint — the rest would return 403 `action_not_permitted`, and a tool that
+ * always fails is worse than a tool that does not exist, because the model keeps
+ * trying it and reports the failure as the user's problem.
+ *
+ * Requires a `read_write` token. A `read` token gets a 403 from the server, which
+ * surfaces as a sentence rather than a crash.
+ */
+export const WRITE_TOOLS: ToolDefinition[] = [
+  {
+    name: 'set_transaction_category',
+    description:
+      'Change which category a transaction is filed under. Applies immediately '
+      + 'and is recorded in finPal\'s agent activity log, where the user can undo '
+      + 'it in one click. Requires a read_write token — with a read-only token '
+      + 'this fails and you should tell the user to mint a read_write one under '
+      + 'Settings → Integrations → Agent Access. Use list_categories first so the '
+      + 'category_id is real rather than guessed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        transaction_id: int('The transaction to recategorise'),
+        category_id: int('The category to file it under (see list_categories)'),
+      },
+      required: ['transaction_id', 'category_id'],
+    },
+    async run(client, args, ctx) {
+      const id = Number(args.transaction_id);
+      if (!Number.isInteger(id) || id < 1) {
+        throw new Error('transaction_id must be a positive integer');
+      }
+      const categoryId = Number(args.category_id);
+      if (!Number.isInteger(categoryId) || categoryId < 1) {
+        throw new Error('category_id must be a positive integer');
+      }
+      const body = await client.put(`/api/v1/transactions/${id}`, {
+        category_id: categoryId,
+      });
+      return scrub(body, ctx);
+    },
+  },
+];
+
+/** Everything the server exposes. Reads first: the common case. */
+export const ALL_TOOLS: ToolDefinition[] = [...TOOLS, ...WRITE_TOOLS];

@@ -10,7 +10,7 @@ import {
 
 import { FinpalError, type FinpalClient } from './client.js';
 import type { ScrubContext } from './scrub.js';
-import { TOOLS } from './tools.js';
+import { ALL_TOOLS } from './tools.js';
 
 export function buildServer(client: FinpalClient, ctx: ScrubContext): Server {
   const server = new Server(
@@ -19,7 +19,7 @@ export function buildServer(client: FinpalClient, ctx: ScrubContext): Server {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: TOOLS.map(({ name, description, inputSchema }) => ({
+    tools: ALL_TOOLS.map(({ name, description, inputSchema }) => ({
       name,
       description,
       inputSchema,
@@ -27,7 +27,7 @@ export function buildServer(client: FinpalClient, ctx: ScrubContext): Server {
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const tool = TOOLS.find((t) => t.name === request.params.name);
+    const tool = ALL_TOOLS.find((t) => t.name === request.params.name);
     if (!tool) {
       return {
         isError: true,

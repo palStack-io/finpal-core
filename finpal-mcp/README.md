@@ -91,11 +91,26 @@ server.
 | `get_net_worth_trend` | Assets, liabilities and net worth over time |
 | `get_recurring_transactions` | Saved subscriptions and regular bills |
 
-## What it will not do
+## Writing
 
-**It cannot change anything.** Every tool is a read. finPal supports write access
-for agents — recategorising transactions, proposing new ones for your approval —
-but those tools are not exposed here yet.
+One write tool: **`set_transaction_category`**, which refiles a transaction under
+a different category. It needs a `read_write` token; a `read` token gets a clear
+refusal.
+
+Every agent write is **recorded in finPal's agent activity log** with the previous
+value, so you can undo it in one click from **Settings → Integrations → Agent
+Access**. The model cannot approve or undo its own changes — those endpoints are
+browser-only by design.
+
+Only one write tool exists on purpose. finPal's guardrails cover more actions —
+creating transactions and budgets become proposals awaiting your approval — but
+those endpoints are not reachable yet, and a tool that always fails is worse than
+one that does not exist: the model keeps trying it and reports the failure as your
+problem.
+
+**It cannot delete anything**, and it never will through this server. finPal
+refuses deletion to tokens outright: deleting a category silently clears the
+category on every transaction that ever used it.
 
 ## What it hides from the model
 
