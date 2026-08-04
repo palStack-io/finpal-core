@@ -17,17 +17,34 @@ from src.utils.api_auth import current_pat
 logger = logging.getLogger(__name__)
 
 
-def record_applied(action, target_ref=None, undo_state=None):
+def _requested_payload(kwargs):
+    """What the caller asked for: the JSON body plus the view's URL arguments.
+
+    A body that is not a JSON object (a bare list, say) is discarded rather than
+    merged, because the URL arguments still have to survive.
+    """
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = {}
+    payload.update({k: v for k, v in kwargs.items()})
+    return payload
+
+
+def record_applied(action, target_ref=None, undo_state=None, payload=None):
     """Audit a SAFE write that has just been applied by a token caller.
 
     No-op for a human session, so handlers can call it unconditionally.
+
+    `payload` is not decoration: src/services/agent_guard/revert.py locates the
+    row to restore from it, so an applied action recorded with an empty payload
+    reverts to nothing while still reporting success.
     """
     pat = current_pat()
     if pat is None:
         return None
     row = AgentAction.record(
         user_id=pat.user_id, token_id=pat.id, action=action,
-        payload={}, status=STATUS_APPLIED, undo_state=undo_state,
+        payload=payload or {}, status=STATUS_APPLIED, undo_state=undo_state,
         target_ref=target_ref)
     db.session.commit()
     return row
@@ -54,8 +71,7 @@ def guarded_write(action, undo_state=None):
                                 'action': action}), 403
 
             if tier == GATED:
-                payload = request.get_json(silent=True) or {}
-                payload.update({k: v for k, v in kwargs.items()})
+                payload = _requested_payload(kwargs)
                 row = AgentAction.record(
                     user_id=pat.user_id, token_id=pat.id, action=action,
                     payload=payload, status=STATUS_PENDING)
@@ -75,8 +91,9 @@ def guarded_write(action, undo_state=None):
                 except Exception:
                     logger.exception(
                         'Failed to capture undo_state for %s', action)
+            requested = _requested_payload(kwargs)
             result = fn(*args, **kwargs)
-            record_applied(action, undo_state=captured)
+            record_applied(action, undo_state=captured, payload=requested)
             return result
         return wrapper
     return decorator

@@ -104,13 +104,20 @@ def test_safe_write_applies_and_is_audited(client, db, app):
     user = UserFactory()
     token, plaintext = _write_token(user)
 
-    resp = client.post('/__probe/safe', headers={'X-API-Key': plaintext})
+    resp = client.post('/__probe/safe', json={'name': 'Made by agent'},
+                       headers={'X-API-Key': plaintext})
 
     assert resp.status_code == 200
     row = AgentAction.query.filter_by(action='create_category').first()
     assert row is not None, 'a SAFE write was not audited'
     assert row.status == STATUS_APPLIED
     assert row.token_id == token.id
+    # An applied action must record what was asked for, not just that something
+    # happened: src/services/agent_guard/revert.py finds the row it has to
+    # restore through `payload`. With an empty payload the lookup matches
+    # nothing, revert_action() returns without raising, and the caller is told
+    # the change was reversed when it was not.
+    assert row.payload == {'name': 'Made by agent'}
 
 
 def test_an_untiered_action_is_refused(client, db, app):
