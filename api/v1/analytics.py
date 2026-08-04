@@ -1,8 +1,12 @@
 """Analytics API endpoints - Dashboard and Statistics"""
-from flask import jsonify
+from flask import jsonify, request
 from flask_restx import Namespace, Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.models.personal_access_token import SCOPE_READ
 from src.services.analytics.service import AnalyticsService
+from src.services.analytics.spending_summary import (
+    GROUP_CATEGORY, InvalidSummaryRequest, parse_date, spending_summary)
+from src.utils.api_auth import api_auth_required
 import logging
 
 logger = logging.getLogger(__name__)
@@ -302,3 +306,30 @@ class MonthlyComparison(Resource):
         except Exception as e:
             logger.exception("Monthly comparison fetch failed")
             return {'success': False, 'error': 'Internal server error'}, 500
+
+
+@ns.route('/spending-summary')
+class SpendingSummary(Resource):
+    @ns.doc('get_spending_summary', security='Bearer')
+    # Accepts a personal access token as well as a session: this is the endpoint
+    # an MCP client relies on so a model never has to page raw rows.
+    @api_auth_required(scope=SCOPE_READ)
+    def get(self):
+        """Spending totals grouped by category, merchant or month over a range."""
+        user_id = get_jwt_identity()
+        try:
+            start = parse_date(request.args.get('start_date'), 'start_date')
+            end = parse_date(request.args.get('end_date'), 'end_date')
+            result = spending_summary(
+                user_id, start, end,
+                request.args.get('group_by') or GROUP_CATEGORY)
+        except InvalidSummaryRequest as exc:
+            # Authored, client-safe messages only — never str() of an arbitrary
+            # exception.
+            return {'success': False, 'error': str(exc)}, 400
+        except Exception:
+            logger.exception('Spending summary failed')
+            return {'success': False, 'error': 'Could not compute the summary'}, 500
+
+        result['success'] = True
+        return result, 200
