@@ -1,4 +1,3 @@
-r"""29a41de6a866d56c36aba5159f45257c"""
 """
 OIDC Authentication module for finPal
 Provides OpenID Connect integration
@@ -14,7 +13,7 @@ import logging
 from datetime import datetime
 from urllib.parse import urlencode
 import requests
-from flask import Flask, current_app, redirect, url_for, request, flash, session
+from flask import Flask, current_app, redirect, request, session
 from flask_login import login_user, logout_user, current_user, login_required
 
 # OIDC helper functions
@@ -84,6 +83,7 @@ def verify_id_token_nonce(id_token, expected_nonce, jwks_uri=None,
                 algorithms=['RS256', 'RS384', 'RS512', 'ES256', 'ES384'],
                 audience=audience,
                 issuer=issuer,
+                # aud/iss are only enforced when we were given them.
                 options={'verify_aud': bool(audience), 'verify_iss': bool(issuer)},
             )
         else:
@@ -216,9 +216,8 @@ def register_oidc_routes(app, User, db):
     def login_oidc():
         """Initiate OIDC authentication with PKCE flow for enhanced security"""
         if not is_oidc_enabled():
-            flash('OIDC authentication is not enabled.')
-            return redirect('/')
-        
+            return redirect('/login?error=SSO+is+not+configured+on+this+server')
+
         try:
             # Generate and store PKCE code_verifier
             code_verifier = generate_code_verifier()
@@ -234,7 +233,7 @@ def register_oidc_routes(app, User, db):
             # see verify_id_token_nonce and its use in the callback.
             nonce = secrets.token_urlsafe(16)
             set_oidc_session('nonce', nonce)
-            
+
             # Store the original URL to redirect after authentication
             redirect_to = request.args.get('next', '/')
             set_oidc_session('redirect_to', redirect_to)
@@ -270,15 +269,13 @@ def register_oidc_routes(app, User, db):
             
         except Exception as e:
             current_app.logger.error(f"Error initiating OIDC authentication: {str(e)}")
-            flash('An error occurred while initiating authentication.')
-            return redirect('/')
+            return redirect('/login?error=SSO+configuration+error')
 
     @app.route('/oidc/callback')
     def oidc_callback():
         """Handle OIDC callback with proper security validation"""
         if not is_oidc_enabled():
-            flash('OIDC authentication is not enabled.')
-            return redirect('/')
+            return redirect('/login?error=SSO+is+not+configured+on+this+server')
         
         try:
             # Get the authorization code from the callback
@@ -292,15 +289,13 @@ def register_oidc_routes(app, User, db):
             
             if not callback_state or callback_state != stored_state:
                 current_app.logger.warning("Invalid state parameter in OIDC callback")
-                flash('Authentication failed: Invalid state parameter.')
-                return redirect('/')
-            
+                return redirect('/login?error=SSO+authentication+failed:+invalid+state')
+
             # Get the code verifier from session
             code_verifier = get_oidc_session('code_verifier', delete=True)
             if not code_verifier:
                 current_app.logger.warning("Missing code verifier in OIDC callback")
-                flash('Authentication failed: Missing code verifier.')
-                return redirect('/')
+                return redirect('/login?error=SSO+authentication+failed:+session+expired')
             
             # Exchange the code for tokens
             token_data = {
@@ -322,9 +317,8 @@ def register_oidc_routes(app, User, db):
             
             if token_response.status_code != 200:
                 current_app.logger.error(f"Token exchange failed: {token_response.text}")
-                flash('Authentication failed: Unable to validate credentials.')
-                return redirect('/')
-            
+                return redirect('/login?error=SSO+token+exchange+failed')
+
             tokens = token_response.json()
 
             # Check the nonce before trusting anything in this response. Consume
@@ -351,27 +345,25 @@ def register_oidc_routes(app, User, db):
                 # a provider that omits id_token is misconfigured, not an attacker.
                 current_app.logger.warning(
                     'OIDC provider returned no id_token; nonce could not be verified')
-            
+
             # Get user info from userinfo endpoint
             userinfo_response = requests.get(
                 current_app.config['OIDC_USERINFO_URI'],
                 headers={'Authorization': f"Bearer {tokens['access_token']}"},
                 timeout=10
             )
-            
+
             if userinfo_response.status_code != 200:
                 current_app.logger.error(f"Userinfo request failed: {userinfo_response.text}")
-                flash('Authentication failed: Unable to retrieve user information.')
-                return redirect('/')
-            
+                return redirect('/login?error=SSO+failed:+could+not+retrieve+user+info')
+
             user_info = userinfo_response.json()
-            
+
             # Verify we got basic required user info
             if 'sub' not in user_info:
                 current_app.logger.error("Missing sub claim in OIDC userinfo")
-                flash('Authentication failed: Incomplete user information received.')
-                return redirect('/')
-            
+                return redirect('/login?error=SSO+failed:+incomplete+user+info+from+provider')
+
             # Create or get the user
             try:
                 user = User.from_oidc(user_info)
@@ -380,9 +372,9 @@ def register_oidc_routes(app, User, db):
                 return redirect(f"/login?error={quote(str(e))}")
 
             if not user:
-                flash('Authentication failed: Unable to create or find user.')
-                return redirect('/')
-            
+                return redirect('/login?error=SSO+failed:+could+not+create+user')
+
+
             is_mobile = get_oidc_session('mobile', '0', delete=True) == '1'
 
             if is_mobile:
@@ -415,8 +407,7 @@ def register_oidc_routes(app, User, db):
             
         except Exception as e:
             current_app.logger.error(f"Error processing OIDC callback: {str(e)}")
-            flash('An error occurred during authentication. Please try again.')
-            return redirect('/')
+            return redirect('/login?error=SSO+authentication+error')
 
     @app.route('/logout/oidc')
     def logout_oidc():
