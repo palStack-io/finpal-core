@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import g, jsonify, request
+from flask import g, request
 from flask_jwt_extended import create_access_token, decode_token, verify_jwt_in_request
 
 from src.extensions import db
@@ -81,7 +81,15 @@ def _touch(token):
 
 
 def api_auth_required(scope=SCOPE_READ):
-    """Accept a personal access token, or fall through to a JWT session."""
+    """Accept a personal access token, or fall through to a JWT session.
+
+    Refusals return a plain dict, never jsonify(). This decorator is applied to
+    flask-restx Resources, and flask-restx tries to serialise whatever the view
+    returns — handed a Response object it raises "Object of type Response is not
+    JSON serializable" and the client gets a 500 instead of the 401. The same
+    mistake in @demo_restricted turned every demo refusal into a server error.
+    A dict works in both a Resource and a plain blueprint.
+    """
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
@@ -95,13 +103,13 @@ def api_auth_required(scope=SCOPE_READ):
 
             token = PersonalAccessToken.find_by_plaintext(presented)
             if token is None:
-                return jsonify({'error': 'invalid_token'}), 401
+                return {'error': 'invalid_token'}, 401
             if token.is_revoked:
-                return jsonify({'error': 'token_revoked'}), 401
+                return {'error': 'token_revoked'}, 401
             if token.is_expired:
-                return jsonify({'error': 'token_expired'}), 401
+                return {'error': 'token_expired'}, 401
             if not token.has_scope(scope):
-                return jsonify({'error': 'insufficient_scope'}), 403
+                return {'error': 'insufficient_scope'}, 403
 
             _install_identity(token.user_id, token)
             g.pat = token

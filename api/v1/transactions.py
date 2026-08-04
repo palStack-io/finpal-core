@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 from src.utils.split_with import split_with_filter as _split_with_filter  # noqa: E402
+from src.models.personal_access_token import SCOPE_READ
+from src.utils.api_auth import api_auth_required
 # Was a local copy. Moved to src/utils/split_with.py so the six other query sites
 # share one implementation — the duplication is why S-06 stayed open while being
 # marked closed.
@@ -52,7 +54,10 @@ transaction_model = ns.model('Transaction', {
 @ns.route('/')
 class TransactionList(Resource):
     @ns.doc('list_transactions', security='Bearer')
-    @jwt_required()
+    # Accepts a personal access token as well as a session, so an MCP
+    # client or script can read. Reads need authentication only; the
+    # write tiering is separate and unchanged.
+    @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get all transactions for current user with optional filters"""
         current_user_id = get_jwt_identity()
