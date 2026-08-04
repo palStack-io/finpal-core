@@ -33,21 +33,43 @@ def rate_limit_storage_uri() -> str:
 
 
 def rate_limit_key():
-    """Bucket by access token when there is one, else by address.
+    """Bucket by the presented access token when there is one, else by address.
 
     Every request from a single MCP server shares a source address, so keying on
     the address alone would throttle an agent together with the humans behind the
     same NAT — or, with a generous limit, not throttle it at all.
 
-    Imported lazily: src.utils.api_auth imports models, and this module is
-    imported before them.
+    Keyed on a hash of the *presented credential*, deliberately not on
+    `g.pat.id`. flask-limiter registers its check with `app.before_request`
+    (extension.py:472), so `key_func` runs before any view function — and
+    therefore before `@api_auth_required` has resolved the token and set `g.pat`.
+    Reading `g.pat` here looked correct and was inert: every request fell through
+    to the address.
+
+    Hashing the header also avoids a database lookup on every single request, and
+    gives an unknown or revoked token its own bucket rather than lumping it in
+    with the address — which is what you want when someone is guessing tokens.
     """
+    import hashlib
+
+    from flask import request
+
     try:
-        from src.utils.api_auth import current_pat
-        pat = current_pat()
-        if pat is not None:
-            return 'pat:%d' % pat.id
+        presented = request.headers.get('X-API-Key', '').strip()
+        if not presented.startswith('fp_live_'):
+            auth = request.headers.get('Authorization', '').strip()
+            if auth.startswith('Bearer '):
+                candidate = auth[len('Bearer '):].strip()
+                presented = candidate if candidate.startswith('fp_live_') else ''
+            else:
+                presented = ''
+        if presented:
+            # Truncated: this is a bucket label, not a credential check. The
+            # value never leaves the limiter's storage, and the full token is
+            # never logged.
+            return 'pat:' + hashlib.sha256(presented.encode('utf-8')).hexdigest()[:16]
     except Exception:
+        # A key function must never raise into a request.
         pass
     return get_remote_address()
 
