@@ -1,6 +1,28 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4.
+ *
+ * This file used the v3 directives (@tailwind base/components/utilities), which
+ * @tailwindcss/postcss v4 does not process — so NO utilities were generated and
+ * every Tailwind class in the app was inert. The built CSS was 19KB with zero
+ * utility classes in it. Components written against Tailwind (Card, Button,
+ * Input, Toast, Header, Layout, Loading, TeamManagement) rendered completely
+ * unstyled; the Household settings tab is where it was first noticed.
+ *
+ * Utilities and theme are imported WITHOUT Preflight on purpose. Preflight is
+ * Tailwind's own CSS reset, and this file already carries a hand-rolled one
+ * below (`* { margin: 0; padding: 0 }`). The rest of the app is built from
+ * inline styles that were developed against that reset, so adding a second one
+ * would restyle every page — a much larger change than fixing the components
+ * that were actually broken.
+ *
+ * If Preflight is ever wanted, replace these three lines with
+ * `@import "tailwindcss";` and expect to re-check every page.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+/* v4 reads CSS-based @theme config by default; this opts into the existing
+   JS config so the custom primary/accent/background colours keep working. */
+@config "../tailwind.config.js";
 
 :root {
   --primary-green: #15803d;
