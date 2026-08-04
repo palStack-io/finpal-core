@@ -322,30 +322,51 @@ def calculate_asset_debt_trends(current_user):
             Expense.date >= twelve_months_ago
         ).order_by(Expense.date).all()
 
-        # Track balance over time
-        balance_history = {}
-        current_balance = account.balance or 0
-
-        # Start with the most recent balance
-        balance_history[today.strftime('%Y-%m')] = current_balance
-
-        # Process transactions to track historical balances
+        # Reconstruct each month's closing balance by working *backwards* from the
+        # balance we know: today's.
+        #
+        # This used to seed `current_balance` with today's balance and then walk
+        # transactions oldest-to-newest applying `+= income` / `-= expense`, which
+        # treats the present balance as the starting balance and replays a year of
+        # activity on top of it. The resulting "history" was the current balance
+        # plus a forward sum — not a balance at any point in time — and it pushed
+        # the whole net-worth trend the wrong way.
+        #
+        # The balance at the end of month M is:
+        #     today's balance − (net effect of every transaction after M)
+        # so the walk has to go newest-to-oldest, undoing one month at a time.
+        by_month = {}
         for transaction in transactions:
-            month_key = transaction.date.strftime('%Y-%m')
-
-            # Consider currency conversion for each transaction if needed
-            transaction_amount = transaction.amount
+            amount = transaction.amount
             if transaction.currency_code and transaction.currency_code != account_currency_code:
-                transaction_amount = convert_currency(transaction_amount, transaction.currency_code, account_currency_code)
+                amount = convert_currency(
+                    amount, transaction.currency_code, account_currency_code)
 
-            # Adjust balance based on transaction
+            # Signed effect on the balance, so undoing it is a subtraction.
             if transaction.transaction_type == 'income':
-                current_balance += transaction_amount
-            elif transaction.transaction_type == 'expense' or transaction.transaction_type == 'transfer':
-                current_balance -= transaction_amount
+                effect = amount
+            elif transaction.transaction_type in ('expense', 'transfer'):
+                effect = -amount
+            else:
+                continue
 
-            # Update monthly balance
-            balance_history[month_key] = current_balance
+            by_month.setdefault(transaction.date.strftime('%Y-%m'), 0)
+            by_month[transaction.date.strftime('%Y-%m')] += effect
+
+        balance_history = {}
+        running = account.balance or 0
+
+        # No activity since the newest transaction, so the current month closes at
+        # today's balance. Set explicitly for the case where the newest transaction
+        # predates this month.
+        balance_history[today.strftime('%Y-%m')] = running
+
+        for month_key in sorted(by_month, reverse=True):
+            # `running` is this month's closing balance before we undo its activity.
+            balance_history[month_key] = running
+            # Having removed this month's transactions, `running` is now the closing
+            # balance of the month before it.
+            running -= by_month[month_key]
 
         # Convert balance history to user currency if needed
         if account_currency_code != user_currency_code:
