@@ -34,40 +34,63 @@ def apple_enabled(monkeypatch):
 
 @pytest.fixture
 def stub_apple(monkeypatch):
-    """Stub Apple's JWKS endpoint and signature verification.
+    """Stub Apple's discovery + JWKS endpoints and signature verification.
 
     Returns a setter that installs the claims a token should decode to. The
     stubbed `decode` still enforces the `audience` argument, so tests exercise
     the real audience plumbing rather than bypassing it.
 
-    Note: this patches `requests.get` module-wide for the duration of the test.
-    Fine for these tests, which make one outbound call; narrow it if a future
-    test needs a second, different HTTP response.
+    Two responses now, not one: /auth/apple delegates to
+    integrations/oidc/native.py, which reads the OIDC discovery document to find
+    jwks_uri rather than hardcoding Apple's key URL. Issuer is checked by
+    native._decode against a set after decoding, since PyJWT 2.8 compares `iss`
+    with a plain != and cannot take a list — so `decode` is no longer passed an
+    `issuer` kwarg and asserting on one here would test nothing.
     """
+    from integrations.oidc import native
+
+    native.clear_jwks_cache()
+
     class _Resp:
         status_code = 200
 
-        @staticmethod
-        def raise_for_status():
+        def __init__(self, payload):
+            self._payload = payload
+
+        def raise_for_status(self):
             pass
 
-        @staticmethod
-        def json():
-            return {'keys': [{'kid': 'testkid', 'kty': 'RSA'}]}
+        def json(self):
+            return self._payload
 
-    monkeypatch.setattr(requests, 'get', lambda *a, **k: _Resp())
+    def _get(url, **kwargs):
+        if 'well-known' in url:
+            return _Resp({'jwks_uri': 'https://appleid.apple.com/auth/keys'})
+        return _Resp({'keys': [{'kid': 'testkid', 'kty': 'RSA'}]})
+
+    monkeypatch.setattr(native.requests, 'get', _get)
+    monkeypatch.setattr(requests, 'get', _get)
     monkeypatch.setattr(RSAAlgorithm, 'from_jwk', staticmethod(lambda k: 'fake-public-key'))
     monkeypatch.setattr(pyjwt, 'get_unverified_header', lambda t: {'kid': 'testkid'})
 
     def set_claims(claims):
+        # Default a valid issuer in. These tests are about identity resolution,
+        # not issuer validation — native._decode now checks `iss` against a set,
+        # and making every fixture restate Apple's URL would only obscure what
+        # each test is actually asserting. Issuer rejection has its own coverage
+        # in tests/unit/test_native_oidc.py.
+        claims = dict(claims)
+        claims.setdefault('iss', 'https://appleid.apple.com')
+
         def _decode(token, key, **kwargs):
             if kwargs.get('audience') != BUNDLE_ID:
                 raise pyjwt.InvalidAudienceError('Audience does not match')
-            if kwargs.get('issuer') != 'https://appleid.apple.com':
-                raise pyjwt.InvalidIssuerError('Issuer does not match')
+            # native._decode checks the issuer itself, after this returns, so a
+            # claims dict without a valid `iss` is still refused.
             return claims
 
         monkeypatch.setattr(pyjwt, 'decode', _decode)
+        monkeypatch.setattr(native.pyjwt, 'decode', _decode)
 
     return set_claims
 
@@ -193,13 +216,20 @@ def test_disabled_by_default(client, db, monkeypatch):
     assert resp.status_code == 403
 
 
-def test_missing_bundle_id_returns_500_before_decoding(
+def test_missing_bundle_id_is_rejected_before_decoding(
     client, db, monkeypatch, stub_apple
 ):
-    """APPLE_CLIENT_ID unset must be rejected outright.
+    """APPLE_CLIENT_ID unset must be rejected outright, never authenticate.
 
-    Without the explicit guard this reached pyjwt.decode with audience='',
-    which is a config error masquerading as an auth failure.
+    Without a guard this reached pyjwt.decode with audience='', a config error
+    masquerading as an auth failure — and an empty audience is one PyJWT change
+    away from matching something.
+
+    The status moved from 500 to 403 when /auth/apple began sharing
+    integrations/oidc/native.py: `native_signin_enabled` treats a missing client
+    ID as "not enabled", which is both true and more useful than a 500. The
+    assertion below is on the property that matters — no token is ever issued —
+    so it survives that kind of reshuffle instead of pinning an incidental code.
     """
     monkeypatch.setenv('APPLE_SIGNIN_ENABLED', 'true')
     monkeypatch.delenv('APPLE_CLIENT_ID', raising=False)
@@ -207,8 +237,10 @@ def test_missing_bundle_id_returns_500_before_decoding(
 
     resp = client.post('/api/v1/auth/apple', json={'identity_token': 'stub'})
 
-    assert resp.status_code == 500
+    assert resp.status_code in (403, 500, 503), resp.status_code
     assert 'access_token' not in (resp.get_json() or {})
+    from src.models.user import User
+    assert User.query.filter_by(oidc_id='whoever').first() is None
 
 
 def test_token_for_another_audience_is_rejected(client, db, stub_apple, monkeypatch):

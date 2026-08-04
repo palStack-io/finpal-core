@@ -466,139 +466,52 @@ def auth_config():
     oidc_enabled = current_app.config.get('OIDC_ENABLED', False)
     oidc_provider_name = current_app.config.get('OIDC_PROVIDER_NAME', 'SSO')
     apple_signin_enabled = os.getenv('APPLE_SIGNIN_ENABLED', 'False').lower() == 'true'
-    return jsonify({
+    from integrations.oidc import native
+    payload = {
         'oidc_enabled': bool(oidc_enabled),
         'oidc_provider_name': oidc_provider_name,
         'apple_signin_enabled': apple_signin_enabled,
-    }), 200
+    }
+    # Native sign-in config for mobile. Client IDs are public by design — they
+    # identify the app to the provider and are embedded in every shipped binary.
+    payload.update(native.public_config())
+    return jsonify(payload), 200
 
 
 @api_bp.route('/apple', methods=['POST'])
+@limiter.limit("10 per minute")
 def apple_signin():
-    """Verify Apple Sign In identity token and return finPal JWT tokens."""
-    import os
-    import requests as http_requests
-    import jwt as pyjwt
-    from jwt.algorithms import RSAAlgorithm
+    """Deprecated alias for POST /api/v1/auth/oidc with provider=apple.
 
-    if os.getenv('APPLE_SIGNIN_ENABLED', 'False').lower() != 'true':
-        return jsonify({'error': 'Apple Sign In is not enabled'}), 403
+    Kept because shipped mobile builds call it. It delegates rather than
+    duplicating: the previous implementation was ~110 lines that refetched
+    Apple's JWKS on every single sign-in and verified the issuer inline. All of
+    that now lives in integrations/oidc/native.py, shared with Google, with the
+    keys cached for an hour.
+
+    Note the field name differs — this endpoint takes `identity_token`, which is
+    what Apple's SDK calls it, while /auth/oidc takes `id_token`.
+    """
+    from integrations.oidc import native
 
     data = request.get_json() or {}
     identity_token = data.get('identity_token')
+
+    if not native_signin_available(native.APPLE):
+        return jsonify({'error': 'Apple Sign In is not enabled'}), 403
     if not identity_token:
         return jsonify({'error': 'identity_token is required'}), 400
 
     try:
-        # Fetch Apple's public keys
-        keys_resp = http_requests.get(
-            'https://appleid.apple.com/auth/keys', timeout=10
-        )
-        keys_resp.raise_for_status()
-        apple_keys = keys_resp.json().get('keys', [])
+        claims = native.verify_id_token(native.APPLE, identity_token)
+    except native.OidcConfigError as exc:
+        current_app.logger.error('Apple Sign In misconfigured: %s', exc)
+        return jsonify({'error': str(exc)}), 503
+    except native.OidcVerificationError as exc:
+        current_app.logger.warning('Apple token verification failed: %s', exc)
+        return jsonify({'error': str(exc)}), 401
 
-        # Find the key matching the token's kid header
-        header = pyjwt.get_unverified_header(identity_token)
-        kid = header.get('kid')
-        apple_key_dict = next((k for k in apple_keys if k['kid'] == kid), None)
-        if not apple_key_dict:
-            return jsonify({'error': 'Invalid token: key not found'}), 401
-
-        # Build RSA public key and verify the token
-        public_key = RSAAlgorithm.from_jwk(apple_key_dict)
-        bundle_id = os.getenv('APPLE_CLIENT_ID', '')
-        if not bundle_id:
-            current_app.logger.error(
-                'APPLE_SIGNIN_ENABLED is true but APPLE_CLIENT_ID is unset'
-            )
-            return jsonify({'error': 'Apple Sign In is misconfigured on this server'}), 500
-        claims = pyjwt.decode(
-            identity_token,
-            public_key,
-            algorithms=['RS256'],
-            audience=bundle_id,
-            issuer='https://appleid.apple.com',
-        )
-
-        # Identity is taken from the signed token ONLY — never from the request
-        # body. Apple omits the email claim on every sign-in after the first
-        # authorization, so a `data.get('email')` fallback here is the normal
-        # path rather than an edge case: any caller holding a valid Apple token
-        # of their own could name someone else's address and, because the user
-        # PK *is* the email, be handed that account. Resolve by `sub` instead.
-        sub = claims['sub']
-        token_email = claims.get('email')
-        # Apple sends email_verified as either a bool or the string "true".
-        email_verified = str(claims.get('email_verified', 'false')).lower() == 'true'
-
-        known = User.query.filter_by(oidc_id=sub, oidc_provider='apple').first()
-        if not known:
-            # First sign-in for this Apple ID: we need a trustworthy email to
-            # create (or link) the account, and only the token can supply one.
-            if not token_email:
-                return jsonify({
-                    'error': 'Apple did not return an email address for this sign-in. '
-                             'On your device, remove finPal under Settings → your name → '
-                             'Sign in with Apple, then try again.'
-                }), 400
-            if not email_verified:
-                return jsonify({'error': 'This Apple account email is not verified'}), 403
-
-        oidc_data = {'sub': sub}
-        if token_email and email_verified:
-            oidc_data['email'] = token_email
-            oidc_data['email_verified'] = True
-        # full_name is display-only. Apple returns the real name once, in the
-        # credential rather than the token, so the client has to relay it — but
-        # it never contributes to identity resolution.
-        full_name = data.get('full_name')
-        if full_name:
-            oidc_data['name'] = full_name
-        elif 'email' in oidc_data:
-            oidc_data['name'] = oidc_data['email'].split('@')[0]
-
-        # Reuse existing OIDC user creation logic
-        # User.from_oidc is a classmethod on the model (src/models/user.py)
-        try:
-            user = User.from_oidc(oidc_data, provider='apple')
-        except ValueError as e:
-            # Deliberately surfaced: from_oidc raises ValueError only with an
-            # authored, user-facing message ("This account is already linked to
-            # X. Please sign in with X instead."). This is not the str(e) leak
-            # CLAUDE.md forbids — that rule is about unhandled exceptions, whose
-            # text carries table names and DSNs.
-            return jsonify({'error': str(e)}), 409
-        if not user:
-            return jsonify({'error': 'Failed to create or find user'}), 500
-
-        db.session.commit()
-
-        access_token = create_access_token(
-            identity=user.id,
-            additional_claims={'email': user.id}
-        )
-        refresh_token = create_refresh_token(identity=user.id)
-
-        return jsonify({
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-            'user': {
-                'id': user.id,
-                'name': user.name,
-                'email': user.id,
-                'default_currency_code': getattr(user, 'default_currency_code', 'USD') or 'USD',
-                'profile_emoji': getattr(user, 'profile_emoji', '👤'),
-            }
-        }), 200
-
-    except pyjwt.ExpiredSignatureError:
-        return jsonify({'error': 'Apple token has expired'}), 401
-    except pyjwt.InvalidTokenError as e:
-        current_app.logger.warning(f"Apple token validation failed: {e}")
-        return jsonify({'error': 'Invalid Apple token'}), 401
-    except Exception as e:
-        current_app.logger.error(f"Apple Sign In error: {e}")
-        return jsonify({'error': 'Authentication failed'}), 500
+    return _complete_native_signin(native.APPLE, claims, data.get('full_name'))
 
 
 @api_bp.route('/reset-password', methods=['POST'])
@@ -638,3 +551,131 @@ def reset_password():
         db.session.rollback()
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'success': False, 'error': 'An internal error occurred'}), 500
+
+
+@api_bp.route('/oidc', methods=['POST'])
+@limiter.limit("10 per minute")
+def native_oidc_signin():
+    """Sign in with a provider ID token obtained natively on a device.
+
+    Contract matches pantryPal's so mobile code is portable across the pals:
+    `{provider, id_token | access_token, full_name?}`.
+
+    This is additive. The web redirect PKCE flow in integrations/oidc/auth.py is
+    what self-hosters on Authentik, Keycloak and Authelia use and is untouched.
+    """
+    from integrations.oidc import native
+
+    data = request.get_json() or {}
+    provider = (data.get('provider') or '').strip().lower()
+    id_token = data.get('id_token')
+    access_token = data.get('access_token')
+
+    if not provider:
+        return jsonify({'error': 'provider is required'}), 400
+    if not native_signin_available(provider):
+        return jsonify({
+            'error': '%s sign-in is not enabled on this server' % provider.title(),
+        }), 403
+    if not id_token and not access_token:
+        return jsonify({'error': 'id_token or access_token is required'}), 400
+
+    try:
+        if id_token:
+            claims = native.verify_id_token(provider, id_token)
+        else:
+            # Google's native SDKs often hand the app an access_token instead.
+            # Apple never uses this path.
+            claims = native.fetch_userinfo(provider, access_token)
+    except native.OidcConfigError as exc:
+        # The operator's problem, not the caller's — do not report it as 401 or
+        # they will go hunting for a bad token that does not exist.
+        current_app.logger.error('Native OIDC misconfigured: %s', exc)
+        return jsonify({'error': str(exc)}), 503
+    except native.OidcVerificationError as exc:
+        # Authored, client-safe messages only.
+        current_app.logger.warning('Native OIDC verification failed: %s', exc)
+        return jsonify({'error': str(exc)}), 401
+
+    return _complete_native_signin(provider, claims, data.get('full_name'))
+
+
+def native_signin_available(provider):
+    """Whether this server accepts native sign-in for `provider`."""
+    from integrations.oidc import native
+    return native.native_signin_enabled(provider)
+
+
+def _complete_native_signin(provider, claims, full_name=None):
+    """Turn verified provider claims into finPal tokens.
+
+    Identity comes from the verified claims ONLY, never from the request body.
+    Apple omits the email claim on every sign-in after the first, so a body
+    fallback would be the normal path rather than an edge case — and because the
+    user PK *is* the email, any caller with a valid token of their own could name
+    someone else's address and be handed that account. Resolve by `sub`.
+    """
+    sub = claims.get('sub')
+    if not sub:
+        return jsonify({'error': 'Provider token carried no subject'}), 401
+
+    token_email = claims.get('email')
+    # Providers send email_verified as a bool or the string "true".
+    email_verified = str(claims.get('email_verified', 'false')).lower() == 'true'
+
+    known = User.query.filter_by(oidc_id=sub, oidc_provider=provider).first()
+    if not known:
+        # First sign-in for this provider identity: creating or linking an
+        # account needs a trustworthy address, and only the token can supply one.
+        if not token_email:
+            return jsonify({
+                'error': 'Your sign-in provider did not return an email address, '
+                         'so finPal cannot create an account. Check the app has '
+                         'permission to share your email.',
+            }), 400
+        if not email_verified:
+            return jsonify({
+                'error': 'This account email is not verified with the provider',
+            }), 403
+
+    oidc_data = {'sub': sub}
+    if token_email and email_verified:
+        oidc_data['email'] = token_email
+        oidc_data['email_verified'] = True
+    # Display-only. Apple returns the real name once, at first authorization, so
+    # the client relays it — it never decides which account is used.
+    if full_name:
+        oidc_data['name'] = full_name
+    elif claims.get('name'):
+        oidc_data['name'] = claims['name']
+
+    try:
+        user = User.from_oidc(oidc_data, provider=provider)
+    except ValueError as exc:
+        # from_oidc raises ValueError only with an authored, user-facing message
+        # ("already linked to X"). Not the str(e) leak CLAUDE.md forbids.
+        return jsonify({'error': str(exc)}), 409
+    except Exception:
+        db.session.rollback()
+        logger.exception('Native OIDC sign-in failed to resolve a user')
+        return jsonify({'error': 'Authentication failed'}), 500
+
+    if not user:
+        return jsonify({'error': 'Failed to create or find user'}), 500
+
+    db.session.commit()
+
+    access = create_access_token(identity=user.id,
+                                additional_claims={'email': user.id})
+    refresh = create_refresh_token(identity=user.id)
+    return jsonify({
+        'access_token': access,
+        'refresh_token': refresh,
+        'user': {
+            'id': user.id,
+            'name': user.name,
+            'email': user.id,
+            'default_currency_code': getattr(user, 'default_currency_code', 'USD') or 'USD',
+            'profile_emoji': getattr(user, 'profile_emoji', '\U0001f464'),
+        },
+    }), 200
