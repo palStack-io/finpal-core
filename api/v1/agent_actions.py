@@ -20,7 +20,8 @@ from src.models.agent_action import (
     STATUS_REVERTED,
     AgentAction,
 )
-from src.services.agent_guard.apply import UnsupportedAction, apply_action
+from src.services.agent_guard.apply import (
+    ProposalNoLongerValid, UnsupportedAction, apply_action)
 from src.utils.decorators import demo_restricted
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,12 @@ class AgentActionApprove(Resource):
 
         try:
             row.target_ref = apply_action(row)
+        except ProposalNoLongerValid as exc:
+            db.session.rollback()
+            # Reachable by design: guarded_write records a proposal before the
+            # handler's validation runs, so a malformed one reaches the queue.
+            return {'error': 'This proposal is not valid and cannot be applied',
+                    'details': exc.errors}, 422
         except UnsupportedAction:
             db.session.rollback()
             logger.exception('No apply implementation for %s', row.action)
@@ -125,9 +132,11 @@ class AgentActionItem(Resource):
         if not row.undo_state and not row.target_ref:
             return {'error': 'Nothing recorded to reverse this action'}, 409
 
-        from src.services.agent_guard.revert import revert_action
+        from src.services.agent_guard.revert import NotReversible, revert_action
         try:
             revert_action(row)
+        except NotReversible:
+            return {'error': 'Nothing recorded lets this action be reversed'}, 409
         except Exception:
             db.session.rollback()
             logger.exception('Failed to revert agent action %s', action_id)

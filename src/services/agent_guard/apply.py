@@ -1,39 +1,48 @@
-"""Apply an approved proposal, reusing the ordinary write path.
+"""Apply an approved proposal through the ordinary write path.
 
-Deliberately not a second implementation of each write: an approved proposal must
-produce exactly what the direct call would have.
+Deliberately not a second implementation of each write. An approved proposal must
+produce exactly what the direct call would have — the first version of this file
+hand-built the Expense and silently diverged in seven ways: no rule engine, no
+validation, account_id and currency_code dropped, notes/tags/splits discarded, a
+different card_used default, and the date truncated to a day. Someone approving a
+proposal has no reason to expect a different transaction from the one they saw.
 """
-from datetime import datetime
-
 from src.extensions import db
-from src.models.transaction import Expense
+from src.services.transaction.creation import (
+    TransactionPayloadInvalid,
+    build_transaction,
+)
 
 
 class UnsupportedAction(Exception):
     """The stored action has no apply implementation."""
 
 
-def _parse_date(value):
-    if not value:
-        return datetime.utcnow()
-    return datetime.strptime(value[:10], '%Y-%m-%d')
+class ProposalNoLongerValid(Exception):
+    """The stored payload does not validate.
+
+    Reachable by design: `@guarded_write` records a GATED proposal *before* the
+    handler's validation runs, so a malformed payload can sit in the queue until
+    someone approves it. `.errors` holds the field errors.
+    """
+
+    def __init__(self, errors):
+        super().__init__('Proposal payload is not valid')
+        self.errors = errors
 
 
 def apply_action(row):
-    """Apply `row` and return a target_ref like 'expense:12'."""
+    """Apply `row` and return a target_ref like 'expense:12'.
+
+    Adds to the session but does not commit — the caller commits alongside the
+    status change, so a failure cannot leave a proposal marked approved with
+    nothing created.
+    """
     if row.action == 'create_transaction':
-        payload = row.payload or {}
-        expense = Expense(
-            description=payload.get('description') or 'Untitled',
-            amount=float(payload.get('amount') or 0.0),
-            date=_parse_date(payload.get('date')),
-            user_id=row.user_id,
-            paid_by=row.user_id,
-            card_used='',
-            split_method='equal',
-            category_id=payload.get('category_id'),
-            transaction_type=payload.get('transaction_type') or 'expense',
-        )
+        try:
+            expense = build_transaction(row.payload or {}, row.user_id)
+        except TransactionPayloadInvalid as exc:
+            raise ProposalNoLongerValid(exc.errors)
         db.session.add(expense)
         db.session.flush()
         return 'expense:%d' % expense.id
