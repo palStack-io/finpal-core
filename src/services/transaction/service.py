@@ -292,7 +292,8 @@ class TransactionService:
             expense.description = form_data.get('description', expense.description)
 
             try:
-                expense.amount = float(form_data.get('amount', expense.amount))
+                if form_data.get('amount') is not None:
+                    expense.amount = float(form_data['amount'])
             except (ValueError, TypeError):
                 return False, 'Invalid amount provided'
 
@@ -301,9 +302,22 @@ class TransactionService:
             except ValueError:
                 pass  # Keep original date if new one is invalid
 
-            # Handle category splits
+            # Category splits — only touched when the caller actually mentions
+            # them. This function was written for an HTML form POST, where every
+            # field is always present, so an absent `enable_category_split` used
+            # to read as "off" and DELETE every CategorySplit row for the expense.
+            # An API client patching a description silently destroyed the splits.
+            mentions_splits = ('enable_category_split' in form_data
+                               or 'category_splits_data' in form_data)
+            mentions_category = 'category_id' in form_data
+
+            if not mentions_splits and not mentions_category:
+                db.session.commit()
+                return True, 'Transaction updated successfully'
+
             enable_category_split = form_data.get('enable_category_split') == 'on'
-            expense.has_category_splits = enable_category_split
+            if mentions_splits:
+                expense.has_category_splits = enable_category_split
 
             if enable_category_split:
                 expense.category_id = None
@@ -329,7 +343,10 @@ class TransactionService:
                 except (json.JSONDecodeError, ValueError) as e:
                     return False, f'Invalid category split data: {str(e)}'
             else:
-                CategorySplit.query.filter_by(expense_id=expense.id).delete()
+                # Clear splits only on an explicit "off"; a bare category_id
+                # change is not a request to discard them.
+                if mentions_splits:
+                    CategorySplit.query.filter_by(expense_id=expense.id).delete()
 
                 category_id = form_data.get('category_id')
                 if category_id and category_id.strip() and category_id != 'null':

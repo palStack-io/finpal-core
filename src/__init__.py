@@ -326,7 +326,6 @@ _KNOWN_DUPLICATE_RULES = {
     '/api/v1/transaction-rules/<int>',
     '/api/v1/transaction-rules/test',
     '/api/v1/transactions',
-    '/api/v1/transactions/<int>',
 }
 
 

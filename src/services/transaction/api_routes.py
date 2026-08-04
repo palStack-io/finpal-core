@@ -72,22 +72,24 @@ def get_transactions():
         return jsonify({'error': str(e)}), 500
 
 
-@api_bp.route('/<int:transaction_id>', methods=['GET'])
-@jwt_required()
-def get_transaction(transaction_id):
-    """Get a single transaction by ID"""
-    try:
-        identity = get_jwt_identity()
-
-        success, message, expense_data = transaction_service.get_transaction(transaction_id, identity)
-
-        if not success:
-            return jsonify({'error': message}), 404
-
-        return jsonify(expense_data), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# The detail handlers (GET/PUT/PATCH/DELETE on /<int:transaction_id>) used to live
+# here and have been retired. They shadowed the flask-restx TransactionDetail —
+# Werkzeug resolves duplicate rules to the first registered, and this blueprint is
+# registered first — so the restx versions were dead code for both clients.
+#
+# They were not equivalent, which is why the restx ones win now: TransactionDetail
+# applies each field only `if 'field' in data`, whereas these were written for an
+# HTML form POST where every field is always present. A JSON body containing only
+# the changed field therefore read absent fields as "clear this", and
+# `enable_category_split` being absent deleted every CategorySplit row for the
+# expense.
+#
+# Safe to remove because nothing calls them: web-ui's updateTransaction and
+# getTransaction are referenced only by a contract test, and mobile's equivalents
+# are unused. Verified by grep before deleting.
+#
+# The list and create routes below stay — web-ui calls /api/v1/transactions with
+# no trailing slash and reaches them.
 
 
 @api_bp.route('', methods=['POST'])
@@ -130,57 +132,3 @@ def create_transaction():
         return jsonify({'error': str(e)}), 500
 
 
-@api_bp.route('/<int:transaction_id>', methods=['PUT', 'PATCH'])
-@jwt_required()
-def update_transaction(transaction_id):
-    """Update a transaction"""
-    try:
-        identity = get_jwt_identity()
-        data = request.get_json()
-
-        if not data:
-            return jsonify({'error': 'Request body is required'}), 400
-
-        # Convert JSON data to form-like dict for transaction service
-        form_data = {
-            'description': data.get('description'),
-            'amount': data.get('amount'),
-            'date': data.get('date'),
-            'category_id': data.get('category_id'),
-            'account_id': data.get('account_id'),
-            'transaction_type': data.get('transaction_type'),
-            'currency_code': data.get('currency_code'),
-            'group_id': data.get('group_id'),
-            'split_method': data.get('split_method'),
-            'notes': data.get('notes', '')
-        }
-
-        success, message = transaction_service.update_transaction(transaction_id, identity, form_data)
-
-        if success:
-            return jsonify({'message': message}), 200
-        else:
-            return jsonify({'error': message}), 400
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-@api_bp.route('/<int:transaction_id>', methods=['DELETE'])
-@jwt_required()
-def delete_transaction(transaction_id):
-    """Delete a transaction"""
-    try:
-        identity = get_jwt_identity()
-
-        success, message = transaction_service.delete_transaction(transaction_id, identity)
-
-        if success:
-            return jsonify({'message': message}), 200
-        else:
-            return jsonify({'error': message}), 400
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
