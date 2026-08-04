@@ -11,6 +11,23 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def _months_arg(default=6, maximum=60):
+    """Read ?months=, or None if it is not a usable number.
+
+    Returning None rather than falling back keeps a typo from silently producing a
+    different chart than the one the client asked for.
+    """
+    raw = request.args.get('months')
+    if raw is None:
+        return default
+    try:
+        months = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return months if 1 <= months <= maximum else None
+
+
 # Create namespace
 ns = Namespace('analytics', description='Analytics and dashboard operations')
 
@@ -113,6 +130,7 @@ class Statistics(Resource):
             }, 200
 
         except Exception as e:
+            logger.exception("Statistics fetch failed")
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -146,6 +164,7 @@ class Trends(Resource):
             }, 200
 
         except Exception as e:
+            logger.exception("Spending trends fetch failed")
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -240,6 +259,7 @@ class Summary(Resource):
             }, 200
 
         except Exception as e:
+            logger.exception("Financial summary fetch failed")
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -261,8 +281,14 @@ class CashFlow(Resource):
         """Get cash flow data (monthly income, expenses, and savings)"""
         current_user_id = get_jwt_identity()
 
+        # months was accepted by the service and never sent by the route, so the
+        # Week/Month/Year selector could not change this chart.
+        months = _months_arg()
+        if months is None:
+            return {'success': False, 'error': 'months must be between 1 and 60'}, 400
+
         try:
-            cashflow_data = analytics_service.get_cashflow_data(current_user_id)
+            cashflow_data = analytics_service.get_cashflow_data(current_user_id, months=months)
 
             return {
                 'success': True,
@@ -304,8 +330,12 @@ class NetWorth(Resource):
         """Get net worth trend data (assets, liabilities, net worth over time)"""
         current_user_id = get_jwt_identity()
 
+        months = _months_arg()
+        if months is None:
+            return {'success': False, 'error': 'months must be between 1 and 60'}, 400
+
         try:
-            networth_data = analytics_service.get_networth_trend(current_user_id)
+            networth_data = analytics_service.get_networth_trend(current_user_id, months=months)
 
             return {
                 'success': True,

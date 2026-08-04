@@ -273,6 +273,8 @@ export const analyticsService = {
     expenses: number;
     savings: number;
   }>> {
+    // `months` was accepted by this function and then never sent, so /cashflow
+    // always returned its own default and the range selector could not move it.
     const response = await api.get<{
       success: boolean;
       cashflow: Array<{
@@ -281,7 +283,7 @@ export const analyticsService = {
         expenses: number;
         savings: number;
       }>;
-    }>('/api/v1/analytics/cashflow');
+    }>(`/api/v1/analytics/cashflow?months=${months}`);
     return response.data.cashflow;
   },
 
@@ -333,7 +335,7 @@ export const analyticsService = {
         assets: number;
         liabilities: number;
       }>;
-    }>('/api/v1/analytics/networth');
+    }>(`/api/v1/analytics/networth?months=${months}`);
     return response.data.networth;
   },
 };
