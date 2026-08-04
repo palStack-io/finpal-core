@@ -264,7 +264,8 @@ class FinancialHealth(Resource):
 @ns.route('/networth')
 class NetWorth(Resource):
     @ns.doc('get_networth_trend', security='Bearer')
-    @jwt_required()
+    # Backs the MCP get_net_worth_trend tool.
+    @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get net worth trend data (assets, liabilities, net worth over time)"""
         current_user_id = get_jwt_identity()

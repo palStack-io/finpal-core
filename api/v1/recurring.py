@@ -9,6 +9,8 @@ from schemas import recurring_schema, recurrings_schema
 from schemas.input_schemas import recurring_input
 from src.utils.validation import validate_request, validation_error_response
 import logging
+from src.models.personal_access_token import SCOPE_READ
+from src.utils.api_auth import api_auth_required
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,8 @@ recurring_model = ns.model('RecurringExpense', {
 @ns.route('/')
 class RecurringList(Resource):
     @ns.doc('list_recurring', security='Bearer')
-    @jwt_required()
+    # Backs the MCP get_recurring_transactions tool.
+    @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get all recurring transactions for current user"""
         current_user_id = get_jwt_identity()

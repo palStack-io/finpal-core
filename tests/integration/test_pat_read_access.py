@@ -20,6 +20,8 @@ READ_ENDPOINTS = [
     '/api/v1/accounts',
     '/api/v1/categories/',
     '/api/v1/budgets/',
+    '/api/v1/analytics/networth',
+    '/api/v1/recurring/',
 ]
 
 
@@ -85,3 +87,17 @@ def test_writes_are_still_refused_to_a_read_token(client, db):
                        headers={'X-API-Key': _token(user)})
     assert resp.status_code in (401, 403), resp.get_data(as_text=True)[:120]
     assert Expense.query.filter_by(description='nope').count() == 0
+
+
+def test_the_two_newly_wired_endpoints_reject_a_revoked_token(client, db):
+    """Wiring an endpoint must not skip the revocation check."""
+    user = UserFactory()
+    plaintext = _token(user)
+    token = PersonalAccessToken.find_by_plaintext(plaintext)
+    token.revoked_at = datetime.utcnow()
+    db.session.commit()
+
+    for path in ('/api/v1/analytics/networth', '/api/v1/recurring/'):
+        resp = client.get(path, headers={'X-API-Key': plaintext})
+        assert resp.status_code == 401, path
+        assert resp.get_json()['error'] == 'token_revoked', path
