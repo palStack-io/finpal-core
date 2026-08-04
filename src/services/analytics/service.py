@@ -321,52 +321,64 @@ class AnalyticsService:
             budgets=budget_items
         )
 
-    def _get_category_spending(self, expenses, expense_splits):
-        """Get top category spending for current month"""
-        current_month = datetime.now().month
-        current_year = datetime.now().year
+    UNCATEGORISED_LABEL = 'Uncategorised'
+
+    def _get_category_spending(self, expenses, expense_splits, start=None,
+                               end=None, limit=6, transaction_type='expense'):
+        """Total spending per category over a window, highest first.
+
+        `start`/`end` are inclusive datetime bounds; omitting both keeps the
+        historical behaviour of reporting the current calendar month. They were
+        added because /analytics/categories/top accepts start_date and end_date
+        from the client and had no way to honour them — the Week/Month/Year
+        selector on the Analytics page silently returned current-month figures
+        for all three.
+
+        `transaction_type` selects the direction, so the same aggregation backs
+        the income breakdown as well as the spending one.
+        """
+        if start is None and end is None:
+            now = datetime.now()
+            start = datetime(now.year, now.month, 1)
+            end = now
 
         category_totals = {}
 
+        def add(name, amount, color, icon):
+            bucket = category_totals.setdefault(
+                name, {'amount': 0, 'color': color, 'icon': icon})
+            bucket['amount'] += amount
+
         for expense in expenses:
-            # Skip non-expenses
-            if hasattr(expense, 'transaction_type') and expense.transaction_type != 'expense':
+            if getattr(expense, 'transaction_type', 'expense') != transaction_type:
                 continue
 
-            # Filter expenses for the current month and year
-            if expense.date.month != current_month or expense.date.year != current_year:
+            if start is not None and expense.date < start:
+                continue
+            if end is not None and expense.date > end:
                 continue
 
-            # Handle category splits first
             if expense.category_splits:
                 for split in expense.category_splits:
                     if split.category:
-                        category_name = split.category.name
-                        if category_name not in category_totals:
-                            category_totals[category_name] = {
-                                'amount': 0,
-                                'color': split.category.color,
-                                'icon': split.category.icon
-                            }
-                        category_totals[category_name]['amount'] += split.amount
+                        add(split.category.name, split.amount,
+                            split.category.color, split.category.icon)
+                    else:
+                        # A split with no category still spent money. Dropping it
+                        # made the pie's slices sum to less than the reported
+                        # total with no indication anything was missing.
+                        add(self.UNCATEGORISED_LABEL, split.amount, None, None)
+            elif expense.category:
+                add(expense.category.name, expense.amount,
+                    expense.category.color, expense.category.icon)
             else:
-                # Use single category
-                if expense.category:
-                    category_name = expense.category.name
-                    if category_name not in category_totals:
-                        category_totals[category_name] = {
-                            'amount': 0,
-                            'color': expense.category.color,
-                            'icon': expense.category.icon
-                        }
-                    category_totals[category_name]['amount'] += expense.amount
+                add(self.UNCATEGORISED_LABEL, expense.amount, None, None)
 
-        # Sort and return top categories as list of dicts
         sorted_categories = sorted(
             [
                 {
                     'name': name,
-                    'amount': data['amount'],
+                    'amount': round(data['amount'], 2),
                     'color': data['color'],
                     'icon': data['icon']
                 }
@@ -374,9 +386,38 @@ class AnalyticsService:
             ],
             key=lambda x: x['amount'],
             reverse=True
-        )[:6]  # Top 6 categories
+        )
 
-        return sorted_categories
+        return sorted_categories[:limit] if limit else sorted_categories
+
+    def get_top_categories(self, user_id, limit=8, start=None, end=None,
+                           transaction_type='expense'):
+        """Category totals for one date window, without the dashboard payload.
+
+        /analytics/categories/top used to call get_dashboard_data, which loads
+        every household transaction since January 1st of the current year to
+        build twenty other fields the caller discards. This queries the window
+        the caller actually asked for.
+        """
+        from src.utils.household import get_all_user_ids
+
+        household_ids = get_all_user_ids()
+
+        query = Expense.query.filter(
+            or_(
+                Expense.user_id.in_(household_ids),
+                split_with_filter(Expense.split_with, user_id)
+            ),
+            Expense.transaction_type == transaction_type
+        )
+        if start is not None:
+            query = query.filter(Expense.date >= start)
+        if end is not None:
+            query = query.filter(Expense.date <= end)
+
+        return self._get_category_spending(
+            query.all(), {}, start=start, end=end, limit=limit,
+            transaction_type=transaction_type)
 
     def get_spending_trends(self, user_id, months=6):
         """Get spending trends over time"""
@@ -675,7 +716,7 @@ class AnalyticsService:
             'investmentReturn': investment_return
         }
 
-    def _calculate_investment_return(self, user_id) -> float:
+    def _calculate_investment_return(self, user_id):
         """
         Compute the user's weighted-average investment return (%) using stored
         current_price and purchase_price values.
@@ -683,7 +724,10 @@ class AnalyticsService:
         Weighting is by cost basis (shares × purchase_price) so larger positions
         have more influence on the result.
 
-        Falls back to 7.5 if the user has no priced investments.
+        Returns None when the user holds no priced positions. It used to return
+        7.5, which showed a fresh user a 7.5% portfolio return on an empty
+        portfolio — an invented number presented as their own performance.
+        Callers must render the absence, not a default.
         """
         from src.models.investment import Portfolio, Investment
 
@@ -703,64 +747,63 @@ class AnalyticsService:
         if total_cost > 0:
             return round(((total_current - total_cost) / total_cost) * 100, 2)
 
-        return 7.5  # Fallback when no priced positions exist
+        return None  # No priced positions — there is no return to report
 
     def get_networth_trend(self, user_id, months=12):
-        """Get net worth trend over time"""
-        from datetime import datetime, timedelta
-        from calendar import month_abbr
+        """Net worth over the months we have data for. Never more than that.
 
-        # Get current data
+        There used to be a synthetic fallback that manufactured a 12-month series
+        from the current balances whenever fewer than `months` real months
+        existed — which was almost always, because the underlying trend only
+        emits months containing transactions. It was also inverted:
+        `growth_factor = (months - i - 1) * 0.02` gave the oldest month a factor
+        of 0 and the newest 0.22, so assets were divided by 1.22 at the present
+        day and the chart showed net worth declining steadily to today. The final
+        datapoint did not even equal the `total_assets` computed a few lines
+        above it.
+
+        A short honest series is better than a long invented one, so this returns
+        only real months, and the newest point is pinned to the totals the rest
+        of the payload reports. An empty list is a valid answer; the caller shows
+        an empty state.
+        """
         dashboard_data = self.get_dashboard_data(user_id)
 
-        current_assets = dashboard_data.get('total_assets', 0)
-        current_liabilities = dashboard_data.get('total_debts', 0)
-        current_net_worth = current_assets - current_liabilities
+        current_assets = dashboard_data.get('total_assets', 0) or 0
+        current_liabilities = dashboard_data.get('total_debts', 0) or 0
 
-        # Get historical asset/debt trends if available
-        asset_trends_months = dashboard_data.get('asset_trends_months', [])
-        asset_trends = dashboard_data.get('asset_trends', [])
-        debt_trends = dashboard_data.get('debt_trends', [])
+        trend_months = dashboard_data.get('asset_trends_months') or []
+        assets_series = dashboard_data.get('asset_trends') or []
+        debts_series = dashboard_data.get('debt_trends') or []
+
+        if not trend_months:
+            return []
+
+        # Most recent `months` points, however few that is.
+        window = trend_months[-months:]
+        offset = len(trend_months) - len(window)
 
         trend_data = []
+        for position, label in enumerate(window):
+            index = offset + position
+            assets = assets_series[index] if index < len(assets_series) else current_assets
+            liabilities = debts_series[index] if index < len(debts_series) else current_liabilities
 
-        # If we have historical data, use it
-        if asset_trends_months and len(asset_trends_months) >= months:
-            for i in range(-months, 0):
-                month_idx = i
-                assets = asset_trends[month_idx] if month_idx < len(asset_trends) else current_assets
-                liabilities = debt_trends[month_idx] if month_idx < len(debt_trends) else current_liabilities
-                net_worth = assets - liabilities
+            trend_data.append({
+                'month': label,
+                'netWorth': round(assets - liabilities, 2),
+                'assets': round(assets, 2),
+                'liabilities': round(liabilities, 2)
+            })
 
-                month_label = asset_trends_months[month_idx] if month_idx < len(asset_trends_months) else month_abbr[datetime.now().month]
-
-                trend_data.append({
-                    'month': month_label,
-                    'netWorth': round(net_worth, 2),
-                    'assets': round(assets, 2),
-                    'liabilities': round(liabilities, 2)
-                })
-        else:
-            # Generate synthetic trend data based on current values
-            # Assume 2% monthly growth in assets and 1% monthly reduction in debt
-            now = datetime.now()
-
-            for i in range(months - 1, -1, -1):
-                target_date = now - timedelta(days=30*i)
-
-                # Calculate historical values with some growth
-                growth_factor = (months - i - 1) * 0.02  # 2% per month
-                debt_reduction = (months - i - 1) * 0.01  # 1% per month
-
-                assets = current_assets / (1 + growth_factor) if growth_factor > 0 else current_assets
-                liabilities = current_liabilities / (1 - debt_reduction) if debt_reduction < 1 else current_liabilities
-                net_worth = assets - liabilities
-
-                trend_data.append({
-                    'month': month_abbr[target_date.month],
-                    'netWorth': round(net_worth, 2),
-                    'assets': round(assets, 2),
-                    'liabilities': round(liabilities, 2)
-                })
+        # The newest point is now, so it must agree with the totals shown on the
+        # cards beside the chart. Otherwise the two contradict each other on the
+        # same screen.
+        trend_data[-1] = {
+            'month': trend_data[-1]['month'],
+            'netWorth': round(current_assets - current_liabilities, 2),
+            'assets': round(current_assets, 2),
+            'liabilities': round(current_liabilities, 2)
+        }
 
         return trend_data

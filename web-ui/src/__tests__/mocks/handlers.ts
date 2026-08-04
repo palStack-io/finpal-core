@@ -34,14 +34,10 @@ export const authHandlers = [
     })
   ),
 
-  http.get(`${BASE}/api/v1/users/me`, () =>
-    HttpResponse.json({
-      id: 'test@test.com',
-      email: 'test@test.com',
-      name: 'Test User',
-      modules: ['pointspal'],
-    })
-  ),
+  // NOTE: deliberately no handler for /api/v1/users/me — that route does not
+  // exist on the backend (only /api/v1/auth/me does). A mock for it previously
+  // hid a live 404 in the OIDC callback. Leave it unmocked so any code that
+  // calls it fails loudly.
 ];
 
 // ── Transactions ──────────────────────────────────────────────────────────────

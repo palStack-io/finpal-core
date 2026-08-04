@@ -541,9 +541,11 @@ export const Groups: React.FC = () => {
     group.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate totals (mock for now - should come from backend)
-  const totalOwed = 0;
-  const totalOwe = 0;
+  // No "You Are Owed"/"You Owe" cards. They were `const totalOwed = 0` and
+  // `const totalOwe = 0` with a "mock for now" comment, so both rendered a
+  // confident $0.00 whatever the group balances were. /groups/{id}/balances
+  // exists but returns simplified debts keyed by display name, not user id, so
+  // aggregating them across groups needs a backend change first.
 
   if (loading) {
     return (
@@ -603,7 +605,7 @@ export const Groups: React.FC = () => {
           </div>
 
           {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 260px))', gap: '16px', marginBottom: '24px' }}>
             <div style={{
               padding: '20px',
               background: 'var(--bg-card)',
@@ -628,53 +630,6 @@ export const Groups: React.FC = () => {
               <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{groups.length}</p>
             </div>
 
-            <div style={{
-              padding: '20px',
-              background: 'var(--bg-card)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'rgba(34, 197, 94, 0.2)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <DollarSign size={20} color="#22c55e" />
-                </div>
-                <span style={bodyTextStyle}>You Are Owed</span>
-              </div>
-              <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--brand-green-glow)' }}>{branding.currencySymbol}{totalOwed.toFixed(2)}</p>
-            </div>
-
-            <div style={{
-              padding: '20px',
-              background: 'var(--bg-card)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <DollarSign size={20} color="#ef4444" />
-                </div>
-                <span style={bodyTextStyle}>You Owe</span>
-              </div>
-              <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-red)' }}>{branding.currencySymbol}{totalOwe.toFixed(2)}</p>
-            </div>
           </div>
 
           {/* Search */}

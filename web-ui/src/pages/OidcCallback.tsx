@@ -23,8 +23,11 @@ export const OidcCallback: React.FC = () => {
     setToken(accessToken);
     setRefreshToken(refreshToken);
 
-    // Fetch user info with the new token
-    api.get('/api/v1/users/me', {
+    // Fetch user info with the new token.
+    // /api/v1/auth/me is the real endpoint (auth_api.get_current_user); there is
+    // no /api/v1/users/me route, so the previous URL 404'd and every OIDC login
+    // ended on "could not load user profile".
+    api.get('/api/v1/auth/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
       .then(({ data }) => {

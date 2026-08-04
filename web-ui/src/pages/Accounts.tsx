@@ -26,6 +26,7 @@ export const Accounts = () => {
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadAccounts();
@@ -44,7 +45,9 @@ export const Accounts = () => {
         balance: acc.balance || 0,
         currency: acc.currency_code || 'USD',
         lastSync: acc.last_sync ? new Date(acc.last_sync).toLocaleDateString() : 'Never',
-        trend: { value: 2.3, direction: 'up' }, // TODO: Calculate from historical data
+        // No `trend` here any more. It was `{ value: 2.3, direction: 'up' }` for
+        // every account on every load, rendered as a green upward 2.3% beside
+        // each balance. There is no balance history to derive one from.
         institution: acc.institution || 'Manual',
         accountNumber: acc.account_number || 'N/A',
         color: acc.color || getAccountColor(acc.account_type || 'checking'),
@@ -102,14 +105,32 @@ export const Accounts = () => {
     }
   };
 
+  /**
+   * Sync connected accounts and report what actually happened.
+   *
+   * This used to be `// TODO: Implement sync functionality` followed by a reload
+   * and then "Accounts synced successfully" — it claimed to have done something
+   * it had not even attempted. Sync only means anything for SimpleFin-linked
+   * accounts, so the server's own answer (including "not enabled") is what the
+   * toast reports.
+   */
   const handleSyncAll = async () => {
     try {
-      showToast('Syncing accounts...', 'info');
-      // TODO: Implement sync functionality
+      setSyncing(true);
+      showToast('Syncing accounts…', 'info');
+      const result = await accountService.syncAllSimpleFin();
       await loadAccounts();
-      showToast('Accounts synced successfully', 'success');
+      showToast(
+        result.message || (result.success ? 'Accounts synced' : 'Nothing to sync'),
+        result.success ? 'success' : 'error',
+      );
     } catch (error: any) {
-      showToast('Failed to sync accounts', 'error');
+      showToast(
+        error?.response?.data?.error || 'Could not sync accounts',
+        'error',
+      );
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -153,11 +174,12 @@ export const Accounts = () => {
               </button>
               <button
                 onClick={handleSyncAll}
-                style={actionBtnStyle}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--border-light)'}
+                disabled={syncing}
+                style={{ ...actionBtnStyle, opacity: syncing ? 0.6 : 1, cursor: syncing ? 'default' : 'pointer' }}
+                onMouseEnter={(e) => { if (!syncing) e.currentTarget.style.background = 'var(--surface-hover)'; }}
+                onMouseLeave={(e) => { if (!syncing) e.currentTarget.style.background = 'var(--border-light)'; }}
               >
-                <RefreshCw size={16} /> Sync All
+                <RefreshCw size={16} /> {syncing ? 'Syncing…' : 'Sync All'}
               </button>
               <button
                 onClick={() => setShowAddModal(true)}
@@ -277,22 +299,15 @@ export const Accounts = () => {
                             </>
                           ) : '••••••'}
                         </p>
-                        {account.trend.direction !== 'neutral' && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                            {account.trend.direction === 'up' ? (
-                              <TrendingUp size={14} color="#22c55e" />
-                            ) : (
-                              <TrendingDown size={14} color="#ef4444" />
-                            )}
-                            <span style={{
-                              color: account.trend.direction === 'up' ? 'var(--brand-green-glow)' : 'var(--accent-red)',
-                              fontSize: '13px',
-                              fontWeight: '500'
-                            }}>
-                              {account.trend.value}%
-                            </span>
-                          </div>
-                        )}
+                        {/* A green "▲ 2.3%" used to render here for every account,
+                            from a hardcoded literal. There is no per-account
+                            balance history to compute a trend from, so the row
+                            shows the balance and nothing more. */}
+                        <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
+                          {account.lastSync === 'Never'
+                            ? account.institution
+                            : `Synced ${account.lastSync}`}
+                        </p>
                       </div>
 
                       {/* Actions */}

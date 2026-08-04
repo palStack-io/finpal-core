@@ -160,7 +160,6 @@ export const Dashboard = () => {
           name: acc.name,
           balance: acc.balance || 0,
           type: acc.account_type || 'checking',
-          trend: 2.3
         }))
       );
 
@@ -341,6 +340,20 @@ export const Dashboard = () => {
               </select>
             }
           >
+            {cashFlowData.length === 0 ? (
+              /* Was rendering 280px of empty axes, which reads as a broken chart
+                 rather than an empty one — the Spending by Category card beside it
+                 already handled this. An empty state should point at the next
+                 action, so it names the thing to do. */
+              <div style={{ ...emptyStateStyle, padding: '72px 0' }}>
+                <p style={{ margin: 0, fontWeight: 500, color: 'var(--text-primary)' }}>
+                  No activity in this period
+                </p>
+                <p style={{ margin: '6px 0 0', fontSize: '14px' }}>
+                  Add a transaction or import a CSV to see money moving in and out.
+                </p>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={280} key={`cashflow-${timeRange}`}>
               <BarChart data={cashFlowData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
@@ -352,6 +365,7 @@ export const Dashboard = () => {
                 <Bar dataKey="expenses" fill="#ef4444" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </SectionCard>
 
           <SectionCard title="Spending by Category">
@@ -456,13 +470,10 @@ export const Dashboard = () => {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{formatCurrency(Math.abs(account.balance))}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
-                    {account.trend > 0 ? <TrendingUp size={14} color="#22c55e" /> : <TrendingDown size={14} color="#ef4444" />}
-                    <span style={{ color: account.trend > 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '12px' }}>
-                      {Math.abs(account.trend)}%
-                    </span>
-                  </div>
+                  {/* The green "▲ 2.3%" that used to sit under each balance came
+                      from a literal, identical on every account. There is no
+                      per-account balance history to compute a trend from. */}
+                  <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: 0, ...tabular }}>{formatCurrency(Math.abs(account.balance))}</p>
                 </div>
               </div>
             )) : (
