@@ -28,6 +28,21 @@ export interface CategoryBreakdown {
   count: number;
 }
 
+/**
+ * What /analytics/categories/top actually returns.
+ *
+ * Separate from CategoryBreakdown, which describes a different endpoint and does
+ * not match this one: it declares category_id/category_name/percentage/count,
+ * none of which appear in this payload. Callers were reading `cat.name` through
+ * the wrong type and TypeScript was rightly complaining.
+ */
+export interface CategoryTotal {
+  name: string;
+  amount: number;
+  color: string | null;
+  icon: string | null;
+}
+
 export interface MonthlyComparison {
   month: string;
   income: number;
@@ -149,21 +164,27 @@ export const analyticsService = {
   },
 
   /**
-   * Get top spending categories
+   * Category totals over a date range, highest first.
+   *
+   * `type` picks the direction: 'expense' is spending, 'income' is where money
+   * came from. The range and limit are honoured server-side — until recently
+   * they were sent and ignored, so every range returned current-month figures.
    */
   async getTopSpendingCategories(
     limit: number = 5,
     startDate?: string,
-    endDate?: string
-  ): Promise<CategoryBreakdown[]> {
+    endDate?: string,
+    type: 'expense' | 'income' = 'expense'
+  ): Promise<CategoryTotal[]> {
     const params = new URLSearchParams();
     params.append('limit', limit.toString());
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    params.append('type', type);
 
     const response = await api.get<{
       success: boolean;
-      categories: CategoryBreakdown[];
+      categories: CategoryTotal[];
     }>(`/api/v1/analytics/categories/top?${params.toString()}`);
     return response.data.categories;
   },
@@ -275,7 +296,9 @@ export const analyticsService = {
     debtToIncome: number;
     emergencyFundMonths: number;
     liquidityRatio: number;
-    investmentReturn: number;
+    // null when the user holds no priced investment positions. It used to be
+    // 7.5, which showed a fresh user a 7.5% return on an empty portfolio.
+    investmentReturn: number | null;
   }> {
     const response = await api.get<{
       success: boolean;
@@ -287,7 +310,7 @@ export const analyticsService = {
         debtToIncome: number;
         emergencyFundMonths: number;
         liquidityRatio: number;
-        investmentReturn: number;
+        investmentReturn: number | null;
       };
     }>('/api/v1/analytics/health');
     return response.data.health;
