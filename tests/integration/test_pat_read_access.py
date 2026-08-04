@@ -101,3 +101,37 @@ def test_the_two_newly_wired_endpoints_reject_a_revoked_token(client, db):
         resp = client.get(path, headers={'X-API-Key': plaintext})
         assert resp.status_code == 401, path
         assert resp.get_json()['error'] == 'token_revoked', path
+
+
+def test_whoami_tells_a_token_which_identity_it_belongs_to(client, db):
+    """An API client cannot infer the caller from the data.
+
+    finPal returns household-wide rows for accounts, categories and budgets, so
+    "all rows share one user_id" gives a confident but wrong answer in a
+    two-person household. Without this endpoint an MCP client cannot tell "you"
+    from "another member" and must label everyone a pseudonym.
+    """
+    user = UserFactory()
+    resp = client.get('/api/v1/auth/whoami', headers={'X-API-Key': _token(user)})
+
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:200]
+    assert resp.get_json()['id'] == user.id
+
+
+def test_whoami_returns_nothing_beyond_identity(client, db):
+    """It is reachable by a token, so it must not become a data leak."""
+    user = UserFactory()
+    resp = client.get('/api/v1/auth/whoami', headers={'X-API-Key': _token(user)})
+    assert set(resp.get_json().keys()) == {'id', 'name'}
+
+
+def test_whoami_rejects_a_revoked_token(client, db):
+    user = UserFactory()
+    plaintext = _token(user)
+    token = PersonalAccessToken.find_by_plaintext(plaintext)
+    token.revoked_at = datetime.utcnow()
+    db.session.commit()
+
+    resp = client.get('/api/v1/auth/whoami', headers={'X-API-Key': plaintext})
+    assert resp.status_code == 401
+    assert resp.get_json()['error'] == 'token_revoked'

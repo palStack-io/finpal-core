@@ -123,8 +123,10 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: 'get_budget_status',
     description:
-      'The user\'s budgets with how much of each has been spent, so you can ' +
-      'say what is over or under.',
+      'The user\'s budget limits: category, amount and period. This returns the '
+      + 'limits ONLY, not how much has been spent against them — the endpoint '
+      + 'carries no spent or remaining field. To say whether a budget is over '
+      + 'or under, combine it with get_spending_summary for the same period.',
     inputSchema: { type: 'object', properties: {} },
     async run(client, _args, ctx) {
       return scrub(await client.get('/api/v1/budgets/'), ctx);
@@ -143,8 +145,10 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: 'get_recurring_transactions',
     description:
-      'Subscriptions and recurring bills finPal has detected, for questions ' +
-      'about regular outgoings.',
+      'The user\'s saved recurring transactions — subscriptions and regular '
+      + 'bills. These are entered or confirmed by the user rather than '
+      + 'automatically detected, so treat the list as their record, not an '
+      + 'exhaustive account of every repeating charge.',
     inputSchema: { type: 'object', properties: {} },
     async run(client, _args, ctx) {
       return scrub(await client.get('/api/v1/recurring/'), ctx);

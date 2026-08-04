@@ -17,6 +17,8 @@ from schemas.input_schemas import login_input, register_input
 from src.utils.validation import validate_request, validation_error_response
 import logging
 import threading
+from src.models.personal_access_token import SCOPE_READ
+from src.utils.api_auth import api_auth_required
 
 logger = logging.getLogger(__name__)
 
@@ -149,3 +151,23 @@ class BackgroundSync(Resource):
         if user and not user.is_demo_user:
             _background_sync(current_app._get_current_object(), user_id)
         return {'status': 'sync started'}, 202
+
+
+@ns.route('/whoami')
+class WhoAmI(Resource):
+    @ns.doc('whoami', security='Bearer')
+    # Token-reachable on purpose, unlike /auth/me which is JWT-only.
+    # An API client needs to know which identity its token belongs to: finPal
+    # returns household-wide rows for accounts, categories and budgets
+    # (src/utils/household.py:get_all_user_ids), so a client cannot infer the
+    # caller from the data — and guessing would attribute one member's spending
+    # to another with total confidence. Returns the minimum needed to tell
+    # "you" from "someone else in your household", nothing more.
+    @api_auth_required(scope=SCOPE_READ)
+    def get(self):
+        """The identity this credential belongs to."""
+        user_id = get_jwt_identity()
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            return {'error': 'User not found'}, 404
+        return {'id': user.id, 'name': user.name}, 200

@@ -18,38 +18,23 @@ import type { ScrubContext } from './scrub.js';
 import { TOOLS } from './tools.js';
 
 /**
- * Prove the token works before announcing any tools.
+ * Identity endpoint, which doubles as the startup credential check.
  *
- * `/api/v1/accounts` and not `/api/v1/auth/me`: `/auth/me` is the obvious choice
- * and it does not work. It lives on the legacy `auth_api` blueprint behind a bare
- * `@jwt_required()`, so a personal access token gets a flat 401
- * (`authorization_required`) — verified against the app's url_map and with a real
- * minted token. Checking there would make the server refuse to start every time.
+ * `/api/v1/auth/whoami` and not `/api/v1/auth/me`: the latter is the obvious
+ * choice and does not work — it sits on the legacy `auth_api` blueprint behind a
+ * bare `@jwt_required()`, so a personal access token gets a flat 401. Checking
+ * there would make this server refuse to start every time.
  *
- * `/api/v1/accounts` carries `@api_auth_required(scope=SCOPE_READ)`, is the
- * endpoint `list_accounts` already calls, and returns 200 with an empty list on a
- * fresh instance — so it distinguishes "your token is wrong" from "you have no
- * data yet", which is exactly the split a startup check should make.
- */
-const TOKEN_CHECK_PATH = '/api/v1/accounts';
-
-/**
- * The scrubber renders the caller's own identity as "you" and everyone else as
- * `member-N`. finpal_core exposes no token-reachable endpoint that says who the
- * caller is: `/auth/me` is JWT-only, `/accounts`, `/categories` and `/budgets`
- * are filtered by `get_all_user_ids()` (every user on the instance, not the
- * household member calling), and `/transactions` and `/recurring` match
+ * `whoami` was added to finpal_core for this purpose, because the caller's
+ * identity cannot be inferred from the data: `/accounts`, `/categories` and
+ * `/budgets` are filtered by `get_all_user_ids()` (every user on the instance,
+ * not the member calling), and `/transactions` matches
  * `user_id == caller OR caller in split_with`, so a row can belong to somebody
- * else. Every available heuristic can therefore name the wrong person.
- *
- * Guessing is worse than not knowing: label the wrong household member "you" and
- * the model attributes one person's spending to another with total confidence.
- * So the owner is left unresolved, `pseudonym()` finds no match for the empty
- * string, and the caller reads as `member-N` alongside everyone else. Less
- * friendly, never wrong. Resolving this properly needs a token-reachable
- * identity endpoint in finpal_core.
+ * else. Guessing is worse than not knowing — label the wrong household member
+ * "you" and the model attributes one person's spending to another with complete
+ * confidence.
  */
-const UNKNOWN_OWNER = '';
+const WHOAMI_PATH = '/api/v1/auth/whoami';
 
 async function main(): Promise<void> {
   let config: Config;
@@ -67,15 +52,17 @@ async function main(): Promise<void> {
 
   // Fail here rather than on every tool call: a token that cannot read anything
   // produces seven identical failures and no clue which layer is at fault.
+  let ownerId = '';
   try {
-    await client.get(TOKEN_CHECK_PATH);
+    const me = (await client.get(WHOAMI_PATH)) as { id?: string } | null;
+    ownerId = me?.id ?? '';
   } catch (err) {
     const message = err instanceof FinpalError ? err.message : String(err);
     process.stderr.write(`finpal-mcp: could not verify the token — ${message}\n`);
     process.exit(1);
   }
 
-  const ctx: ScrubContext = { ownerId: UNKNOWN_OWNER };
+  const ctx: ScrubContext = { ownerId };
 
   const server = new Server(
     { name: 'finpal', version: '0.1.0' },
