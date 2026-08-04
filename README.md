@@ -566,9 +566,13 @@ its own proposals. If it could, the whole arrangement would be decorative.
 The Agent Access screen shows a ready-to-paste MCP client config after you mint a
 token, with the URL and token filled in.
 
-> **`finpal-mcp` is not published yet.** The token works today for scripts and
-> `curl`; the MCP client config becomes usable when that package ships. It is
-> shown now so the setup is one copy rather than hand-written JSON.
+The server itself lives in [`finpal-mcp/`](finpal-mcp/README.md) — read that for
+setup, the tool list, and what it hides from the model.
+
+> **Not published to npm yet**, so `npx -y finpal-mcp` will not resolve until the
+> first release. Until then, build it from this repo:
+> `cd finpal-mcp && npm install && npm run build`, and point the config's
+> `command` at `node` with `args: ["<abs path>/finpal-mcp/dist/index.js"]`.
 
 **Where your data goes.** Pointing an MCP client at a hosted model — Claude,
 ChatGPT — sends the transactions it reads to that company. A local model via
