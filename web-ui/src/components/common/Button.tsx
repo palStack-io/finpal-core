@@ -81,12 +81,19 @@ export const Button: React.FC<ButtonProps> = ({
     ...VARIANTS[variant],
   };
 
+  // Merged, and applied AFTER the props spread, so a caller can override an
+  // individual property (a colour, say) without losing the padding, radius and
+  // inline-flex layout. Written the other way round — `style={style}` before the
+  // spread — a caller's `style` REPLACED the whole computed box, silently, since
+  // TypeScript cannot tell the difference.
+  const mergedStyle: React.CSSProperties = { ...style, ...props.style };
+
   return (
     <Component
       className={className}
-      style={style}
       {...(Component === 'button' ? { disabled: disabled || isLoading } : {})}
       {...props}
+      style={mergedStyle}
     >
       {isLoading ? (
         <>

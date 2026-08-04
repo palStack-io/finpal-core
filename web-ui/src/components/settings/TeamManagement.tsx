@@ -137,10 +137,25 @@ const emptyStateStyle: React.CSSProperties = {
   color: 'var(--text-muted)',
 };
 
-/** Destructive outline button: inline styles win over the Button's own classes. */
+/**
+ * Destructive outline button. common/Button sets `style` before spreading props, so
+ * a `style` passed in replaces its computed style outright — this has to restate the
+ * whole box (Button's `sm` size + `outline` variant) rather than just the colours.
+ */
 const dangerButtonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  padding: '6px 12px',
+  fontSize: '14px',
+  fontWeight: 500,
+  borderRadius: '8px',
+  background: 'transparent',
   color: RED,
-  borderColor: 'rgba(239, 68, 68, 0.3)',
+  border: '2px solid rgba(239, 68, 68, 0.3)',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
 };
 
 const dangerHoverHandlers = {
@@ -148,7 +163,7 @@ const dangerHoverHandlers = {
     e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
   },
   onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.background = '';
+    e.currentTarget.style.background = 'transparent';
   },
 };
 
@@ -393,7 +408,7 @@ export const TeamManagement: React.FC = () => {
           onClick={handleSendInvite}
           isLoading={isSendingInvite}
         >
-          <Send size={16} style={{ marginRight: '8px' }} />
+          <Send size={16} />
           Send Invitation
         </Button>
       </Card>
@@ -418,7 +433,7 @@ export const TeamManagement: React.FC = () => {
             onClick={loadInvitations}
             disabled={isLoadingInvitations}
           >
-            <RefreshCw size={16} style={{ marginRight: '4px' }} />
+            <RefreshCw size={16} />
             Refresh
           </Button>
         </div>
@@ -461,7 +476,7 @@ export const TeamManagement: React.FC = () => {
                       size="sm"
                       onClick={() => handleResendInvitation(invitation.id)}
                     >
-                      <RefreshCw size={12} style={{ marginRight: '4px' }} />
+                      <RefreshCw size={12} />
                       Resend
                     </Button>
                     <Button
@@ -471,7 +486,7 @@ export const TeamManagement: React.FC = () => {
                       style={dangerButtonStyle}
                       {...dangerHoverHandlers}
                     >
-                      <Trash2 size={12} style={{ marginRight: '4px' }} />
+                      <Trash2 size={12} />
                       Cancel
                     </Button>
                   </div>
@@ -504,7 +519,7 @@ export const TeamManagement: React.FC = () => {
             onClick={loadMembers}
             disabled={isLoadingMembers}
           >
-            <RefreshCw size={16} style={{ marginRight: '4px' }} />
+            <RefreshCw size={16} />
             Refresh
           </Button>
         </div>
