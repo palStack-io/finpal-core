@@ -32,7 +32,27 @@ def rate_limit_storage_uri() -> str:
     return os.getenv('RATELIMIT_STORAGE_URI', 'memory://').strip() or 'memory://'
 
 
-limiter = Limiter(key_func=get_remote_address, storage_uri=rate_limit_storage_uri())
+def rate_limit_key():
+    """Bucket by access token when there is one, else by address.
+
+    Every request from a single MCP server shares a source address, so keying on
+    the address alone would throttle an agent together with the humans behind the
+    same NAT — or, with a generous limit, not throttle it at all.
+
+    Imported lazily: src.utils.api_auth imports models, and this module is
+    imported before them.
+    """
+    try:
+        from src.utils.api_auth import current_pat
+        pat = current_pat()
+        if pat is not None:
+            return 'pat:%d' % pat.id
+    except Exception:
+        pass
+    return get_remote_address()
+
+
+limiter = Limiter(key_func=rate_limit_key, storage_uri=rate_limit_storage_uri())
 
 # Configure scheduler timezone
 scheduler.timezone = pytz.timezone('EST')
