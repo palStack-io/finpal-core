@@ -3,7 +3,10 @@ User model
 """
 
 from datetime import datetime, timedelta
+import hashlib
+import json
 import secrets
+from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from src.extensions import db
@@ -40,6 +43,127 @@ class User(UserMixin, db.Model):
 
     # Demo mode
     is_demo_user = db.Column(db.Boolean, default=False)
+
+    @classmethod
+    def from_oidc(cls, oidc_data, provider='authelia'):
+        """Create or update a user from OIDC data with security best practices"""
+        # Check if user exists by OIDC ID
+        user = cls.query.filter_by(oidc_id=oidc_data.get('sub'), oidc_provider=provider).first()
+        
+        # If not found, fall back to matching on email — this is what links an
+        # existing local password account to an OIDC identity.
+        #
+        # TRUST BOUNDARY: `oidc_data` must already be derived from a verified
+        # source — a signature-checked ID token, or a userinfo response fetched
+        # with a token the server obtained itself. Never pass client-supplied
+        # fields in here: the user PK is the email, so an attacker-chosen
+        # `email` at this point is an account takeover.
+        #
+        # email_verified defaults to True because self-hosted IdPs (Authelia,
+        # Keycloak) often omit the claim, and their operator controls the
+        # directory. Public multi-tenant providers DO send it, and callers
+        # using them must check it themselves before calling — see the native
+        # Apple path in src/services/auth/api_routes.py.
+        if not user and 'email' in oidc_data:
+            email_verified = oidc_data.get('email_verified', True)
+
+            if email_verified:
+                user = cls.query.filter_by(id=oidc_data['email']).first()
+            
+        # If user exists, update OIDC details if needed
+        if user:
+            # Block if account is already linked to a different provider
+            if user.oidc_provider and user.oidc_provider != provider:
+                raise ValueError(
+                    f"This account is already linked to {user.oidc_provider}. "
+                    f"Please sign in with {user.oidc_provider} instead."
+                )
+            # Link local account with OIDC if not already linked
+            if not user.oidc_id:
+                user.oidc_id = oidc_data.get('sub')
+                user.oidc_provider = provider
+                db.session.commit()
+            
+            # Update any user profile information
+            if 'name' in oidc_data and oidc_data['name'] != user.name:
+                user.name = oidc_data['name']
+                db.session.commit()
+                
+            # Update last login time
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            return user
+            
+        # Create new user if not found
+        if 'email' in oidc_data:
+            # Email is required for a new user
+            # Generate a secure random password for the local account
+            random_password = secrets.token_urlsafe(24)
+            
+            # Get the display name from OIDC data
+            name = oidc_data.get('name', 
+                            oidc_data.get('preferred_username', 
+                                        oidc_data['email'].split('@')[0]))
+            
+            # Check if this will be the first user
+            is_first_user = cls.query.count() == 0
+            
+            # Create the user object
+            user = cls(
+                id=oidc_data['email'],
+                name=name,
+                oidc_id=oidc_data.get('sub'),
+                oidc_provider=provider,
+                is_admin=is_first_user,  # Make first user admin
+                last_login=datetime.utcnow()
+            )
+            
+            # Set the random password
+            user.set_password(random_password)
+            
+            # Generate user color based on email
+            hash_object = hashlib.md5(user.id.encode())
+            hash_hex = hash_object.hexdigest()
+            r = int(hash_hex[:2], 16)
+            g = int(hash_hex[2:4], 16)
+            b = int(hash_hex[4:6], 16)
+            brightness = (r * 299 + g * 587 + b * 114) / 1000
+            if brightness > 180:
+                r = min(int(r * 0.7), 255)
+                g = min(int(g * 0.7), 255)
+                b = min(int(b * 0.7), 255)
+            user.user_color = f'#{r:02x}{g:02x}{b:02x}'
+            
+            # Save to database
+            db.session.add(user)
+            db.session.commit()
+
+            # Seed default categories. This used to be `from app import
+            # create_default_categories`, which never resolved — app.py has no
+            # such module-level name, it is a method on AuthService. Because the
+            # user is already committed above, the ImportError left every
+            # first-ever OIDC/Apple sign-in returning an error with a
+            # category-less account already in the database.
+            #
+            # Seeding is best-effort on purpose: the account exists and the user
+            # should be let in even if the defaults fail.
+            try:
+                from src.services.auth.service import AuthService
+                AuthService().create_default_categories(user.id)
+            except Exception:
+                current_app.logger.exception(
+                    f"Failed to seed default categories for new OIDC user {user.id}"
+                )
+
+            # Add a log entry
+            current_app.logger.info(f"New user created via OIDC: {user.id}, Admin: {is_first_user}")
+            
+            return user
+            
+        # If we can't create a user (no email), log and return None
+        current_app.logger.error(f"Cannot create user from OIDC data: Missing email. Data: {json.dumps(oidc_data)}")
+        return None
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')

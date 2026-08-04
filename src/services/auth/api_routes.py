@@ -536,7 +536,7 @@ def apple_signin():
             oidc_data['name'] = oidc_data['email'].split('@')[0]
 
         # Reuse existing OIDC user creation logic
-        # User.from_oidc is added by extend_user_model at startup
+        # User.from_oidc is a classmethod on the model (src/models/user.py)
         try:
             user = User.from_oidc(oidc_data, provider='apple')
         except ValueError as e:
