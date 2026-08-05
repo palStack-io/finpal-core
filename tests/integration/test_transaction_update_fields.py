@@ -224,20 +224,107 @@ def test_a_rejected_update_leaves_nothing_behind(client, db, auth_headers):
         % Account.query.get(acct.id).balance)
 
 
-def test_the_update_path_honours_the_same_fields_as_create(client, db):
-    """The invariant `KNOWN_DROPPED` cannot express.
+# Fields the create path accepts that `put` deliberately does not handle. Empty, and
+# that is the point: every field of `TransactionInput` should be editable, because the
+# web form posts one payload object to both endpoints. An entry here needs a reason.
+UPDATE_EXEMPT = set()
 
-    That gate reads `transaction_input.fields`, and `put` never goes through the
-    schema — which is why it caught three fields on create and none here. This
-    reads the handler source instead, so a field wired into create but forgotten in
-    `put` fails rather than being silently discarded with a 200.
+
+def test_the_update_path_honours_every_field_create_accepts(client, db):
+    """The invariant, derived from the schema rather than from a list of known cases.
+
+    Two things this replaces, and the reason it is shaped this way:
+
+    `KNOWN_DROPPED` in `test_transaction_create_payload.py` cannot see the update path
+    at all — it inspects `transaction_input.fields`, and `put` reads `data` directly —
+    which is why it fired three times on create and stayed silent while the edit path
+    dropped `split_value` and `category_splits`.
+
+    The first version of *this* test then hardcoded those same three field names, and
+    so was blind in turn to `group_id` and `paid_by`, which had never had a `put`
+    branch either. A check keyed to a list only ever catches the cases already known;
+    keying it to the mechanism — every field the schema accepts — catches the next one
+    too.
     """
     import inspect
 
     from api.v1 import transactions as module
+    from schemas.input_schemas import transaction_input
 
     source = inspect.getsource(module.TransactionDetail.put)
-    for field in ('destination_account_id', 'split_value', 'category_splits'):
-        assert "'%s' in data" % field in source, (
-            '`put` has no branch for %r, so an edit sending it gets a 200 and '
-            'loses it' % field)
+    missing = sorted(
+        field for field in transaction_input.fields
+        if field not in UPDATE_EXEMPT and "'%s' in data" % field not in source)
+
+    assert not missing, (
+        '`put` has no branch for these, so an edit sending them gets a 200 and '
+        'loses them — wire them up, or add them to UPDATE_EXEMPT with a reason: %s'
+        % missing)
+
+
+def test_group_id_can_be_changed(client, db, auth_headers):
+    """Moving a transaction into a group, or out of one.
+
+    `GroupDetail.tsx:88` lists a group's transactions with `?group_id=`, so a
+    correction that is silently dropped never appears where the user is looking.
+    """
+    from src.models.group import Group
+
+    user = UserFactory()
+    group = Group(name='Flat', created_by=user.id, default_split_method='equal',
+                  auto_include_all=False)
+    group.members.append(user)
+    db.session.add(group)
+    db.session.commit()
+    tid = _create(client, user, auth_headers)
+
+    resp = client.put('/api/v1/transactions/%d' % tid,
+                      headers=auth_headers(user), json={'group_id': group.id})
+
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:300]
+    assert _row(tid).group_id == group.id, (
+        'the edit was accepted with a 200 and the transaction never joined the '
+        'group')
+
+    cleared = client.put('/api/v1/transactions/%d' % tid,
+                         headers=auth_headers(user), json={'group_id': None})
+    assert cleared.status_code == 200
+    assert _row(tid).group_id is None, 'a transaction cannot be taken out of a group'
+
+
+def test_group_id_on_update_is_membership_checked(client, db, auth_headers):
+    """The same check create does. Without it, `put` is a way around it."""
+    from src.models.group import Group
+
+    caller = UserFactory()
+    owner = UserFactory()
+    theirs = Group(name='Not yours', created_by=owner.id,
+                   default_split_method='equal', auto_include_all=False)
+    theirs.members.append(owner)
+    db.session.add(theirs)
+    db.session.commit()
+    tid = _create(client, caller, auth_headers)
+
+    resp = client.put('/api/v1/transactions/%d' % tid,
+                      headers=auth_headers(caller),
+                      json={'group_id': theirs.id})
+
+    assert resp.status_code == 400, (
+        'a non-member moved a transaction into a stranger\'s group; got %s'
+        % resp.status_code)
+    assert _row(tid).group_id is None
+
+
+def test_paid_by_can_be_changed(client, db, auth_headers):
+    """Who paid feeds `calculate_splits`, so correcting it changes who owes whom."""
+    user = UserFactory()
+    other = UserFactory()
+    tid = _create(client, user, auth_headers)
+    assert _row(tid).paid_by == user.id
+
+    resp = client.put('/api/v1/transactions/%d' % tid,
+                      headers=auth_headers(user), json={'paid_by': other.id})
+
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:300]
+    assert _row(tid).paid_by == other.id, (
+        'the payer correction was accepted with a 200 and discarded')
