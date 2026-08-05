@@ -57,11 +57,18 @@ KNOWN_DROPPED = {
     # an entry that has become accepted, which is what stops this list rotting into
     # a permanent excuse. It fired on both.
     #
-    # Real column + a real `category_splits` table, and `src/models/budget.py:92`
-    # reads `has_category_splits` to skip the expense's own category so the split
-    # rows can be attributed instead. The web form has a splits UI whose result is
-    # discarded on create.
-    'category_splits',
+    # `category_splits` has since been wired too — see
+    # `tests/integration/test_category_splits.py`, which also settles the contract
+    # (the web form's `{category_id: amount}` object, not the legacy service's
+    # `category_splits_data` JSON string of a list, which no client ever sent).
+    #
+    # `has_category_splits` stays listed, and this is the one entry that is
+    # **deliberately permanent**. It is not dropped through neglect: it is *derived*
+    # from whether split rows are present, and must never be taken from the client.
+    # `budget.py:92` skips a flagged expense so its split rows can be attributed
+    # instead, so a caller who could set the flag with no rows would make the
+    # spending invisible to every budget. Pinned by
+    # `test_the_flag_is_derived_from_the_rows_not_taken_from_the_client`.
     'has_category_splits',
 }
 

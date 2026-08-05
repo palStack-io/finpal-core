@@ -59,6 +59,14 @@ class TransactionInput(Schema):
     # mis-divided the money and attributed the payer nothing. The valid range
     # depends on the split method, so it is checked in `build_transaction`.
     split_value = fields.Float(allow_none=True)
+    # One transaction attributed across several categories: {category_id: amount},
+    # which is the shape `AddTransactionForm` sends. The legacy service read a
+    # different one — `category_splits_data`, a JSON *string* holding a *list* —
+    # which no client has ever sent. Amounts, ownership and the total are checked in
+    # `build_transaction`; `has_category_splits` is deliberately *not* accepted here,
+    # because it is derived from whether splits are present rather than trusted.
+    category_splits = fields.Dict(
+        keys=fields.Str(), values=fields.Float(), allow_none=True)
 
 
 class AccountInput(Schema):
