@@ -37,6 +37,14 @@ class TransactionInput(Schema):
     split_method = fields.Str(validate=validate.OneOf(SPLIT_METHODS))
     split_with = fields.Str(validate=validate.Length(max=500))
     paid_by = fields.Str(validate=validate.Length(max=255))
+    # `Expense.group_id` is a real, nullable FK to groups.id, but this schema
+    # omitted it and `validate_request` loads with `unknown=EXCLUDE`, so a create
+    # carrying group_id got a 201 with the group silently stripped. web-ui posts
+    # exactly that when recording a settlement (GroupDetail.tsx:108), so every
+    # settlement was filed as an ungrouped personal expense and never showed up
+    # in the group it was settling. Asserted against the database row in
+    # tests/integration/test_route_shadowing.py.
+    group_id = fields.Int(allow_none=True)
 
 
 class AccountInput(Schema):

@@ -1094,7 +1094,28 @@ export const Settings: React.FC = () => {
                       "That's what pals do – they show up and help with the everyday stuff."
                     </p>
                     <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '16px' }}>
-                      © {new Date().getFullYear()} {branding.parentBrand}. All rights reserved.
+                      © {new Date().getFullYear()} {branding.parentBrand} · finPal is free
+                      software under the{' '}
+                      <a
+                        href="https://www.gnu.org/licenses/agpl-3.0.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}
+                      >
+                        AGPL-3.0
+                      </a>
+                      {'. '}
+                      {/* AGPL-3.0 section 13: a program users interact with over a
+                          network must offer them its source. finPal is served over
+                          HTTP, so this link is a licence obligation, not a courtesy. */}
+                      <a
+                        href="https://github.com/palStack-io/finpal-core"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}
+                      >
+                        Get the source code
+                      </a>
                     </p>
                   </div>
                 </div>

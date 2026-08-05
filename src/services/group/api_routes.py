@@ -36,6 +36,12 @@ def get_groups():
                 'default_split_method': group.default_split_method,
                 'default_payer': group.default_payer,
                 'auto_include_all': group.auto_include_all,
+                # created_at and member_count were only ever sent by the restx
+                # GroupList this handler now replaces for both URL spellings.
+                # Carried over so retiring it removes no field from any client,
+                # even though neither is read today.
+                'created_at': group.created_at.isoformat() if group.created_at else None,
+                'member_count': len(group.members),
                 'members': [
                     {
                         'id': member.id,

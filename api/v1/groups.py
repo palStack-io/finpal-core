@@ -1,12 +1,11 @@
 """Groups API endpoints - Bill splitting and group management"""
 from flask import request
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.group import Group
 from src.models.user import User
 from src.models.associations import group_users
 from src.extensions import db
-from schemas import group_schema, groups_schema
 
 import logging
 
@@ -16,199 +15,46 @@ logger = logging.getLogger(__name__)
 # Create namespace
 ns = Namespace('groups', description='Group and bill splitting operations')
 
-# Define request/response models
-group_model = ns.model('Group', {
-    'name': fields.String(required=True, description='Group name'),
-    'description': fields.String(description='Group description'),
-    'member_ids': fields.List(fields.Integer, description='List of user IDs to add as members'),
-})
-
-
-@ns.route('/')
-class GroupList(Resource):
-    @ns.doc('list_groups', security='Bearer')
-    @jwt_required()
-    def get(self):
-        """Get all groups for current user"""
-        current_user_id = get_jwt_identity()
-
-        # Get all groups where user is a member
-        groups = Group.query.join(group_users).filter(
-            group_users.c.user_id == current_user_id
-        ).all()
-
-        # Serialize
-        result = groups_schema.dump(groups)
-
-        return {
-            'success': True,
-            'groups': result
-        }, 200
-
-    @ns.doc('create_group', security='Bearer')
-    @ns.expect(group_model)
-    @jwt_required()
-    def post(self):
-        """Create a new group"""
-        current_user_id = get_jwt_identity()
-        data = request.get_json()
-
-        try:
-            new_group = Group(
-                name=data.get('name'),
-                description=data.get('description', ''),
-                created_by=current_user_id
-            )
-
-            db.session.add(new_group)
-            db.session.flush()  # Get group ID without committing
-
-            # Add creator as member
-            current_user = User.query.get(current_user_id)
-            if current_user:
-                new_group.members.append(current_user)
-
-            # Add other members if provided
-            member_ids = data.get('member_ids', [])
-            for member_id in member_ids:
-                if member_id != current_user_id:  # Don't add creator twice
-                    member = User.query.get(member_id)
-                    if member:
-                        new_group.members.append(member)
-
-            db.session.commit()
-
-            result = group_schema.dump(new_group)
-
-            return {
-                'success': True,
-                'group': result,
-                'message': 'Group created successfully'
-            }, 201
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': 'Internal server error'
-            }, 400
-
-
-@ns.route('/<int:id>')
-@ns.param('id', 'Group ID')
-class GroupDetail(Resource):
-    @ns.doc('get_group', security='Bearer')
-    @jwt_required()
-    def get(self, id):
-        """Get a specific group by ID"""
-        current_user_id = get_jwt_identity()
-
-        # Check if user is a member of this group
-        group = Group.query.join(group_users).filter(
-            Group.id == id,
-            group_users.c.user_id == current_user_id
-        ).first()
-
-        if not group:
-            return {'success': False, 'error': 'Group not found or access denied'}, 404
-
-        result = group_schema.dump(group)
-
-        return {
-            'success': True,
-            'group': result
-        }, 200
-
-    @ns.doc('update_group', security='Bearer')
-    @ns.expect(group_model)
-    @jwt_required()
-    def put(self, id):
-        """Update a group"""
-        current_user_id = get_jwt_identity()
-
-        group = Group.query.filter_by(id=id).first()
-
-        if not group:
-            return {'success': False, 'error': 'Group not found'}, 404
-
-        # Check if user is the creator or a member
-        if group.created_by != current_user_id:
-            is_member = db.session.query(group_users).filter(
-                group_users.c.group_id == id,
-                group_users.c.user_id == current_user_id
-            ).first()
-            if not is_member:
-                return {'success': False, 'error': 'Access denied'}, 403
-
-        data = request.get_json()
-
-        try:
-            if 'name' in data:
-                group.name = data['name']
-            if 'description' in data:
-                group.description = data['description']
-
-            # Update members if provided (only creator can do this)
-            if 'member_ids' in data and group.created_by == current_user_id:
-                # Clear existing members
-                group.members.clear()
-
-                # Add creator
-                creator = User.query.get(current_user_id)
-                if creator:
-                    group.members.append(creator)
-
-                # Add other members
-                member_ids = data.get('member_ids', [])
-                for member_id in member_ids:
-                    if member_id != current_user_id:
-                        member = User.query.get(member_id)
-                        if member:
-                            group.members.append(member)
-
-            db.session.commit()
-
-            result = group_schema.dump(group)
-
-            return {
-                'success': True,
-                'group': result,
-                'message': 'Group updated successfully'
-            }, 200
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': 'Internal server error'
-            }, 400
-
-    @ns.doc('delete_group', security='Bearer')
-    @jwt_required()
-    def delete(self, id):
-        """Delete a group (only creator can delete)"""
-        current_user_id = get_jwt_identity()
-
-        group = Group.query.filter_by(id=id, created_by=current_user_id).first()
-
-        if not group:
-            return {'success': False, 'error': 'Group not found or access denied'}, 404
-
-        try:
-            db.session.delete(group)
-            db.session.commit()
-
-            return {
-                'success': True,
-                'message': 'Group deleted successfully'
-            }, 200
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': 'Internal server error'
-            }, 400
+# GroupList, GroupDetail and GroupBalances used to live here and have been
+# retired. They shadowed the legacy `group_api` blueprint
+# (src/services/group/api_routes.py), which registers first and therefore wins —
+# but only for the spelling *without* a trailing slash. Because this app sets
+# `url_map.strict_slashes = False`, the blueprint's slash-less rule and these
+# slashed rules each matched one spelling, so web-ui (which omits the slash) and
+# mobile (which includes it) were served *different implementations of the same
+# endpoint*.
+#
+# They were not equivalent, and the blueprint is the more complete side, so the
+# duplicates are removed rather than the blueprint:
+#
+#   * `GroupSchema` has no `default_split_method`, `default_payer` or
+#     `auto_include_all`. mobile declares all three (`groupService.ts:14-16`) and
+#     renders `group.default_split_method` (`groups.tsx:165`), so it was showing
+#     nothing there, and `GroupForm` read the group's split settings back as
+#     `undefined` when opening the edit sheet — saving then reset them.
+#   * `GroupList.post` built the Group from `name` and `description` only and
+#     returned 201, silently discarding the `default_split_method` and
+#     `auto_include_all` that mobile's GroupForm sends.
+#   * `group_model` declared `member_ids` as `fields.List(fields.Integer)`, while
+#     user ids are email strings.
+#   * `GroupDetail` and `GroupBalances` never served a request under either
+#     spelling — the blueprint claims `/<int:group_id>` and `/<int:group_id>/
+#     balances`, which match the same URLs as `<int:id>`; the converter variable
+#     name is not part of matching. Deleting them is a no-op for both clients.
+#
+# Removing them needs no client change: with `strict_slashes = False` and no
+# slashed rule left here, the blueprint's rule matches both spellings. This is
+# the same mechanism PR #42 used to retire the legacy transactions list, and it
+# is asserted in tests/integration/test_route_shadowing.py by comparing the
+# payload of both spellings, not the status code.
+#
+# What mobile loses is `created_at` and `member_count`; it reads neither
+# (`groups.tsx:175` counts `group.members.length`). What it gains is the three
+# split fields, plus a `POST` response that finally matches the
+# `{message, group_id}` its own `create()` already declared.
+#
+# GroupMembers (GET) and GroupInvite stay: the blueprint claims POST on
+# /members and nothing at all on /invite, so neither collides.
 
 
 @ns.route('/<int:id>/members')
@@ -238,33 +84,6 @@ class GroupMembers(Resource):
         return {
             'success': True,
             'members': result
-        }, 200
-
-
-@ns.route('/<int:id>/balances')
-@ns.param('id', 'Group ID')
-class GroupBalances(Resource):
-    @ns.doc('get_group_balances', security='Bearer')
-    @jwt_required()
-    def get(self, id):
-        """Get IOU balances within a group"""
-        current_user_id = get_jwt_identity()
-
-        # Check if user is a member
-        group = Group.query.join(group_users).filter(
-            Group.id == id,
-            group_users.c.user_id == current_user_id
-        ).first()
-
-        if not group:
-            return {'success': False, 'error': 'Group not found or access denied'}, 404
-
-        balances = group.calculate_balances()
-
-        return {
-            'success': True,
-            'group_id': id,
-            'balances': balances
         }, 200
 
 

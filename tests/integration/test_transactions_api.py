@@ -33,9 +33,16 @@ def test_create_transaction_returns_201(client, db, auth_headers):
         'date': '2026-03-01',
         'category_id': cat.id,
         'transaction_type': 'expense',
-        'split_method': 'none',
+        # Was 'none', which no client offers and `TransactionInput`'s OneOf has
+        # never accepted. It only passed because the unvalidated legacy blueprint
+        # served this slash-less path; now that restx serves both spellings the
+        # payload is validated. The model's `split_method == 'none'` branch is
+        # reachable only for legacy rows and is equivalent to its own
+        # `or not self.split_with`, so the schema is right and this test was
+        # asserting on a value nothing writes.
+        'split_method': 'equal',
     }, headers=headers)
-    assert resp.status_code == 201
+    assert resp.status_code == 201, resp.get_data(as_text=True)[:300]
 
 
 def test_create_transaction_requires_auth(client, db):

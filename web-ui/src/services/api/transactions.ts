@@ -132,7 +132,16 @@ export const transactionsApi = {
   },
 
   // Create transaction
-  create: async (data: Partial<Transaction>): Promise<{ message: string; transaction_id: number }> => {
+  //
+  // Returns the created row, not just its id. This used to be typed
+  // `{message, transaction_id}` — the shape of the legacy blueprint handler that
+  // served the slash-less URL. That handler is retired and flask-restx now serves
+  // both spellings, so the response carries the transaction itself. The mock in
+  // __tests__/mocks/handlers.ts already returned this shape, which is why nothing
+  // caught the mismatch.
+  create: async (
+    data: Partial<Transaction>
+  ): Promise<{ success: boolean; message: string; transaction: Transaction }> => {
     const response = await api.post(API_CONFIG.endpoints.transactions.create, data);
     return response.data;
   },
