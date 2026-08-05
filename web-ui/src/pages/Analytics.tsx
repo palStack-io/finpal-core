@@ -4,6 +4,8 @@ import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { formatMoney, tabular } from '../styles/money';
+import { ScopeTag } from '../components/ScopeTag';
+import type { Scope } from '../utils/scope';
 import {
   Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -486,8 +488,17 @@ export const Analytics: React.FC = () => {
               gap: '24px',
               marginBottom: '32px'
             }}>
+              {/* Every figure on this page is the household's, and consistently
+                  so — unlike the Dashboard, where the income card is the
+                  household's but the expense card is the caller's own share.
+                  These four come from /analytics/categories/top, whose
+                  `get_top_categories` sums full amounts over the household query
+                  for both directions, so the savings rate here divides like with
+                  like. Tagged rather than reconciled: the two pages are allowed
+                  to differ as long as each says what it is. */}
               <MetricCard
                 title="Total Income"
+                scope="household"
                 value={formatMoney(totals.income, { currency })}
                 change={previous && pctChange(totals.income, previous.income)}
                 icon={<TrendingUp size={24} />}
@@ -495,6 +506,7 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Total Expenses"
+                scope="household"
                 value={formatMoney(totals.expenses, { currency })}
                 change={previous && pctChange(totals.expenses, previous.expenses)}
                 higherIsBetter={false}
@@ -503,6 +515,7 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Net Savings"
+                scope="household"
                 value={formatMoney(totals.netSavings, { currency })}
                 change={previous && pctChange(totals.netSavings, previous.netSavings)}
                 icon={<DollarSign size={24} />}
@@ -510,6 +523,7 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Savings Rate"
+                scope="household"
                 value={`${totals.savingsRate.toFixed(1)}%`}
                 change={previous && pctChange(totals.savingsRate, previous.savingsRate)}
                 icon={<Target size={24} />}
@@ -1014,7 +1028,9 @@ const MetricCard: React.FC<{
   higherIsBetter?: boolean;
   icon: React.ReactNode;
   color: string;
-}> = ({ title, value, change, higherIsBetter = true, icon, color }) => {
+  /** Whose money this figure covers (AUDIT.md D-01). */
+  scope?: Scope;
+}> = ({ title, value, change, higherIsBetter = true, icon, color, scope }) => {
   const rose = change !== undefined && change > 0;
   const good = change === undefined || change === 0
     ? true
@@ -1055,7 +1071,18 @@ const MetricCard: React.FC<{
             : <ArrowDownRight size={20} color={color} />
         )}
       </div>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '4px' }}>{title}</p>
+      <p style={{
+        color: 'var(--text-secondary)',
+        fontSize: '13px',
+        marginBottom: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        flexWrap: 'wrap',
+      }}>
+        {title}
+        {scope && <ScopeTag scope={scope} />}
+      </p>
       <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px', ...tabular }}>
         {value}
       </p>
