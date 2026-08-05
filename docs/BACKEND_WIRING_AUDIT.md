@@ -16,8 +16,21 @@ token. Status is based on returned payloads, not on HTTP codes — every bug in 
 | **STUBBED** | Displays values the app never computed |
 | **DEAD** | Service method exists, points at a route that 404s, nothing calls it |
 
-> Statuses marked ✅ were fixed on 2026-08-04 (PRs #38 / #39 / #40, deployed).
-> Everything else is still open.
+> Statuses marked ✅ were fixed on 2026-08-04 (PRs #38 / #39 / #40 / #41, and the
+> transactions/analytics branch below). Everything else is still open.
+
+**Update 2026-08-04, second pass.** The Transactions rows, `/analytics/stats` and
+every DEAD service method are now closed. One row in this file was **wrong**, not
+merely out of date: GroupDetail was recorded as ✅ LIVE on the grounds that it used
+the with-slash route. It did — but that handler never read `group_id`, so the page
+showed the user's whole history as the group's. The lesson is the one this file
+already ends on: reaching the right handler is not the same as getting the right
+data, and only the payload says which.
+
+Two findings this file has no section for, tracked in `AUDIT.md` Part 5 instead:
+household-vs-per-user scoping mixed inside a single payload (D-01), and
+`account_number` / `is_active` on `/accounts` existing only in the swagger model
+(D-05).
 
 ---
 
@@ -39,8 +52,8 @@ token. Status is based on returned payloads, not on HTTP codes — every bug in 
 | Export button | none | ✅ was **STUBBED** — `alert('Export functionality coming soon')`. Now writes a real CSV of the loaded figures. |
 | week / month / year toggle | — | ✅ was **INERT** — only the label changed. Two params dropped frontend-side, one ignored backend-side. |
 | Error handling | — | ✅ was **BROKEN (silent)** — `console.error` only, so a failed load left every metric at `0` while the health ratios reported "good". An outage rendered as a clean bill of health. Now an alert with retry. |
-| `/analytics/stats` | — | ❌ **BROKEN but DEAD.** 500s via `convert_to_dict` recursing over live SQLAlchemy instances (`RecursionError`). No caller. Was returning 500 with no log line; `logger.exception()` added, handler not rewritten. |
-| `getIncomeTrends`, `getCategoryBreakdown`, `getNetWorthTrend`, `generateReport` | — | ❌ **DEAD** — all four 404 live and are absent from `url_map`. No component calls them. Note `net-worth` looks like a typo for `networth`, but its declared type doesn't match that payload, so it was left alone. |
+| `/analytics/stats` | — | ✅ was **BROKEN but DEAD.** 500'd on every call: `convert_to_dict` recursed into `obj.__dict__`, reaching `_sa_instance_state` on the live SQLAlchemy instances the service returns. Reproduced against the shipped code, then rewritten to serialize explicitly through the same helper `/dashboard` uses. 4 tests assert real figures and that no ORM internals reach the body. |
+| `getIncomeTrends`, `getCategoryBreakdown`, `getNetWorthTrend`, `generateReport` | — | ✅ **DEAD, removed.** All four 404 live and were absent from `url_map`. `CategoryBreakdown` went with them — no endpoint returns that shape and they were its only consumers. |
 
 ## Dashboard
 
@@ -58,10 +71,12 @@ token. Status is based on returned payloads, not on HTTP codes — every bug in 
 
 | Section | Source | Status |
 |---|---|---|
-| List + summary | `/api/v1/transactions` → **legacy** handler | ❌ **LIVE but unpaginated and unfiltered.** The legacy handler reads **zero** query params and returns no `pagination`. The whole history loads on every render; all filtering is client-side. The paginating restx handler is at `/api/v1/transactions/` — *with* the trailing slash. |
-| `transactionService.getTransactions(filters)` | same | ❌ **latent BROKEN.** Builds `page`/`per_page`/`start_date`/`search`, all silently discarded. **The MSW mock returns a `pagination` key the winning handler never sends, so `services.contract.test.ts` passes on a fictional shape.** |
+| List + summary | `/api/v1/transactions/` → restx | ✅ was **LIVE but unpaginated and unfiltered.** The legacy handler won the slash-less rule and read **zero** query params, so the whole history loaded on every render and all filtering was client-side. That handler is retired; since the app sets `url_map.strict_slashes = False`, the restx rule now serves both spellings. `summary` was added to it, computed over the **whole filtered query** rather than the page — and excluding `transfer` rows, which the legacy version counted as spending. |
+| `transactionService.getTransactions(filters)` | same | ✅ was **latent BROKEN** — built `page`/`per_page`/`start_date`/`search` and had them all discarded. Now sends them to the slash form. The MSW mock sat on the slash-less path returning a `pagination` key the winning handler never sent, so the contract test was green on a shape that did not exist; it now mirrors the real payload, `summary` included, and is registered on one spelling only so a stale URL fails loudly. |
+| Pagination UI | — | ✅ was **absent.** With the list bounded to one page the rest of the history would have been unreachable rather than merely off-screen. Pager added, and the heading reads "Transactions 1–50 of 120" rather than a bare count that would read as the whole history. |
+| `BudgetsMinimal` spending totals | same | ✅ was **at risk.** It called `getAll()` with no arguments and totalled the result per category; against a paginating endpoint that silently becomes the newest 50 rows, under-reporting every budget with no error anywhere. Now fetches only the window the budgets cover, pages through it, and says so if it hits its bound instead of showing a partial total. |
 | Create / edit / delete | POST legacy, PUT/DELETE restx | ✅ **LIVE** (mixed but functional) |
-| `split`, `bulk`, `export` service methods | — | ❌ **DEAD** |
+| `split`, `bulk`, `export` service methods | — | ✅ **DEAD, removed.** Verified absent from `url_map` under any verb and 404 live before deleting. |
 
 ## Accounts
 
@@ -76,15 +91,15 @@ token. Status is based on returned payloads, not on HTTP codes — every bug in 
 | Page | Source | Status |
 |---|---|---|
 | Budgets (`BudgetsMinimal.tsx`) | `/budgets/overview` | ✅ **EMPTY-BUT-OK** |
-| `budgetService.getBudgetSpending` | `/budgets/{id}/spending` | ❌ **DEAD** — 404, no caller |
+| `budgetService.getBudgetSpending` | `/budgets/{id}/spending` | ✅ **DEAD, removed** |
 | Investments | `/investments/portfolios`, `/holdings`, `/transactions`, `/exchanges` | ✅ **EMPTY-BUT-OK.** Totals computed client-side. Price refresh was **broken** independently — yfinance 0.2.18 got `429` on every quote; fixed by the 1.5.2 upgrade. **No CSV/folder-watch import path exists for brokerage data** (see below). |
 | Groups list | `/api/v1/groups` (legacy) | ✅ **EMPTY-BUT-OK** |
 | Groups "you are owed / you owe" cards | none | ✅ was **STUBBED** — `totalOwed = 0; totalOwe = 0`, "mock for now". Cards removed. `/groups/{id}/balances` exists but keys simplified debts by **display name, not user id**, so aggregating across groups needs a backend change first. |
-| GroupDetail | `/groups/{id}`, `/balances`, `/transactions/?group_id=` | ✅ **LIVE** (uses the *with-slash* route, so it does get pagination) |
-| `groupService` expenses / settle / settlements / removeMember | — | ❌ **DEAD** — all 404 |
+| GroupDetail | `/groups/{id}`, `/balances`, `/transactions/?group_id=` | ✅ was **BROKEN** — this row previously read "LIVE (uses the *with-slash* route, so it does get pagination)". It did reach the paginating handler, but that handler contained **no occurrence of `group_id`**, so the parameter was discarded and the page rendered the user's entire transaction history as the group's. Filter added; 15 integration tests now assert group scoping from the payload. |
+| `groupService` expenses / settle / settlements / removeMember | — | ✅ **DEAD, removed.** `teamService.removeMember` was kept: it looks like the same method but `/api/v1/team/members/<id>` DELETE exists and `TeamManagement.tsx` calls it. |
 | Recurring (mounted inside Settings) | `/recurring`, `/detect`, `/toggle`, `/create-from-pattern`, `/ignore` | ✅ **EMPTY-BUT-OK.** Note: **no `/recurring` route in `App.tsx`** — reachable only via Settings. |
 | Categories | `/api/v1/categories` (legacy) | ✅ **LIVE.** Errors are `console.error`-only, so a failure shows an empty list with no message. |
-| `categoryService` spending / mappings / bulk-categorize | — | ❌ **DEAD** — 4 URLs, all 404 |
+| `categoryService` spending / mappings / bulk-categorize | — | ✅ **DEAD, removed** — 4 URLs, 5 methods |
 | Transaction Rules | `/transaction-rules` legacy; `/stats`, `/suggest`, `/bulk-apply` restx | ✅ **LIVE.** `api.transaction-rules_transaction_rule_list` and `..._test_rule` **are genuinely shadowed** by the legacy blueprint — the only true route shadowing in the app, and therefore unreachable dead code. |
 | OIDC callback | `/api/v1/users/me` | ✅ was **BROKEN** — that route does not exist in `url_map` (the real one is `/api/v1/auth/me`), so every SSO login failed at the last step. An MSW mock for the nonexistent URL was hiding it. |
 
