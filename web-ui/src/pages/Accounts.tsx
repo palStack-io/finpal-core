@@ -197,6 +197,7 @@ export const Accounts = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
           <StatCard
             label="Net Worth"
+            scope="household"
             value={showBalances ? formatCurrency(totalBalance) : '••••••'}
             accentColor="#22c55e"
             icon={<Wallet size={24} color="#22c55e" />}
@@ -204,6 +205,7 @@ export const Accounts = () => {
           />
           <StatCard
             label="Total Assets"
+            scope="household"
             value={showBalances ? formatCurrency(totalAssets) : '••••••'}
             accentColor="#3b82f6"
             icon={<TrendingUp size={24} color="#3b82f6" />}
@@ -211,6 +213,7 @@ export const Accounts = () => {
           />
           <StatCard
             label="Total Liabilities"
+            scope="household"
             value={showBalances ? formatCurrency(totalLiabilities) : '••••••'}
             accentColor="#ef4444"
             icon={<TrendingDown size={24} color="#ef4444" />}

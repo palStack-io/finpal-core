@@ -12,6 +12,7 @@ import { getBranding } from '../config/branding';
 import { useTheme } from '../contexts/ThemeContext';
 import { CHART_COLORS } from '../config/theme';
 import { StatCard } from '../components/StatCard';
+import { DASHBOARD_FIGURE_SCOPE, MIXED_SCOPE_CAPTION } from '../utils/scope';
 import { SectionCard } from '../components/SectionCard';
 import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -303,16 +304,22 @@ export const Dashboard = () => {
 
         {/* Stat Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+          {/* Each card says whose money it covers. The scoping is per field, not
+              per endpoint: this one payload carries the caller's own net worth
+              and expense share alongside the household's income. See
+              `utils/scope.ts` and the backend suite it points at. */}
           <StatCard
             label="Net Worth"
             value={formatCurrency(netWorth)}
+            scope={DASHBOARD_FIGURE_SCOPE.netWorth}
             accentColor="#22c55e"
             icon={<Wallet size={24} color="#22c55e" />}
-            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--brand-green-glow)', fontSize: '14px' }}>Track your wealth</span></>}
+            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--brand-green-glow)', fontSize: '14px' }}>Your own accounts</span></>}
           />
           <StatCard
             label="Monthly Income"
             value={formatCurrency(monthlyIncome)}
+            scope={DASHBOARD_FIGURE_SCOPE.monthlyIncome}
             accentColor="#3b82f6"
             icon={<TrendingUp size={24} color="#3b82f6" />}
             subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current month earnings</span>}
@@ -320,16 +327,24 @@ export const Dashboard = () => {
           <StatCard
             label="Monthly Expenses"
             value={formatCurrency(monthlyExpenses)}
+            scope={DASHBOARD_FIGURE_SCOPE.monthlyExpenses}
             accentColor="#ef4444"
             icon={<TrendingDown size={24} color="#ef4444" />}
-            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--accent-red)', fontSize: '14px' }}>Current month spending</span></>}
+            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--accent-red)', fontSize: '14px' }}>Your share this month</span></>}
           />
+          {/* No tag, and no congratulation. `savings_rate` divides by the
+              household's income after subtracting only the caller's expenses
+              (AUDIT.md D-18), so neither "Yours" nor "Household" is true. The
+              subtitle used to read "Great job saving!" unconditionally — praise
+              for a number that reads 100% for a member who has entered nothing,
+              and 0% for someone with no income at all. */}
           <StatCard
             label="Savings Rate"
             value={`${savingsRate.toFixed(1)}%`}
+            scope={DASHBOARD_FIGURE_SCOPE.savingsRate}
             accentColor="#fbbf24"
             icon={<PiggyBank size={24} color="#fbbf24" />}
-            subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Great job saving!</span>}
+            subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{MIXED_SCOPE_CAPTION.savingsRate}</span>}
           />
         </div>
 
