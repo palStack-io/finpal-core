@@ -64,8 +64,16 @@ export interface TransactionFilters {
   search?: string;
 }
 
+export interface TransactionSummary {
+  total_income: number;
+  total_expense: number;
+  net_balance: number;
+}
+
 export interface PaginatedTransactions {
   transactions: Transaction[];
+  /** Totals over the whole filtered query, not just the returned page. */
+  summary: TransactionSummary;
   pagination: {
     page: number;
     per_page: number;
@@ -96,14 +104,20 @@ export const transactionService = {
     if (filters?.type) params.append('type', filters.type);
     if (filters?.search) params.append('search', filters.search);
 
+    // Trailing slash: the paginating, filtering handler. Without it this hit a
+    // legacy handler that read none of the parameters built above and returned
+    // no `pagination` — so `per_page` was a lie and every caller got the whole
+    // history.
     const response = await api.get<{
       success: boolean;
       transactions: Transaction[];
+      summary: TransactionSummary;
       pagination: PaginatedTransactions['pagination'];
-    }>(`/api/v1/transactions?${params.toString()}`);
+    }>(`/api/v1/transactions/?${params.toString()}`);
 
     return {
       transactions: response.data.transactions,
+      summary: response.data.summary,
       pagination: response.data.pagination,
     };
   },
