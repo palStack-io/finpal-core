@@ -32,8 +32,10 @@ class Handle:
 class LocalFolderAdapter:
     def __init__(self, path: str, max_bytes: int | None = None):
         self.path = resolve_within_root(path)
+        # `or` rather than a getenv default: docker-compose forwards an unset
+        # variable as the empty string, and int('') raises.
         self.max_bytes = max_bytes if max_bytes is not None else int(
-            os.getenv('CSV_IMPORT_MAX_BYTES', DEFAULT_MAX_BYTES))
+            os.getenv('CSV_IMPORT_MAX_BYTES') or DEFAULT_MAX_BYTES)
 
     def list_candidates(self) -> list[Handle]:
         handles = []

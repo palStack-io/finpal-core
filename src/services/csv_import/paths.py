@@ -11,7 +11,9 @@ class PathOutsideRootError(Exception):
 
 
 def import_root() -> str:
-    return os.getenv('CSV_IMPORT_ROOT', DEFAULT_IMPORT_ROOT)
+    # `or` rather than a getenv default: docker-compose forwards an unset variable
+    # as the empty string, and an empty root would neuter the confinement below.
+    return os.getenv('CSV_IMPORT_ROOT') or DEFAULT_IMPORT_ROOT
 
 
 def resolve_within_root(path: str) -> str:
