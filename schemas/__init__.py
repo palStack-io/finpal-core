@@ -26,6 +26,12 @@ class TransactionSchema(Schema):
     category_id = fields.Int(allow_none=True)
     account_id = fields.Int(allow_none=True)
     recurring_id = fields.Int(allow_none=True)
+    # Omitting this made the create response deny a group it had just set: with
+    # `group_id` accepted on input, `POST /transactions/` wrote the row into the
+    # group and then returned `group_id: null`, so a client reading the response
+    # could not tell a grouped transaction from an ungrouped one. Verified against
+    # the deployed instance before adding it.
+    group_id = fields.Int(allow_none=True)
     transaction_type = fields.Str(allow_none=True)
     notes = fields.Str(allow_none=True)
     created_at = fields.DateTime(dump_only=True)

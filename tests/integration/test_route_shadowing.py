@@ -189,6 +189,13 @@ def test_group_id_survives_a_create_on_both_spellings(
             '%s accepted group_id with a 201 and dropped it, so the '
             'transaction never lands in the group' % path)
 
+        # And the response must not deny the group it just set. Caught against the
+        # deployed instance: the row landed in the group while the response said
+        # `group_id: null`, because TransactionSchema had no such field.
+        assert resp.get_json()['transaction']['group_id'] == group.id, (
+            '%s wrote group_id to the database but reported %r in the response'
+            % (path, resp.get_json()['transaction'].get('group_id')))
+
 
 def test_a_create_cannot_file_itself_into_someone_elses_group(
         client, db, auth_headers):
