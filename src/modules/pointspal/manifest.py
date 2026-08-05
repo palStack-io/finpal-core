@@ -12,6 +12,10 @@ class PointsPalModule(ModuleBase):
     enabled_env = 'POINTSPAL_ENABLED'
     version = '1.0.0'
 
+    # pointsPal is part of core, not an add-on to switch on. POINTSPAL_ENABLED
+    # still works as an opt-out for an operator who does not want it.
+    default_enabled = True
+
     def get_namespaces(self):
         from src.modules.pointspal.routes import wallet_ns, points_ns, optimizer_ns, pointspal_ns
         return [

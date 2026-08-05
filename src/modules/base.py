@@ -18,15 +18,29 @@ class ModuleBase:
     enabled_env: str = ''     # env var name, e.g. 'POINTSPAL_ENABLED'
     version: str = '1.0.0'
 
+    # True for a module that ships as part of core, so a self-hoster gets it
+    # without setting anything. Its enabled_env then acts as an opt-OUT rather
+    # than an opt-in. Optional add-on modules leave this False.
+    default_enabled: bool = False
+
     # ------------------------------------------------------------------
     # Enablement
     # ------------------------------------------------------------------
 
     def is_enabled(self) -> bool:
-        """Return True if this module is enabled at the deployment level."""
+        """
+        Return True if this module is enabled at the deployment level.
+
+        An explicit value in enabled_env always wins, in both directions, so an
+        operator can decline a core module as well as opt into an add-on. Only
+        when the variable is absent does default_enabled decide.
+        """
         if not self.enabled_env:
-            return False
-        return os.getenv(self.enabled_env, 'false').lower() == 'true'
+            return self.default_enabled
+        raw = os.getenv(self.enabled_env)
+        if raw is None:
+            return self.default_enabled
+        return raw.strip().lower() == 'true'
 
     def is_user_enabled(self, user_id: str) -> bool:
         """

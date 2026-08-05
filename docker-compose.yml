@@ -24,7 +24,8 @@ x-backend-env: &backend-env
   INVESTMENT_TRACKING_ENABLED: "${INVESTMENT_TRACKING_ENABLED:-true}"
   SIMPLEFIN_ENABLED: "${SIMPLEFIN_ENABLED:-true}"
   FMP_API_KEY: "${FMP_API_KEY:-}"
-  POINTSPAL_ENABLED: "${POINTSPAL_ENABLED:-false}"
+  # pointsPal is part of core. Set POINTSPAL_ENABLED=false to decline it.
+  POINTSPAL_ENABLED: "${POINTSPAL_ENABLED:-true}"
   POINTSPAL_SYNC_INTERVAL_HOURS: "${POINTSPAL_SYNC_INTERVAL_HOURS:-24}"
 
   # Email (optional - for password reset)
