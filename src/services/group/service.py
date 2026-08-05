@@ -166,10 +166,22 @@ class GroupService:
             return False, 'Only the group creator can delete the group'
 
         try:
-            # Delete associated settlements
-            Settlement.query.filter_by(group_id=group_id).delete()
+            # No settlements to cascade: `Settlement` has no `group_id` column
+            # (src/models/group.py:153 links a payer to a receiver and nothing
+            # else), and nothing else in the codebase treats settlements as
+            # group-scoped — src/utils/helpers.py filters them by payer/receiver,
+            # and scripts/load_demo_data.py builds one with no group.
+            #
+            # There used to be a `Settlement.query.filter_by(group_id=...)` here.
+            # It raised `Entity namespace for "settlements" has no property
+            # "group_id"` on every call, before deleting anything, and the handler
+            # turned that into a 400 — so **no group could ever be deleted**, for
+            # any user, while both clients showed a Delete action for it. Found by
+            # trying to delete a group on the deployed instance.
 
-            # Update expenses to remove group reference
+            # Update expenses to remove group reference. Deliberately detach
+            # rather than delete: these are real financial records that happen to
+            # have been shared.
             Expense.query.filter_by(group_id=group_id).update({'group_id': None})
 
             # Delete the group
