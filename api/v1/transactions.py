@@ -323,6 +323,29 @@ class TransactionDetail(Resource):
                 transaction.split_method = data['split_method']
             if 'split_with' in data:
                 transaction.split_with = data['split_with']
+            if 'paid_by' in data:
+                # Who paid feeds `calculate_splits`, so this decides who owes whom.
+                transaction.paid_by = data['paid_by']
+            if 'group_id' in data:
+                # Membership-checked exactly as on create — otherwise `put` is simply
+                # a way around that check. Never had a branch here at all, so moving
+                # a transaction into or out of a group was silently dropped with a
+                # 200, and `GroupDetail.tsx:88` lists a group by `?group_id=`, so the
+                # correction never showed up where the user was looking.
+                gid = data['group_id']
+                if gid is not None:
+                    from src.models.associations import group_users
+                    from src.models.group import Group
+                    is_member = db.session.query(Group.id).join(
+                        group_users, group_users.c.group_id == Group.id
+                    ).filter(
+                        Group.id == gid,
+                        group_users.c.user_id == current_user_id,
+                    ).first()
+                    if not is_member:
+                        return _refuse({'group_id': [
+                            'Unknown group, or you are not a member of it.']})
+                transaction.group_id = gid
             if 'destination_account_id' in data:
                 # Re-checked here rather than trusted: this handler reads `data`
                 # directly instead of going through `TransactionInput`, so the
@@ -348,8 +371,16 @@ class TransactionDetail(Resource):
             # form posts one payload object to either endpoint, so every edit of a
             # split transaction silently lost them.
             from src.services.transaction.creation import (
-                TransactionPayloadInvalid, validate_split_value,
-                validated_category_splits)
+                TransactionPayloadInvalid, validate_paid_by,
+                validate_split_value, validated_category_splits)
+
+            try:
+                # After the assignments above, so the group being checked against is
+                # the one the transaction will actually be in.
+                validate_paid_by(transaction.paid_by, transaction.group_id,
+                                 current_user_id)
+            except TransactionPayloadInvalid as exc:
+                return _refuse(exc.errors)
 
             if 'split_value' in data:
                 transaction.split_value = data['split_value']
