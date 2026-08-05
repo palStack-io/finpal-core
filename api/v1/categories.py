@@ -88,91 +88,17 @@ class CategoryList(Resource):
             }, 400
 
 
-@ns.route('/<int:id>')
-@ns.param('id', 'Category ID')
-class CategoryDetail(Resource):
-    @ns.doc('get_category', security='Bearer')
-    @jwt_required()
-    def get(self, id):
-        """Get a specific category by ID"""
-        current_user_id = get_jwt_identity()
-
-        category = Category.query.filter_by(id=id, user_id=current_user_id).first()
-
-        if not category:
-            return {'success': False, 'error': 'Category not found'}, 404
-
-        result = category_schema.dump(category)
-
-        return {
-            'success': True,
-            'category': result
-        }, 200
-
-    @ns.doc('update_category', security='Bearer')
-    @ns.expect(category_model)
-    @jwt_required()
-    def put(self, id):
-        """Update a category"""
-        current_user_id = get_jwt_identity()
-
-        category = Category.query.filter_by(id=id, user_id=current_user_id).first()
-
-        if not category:
-            return {'success': False, 'error': 'Category not found'}, 404
-
-        data = request.get_json() or {}
-        if not data:
-            return {'success': False, 'error': 'Request body required'}, 400
-
-        try:
-            if 'name' in data:
-                category.name = data['name']
-            if 'icon' in data:
-                category.icon = data['icon']
-            if 'parent_id' in data:
-                category.parent_id = data['parent_id']
-
-            db.session.commit()
-
-            result = category_schema.dump(category)
-
-            return {
-                'success': True,
-                'category': result,
-                'message': 'Category updated successfully'
-            }, 200
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': 'Internal server error'
-            }, 400
-
-    @ns.doc('delete_category', security='Bearer')
-    @jwt_required()
-    def delete(self, id):
-        """Delete a category"""
-        current_user_id = get_jwt_identity()
-
-        category = Category.query.filter_by(id=id, user_id=current_user_id).first()
-
-        if not category:
-            return {'success': False, 'error': 'Category not found'}, 404
-
-        try:
-            db.session.delete(category)
-            db.session.commit()
-
-            return {
-                'success': True,
-                'message': 'Category deleted successfully'
-            }, 200
-
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': 'Internal server error'
-            }, 400
+# CategoryDetail used to live here and has been retired. It was dead code: the
+# legacy `category_api` blueprint registers first and its
+# `/api/v1/categories/<int:category_id>` matches exactly the same requests as
+# `<int:id>` did, since the converter variable name plays no part in matching. So
+# GET, PUT and DELETE here never ran, under either spelling.
+#
+# Unlike the categories *collection* above, the detail route carried no scope
+# disagreement to resolve: this handler filtered `user_id=current_user_id` and the
+# blueprint's checks `category.user_id != identity`, so both are per-user and only
+# the status code for someone else's category differed (404 here, 403 there). That
+# is why this half could be settled now while the collection stays deferred —
+# see _KNOWN_DUPLICATE_ROUTES in src/__init__.py and AUDIT.md D-20.
+#
+# The blueprint also serves PATCH, which this never did.

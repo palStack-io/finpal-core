@@ -497,7 +497,7 @@ class AuthService:
                     <p>Happy tracking!</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2026 finPal. All rights reserved.</p>
+                    <p>&copy; 2026 finPal</p>
                 </div>
             </div>
         </body>

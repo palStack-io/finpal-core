@@ -124,20 +124,66 @@ def test_startup_rejects_a_new_duplicate_route(app):
     probe.add_url_rule('/api/v1/thing', endpoint='first', view_func=lambda: '')
     probe.add_url_rule('/api/v1/thing', endpoint='second', view_func=lambda: '')
 
-    with pytest.raises(RuntimeError, match='Duplicate URL rules'):
+    with pytest.raises(RuntimeError, match='Duplicate URL routes'):
         _assert_no_new_duplicate_routes(probe)
 
 
-def test_known_duplicates_are_tolerated_but_recorded(app):
-    """The remaining duplicates must not break the boot — they are load-bearing.
+def test_startup_rejects_a_duplicate_that_differs_only_by_trailing_slash(app):
+    """The gap that let the shadowing survive four audits.
 
-    Categories, groups and transaction-rules each still have a legacy blueprint
-    rule shadowing a restx one, and a client depends on the winner.
+    `url_map.strict_slashes = False` makes a slash-less rule match the slashed
+    request too, so these two rules are one route. The guard compared rule strings
+    without normalising the slash, so it reported success while web-ui and mobile
+    were being served different implementations of groups and of transaction
+    creation.
     """
-    from src import _KNOWN_DUPLICATE_RULES, _assert_no_new_duplicate_routes
+    from flask import Flask
 
-    assert '/api/v1/categories' in _KNOWN_DUPLICATE_RULES
-    assert '/api/v1/groups' in _KNOWN_DUPLICATE_RULES
+    from src import _assert_no_new_duplicate_routes
+
+    probe = Flask('probe')
+    probe.url_map.strict_slashes = False
+    probe.add_url_rule('/api/v1/thing', endpoint='bare', view_func=lambda: '')
+    probe.add_url_rule('/api/v1/thing/', endpoint='slashed', view_func=lambda: '')
+
+    with pytest.raises(RuntimeError, match='Duplicate URL routes'):
+        _assert_no_new_duplicate_routes(probe)
+
+
+def test_differing_methods_on_one_path_are_not_a_duplicate(app):
+    """Two handlers on one path under different verbs are two routes.
+
+    The legacy blueprint claims `POST /groups/<id>/members` and restx claims
+    `GET`. Keying only on the path called that a duplicate and cost the allowlist
+    an entry that hid a real one.
+    """
+    from flask import Flask
+
+    from src import _assert_no_new_duplicate_routes
+
+    probe = Flask('probe')
+    probe.add_url_rule('/api/v1/thing', endpoint='reader',
+                       view_func=lambda: '', methods=['GET'])
+    probe.add_url_rule('/api/v1/thing', endpoint='writer',
+                       view_func=lambda: '', methods=['POST'])
+
+    _assert_no_new_duplicate_routes(probe)
+
+
+def test_the_one_remaining_duplicate_is_the_deferred_categories_collection(app):
+    """Everything else has been resolved; this one is a deferred decision.
+
+    `category_api.get_categories` filters to the caller and
+    `api.categories_category_list` returns the whole household, so choosing a
+    winner decides whether a category belongs to a person or a household — the
+    question the owner deferred to the money-model revamp (AUDIT D-18/D-20).
+    """
+    from src import _KNOWN_DUPLICATE_ROUTES, _assert_no_new_duplicate_routes
+
+    assert _KNOWN_DUPLICATE_ROUTES == {
+        ('/api/v1/categories', 'GET'),
+        ('/api/v1/categories', 'POST'),
+    }, _KNOWN_DUPLICATE_ROUTES
     # The real app boots, which means every actual duplicate is accounted for.
     _assert_no_new_duplicate_routes(app)
 
@@ -153,15 +199,22 @@ def test_transactions_is_no_longer_a_duplicate_rule(app):
 
     The legacy GET is retired, so only the restx rule serves lists. If a list
     handler is ever added back to the blueprint this fails, and
-    `_KNOWN_DUPLICATE_RULES` should not simply be widened again to accommodate it.
+    `_KNOWN_DUPLICATE_ROUTES` should not simply be widened again to accommodate it.
+
+    The POST has since gone the same way, which left the blueprint with no rules
+    at all — it is no longer registered. So both verbs are asserted here.
     """
-    from src import _KNOWN_DUPLICATE_RULES
+    from src import _KNOWN_DUPLICATE_ROUTES
 
-    assert '/api/v1/transactions' not in _KNOWN_DUPLICATE_RULES
+    assert ('/api/v1/transactions', 'GET') not in _KNOWN_DUPLICATE_ROUTES
+    assert ('/api/v1/transactions', 'POST') not in _KNOWN_DUPLICATE_ROUTES
 
-    list_endpoints = {
-        rule.endpoint
-        for rule in app.url_map.iter_rules()
-        if rule.rule.rstrip('/') == '/api/v1/transactions' and 'GET' in rule.methods
-    }
-    assert list_endpoints == {'api.transactions_transaction_list'}, list_endpoints
+    for method in ('GET', 'POST'):
+        endpoints = {
+            rule.endpoint
+            for rule in app.url_map.iter_rules()
+            if rule.rule.rstrip('/') == '/api/v1/transactions'
+            and method in rule.methods
+        }
+        assert endpoints == {'api.transactions_transaction_list'}, (
+            '%s /api/v1/transactions is served by %s' % (method, endpoints))

@@ -210,9 +210,9 @@ def create_app(config_name=None):
     from src.services.auth import api_bp as auth_api_bp
     app.register_blueprint(auth_api_bp)
 
-    # Transaction API
-    from src.services.transaction import api_bp as transaction_api_bp
-    app.register_blueprint(transaction_api_bp)
+    # No Transaction API blueprint: every route it carried shadowed
+    # api/v1/transactions.py, and all of them are now retired. See
+    # src/services/transaction/__init__.py.
 
     # Group API
     from src.services.group import api_bp as group_api_bp
@@ -303,76 +303,101 @@ def _seed_reference_data(app):
         app.logger.exception('Failed to seed default currencies')
 
 
-# Paths where two blueprints legitimately claim the same rule today. Werkzeug
-# resolves duplicates to the first registered, so for each of these the older
-# blueprint wins and the flask-restx handler is dead code.
+# Routes where two handlers still claim the same request today. Werkzeug resolves
+# duplicates to the first registered, so for each of these the older blueprint
+# wins and the flask-restx handler is dead code.
 #
 # These are NOT approved — they are recorded so that no *new* ones can appear
-# unnoticed. The transactions entry has now been removed from this set, because
-# the duplicate is gone: the legacy GET list handler is retired, so the restx
-# rule serves both `/api/v1/transactions` and `/api/v1/transactions/` (this app
-# sets `url_map.strict_slashes = False`). That was the case this comment used to
-# describe — two clients on two implementations of one resource, which is how
-# S-06 came to be fixed for mobile and left broken for the web. The rest still
-# stand and still need client changes; tracked in ROADMAP.md.
-_KNOWN_DUPLICATE_RULES = {
-    # Compared by URL *shape* (converter parameter names stripped) — see _shape.
-    '/api/v1/categories',
-    '/api/v1/categories/<int>',
-    '/api/v1/groups',
-    '/api/v1/groups/<int>',
-    '/api/v1/groups/<int>/balances',
-    '/api/v1/groups/<int>/members',
-    '/api/v1/transaction-rules',
-    '/api/v1/transaction-rules/<int>',
-    '/api/v1/transaction-rules/test',
+# unnoticed. Keyed by (shape, method); see _route_shape.
+#
+# Everything this set used to list has been resolved. What is left is one
+# deliberate deferral:
+_KNOWN_DUPLICATE_ROUTES = {
+    # The categories *collection* only. `category_api.get_categories` filters to
+    # the calling user; `api.categories_category_list` returns every category in
+    # the household. web-ui reaches the first and mobile the second, so the two
+    # clients genuinely see different rows — but picking a side decides whether a
+    # category belongs to a person or to a household, which is the question the
+    # owner deferred on 2026-08-05 ("redo it, don't patch it") and which AUDIT.md
+    # tracks as D-20 feeding the D-18 revamp. Converging it here would settle
+    # that by accident.
+    ('/api/v1/categories', 'GET'),
+    ('/api/v1/categories', 'POST'),
 }
 
 
-def _assert_no_new_duplicate_routes(app):
-    """Fail fast if two handlers claim the same URL rule.
+def _route_shape(rule):
+    """The rule reduced to what actually decides whether it matches a request.
 
-    A duplicate rule means one handler is silently unreachable. That is not
-    hypothetical here: the S-07, S-08 and S-13 security fixes were written on
-    handlers that had been shadowed this way, so they were committed, reviewed and
-    never executed. Startup is the only place this is cheap to notice.
+    Two normalisations, and both of them were learned from a duplicate this guard
+    failed to catch:
+
+    * Converter parameter **names** are stripped. `/x/<int:id>` and
+      `/x/<int:transaction_id>` are different strings but match the same URLs, so
+      one of them is dead. The flask-restx transaction detail handler was
+      shadowed this way for months while this guard said nothing.
+    * The **trailing slash** is stripped. This app sets
+      `url_map.strict_slashes = False`, which makes a rule written without a
+      trailing slash also match the slashed request, and vice versa — so
+      `/api/v1/groups` and `/api/v1/groups/` are one route wearing two spellings.
+      Comparing them as distinct strings is why the guard stayed silent while
+      web-ui (slash-less, legacy blueprint) and mobile (slashed, restx) were
+      served different implementations of groups, categories and transaction
+      creation. Of the 18 collisions that state contained, only two were
+      byte-identical rule strings.
     """
     import re
+    shape = re.sub(r'<([^:<>]+):[^<>]+>', r'<\1>',
+                   re.sub(r'<(?![^:<>]+:)([^<>]+)>', r'<string>', str(rule.rule)))
+    return shape.rstrip('/') or '/'
+
+
+def duplicate_routes(app):
+    """{(shape, method): {endpoint, ...}} for every route with >1 handler.
+
+    Methods are part of the key because they are part of matching: the legacy
+    blueprint claims `POST /groups/<id>/members` and restx claims `GET` on the
+    same path, which is two routes rather than a collision. Ignoring methods
+    reported that as a duplicate and cost the set an allowlist entry.
+    """
     from collections import defaultdict
-
-    def _shape(rule):
-        """Rule with converter parameter NAMES stripped.
-
-        `/x/<int:id>` and `/x/<int:transaction_id>` are different strings but the
-        same URL shape, so both match the same requests and one of them is dead.
-        Comparing raw strings missed exactly that: the flask-restx transaction
-        detail handler was shadowed by the legacy blueprint for months, and this
-        guard — written to catch shadowing — said nothing.
-        """
-        return re.sub(r'<([^:<>]+):[^<>]+>', r'<\1>',
-                      re.sub(r'<(?![^:<>]+:)([^<>]+)>', r'<string>', str(rule.rule)))
-
-    by_rule = defaultdict(set)
+    by_route = defaultdict(set)
     for rule in app.url_map.iter_rules():
-        by_rule[_shape(rule)].add(rule.endpoint)
+        shape = _route_shape(rule)
+        for method in rule.methods - {'HEAD', 'OPTIONS'}:
+            by_route[(shape, method)].add(rule.endpoint)
+    return {k: v for k, v in by_route.items() if len(v) > 1}
 
-    duplicates = {r: eps for r, eps in by_rule.items() if len(eps) > 1}
-    unexpected = {r: eps for r, eps in duplicates.items()
-                  if r not in _KNOWN_DUPLICATE_RULES}
+
+def _assert_no_new_duplicate_routes(app):
+    """Fail fast if two handlers claim the same request.
+
+    A duplicate means one handler is silently unreachable, or — worse, because it
+    is invisible — that which handler runs depends on whether the client typed a
+    trailing slash. Neither is hypothetical here: the S-07, S-08 and S-13 security
+    fixes were written on handlers that had been shadowed this way, so they were
+    committed, reviewed and never executed. Startup is the only place this is
+    cheap to notice.
+    """
+    duplicates = duplicate_routes(app)
+    unexpected = {k: eps for k, eps in duplicates.items()
+                  if k not in _KNOWN_DUPLICATE_ROUTES}
 
     if unexpected:
-        detail = '; '.join(f'{r} -> {sorted(eps)}' for r, eps in sorted(unexpected.items()))
+        detail = '; '.join(f'{m} {p} -> {sorted(eps)}'
+                           for (p, m), eps in sorted(unexpected.items()))
         raise RuntimeError(
-            'Duplicate URL rules detected, so one handler per rule is '
-            f'unreachable: {detail}. Either remove the duplicate or, if it is '
-            'deliberate, add the path to _KNOWN_DUPLICATE_RULES with a reason.')
+            'Duplicate URL routes detected, so for each of these one handler is '
+            f'unreachable or is chosen by the trailing slash: {detail}. Either '
+            'remove the duplicate or, if it is deliberate, add (path, method) to '
+            '_KNOWN_DUPLICATE_ROUTES with a reason.')
 
-    stale = _KNOWN_DUPLICATE_RULES - set(duplicates)
+    stale = _KNOWN_DUPLICATE_ROUTES - set(duplicates)
     if stale:
         # Not fatal: a cleaned-up duplicate is good news, the list is just behind.
         app.logger.info(
-            'These rules are no longer duplicated and can be dropped from '
-            f'_KNOWN_DUPLICATE_RULES: {sorted(stale)}')
+            'These routes are no longer duplicated and can be dropped from '
+            f'_KNOWN_DUPLICATE_ROUTES: {sorted(stale)}')
 
 
 def setup_scheduled_tasks(app):

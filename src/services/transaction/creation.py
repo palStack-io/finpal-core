@@ -48,6 +48,32 @@ def build_transaction(payload, user_id):
     if errors:
         raise TransactionPayloadInvalid(errors)
 
+    # `group_id` goes straight to a foreign key, so it has to be checked here
+    # rather than trusted. Without this, any caller could file a transaction into
+    # any group by guessing an integer, and the row would then appear in that
+    # group's list and in `calculate_group_balances` for its real members.
+    #
+    # This is checked at build time, not at the API edge, for the same reason the
+    # rest of the validation lives here: `@guarded_write` records a GATED proposal
+    # before the handler runs, so a check at the edge would not see an approved
+    # proposal's payload.
+    group_id = validated.get('group_id')
+    if group_id is not None:
+        from src.models.associations import group_users
+        from src.models.group import Group
+        is_member = db.session.query(Group.id).join(
+            group_users, group_users.c.group_id == Group.id
+        ).filter(
+            Group.id == group_id,
+            group_users.c.user_id == user_id,
+        ).first()
+        if not is_member:
+            # Deliberately the same answer whether the group is absent or simply
+            # not the caller's — otherwise this distinguishes real group ids from
+            # unused ones for an outsider.
+            raise TransactionPayloadInvalid(
+                {'group_id': ['Unknown group, or you are not a member of it.']})
+
     # The rule engine may set category_id and account_id and append to notes.
     transaction_data = {
         'description': payload.get('description', ''),
@@ -76,6 +102,7 @@ def build_transaction(payload, user_id):
         split_method=payload.get('split_method', 'equal'),
         split_with=payload.get('split_with', ''),
         paid_by=payload.get('paid_by', user_id),
+        group_id=group_id,  # the membership-checked value from above
         user_id=user_id,
     )
 
