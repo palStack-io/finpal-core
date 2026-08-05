@@ -32,6 +32,21 @@ def apply_transaction_rules(transaction_data, user_id):
     # Track which rules matched for logging
     matched_rules = []
 
+    # Fields where the highest-priority match wins and later matches must not
+    # overwrite it. Everything else — tags, notes — keeps accumulating, which is the
+    # rest of what the comment below describes.
+    #
+    # Enforced here rather than inside `TransactionRule.apply`, and that placement is
+    # the point. `apply` is shared by three callers with different needs:
+    # `bulk_apply_rules` deliberately re-categorises *existing* transactions and
+    # passes their current `category_id` in, and `TestRule` previews a rule against a
+    # client-supplied sample. A "don't overwrite a value already set" guard inside
+    # `apply` would silently reduce bulk-apply to "only categorise the uncategorised"
+    # and make the preview claim the rule does nothing. Precedence is a property of
+    # *this* priority-ordered loop, so it belongs in the loop.
+    precedence_fields = ('category_id', 'account_id')
+    claimed = {}
+
     # Apply each rule
     for rule in rules:
         if rule.matches(transaction_data):
@@ -41,10 +56,21 @@ def apply_transaction_rules(transaction_data, user_id):
             # Apply the rule's actions
             transaction_data = rule.apply(transaction_data)
 
-            # Stop after first match if desired (can make this configurable)
-            # For now, we'll apply all matching rules in priority order
-            # The highest priority rule will set the category first,
-            # but lower priority rules can still add tags, notes, etc.
+            # Rules arrive in descending priority, so the first to set one of these
+            # claims it and a later, lower-priority write is put back. Without this
+            # the **lowest** priority match won, inverting the feature: a specific
+            # high-priority rule written to override a general one lost to it. The
+            # intent was already recorded in the comment below; only the code
+            # disagreed with it.
+            for field in precedence_fields:
+                if field in claimed:
+                    transaction_data[field] = claimed[field]
+                elif transaction_data.get(field):
+                    claimed[field] = transaction_data[field]
+
+            # All matching rules are applied, in priority order, rather than stopping
+            # at the first. The highest priority rule sets the category (above), and
+            # lower priority rules can still add tags, notes, etc.
 
     if matched_rules:
         logger.info(f"Matched rules: {', '.join(matched_rules)}")
