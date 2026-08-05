@@ -2,7 +2,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from src.models.transaction import Expense
+from src.models.transaction import CategorySplit, Expense
 from src.extensions import db
 from src.services.transaction import balances
 from schemas import transaction_schema, transactions_schema
@@ -13,6 +13,19 @@ from sqlalchemy import or_, and_
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _refuse(details):
+    """Reject an update, rolling back first.
+
+    `TransactionDetail.put` assigns the incoming fields onto the ORM object before
+    it can validate them — the checks depend on the row's post-update state. So a
+    plain `return` would leave those mutations pending in the session, to be
+    committed by whatever ran next. Every validation exit goes through here.
+    """
+    db.session.rollback()
+    return {'success': False, 'error': 'Validation error',
+            'details': details}, 400
 
 
 from src.models.personal_access_token import SCOPE_READ_WRITE  # noqa: E402
@@ -320,15 +333,67 @@ class TransactionDetail(Resource):
                     owned = Account.query.filter_by(
                         id=dest, user_id=current_user_id).first()
                     if not owned:
-                        return {'success': False, 'error': 'Validation error',
-                                'details': {'destination_account_id': [
-                                    'Unknown account, or it is not yours.']}}, 400
+                        return _refuse({'destination_account_id': [
+                            'Unknown account, or it is not yours.']})
                     if dest == transaction.account_id:
-                        return {'success': False, 'error': 'Validation error',
-                                'details': {'destination_account_id': [
-                                    'Source and destination accounts cannot be '
-                                    'the same.']}}, 400
+                        return _refuse({'destination_account_id': [
+                            'Source and destination accounts cannot be '
+                            'the same.']})
                 transaction.destination_account_id = dest
+
+            # `split_value` and `category_splits` are validated with the *same*
+            # helpers the create path uses. They were wired into create in #51 and
+            # forgotten here, and because this handler reads `data` rather than
+            # `TransactionInput`, both were accepted with a 200 and discarded — the
+            # form posts one payload object to either endpoint, so every edit of a
+            # split transaction silently lost them.
+            from src.services.transaction.creation import (
+                TransactionPayloadInvalid, validate_split_value,
+                validated_category_splits)
+
+            if 'split_value' in data:
+                transaction.split_value = data['split_value']
+            try:
+                # Checked against the values the row holds *after* the assignments
+                # above, since an edit may change the method and the share together.
+                validate_split_value(transaction.split_value,
+                                     transaction.split_method,
+                                     transaction.amount)
+            except TransactionPayloadInvalid as exc:
+                return _refuse(exc.errors)
+
+            if 'category_splits' in data:
+                try:
+                    splits = validated_category_splits(
+                        data['category_splits'], transaction.amount,
+                        current_user_id)
+                except TransactionPayloadInvalid as exc:
+                    return _refuse(exc.errors)
+                # Replaced wholesale rather than merged: a partial update of split
+                # rows has no meaning, since they must always sum to the total.
+                for existing in list(transaction.category_splits):
+                    transaction.category_splits.remove(existing)
+                for category_id, amount in splits:
+                    transaction.category_splits.append(
+                        CategorySplit(category_id=category_id, amount=amount))
+                # Re-derived, exactly as on create. Left set with no rows, the
+                # expense would be skipped by budget.py:92 and attributed nowhere.
+                transaction.has_category_splits = bool(splits)
+                if splits:
+                    transaction.category_id = None
+            elif transaction.has_category_splits:
+                # The splits were not restated, so they must still add up. Changing
+                # only the amount would leave 60/40 against a new total, and
+                # budget.py attributes from those rows regardless of the mismatch.
+                try:
+                    validated_category_splits(
+                        {str(s.category_id): s.amount
+                         for s in transaction.category_splits},
+                        transaction.amount, current_user_id)
+                except TransactionPayloadInvalid:
+                    return _refuse({'category_splits': [
+                        'This transaction is split across categories, so its '
+                        'amount cannot change without restating the splits.']})
 
             # Undo what the row used to do, then apply what it does now. Reversing
             # first is what makes a moved account, a changed amount and a corrected
