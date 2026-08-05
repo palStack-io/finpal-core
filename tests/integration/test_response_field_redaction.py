@@ -76,6 +76,12 @@ TRANSACTION_KEYS = {
     'split_method', 'split_with', 'paid_by', 'user_id', 'category_id',
     'account_id', 'recurring_id', 'transaction_type', 'notes',
     'category', 'account', 'splits',
+    # Added deliberately: `group_id` is accepted on create, so omitting it from
+    # the response meant a create reported `group_id: null` for a row it had just
+    # filed into a group. Safe to expose — it is an opaque integer, not PII, and
+    # `build_transaction` now refuses a group the caller is not a member of, so a
+    # value here always names a group the reader already sees in /groups.
+    'group_id',
 }
 BUDGET_KEYS = {
     'id', 'name', 'amount', 'period', 'category_id', 'user_id', 'start_date',
