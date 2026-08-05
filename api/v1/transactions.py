@@ -310,6 +310,25 @@ class TransactionDetail(Resource):
                 transaction.split_method = data['split_method']
             if 'split_with' in data:
                 transaction.split_with = data['split_with']
+            if 'destination_account_id' in data:
+                # Re-checked here rather than trusted: this handler reads `data`
+                # directly instead of going through `TransactionInput`, so the
+                # ownership check in `build_transaction` never sees an update.
+                dest = data['destination_account_id']
+                if dest is not None:
+                    from src.models.account import Account
+                    owned = Account.query.filter_by(
+                        id=dest, user_id=current_user_id).first()
+                    if not owned:
+                        return {'success': False, 'error': 'Validation error',
+                                'details': {'destination_account_id': [
+                                    'Unknown account, or it is not yours.']}}, 400
+                    if dest == transaction.account_id:
+                        return {'success': False, 'error': 'Validation error',
+                                'details': {'destination_account_id': [
+                                    'Source and destination accounts cannot be '
+                                    'the same.']}}, 400
+                transaction.destination_account_id = dest
 
             # Undo what the row used to do, then apply what it does now. Reversing
             # first is what makes a moved account, a changed amount and a corrected

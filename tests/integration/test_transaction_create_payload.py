@@ -45,17 +45,31 @@ WEB_PAYLOAD_FIELDS = {
 # *string* holding a *list*, under a different name from the `category_splits`
 # *dict* the web form sends, and the handler never passed it through regardless.
 KNOWN_DROPPED = {
-    # Real column (src/models/transaction.py:36) and the whole point of a
-    # transfer, so a transfer currently records no destination.
-    'destination_account_id',
-    # Real column + a real `category_splits` table, and `src/models/budget.py:92`
-    # reads `has_category_splits` to attribute spending to budgets. The web form
-    # has a splits UI whose result is discarded on create.
-    'category_splits',
+    # `destination_account_id` and `split_value` used to be listed here. Both are
+    # accepted now, with the validation each needs — ownership plus
+    # source-must-differ for the destination, and a range that depends on the split
+    # method for the payer share. Covered by
+    # `tests/integration/test_transfer_destination.py` and
+    # `tests/integration/test_split_value.py`.
+    #
+    # Removing them was not optional:
+    # `test_the_fields_web_sends_are_either_honoured_or_listed_as_dropped` fails on
+    # an entry that has become accepted, which is what stops this list rotting into
+    # a permanent excuse. It fired on both.
+    #
+    # `category_splits` has since been wired too — see
+    # `tests/integration/test_category_splits.py`, which also settles the contract
+    # (the web form's `{category_id: amount}` object, not the legacy service's
+    # `category_splits_data` JSON string of a list, which no client ever sent).
+    #
+    # `has_category_splits` stays listed, and this is the one entry that is
+    # **deliberately permanent**. It is not dropped through neglect: it is *derived*
+    # from whether split rows are present, and must never be taken from the client.
+    # `budget.py:92` skips a flagged expense so its split rows can be attributed
+    # instead, so a caller who could set the flag with no rows would make the
+    # spending invisible to every budget. Pinned by
+    # `test_the_flag_is_derived_from_the_rows_not_taken_from_the_client`.
     'has_category_splits',
-    # The legacy service hardcoded `split_value=0` when building the Expense, so
-    # this has never been honoured by any create path.
-    'split_value',
 }
 
 

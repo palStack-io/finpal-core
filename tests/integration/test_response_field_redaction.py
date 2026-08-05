@@ -82,6 +82,14 @@ TRANSACTION_KEYS = {
     # `build_transaction` now refuses a group the caller is not a member of, so a
     # value here always names a group the reader already sees in /groups.
     'group_id',
+    # Added with the same reasoning: an account id the caller must already own for
+    # the write to have been accepted, so it exposes nothing new, and omitting it
+    # made a transfer's response claim the money went nowhere.
+    'destination_account_id',
+    # The payer's share of a non-equal split. Not PII, and it is the caller's own
+    # figure; `AddTransactionForm` reads it back when editing, so omitting it blanked
+    # the payer share on every edit of a percentage split.
+    'split_value',
 }
 BUDGET_KEYS = {
     'id', 'name', 'amount', 'period', 'category_id', 'user_id', 'start_date',

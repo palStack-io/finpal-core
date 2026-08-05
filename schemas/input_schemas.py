@@ -45,6 +45,28 @@ class TransactionInput(Schema):
     # in the group it was settling. Asserted against the database row in
     # tests/integration/test_route_shadowing.py.
     group_id = fields.Int(allow_none=True)
+    # Where a transfer's money goes. A real column with an `incoming_transfers`
+    # backref, and the entire point of a transfer, but it was missing here — so a
+    # transfer got a 201 and recorded no destination, which also made the transfer
+    # branch of the balance arithmetic unreachable. Ownership and
+    # source-must-differ are checked in `build_transaction`, since a raw foreign
+    # key from a client cannot be trusted by shape alone.
+    destination_account_id = fields.Int(allow_none=True)
+    # The payer's share of a non-equal split: a percentage when
+    # split_method='percentage', an absolute amount when 'custom'. The column's
+    # "deprecated" comment is wrong — `Expense.calculate_splits` reads it in both
+    # branches, falling back to 0, so dropping it did not omit a field, it
+    # mis-divided the money and attributed the payer nothing. The valid range
+    # depends on the split method, so it is checked in `build_transaction`.
+    split_value = fields.Float(allow_none=True)
+    # One transaction attributed across several categories: {category_id: amount},
+    # which is the shape `AddTransactionForm` sends. The legacy service read a
+    # different one — `category_splits_data`, a JSON *string* holding a *list* —
+    # which no client has ever sent. Amounts, ownership and the total are checked in
+    # `build_transaction`; `has_category_splits` is deliberately *not* accepted here,
+    # because it is derived from whether splits are present rather than trusted.
+    category_splits = fields.Dict(
+        keys=fields.Str(), values=fields.Float(), allow_none=True)
 
 
 class AccountInput(Schema):

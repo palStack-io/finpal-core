@@ -14,7 +14,7 @@ from datetime import datetime
 
 from schemas.input_schemas import transaction_input
 from src.extensions import db
-from src.models.transaction import Expense
+from src.models.transaction import CategorySplit, Expense
 from src.utils.validation import validate_request
 
 
@@ -33,6 +33,56 @@ def _coerce_date(value):
         # Full ISO, so time-of-day survives; date-only strings parse too.
         return datetime.fromisoformat(value)
     return datetime.utcnow()
+
+
+def _validated_category_splits(raw, total_amount, user_id):
+    """Normalise `{category_id: amount}` into a list of (category_id, amount).
+
+    Returns `[]` for absent or empty input, which is what keeps
+    `has_category_splits` false for an ordinary transaction. Raises
+    TransactionPayloadInvalid otherwise.
+    """
+    if not raw:
+        # Covers both absent and `{}`. An empty object must not produce a flagged
+        # expense with nothing to attribute — `budget.py:92` skips flagged
+        # expenses, so that would delete the spending from every budget.
+        return []
+
+    from src.models.category import Category
+
+    splits = []
+    for key, amount in raw.items():
+        try:
+            category_id = int(key)
+        except (TypeError, ValueError):
+            raise TransactionPayloadInvalid({'category_splits': [
+                'Category ids must be integers.']})
+        if amount is None or amount <= 0:
+            raise TransactionPayloadInvalid({'category_splits': [
+                'Each split amount must be greater than zero.']})
+        splits.append((category_id, float(amount)))
+
+    owned = {
+        c.id for c in Category.query.filter(
+            Category.id.in_([cid for cid, _ in splits]),
+            Category.user_id == user_id).all()
+    }
+    missing = [cid for cid, _ in splits if cid not in owned]
+    if missing:
+        # Same answer whether the category is absent or someone else's.
+        raise TransactionPayloadInvalid({'category_splits': [
+            'Unknown category, or it is not yours.']})
+
+    # The legacy service logged a warning here and stored the transaction anyway,
+    # which is how a budget silently under- or over-counts. A split that does not
+    # account for the whole amount has no correct attribution, so refuse it.
+    # The 0.01 tolerance is kept: thirds do not divide cleanly and refusing a
+    # one-cent gap would make three-way splits impossible.
+    if abs(sum(amount for _, amount in splits) - total_amount) > 0.01:
+        raise TransactionPayloadInvalid({'category_splits': [
+            'The split amounts must add up to the transaction amount.']})
+
+    return splits
 
 
 def build_transaction(payload, user_id):
@@ -74,6 +124,68 @@ def build_transaction(payload, user_id):
             raise TransactionPayloadInvalid(
                 {'group_id': ['Unknown group, or you are not a member of it.']})
 
+    # `destination_account_id` is the other raw foreign key a client supplies, and
+    # crediting an account is if anything more sensitive than debiting one.
+    destination_account_id = validated.get('destination_account_id')
+    if destination_account_id is not None:
+        from src.models.account import Account
+
+        transaction_type = payload.get('transaction_type', 'expense')
+        if transaction_type != 'transfer':
+            # Refused rather than ignored. The balance arithmetic only reads this
+            # for transfers, so storing it on an expense would record a movement
+            # that never happens — and silently dropping documented fields is the
+            # defect this whole series has been unpicking. The web form only sends
+            # it when the type is `transfer`, so nothing legitimate breaks.
+            raise TransactionPayloadInvalid({'destination_account_id': [
+                'Only a transfer can have a destination account.']})
+
+        owned = Account.query.filter_by(
+            id=destination_account_id, user_id=user_id).first()
+        if not owned:
+            # Same answer whether the account is absent or someone else's, so this
+            # cannot be used to probe which account ids exist.
+            raise TransactionPayloadInvalid({'destination_account_id': [
+                'Unknown account, or it is not yours.']})
+
+        if destination_account_id == validated.get('account_id'):
+            # Carried over from the legacy service. A self-transfer nets to zero in
+            # the arithmetic, so it would be accepted and change nothing, leaving a
+            # row that claims a movement which never happened.
+            raise TransactionPayloadInvalid({'destination_account_id': [
+                'Source and destination accounts cannot be the same.']})
+
+    # `split_value` means different things per split method, so its range cannot be
+    # expressed in the schema.
+    split_value = validated.get('split_value')
+    if split_value is not None:
+        split_method = payload.get('split_method', 'equal')
+        amount = validated.get('amount') or 0
+        if split_method == 'equal':
+            # `calculate_splits` never reads it for an equal split, so accepting it
+            # would store a number that changes nothing — which is the same kind of
+            # lie as dropping it silently. The web form agrees: it only sends the
+            # field when the method is not `equal`.
+            raise TransactionPayloadInvalid({'split_value': [
+                'An equal split has no payer share to set.']})
+        if split_value < 0:
+            raise TransactionPayloadInvalid({'split_value': [
+                'The payer share cannot be negative.']})
+        if split_method == 'percentage' and split_value > 100:
+            # Above 100 the remainder goes negative and an *expense* starts
+            # crediting the other participants.
+            raise TransactionPayloadInvalid({'split_value': [
+                'A percentage share cannot exceed 100.']})
+        if split_method == 'custom' and split_value > amount:
+            raise TransactionPayloadInvalid({'split_value': [
+                "The payer's amount cannot exceed the transaction total."]})
+
+    # Category splits. Validated here rather than in the schema because the checks
+    # are cross-field: the amounts have to sum to the transaction total, and each
+    # category id is a raw foreign key from the client.
+    category_splits = _validated_category_splits(
+        validated.get('category_splits'), validated.get('amount') or 0, user_id)
+
     # The rule engine may set category_id and account_id and append to notes.
     transaction_data = {
         'description': payload.get('description', ''),
@@ -84,17 +196,24 @@ def build_transaction(payload, user_id):
         'notes': payload.get('notes', ''),
         'tags': payload.get('tags', []),
     }
-    if not transaction_data.get('category_id'):
+    if not transaction_data.get('category_id') and not category_splits:
+        # Skipped when the transaction is split: the rule engine would assign a
+        # single category, and a split expense must have none of its own or the
+        # amount is attributed twice.
         from src.utils.rule_engine import apply_transaction_rules
         transaction_data = apply_transaction_rules(transaction_data, user_id)
 
-    return Expense(
+    expense = Expense(
         description=payload.get('description'),
         amount=payload.get('amount'),
         date=_coerce_date(payload.get('date')),
         currency_code=payload.get('currency_code', 'USD'),
         card_used=payload.get('card_used', 'Cash'),
-        category_id=transaction_data.get('category_id'),
+        # Cleared when the transaction is split across categories, which is the
+        # other half of not double-counting: `budget.py:92` skips a flagged expense
+        # and attributes its split rows instead, so an own-category as well would
+        # be counted twice. The legacy service did this too.
+        category_id=None if category_splits else transaction_data.get('category_id'),
         account_id=transaction_data.get('account_id', payload.get('account_id')),
         transaction_type=transaction_data.get(
             'transaction_type', payload.get('transaction_type', 'expense')),
@@ -103,8 +222,26 @@ def build_transaction(payload, user_id):
         split_with=payload.get('split_with', ''),
         paid_by=payload.get('paid_by', user_id),
         group_id=group_id,  # the membership-checked value from above
+        destination_account_id=destination_account_id,  # ownership-checked above
+        split_value=split_value,  # range-checked against the split method above
+        # Derived, never taken from the client. A caller who could set this flag
+        # with no split rows would make the expense invisible to every budget:
+        # `budget.py:92` skips flagged expenses and then finds nothing to attribute.
+        has_category_splits=bool(category_splits),
         user_id=user_id,
     )
+
+    # Appended to the relationship rather than constructed with an `expense_id`,
+    # because `build_transaction` deliberately returns an *unsaved* row and has no id
+    # to give them. SQLAlchemy fills it in when the caller flushes, and the backref's
+    # `cascade='all, delete-orphan'` then removes them with the transaction — which
+    # matters, since `budget.py` joins split rows on `expense_id` and would keep
+    # counting orphans.
+    for category_id, amount in category_splits:
+        expense.category_splits.append(
+            CategorySplit(category_id=category_id, amount=amount))
+
+    return expense
 
 
 def create_transaction(payload, user_id):
