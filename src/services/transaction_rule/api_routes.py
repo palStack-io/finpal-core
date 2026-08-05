@@ -9,6 +9,16 @@ from src.models.transaction_rule import TransactionRule
 from src.extensions import db
 import json
 
+# Werkzeug raises HTTPException from inside handler bodies — BadRequest from a bare
+# `request.get_json()` on a malformed body being the common case. Each route-level
+# `except Exception` that answers with a 500 is preceded by `except HTTPException:
+# raise`, so a correct 4xx is not rewritten as a server fault. Without it
+# `POST /api/v1/auth/login` answered a malformed body with a 500.
+from werkzeug.exceptions import HTTPException  # noqa: E402
+import logging  # noqa: E402
+
+logger = logging.getLogger(__name__)
+
 # Create API Blueprint
 api_bp = Blueprint('transaction_rule_api', __name__, url_prefix='/api/v1/transaction-rules')
 
@@ -32,8 +42,11 @@ def get_rules():
             'rules': [rule.to_dict() for rule in rules]
         }), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:rule_id>', methods=['GET'])
@@ -50,8 +63,11 @@ def get_rule(rule_id):
 
         return jsonify(rule.to_dict()), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('', methods=['POST'])
@@ -97,9 +113,12 @@ def create_rule():
             'rule': rule.to_dict()
         }), 201
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:rule_id>', methods=['PUT', 'PATCH'])
@@ -151,9 +170,12 @@ def update_rule(rule_id):
             'rule': rule.to_dict()
         }), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:rule_id>', methods=['DELETE'])
@@ -173,9 +195,12 @@ def delete_rule(rule_id):
 
         return jsonify({'message': 'Rule deleted successfully'}), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/test', methods=['POST'])
@@ -215,5 +240,8 @@ def test_rule():
 
         return jsonify(result), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500

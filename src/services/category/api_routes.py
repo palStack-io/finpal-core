@@ -8,6 +8,16 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.services.category.service import CategoryService
 from src.extensions import db
 
+# Werkzeug raises HTTPException from inside handler bodies — BadRequest from a bare
+# `request.get_json()` on a malformed body being the common case. Each route-level
+# `except Exception` that answers with a 500 is preceded by `except HTTPException:
+# raise`, so a correct 4xx is not rewritten as a server fault. Without it
+# `POST /api/v1/auth/login` answered a malformed body with a 500.
+from werkzeug.exceptions import HTTPException  # noqa: E402
+import logging  # noqa: E402
+
+logger = logging.getLogger(__name__)
+
 # Create API Blueprint
 api_bp = Blueprint('category_api', __name__, url_prefix='/api/v1/categories')
 
@@ -40,8 +50,11 @@ def get_categories():
 
         return jsonify({'categories': categories_data}), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:category_id>', methods=['GET'])
@@ -70,8 +83,11 @@ def get_category(category_id):
 
         return jsonify(category_data), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('', methods=['POST'])
@@ -102,9 +118,12 @@ def create_category():
         else:
             return jsonify({'error': message}), 400
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:category_id>', methods=['PUT', 'PATCH'])
@@ -131,9 +150,12 @@ def update_category(category_id):
         else:
             return jsonify({'error': message}), 400
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:category_id>', methods=['DELETE'])
@@ -150,6 +172,9 @@ def delete_category(category_id):
         else:
             return jsonify({'error': message}), 400
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500

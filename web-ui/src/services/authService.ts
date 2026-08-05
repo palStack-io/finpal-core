@@ -48,13 +48,11 @@ export const authService = {
     }
   },
 
-  /**
-   * Get current user profile
-   */
-  async getCurrentUser(): Promise<User> {
-    const response = await api.get<User>(API_CONFIG.endpoints.auth.profile);
-    return response.data;
-  },
+  // `getCurrentUser` used to live here. It requested
+  // `API_CONFIG.endpoints.auth.profile` — /api/v1/auth/profile — which no blueprint
+  // has ever served, so it would have 404'd; nothing called it. The real route is
+  // /api/v1/auth/me. Removed rather than repointed, because no caller needs it:
+  // `authStore` already holds the user from the login response.
 
   /**
    * Complete user onboarding
