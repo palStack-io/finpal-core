@@ -32,6 +32,13 @@ class TransactionSchema(Schema):
     # could not tell a grouped transaction from an ungrouped one. Verified against
     # the deployed instance before adding it.
     group_id = fields.Int(allow_none=True)
+    # Same reason as group_id: omitting it made a transfer's response claim the
+    # money went nowhere, when the row records exactly where it went.
+    destination_account_id = fields.Int(allow_none=True)
+    # The payer's share of a non-equal split. `AddTransactionForm` reads it back
+    # into the edit form (`transaction?.split_value?.toString()`), so omitting it
+    # made editing a percentage split silently blank the payer's share.
+    split_value = fields.Float(allow_none=True)
     transaction_type = fields.Str(allow_none=True)
     notes = fields.Str(allow_none=True)
     created_at = fields.DateTime(dump_only=True)

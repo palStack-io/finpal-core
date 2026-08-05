@@ -162,22 +162,26 @@ def test_changing_an_expense_to_income_flips_the_sign(client, db, auth_headers):
 
 
 def test_a_transfer_without_a_destination_moves_nothing(client, db, auth_headers):
-    """Deliberately pinned as a no-op, and it must stay one until
-    `destination_account_id` is actually accepted.
+    """The `and destination_account_id` guard, still load-bearing.
 
-    `destination_account_id` is dropped at the schema layer (`TransactionInput`
-    has no such field and `validate_request` uses `unknown=EXCLUDE`), so a
-    transfer currently records no destination. Debiting the source anyway would
-    make the money vanish, which is strictly worse than doing nothing — so the
-    guard is `transaction_type == 'transfer' and destination_account_id`.
+    Originally this asserted the no-op for *every* transfer, because
+    `destination_account_id` was dropped at the schema layer so none could record
+    one. It is accepted now (see `test_transfer_destination.py`), so the case
+    tested here is the narrower and permanent one: a transfer sent with **no
+    destination at all**. The field is nullable and nothing forces a client to
+    supply it, so the guard has to hold.
+
+    Debiting the source with nowhere to credit would delete the money from the
+    books, which is worse than doing nothing.
     """
     user = UserFactory()
     first, second = _accounts(user)
 
-    _create(client, user, auth_headers, description='Move it', amount=200.0,
-            transaction_type='transfer', account_id=first.id,
-            destination_account_id=second.id)
+    resp = _create(client, user, auth_headers, description='Nowhere to go',
+                   amount=200.0, transaction_type='transfer',
+                   account_id=first.id)
 
+    assert resp.status_code == 201, resp.get_data(as_text=True)[:200]
     assert _balance(first.id) == 1000.0, (
         'the source was debited for a transfer with no recorded destination, so '
         '200.00 left the books entirely')

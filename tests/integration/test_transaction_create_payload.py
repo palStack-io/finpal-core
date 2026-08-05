@@ -45,17 +45,24 @@ WEB_PAYLOAD_FIELDS = {
 # *string* holding a *list*, under a different name from the `category_splits`
 # *dict* the web form sends, and the handler never passed it through regardless.
 KNOWN_DROPPED = {
-    # Real column (src/models/transaction.py:36) and the whole point of a
-    # transfer, so a transfer currently records no destination.
-    'destination_account_id',
+    # `destination_account_id` and `split_value` used to be listed here. Both are
+    # accepted now, with the validation each needs — ownership plus
+    # source-must-differ for the destination, and a range that depends on the split
+    # method for the payer share. Covered by
+    # `tests/integration/test_transfer_destination.py` and
+    # `tests/integration/test_split_value.py`.
+    #
+    # Removing them was not optional:
+    # `test_the_fields_web_sends_are_either_honoured_or_listed_as_dropped` fails on
+    # an entry that has become accepted, which is what stops this list rotting into
+    # a permanent excuse. It fired on both.
+    #
     # Real column + a real `category_splits` table, and `src/models/budget.py:92`
-    # reads `has_category_splits` to attribute spending to budgets. The web form
-    # has a splits UI whose result is discarded on create.
+    # reads `has_category_splits` to skip the expense's own category so the split
+    # rows can be attributed instead. The web form has a splits UI whose result is
+    # discarded on create.
     'category_splits',
     'has_category_splits',
-    # The legacy service hardcoded `split_value=0` when building the Expense, so
-    # this has never been honoured by any create path.
-    'split_value',
 }
 
 
