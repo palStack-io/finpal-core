@@ -51,5 +51,3 @@ yfinance==1.5.2
 
 # pointsPal fuzzy matching
 rapidfuzz>=3.6.0
-
-# 29a41de6a866d56c36aba5159f45257c
