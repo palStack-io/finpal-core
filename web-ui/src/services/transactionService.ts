@@ -64,8 +64,16 @@ export interface TransactionFilters {
   search?: string;
 }
 
+export interface TransactionSummary {
+  total_income: number;
+  total_expense: number;
+  net_balance: number;
+}
+
 export interface PaginatedTransactions {
   transactions: Transaction[];
+  /** Totals over the whole filtered query, not just the returned page. */
+  summary: TransactionSummary;
   pagination: {
     page: number;
     per_page: number;
@@ -96,14 +104,20 @@ export const transactionService = {
     if (filters?.type) params.append('type', filters.type);
     if (filters?.search) params.append('search', filters.search);
 
+    // Trailing slash: the paginating, filtering handler. Without it this hit a
+    // legacy handler that read none of the parameters built above and returned
+    // no `pagination` — so `per_page` was a lie and every caller got the whole
+    // history.
     const response = await api.get<{
       success: boolean;
       transactions: Transaction[];
+      summary: TransactionSummary;
       pagination: PaginatedTransactions['pagination'];
-    }>(`/api/v1/transactions?${params.toString()}`);
+    }>(`/api/v1/transactions/?${params.toString()}`);
 
     return {
       transactions: response.data.transactions,
+      summary: response.data.summary,
       pagination: response.data.pagination,
     };
   },
@@ -163,63 +177,6 @@ export const transactionService = {
     return response.data.transactions;
   },
 
-  /**
-   * Bulk create or update transactions
-   */
-  async bulkCreateTransactions(
-    transactions: CreateTransactionData[]
-  ): Promise<Transaction[]> {
-    const response = await api.post<{
-      success: boolean;
-      transactions: Transaction[];
-      message: string;
-    }>('/api/v1/transactions/bulk', { transactions });
-    return response.data.transactions;
-  },
-
-  /**
-   * Export transactions
-   */
-  async exportTransactions(
-    filters?: TransactionFilters,
-    format: 'csv' | 'json' = 'csv'
-  ): Promise<Blob> {
-    const params = new URLSearchParams();
-    params.append('format', format);
-
-    if (filters?.start_date) params.append('start_date', filters.start_date);
-    if (filters?.end_date) params.append('end_date', filters.end_date);
-    if (filters?.category_id)
-      params.append('category_id', filters.category_id.toString());
-    if (filters?.account_id)
-      params.append('account_id', filters.account_id.toString());
-    if (filters?.type) params.append('type', filters.type);
-
-    const response = await api.get(`/api/v1/transactions/export?${params.toString()}`, {
-      responseType: 'blob',
-    });
-
-    return response.data;
-  },
-
-  /**
-   * Split a transaction
-   */
-  async splitTransaction(
-    id: number,
-    splitData: {
-      split_method: string;
-      split_with: string;
-      amounts?: number[];
-    }
-  ): Promise<Transaction> {
-    const response = await api.post<{
-      success: boolean;
-      transaction: Transaction;
-      message: string;
-    }>(`/api/v1/transactions/${id}/split`, splitData);
-    return response.data.transaction;
-  },
 };
 
 export default transactionService;

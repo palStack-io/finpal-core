@@ -129,13 +129,39 @@ def test_startup_rejects_a_new_duplicate_route(app):
 
 
 def test_known_duplicates_are_tolerated_but_recorded(app):
-    """The pre-existing duplicates must not break the boot — they are load-bearing.
+    """The remaining duplicates must not break the boot — they are load-bearing.
 
-    web-ui calls /api/v1/transactions and gets the blueprint; mobile calls
-    /api/v1/transactions/ and gets restx. Deleting either side breaks a client.
+    Categories, groups and transaction-rules each still have a legacy blueprint
+    rule shadowing a restx one, and a client depends on the winner.
     """
     from src import _KNOWN_DUPLICATE_RULES, _assert_no_new_duplicate_routes
 
-    assert '/api/v1/transactions' in _KNOWN_DUPLICATE_RULES
+    assert '/api/v1/categories' in _KNOWN_DUPLICATE_RULES
+    assert '/api/v1/groups' in _KNOWN_DUPLICATE_RULES
     # The real app boots, which means every actual duplicate is accounted for.
     _assert_no_new_duplicate_routes(app)
+
+
+def test_transactions_is_no_longer_a_duplicate_rule(app):
+    """The transactions duplicate is resolved, and must stay that way.
+
+    It used to be the worst of the set: web-ui reached the legacy blueprint,
+    which read no query parameters and returned the entire history, while mobile
+    reached the paginating restx handler on the slashed spelling. One resource,
+    two implementations, and the same split that left S-06 fixed for mobile and
+    broken for the web.
+
+    The legacy GET is retired, so only the restx rule serves lists. If a list
+    handler is ever added back to the blueprint this fails, and
+    `_KNOWN_DUPLICATE_RULES` should not simply be widened again to accommodate it.
+    """
+    from src import _KNOWN_DUPLICATE_RULES
+
+    assert '/api/v1/transactions' not in _KNOWN_DUPLICATE_RULES
+
+    list_endpoints = {
+        rule.endpoint
+        for rule in app.url_map.iter_rules()
+        if rule.rule.rstrip('/') == '/api/v1/transactions' and 'GET' in rule.methods
+    }
+    assert list_endpoints == {'api.transactions_transaction_list'}, list_endpoints

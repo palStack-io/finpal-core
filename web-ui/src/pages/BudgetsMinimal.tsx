@@ -27,6 +27,42 @@ const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)
 const mutedSmallStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '13px' };
 const secondaryBodyStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px', margin: 0 };
 
+/**
+ * The start and end of the period a budget covers, relative to a reference date.
+ *
+ * Extracted because the widest window across all budgets has to be known before
+ * fetching, and each budget's own window is needed again when filtering. Two
+ * copies of this arithmetic would drift, and the fetch would silently stop
+ * covering what the filter looks for.
+ */
+const periodWindow = (period: string, reference: Date): { start: Date; end: Date } => {
+  if (period === 'weekly') {
+    const start = new Date(reference);
+    start.setDate(reference.getDate() - reference.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+  }
+  if (period === 'yearly') {
+    return {
+      start: new Date(reference.getFullYear(), 0, 1),
+      end: new Date(reference.getFullYear(), 11, 31),
+    };
+  }
+  // monthly (default)
+  return {
+    start: new Date(reference.getFullYear(), reference.getMonth(), 1),
+    end: new Date(reference.getFullYear(), reference.getMonth() + 1, 0),
+  };
+};
+
+/** `YYYY-MM-DD` in local time — `toISOString()` shifts to UTC and can move the day. */
+const toIsoDate = (date: Date): string => {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
 const BudgetsMinimal = () => {
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');
@@ -70,38 +106,49 @@ const BudgetsMinimal = () => {
 
       // Load budget overview
       const overview = await budgetService.getBudgetOverview();
+      const budgetsList = overview?.budgets || [];
 
-      // Load all transactions to match with budgets
-      const transactionsData = await transactionsApi.getAll();
+      /**
+       * Only the window the budgets actually cover, and every page of it.
+       *
+       * This used to call `transactionsApi.getAll()` with no arguments and rely
+       * on getting the entire history in one response. That endpoint paginates
+       * now, so an unbounded call would quietly return the newest 50 rows and
+       * every budget would under-report its spending — a wrong number rendered
+       * as a right one. `getAllPages` follows `has_next` and reports whether it
+       * reached the end.
+       */
+      const windows = budgetsList.map((budget) => periodWindow(budget.period, selectedMonth));
+      const windowStart = windows.length
+        ? new Date(Math.min(...windows.map((w) => w.start.getTime())))
+        : selectedMonth;
+      const windowEnd = windows.length
+        ? new Date(Math.max(...windows.map((w) => w.end.getTime())))
+        : selectedMonth;
+
+      const { transactions: windowTransactions, complete } = budgetsList.length
+        ? await transactionsApi.getAllPages({
+            start_date: toIsoDate(windowStart),
+            end_date: toIsoDate(windowEnd),
+            type: 'expense',
+          })
+        : { transactions: [] as Transaction[], complete: true };
+
+      if (!complete) {
+        // Say so rather than show totals computed from part of the period.
+        showToast('Showing partial spending — too many transactions in this period', 'error');
+      }
 
       // Enrich budgets with category info and transactions
-      const budgetsList = overview?.budgets || [];
       const enrichedBudgets = budgetsList.map((budget) => {
         // API already returns nested category object; fall back to lookup by id
         const nestedCat = (budget as any).category as { name?: string; icon?: string; color?: string } | undefined;
         const category = nestedCat?.name ? nestedCat : categoriesData.find((c) => c.id === budget.category_id);
 
-        // Get current period dates based on budget period and selected month
-        const referenceDate = selectedMonth;
-        let startDate: Date;
-        let endDate: Date;
-
-        if (budget.period === 'weekly') {
-          startDate = new Date(referenceDate);
-          startDate.setDate(referenceDate.getDate() - referenceDate.getDay());
-          endDate = new Date(startDate);
-          endDate.setDate(startDate.getDate() + 6);
-        } else if (budget.period === 'yearly') {
-          startDate = new Date(referenceDate.getFullYear(), 0, 1);
-          endDate = new Date(referenceDate.getFullYear(), 11, 31);
-        } else {
-          // monthly (default)
-          startDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
-          endDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
-        }
+        const { start: startDate, end: endDate } = periodWindow(budget.period, selectedMonth);
 
         // Filter transactions by category and date range (expense type only)
-        const budgetTransactions = (transactionsData?.transactions || [])
+        const budgetTransactions = windowTransactions
           .filter((t) => {
             const txDate = new Date(t.date);
             return (

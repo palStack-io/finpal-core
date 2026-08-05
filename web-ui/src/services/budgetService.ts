@@ -117,30 +117,6 @@ export const budgetService = {
   },
 
   /**
-   * Get spending for a specific budget
-   */
-  async getBudgetSpending(id: number): Promise<{
-    budget: Budget;
-    spent: number;
-    remaining: number;
-    percentage: number;
-  }> {
-    const response = await api.get<{
-      success: boolean;
-      budget: Budget;
-      spent: number;
-      remaining: number;
-      percentage: number;
-    }>(`/api/v1/budgets/${id}/spending`);
-    return {
-      budget: response.data.budget,
-      spent: response.data.spent,
-      remaining: response.data.remaining,
-      percentage: response.data.percentage,
-    };
-  },
-
-  /**
    * Get budget overview for all budgets
    */
   async getBudgetOverview(): Promise<{

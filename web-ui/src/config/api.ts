@@ -21,7 +21,10 @@ export const API_CONFIG = {
       refresh: '/api/v1/auth/refresh',
     },
     transactions: {
-      list: '/api/v1/transactions',
+      // The trailing slash is load-bearing on `list`: it is the paginating,
+      // filtering restx handler. `create` deliberately has none — that is the
+      // legacy blueprint's POST, which is the one clients use.
+      list: '/api/v1/transactions/',
       create: '/api/v1/transactions',
       get: (id: number) => `/api/v1/transactions/${id}`,
       update: (id: number) => `/api/v1/transactions/${id}`,

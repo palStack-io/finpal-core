@@ -182,7 +182,10 @@ export const Dashboard = () => {
       );
 
       setBudgets(
-        (budgetsData.budgets || budgetsData || []).slice(0, 4).map((budget: any, idx: number) => ({
+        // `budgetService.getBudgets()` unwraps the envelope and returns the
+        // array, so the old `budgetsData.budgets || …` fallback was reading a
+        // key that is never present and relying on the second branch.
+        (budgetsData || []).slice(0, 4).map((budget: any, idx: number) => ({
           category: budget.category?.name || budget.category_name || budget.name,
           spent: Math.abs(budget.spent || 0),
           budget: budget.amount || 0,

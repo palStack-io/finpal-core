@@ -46,6 +46,37 @@ def _transactions_for_user(user_id):
         )
     )
 
+
+def _totals_for(query):
+    """Income and expense totals for a filtered query, as (income, expense).
+
+    Aggregated in SQL over the whole query rather than in Python over the
+    current page, so the figures describe the same set of rows the caller
+    filtered for. `transfer` rows are excluded from both sides: moving money
+    between your own accounts is not income and not spending, and counting it
+    inflated both totals in the legacy handler.
+
+    Amounts are stored positive with the direction carried by
+    `transaction_type`, so this sums magnitudes and lets the caller subtract.
+    """
+    from sqlalchemy import func
+
+    # `.order_by(None)` clears any ordering the caller applied. Postgres rejects
+    # an ORDER BY on a column that is not in the GROUP BY, so leaving
+    # `ORDER BY date DESC` in place here works on SQLite and 500s in production.
+    sums = dict(
+        query.order_by(None)
+        .with_entities(
+            Expense.transaction_type,
+            func.coalesce(func.sum(func.abs(Expense.amount)), 0),
+        )
+        .group_by(Expense.transaction_type)
+        .all()
+    )
+    income = float(sums.get('income') or 0)
+    expense = float(sums.get('expense') or 0)
+    return round(income, 2), round(expense, 2)
+
 # Create namespace
 ns = Namespace('transactions', description='Transaction operations')
 
@@ -86,6 +117,7 @@ class TransactionList(Resource):
         account_id = request.args.get('account_id', type=int)
         transaction_type = request.args.get('type', type=str)
         search = request.args.get('search', type=str)
+        group_id = request.args.get('group_id', type=int)
 
         # Build query
         query = _transactions_for_user(current_user_id)
@@ -121,8 +153,23 @@ class TransactionList(Resource):
         if search:
             query = query.filter(Expense.description.ilike(f'%{search}%'))
 
+        # `group_id` was accepted by no one. GroupDetail.tsx has always called
+        # `/api/v1/transactions/?group_id=<id>`, and because this handler never
+        # read the parameter, a group's page rendered the user's entire
+        # transaction history as if it belonged to that group. It returned 200
+        # with a plausible-looking list, which is why it went unnoticed.
+        if group_id:
+            query = query.filter(Expense.group_id == group_id)
+
         # Order by date descending
         query = query.order_by(Expense.date.desc())
+
+        # Totals are computed over the WHOLE filtered query, deliberately —
+        # not over `pagination.items`. Summing one page and labelling it "Total
+        # Income" would be a figure the app never computed, which is the exact
+        # class of bug the analytics pass removed. Aggregating in SQL also keeps
+        # this cheap as the history grows.
+        income_total, expense_total = _totals_for(query)
 
         # Paginate
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -134,6 +181,11 @@ class TransactionList(Resource):
         return {
             'success': True,
             'transactions': result,
+            'summary': {
+                'total_income': income_total,
+                'total_expense': expense_total,
+                'net_balance': round(income_total - expense_total, 2),
+            },
             'pagination': {
                 'page': page,
                 'per_page': per_page,

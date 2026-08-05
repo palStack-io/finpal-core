@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, ArrowUpRight, ArrowDownRight, Calendar, Edit, Trash2, Loader2 } from 'lucide-react';
-import { transactionsApi, Transaction } from '../services/api/transactions';
+import { transactionsApi, Transaction, TransactionPagination } from '../services/api/transactions';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney, Money, moneyStyle, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
@@ -11,6 +11,20 @@ import { SectionCard } from '../components/SectionCard';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '12px' };
+
+const PER_PAGE = 50;
+
+const pagerButtonStyle = (enabled: boolean): React.CSSProperties => ({
+  padding: '8px 16px',
+  background: 'var(--surface-hover)',
+  border: '1px solid var(--border-light)',
+  borderRadius: '8px',
+  color: enabled ? 'var(--text-primary)' : 'var(--text-muted)',
+  fontSize: '13px',
+  fontWeight: 600,
+  cursor: enabled ? 'pointer' : 'not-allowed',
+  opacity: enabled ? 1 : 0.5,
+});
 
 export const Transactions: React.FC = () => {
   const { user } = useAuthStore();
@@ -23,6 +37,8 @@ export const Transactions: React.FC = () => {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [netBalance, setNetBalance] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<TransactionPagination | null>(null);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -32,14 +48,35 @@ export const Transactions: React.FC = () => {
   const currency = user?.default_currency_code || 'USD';
   const formatCurrency = (amount: number) => formatMoney(amount, { currency });
 
+  /**
+   * Debounced so typing does not fire a request per keystroke. The search and
+   * type filters are now applied by the server: this page used to load the
+   * entire history on every render and filter it here, which meant the three
+   * cards above the list described all time regardless of what was shown.
+   */
+  const [appliedSearch, setAppliedSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      const data = await transactionsApi.getAll();
+      const data = await transactionsApi.getAll({
+        page,
+        per_page: PER_PAGE,
+        search: appliedSearch || undefined,
+        type: filterType === 'all' ? undefined : filterType,
+      });
       setTransactions(data.transactions);
       setTotalIncome(data.summary.total_income);
       setTotalExpense(data.summary.total_expense);
       setNetBalance(data.summary.net_balance);
+      setPagination(data.pagination);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load transactions');
@@ -50,7 +87,7 @@ export const Transactions: React.FC = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [page, appliedSearch, filterType]);
 
   const handleTransactionSuccess = () => {
     setIsAddPanelOpen(false);
@@ -82,16 +119,23 @@ export const Transactions: React.FC = () => {
     }
   };
 
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesSearch =
-      (t.description || t.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.category?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterType === 'all' || t.transaction_type === filterType;
-    return matchesSearch && matchesFilter;
-  });
+  /**
+   * Says how many rows match in total, and which of them is on screen — because
+   * with the list bounded to one page, a bare count would be the page size and
+   * read as the whole history.
+   */
+  const sectionTitle = (() => {
+    if (!pagination || pagination.total === 0) return 'All Transactions';
+    if (pagination.pages <= 1) return `All Transactions (${pagination.total})`;
+    const first = (pagination.page - 1) * pagination.per_page + 1;
+    const last = first + transactions.length - 1;
+    return `Transactions ${first}–${last} of ${pagination.total}`;
+  })();
 
-  // Group by display date, preserving API sort order
-  const groupedTransactions = filteredTransactions.reduce<Record<string, Transaction[]>>((acc, txn) => {
+  // No client-side filtering: `search` and `type` are query parameters now, so
+  // the rows here are already the matching ones and `pagination.total` is the
+  // count of them across all pages.
+  const groupedTransactions = transactions.reduce<Record<string, Transaction[]>>((acc, txn) => {
     const key = new Date(txn.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     if (!acc[key]) acc[key] = [];
     acc[key].push(txn);
@@ -193,7 +237,7 @@ export const Transactions: React.FC = () => {
                     {(['all', 'income', 'expense'] as const).map((type) => (
                       <button
                         key={type}
-                        onClick={() => setFilterType(type)}
+                        onClick={() => { setFilterType(type); setPage(1); }}
                         style={{
                           padding: '12px 20px',
                           background: filterType === type ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : 'var(--surface-hover)',
@@ -214,8 +258,8 @@ export const Transactions: React.FC = () => {
 
               {/* Transactions grouped by date */}
               <div style={{ marginTop: '24px' }}>
-                <SectionCard title={`All Transactions (${filteredTransactions.length})`}>
-                  {filteredTransactions.length === 0 ? (
+                <SectionCard title={sectionTitle}>
+                  {transactions.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '48px 0' }}>
                       <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No transactions found</p>
                     </div>
@@ -307,6 +351,31 @@ export const Transactions: React.FC = () => {
                         </div>
                       </React.Fragment>
                     ))
+                  )}
+
+                  {/* Pagination. The list is one page now, so without these the
+                      rest of the history would be unreachable rather than
+                      merely off-screen. */}
+                  {pagination && pagination.pages > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingTop: '20px', marginTop: '8px', borderTop: '1px solid var(--border-light)' }}>
+                      <button
+                        onClick={() => setPage((current) => Math.max(1, current - 1))}
+                        disabled={!pagination.has_prev}
+                        style={pagerButtonStyle(pagination.has_prev)}
+                      >
+                        Previous
+                      </button>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                        Page {pagination.page} of {pagination.pages}
+                      </span>
+                      <button
+                        onClick={() => setPage((current) => current + 1)}
+                        disabled={!pagination.has_next}
+                        style={pagerButtonStyle(pagination.has_next)}
+                      >
+                        Next
+                      </button>
+                    </div>
                   )}
                 </SectionCard>
               </div>

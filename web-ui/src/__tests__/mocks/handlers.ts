@@ -42,8 +42,23 @@ export const authHandlers = [
 
 // ── Transactions ──────────────────────────────────────────────────────────────
 export const transactionHandlers = [
-  http.get(`${BASE}/api/v1/transactions`, () =>
-    HttpResponse.json({
+  // The trailing slash matters. This mock used to be registered on the
+  // slash-less path and to return a `pagination` key, while the handler that
+  // actually served that URL — the legacy blueprint's — read no query parameters
+  // and sent no `pagination` at all. So the contract test asserted a shape the
+  // server never produced, and passed. The legacy list handler is gone and the
+  // restx handler serves both spellings; this mock now mirrors *its* payload,
+  // `summary` included.
+  //
+  // Registered with a trailing slash only, deliberately: anything still calling
+  // a URL this does not match fails loudly rather than matching a stale mock.
+  http.get(`${BASE}/api/v1/transactions/`, ({ request }) => {
+    const url = new URL(request.url);
+    const perPage = Number(url.searchParams.get('per_page') ?? 50);
+    const page = Number(url.searchParams.get('page') ?? 1);
+    const total = 1;
+
+    return HttpResponse.json({
       success: true,
       transactions: [
         {
@@ -57,18 +72,25 @@ export const transactionHandlers = [
           category_id: 1,
           account_id: 1,
           user_id: 'test@test.com',
+          category: { id: 1, name: 'Food', icon: '🍔' },
+          account: { id: 1, name: 'Checking' },
         },
       ],
-      pagination: {
-        page: 1,
-        per_page: 50,
-        total: 1,
-        pages: 1,
-        has_next: false,
-        has_prev: false,
+      summary: {
+        total_income: 0,
+        total_expense: 4.5,
+        net_balance: -4.5,
       },
-    })
-  ),
+      pagination: {
+        page,
+        per_page: perPage,
+        total,
+        pages: Math.max(1, Math.ceil(total / perPage)),
+        has_next: page * perPage < total,
+        has_prev: page > 1,
+      },
+    });
+  }),
 
   http.get(`${BASE}/api/v1/transactions/recent`, () =>
     HttpResponse.json({ success: true, transactions: [] })

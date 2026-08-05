@@ -35,6 +35,66 @@ ns = Namespace('analytics', description='Analytics and dashboard operations')
 analytics_service = AnalyticsService()
 
 
+def _serialize_expense(exp):
+    """One expense as plain JSON.
+
+    `AnalyticsService.get_dashboard_data` returns live SQLAlchemy `Expense`
+    instances under `expenses`, so serialization has to be explicit. Walking
+    `__dict__` instead recurses through `_sa_instance_state` and the
+    relationship back-references until Python gives up — see `Statistics.get`.
+    """
+    return {
+        'id': exp.id,
+        'description': exp.description,
+        'amount': exp.amount,
+        'date': exp.date.isoformat() if exp.date else None,
+        'transaction_type': getattr(exp, 'transaction_type', 'expense'),
+        'category': {
+            'name': exp.category.name,
+            'color': exp.category.color,
+            'icon': exp.category.icon,
+        } if exp.category else 'Uncategorized',
+        'account': {
+            'name': exp.account.name,
+            'color': getattr(exp.account, 'color', None),
+        } if exp.account else 'Unknown',
+    }
+
+
+def _serialize_dashboard(dashboard_data):
+    """The dashboard payload: only the fields a client reads, all JSON-safe.
+
+    Shared with `/analytics/stats`, which used to build its response by walking
+    the same dict with a recursive `convert_to_dict`.
+    """
+    serialized_expenses = []
+    for exp in (dashboard_data.get('expenses') or []):
+        try:
+            serialized_expenses.append(_serialize_expense(exp))
+        except Exception:
+            logger.exception('Skipping an expense that would not serialize')
+            continue
+
+    return {
+        'net_worth': dashboard_data.get('net_worth', 0) or 0,
+        'total_income': dashboard_data.get('total_income', 0) or 0,
+        'total_expenses_only': dashboard_data.get('total_expenses_only', 0) or 0,
+        'total_expenses': dashboard_data.get('total_expenses', 0) or 0,
+        'current_month_total': dashboard_data.get('current_month_total', 0) or 0,
+        'current_month_expenses_only': dashboard_data.get('current_month_expenses_only', 0) or 0,
+        'current_month_income': dashboard_data.get('current_month_income', 0) or 0,
+        'net_cash_flow': dashboard_data.get('net_cash_flow', 0) or 0,
+        'savings_rate': dashboard_data.get('savings_rate', 0) or 0,
+        'total_assets': dashboard_data.get('total_assets', 0) or 0,
+        'total_debts': dashboard_data.get('total_debts', 0) or 0,
+        'investment_total': dashboard_data.get('investment_total', 0) or 0,
+        'expenses': serialized_expenses,
+        'top_categories': dashboard_data.get('top_categories', []),
+        'monthly_labels': dashboard_data.get('monthly_labels', []),
+        'monthly_amounts': dashboard_data.get('monthly_amounts', []),
+    }
+
+
 @ns.route('/dashboard')
 class Dashboard(Resource):
     @ns.doc('get_dashboard_data', security='Bearer')
@@ -46,49 +106,7 @@ class Dashboard(Resource):
         try:
             # Get dashboard data from service
             dashboard_data = analytics_service.get_dashboard_data(current_user_id)
-
-            # Pre-serialize expenses into simple dicts (avoid deep SQLAlchemy serialization)
-            serialized_expenses = []
-            for exp in (dashboard_data.get('expenses') or []):
-                try:
-                    serialized_expenses.append({
-                        'id': exp.id,
-                        'description': exp.description,
-                        'amount': exp.amount,
-                        'date': exp.date.isoformat() if exp.date else None,
-                        'transaction_type': getattr(exp, 'transaction_type', 'expense'),
-                        'category': {
-                            'name': exp.category.name if exp.category else 'Uncategorized',
-                            'color': exp.category.color if exp.category else None,
-                            'icon': exp.category.icon if exp.category else None,
-                        } if exp.category else 'Uncategorized',
-                        'account': {
-                            'name': exp.account.name if exp.account else 'Unknown',
-                            'color': getattr(exp.account, 'color', None) if exp.account else None,
-                        } if exp.account else 'Unknown',
-                    })
-                except Exception:
-                    continue
-
-            # Build clean response with only what the frontend needs
-            serializable_data = {
-                'net_worth': dashboard_data.get('net_worth', 0) or 0,
-                'total_income': dashboard_data.get('total_income', 0) or 0,
-                'total_expenses_only': dashboard_data.get('total_expenses_only', 0) or 0,
-                'total_expenses': dashboard_data.get('total_expenses', 0) or 0,
-                'current_month_total': dashboard_data.get('current_month_total', 0) or 0,
-                'current_month_expenses_only': dashboard_data.get('current_month_expenses_only', 0) or 0,
-                'current_month_income': dashboard_data.get('current_month_income', 0) or 0,
-                'net_cash_flow': dashboard_data.get('net_cash_flow', 0) or 0,
-                'savings_rate': dashboard_data.get('savings_rate', 0) or 0,
-                'total_assets': dashboard_data.get('total_assets', 0) or 0,
-                'total_debts': dashboard_data.get('total_debts', 0) or 0,
-                'investment_total': dashboard_data.get('investment_total', 0) or 0,
-                'expenses': serialized_expenses,
-                'top_categories': dashboard_data.get('top_categories', []),
-                'monthly_labels': dashboard_data.get('monthly_labels', []),
-                'monthly_amounts': dashboard_data.get('monthly_amounts', []),
-            }
+            serializable_data = _serialize_dashboard(dashboard_data)
 
             return {
                 'success': True,
@@ -109,21 +127,31 @@ class Statistics(Resource):
         current_user_id = get_jwt_identity()
 
         try:
-            # Get stats data from service
             stats_data = analytics_service.get_stats_data(current_user_id)
 
-            # Convert to serializable format
-            def convert_to_dict(obj):
-                if hasattr(obj, '__dict__'):
-                    return {key: convert_to_dict(value) for key, value in obj.__dict__.items()}
-                elif isinstance(obj, list):
-                    return [convert_to_dict(item) for item in obj]
-                elif isinstance(obj, dict):
-                    return {key: convert_to_dict(value) for key, value in obj.items()}
-                else:
-                    return obj
-
-            serializable_data = convert_to_dict(stats_data)
+            # This endpoint used to 500 on every call. `get_stats_data` returns
+            # `get_dashboard_data`'s dict, which holds live SQLAlchemy `Expense`
+            # instances, and the response was built by a local `convert_to_dict`
+            # that recursed into `obj.__dict__` for anything with one. On an ORM
+            # instance that reaches `_sa_instance_state` and the relationship
+            # back-references, so it recursed until `RecursionError`.
+            #
+            # Nothing calls this endpoint, which is why a route that could never
+            # succeed went unnoticed. Serialized explicitly now, the same way
+            # `/dashboard` does, plus the fields stats adds on top.
+            serializable_data = _serialize_dashboard(stats_data)
+            serializable_data.update({
+                'monthly_income': stats_data.get('monthly_income', []),
+                'category_names': stats_data.get('category_names', []),
+                'category_totals': stats_data.get('category_totals', []),
+                'tag_names': stats_data.get('tag_names', []),
+                'tag_totals': stats_data.get('tag_totals', []),
+                'tag_colors': stats_data.get('tag_colors', []),
+                'liquidity_ratio': stats_data.get('liquidity_ratio', 0),
+                'account_growth': stats_data.get('account_growth', 0),
+                'spending_trend': stats_data.get('spending_trend', 0),
+                'net_balance': stats_data.get('net_balance', 0),
+            })
 
             return {
                 'success': True,
