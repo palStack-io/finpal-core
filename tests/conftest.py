@@ -12,7 +12,9 @@ import os
 import pytest
 
 os.environ.setdefault('TESTING', 'true')
-os.environ.setdefault('POINTSPAL_ENABLED', 'true')
+# POINTSPAL_ENABLED is deliberately NOT set here. pointsPal is part of core and
+# enables itself; forcing it on would mean the suite never exercised that default,
+# and the deployed instance served none of pointsPal while these tests were green.
 os.environ.setdefault('SECRET_KEY', 'test-secret-key')
 os.environ.setdefault('ENCRYPTION_KEY', '')
 
@@ -30,7 +32,6 @@ def app():
         'SQLALCHEMY_TRACK_MODIFICATIONS': False,
         'JWT_SECRET_KEY': 'test-secret-key',
         'SECRET_KEY': 'test-secret-key',
-        'POINTSPAL_ENABLED': 'true',
         'WTF_CSRF_ENABLED': False,
         # Disable background tasks during tests
         'SCHEDULER_API_ENABLED': False,
