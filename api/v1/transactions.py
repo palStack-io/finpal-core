@@ -4,6 +4,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.transaction import Expense
 from src.extensions import db
+from src.services.transaction import balances
 from schemas import transaction_schema, transactions_schema
 from schemas.input_schemas import transaction_input
 from src.utils.validation import validate_request, validation_error_response
@@ -216,6 +217,8 @@ class TransactionList(Resource):
                 return validation_error_response(exc.errors)
 
             db.session.add(new_transaction)
+            # Same commit as the row, so a rollback takes both.
+            balances.apply_on_add(new_transaction)
             db.session.commit()
 
             # Serialize and return
@@ -279,6 +282,11 @@ class TransactionDetail(Resource):
             return {'success': False, 'error': 'Request body required'}, 400
 
         try:
+            # Taken before any assignment below: the field updates are
+            # conditional, so afterwards the row cannot say what it used to be,
+            # and crediting the old account back needs the old values.
+            previous = balances.snapshot(transaction)
+
             # Update fields
             if 'description' in data:
                 transaction.description = data['description']
@@ -302,6 +310,12 @@ class TransactionDetail(Resource):
                 transaction.split_method = data['split_method']
             if 'split_with' in data:
                 transaction.split_with = data['split_with']
+
+            # Undo what the row used to do, then apply what it does now. Reversing
+            # first is what makes a moved account, a changed amount and a corrected
+            # type all fall out of the same two calls.
+            balances.reverse(previous)
+            balances.apply_on_add(transaction)
 
             db.session.commit()
 
@@ -332,6 +346,9 @@ class TransactionDetail(Resource):
             return {'success': False, 'error': 'Transaction not found'}, 404
 
         try:
+            # Snapshot before the delete: afterwards the row is gone and there is
+            # nothing left to read the amount and account from.
+            balances.reverse(balances.snapshot(transaction))
             db.session.delete(transaction)
             db.session.commit()
 
