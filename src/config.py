@@ -69,8 +69,9 @@ class Config:
     
     # pointsPal
     POINTSPAL_ENABLED = os.getenv('POINTSPAL_ENABLED', 'False').lower() == 'true'
-    POINTSPAL_SYNC_URL = os.getenv(
-        'POINTSPAL_SYNC_URL',
+    # `or` rather than a getenv default: docker-compose forwards an unset variable
+    # as the empty string, and an empty URL would fail every catalogue fetch.
+    POINTSPAL_SYNC_URL = os.getenv('POINTSPAL_SYNC_URL') or (
         'https://raw.githubusercontent.com/palStack-io/pointsPal/main/dist/programs.json'
     )
     POINTSPAL_SYNC_INTERVAL_HOURS = int(os.getenv('POINTSPAL_SYNC_INTERVAL_HOURS', 1))

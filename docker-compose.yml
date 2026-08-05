@@ -10,6 +10,9 @@ x-backend-env: &backend-env
   FLASK_APP: "app.py"
   FLASK_ENV: "production"
   SECRET_KEY: "${SECRET_KEY:?SECRET_KEY is required}"
+  # Left empty, src/__init__.py signs tokens with SECRET_KEY instead. Setting it
+  # separates the two, so a session-key disclosure is not also a JWT forgery key.
+  JWT_SECRET_KEY: "${JWT_SECRET_KEY:-}"
   DEBUG: "False"
   DEVELOPMENT_MODE: "False"
   LOG_LEVEL: "${LOG_LEVEL:-INFO}"
@@ -27,6 +30,13 @@ x-backend-env: &backend-env
   # pointsPal is part of core. Set POINTSPAL_ENABLED=false to decline it.
   POINTSPAL_ENABLED: "${POINTSPAL_ENABLED:-true}"
   POINTSPAL_SYNC_INTERVAL_HOURS: "${POINTSPAL_SYNC_INTERVAL_HOURS:-24}"
+  # Empty falls back to the palStack catalogue; set it to point at your own fork.
+  POINTSPAL_SYNC_URL: "${POINTSPAL_SYNC_URL:-}"
+
+  # CSV folder import. CSV_IMPORT_ROOT is a confinement boundary — a watched
+  # folder outside it is rejected — so it has to reach the container to matter.
+  CSV_IMPORT_ROOT: "${CSV_IMPORT_ROOT:-}"
+  CSV_IMPORT_MAX_BYTES: "${CSV_IMPORT_MAX_BYTES:-}"
 
   # Email (optional - for password reset)
   EMAIL_ENABLED: "${EMAIL_ENABLED:-false}"
