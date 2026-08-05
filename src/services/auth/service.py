@@ -497,7 +497,7 @@ class AuthService:
                     <p>Happy tracking!</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2026 palStack-io &middot; finPal is free software under the AGPL-3.0</p>
+                    <p>&copy; 2026 finPal</p>
                 </div>
             </div>
         </body>

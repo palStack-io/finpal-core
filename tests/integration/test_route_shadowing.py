@@ -190,6 +190,69 @@ def test_group_id_survives_a_create_on_both_spellings(
             'transaction never lands in the group' % path)
 
 
+def test_a_create_cannot_file_itself_into_someone_elses_group(
+        client, db, auth_headers):
+    """The authz half of accepting `group_id`.
+
+    Making the field work is only half the change: `build_transaction` writes it
+    straight to a foreign key, so without a membership check any caller could
+    inject a row into any group by id — and it would then show up in that group's
+    transaction list and in `calculate_group_balances` for its real members.
+    Before `group_id` was accepted at all the slashed spelling had no exposure
+    here, so this must not be the thing that opens one.
+    """
+    owner = UserFactory()
+    outsider = UserFactory()
+    private = _group(owner, name='Not yours')
+
+    for path in ('/api/v1/transactions', '/api/v1/transactions/'):
+        resp = client.post(path, headers=auth_headers(outsider), json={
+            'description': 'Injected via %s' % path,
+            'amount': 99.0,
+            'date': '2026-08-05',
+            'transaction_type': 'expense',
+            'group_id': private.id,
+        })
+
+        # Asserted on the database, not the status code: a 201 with the group
+        # stripped would also "pass" a status assertion while silently lying to
+        # the client about what it created.
+        injected = Expense.query.filter_by(group_id=private.id).all()
+        assert injected == [], (
+            '%s let a non-member write into group %d: %r'
+            % (path, private.id, [e.description for e in injected]))
+        assert resp.status_code == 400, (
+            '%s should reject the group outright rather than accept it and drop '
+            'the field, which is the silent-drop failure this series exists for; '
+            'got %s' % (path, resp.status_code))
+
+
+def test_a_member_can_still_record_a_transaction_in_their_own_group(
+        client, db, auth_headers):
+    """Guards the check above against being too strict — a second member of the
+    group must still be able to post to it, which is what a settlement is."""
+    owner = UserFactory()
+    other = UserFactory()
+    group = _group(owner)
+    group.members.append(other)
+    db.session.commit()
+
+    resp = client.post('/api/v1/transactions/', headers=auth_headers(other), json={
+        'description': 'Settlement by the other member',
+        'amount': 7.0,
+        'date': '2026-08-05',
+        'transaction_type': 'expense',
+        'group_id': group.id,
+        'paid_by': owner.id,
+    })
+    assert resp.status_code == 201, resp.get_data(as_text=True)[:300]
+
+    created = Expense.query.filter_by(
+        description='Settlement by the other member').first()
+    assert created is not None
+    assert created.group_id == group.id
+
+
 def test_both_spellings_of_the_create_return_the_shape_the_clients_declare(
         client, db, auth_headers):
     """web-ui's `createTransaction` reads `response.data.transaction` and

@@ -160,7 +160,7 @@ class EmailService:
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2026 palStack-io · finPal is free software under the AGPL-3.0
+                                © 2026 finPal
                             </p>
                         </td>
                     </tr>
@@ -190,7 +190,7 @@ Accept your invitation here:
 This invitation was sent to {to_email}
 If you don't want to join this group, you can safely ignore this email.
 
-© 2026 palStack-io · finPal is free software under the AGPL-3.0
+© 2026 finPal
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -287,7 +287,7 @@ If you don't want to join this group, you can safely ignore this email.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2026 palStack-io · finPal is free software under the AGPL-3.0
+                                © 2026 finPal
                             </p>
                         </td>
                     </tr>
@@ -317,7 +317,7 @@ Get started: {login_link}
 
 Need help? Check out our guides or contact support.
 
-© 2026 palStack-io · finPal is free software under the AGPL-3.0
+© 2026 finPal
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -411,7 +411,7 @@ Need help? Check out our guides or contact support.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2026 palStack-io · finPal is free software under the AGPL-3.0
+                                © 2026 finPal
                             </p>
                         </td>
                     </tr>
@@ -439,7 +439,7 @@ This link will expire in 24 hours. If you didn't sign up for finPal, you can saf
 
 Having trouble? Contact support.
 
-© 2026 palStack-io · finPal is free software under the AGPL-3.0
+© 2026 finPal
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -530,7 +530,7 @@ Having trouble? Contact support.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2026 palStack-io · finPal is free software under the AGPL-3.0
+                                © 2026 finPal
                             </p>
                         </td>
                     </tr>
@@ -556,7 +556,7 @@ This link will expire in {expires_in}. If you didn't request a password reset, p
 
 For security reasons, we never send your password via email.
 
-© 2026 palStack-io · finPal is free software under the AGPL-3.0
+© 2026 finPal
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -687,7 +687,7 @@ For security reasons, we never send your password via email.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                © 2026 palStack-io · finPal is free software under the AGPL-3.0
+                                © 2026 finPal
                             </p>
                         </td>
                     </tr>
@@ -716,7 +716,7 @@ View full report: {report_link}
 
 Want to change your report preferences? Visit Settings.
 
-© 2026 palStack-io · finPal is free software under the AGPL-3.0
+© 2026 finPal
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
@@ -812,7 +812,7 @@ Want to change your report preferences? Visit Settings.
                     <tr>
                         <td style="text-align: center;">
                             <p style="color: #475569; font-size: 12px; margin: 0;">
-                                &copy; 2026 palStack-io &middot; finPal is free software under the AGPL-3.0
+                                &copy; 2026 finPal
                             </p>
                         </td>
                     </tr>
@@ -842,7 +842,7 @@ Accept your invitation here:
 This invitation was sent to {to_email}
 If you don't want to join, you can safely ignore this email.
 
-(c) 2026 palStack-io - finPal is free software under the AGPL-3.0
+(c) 2026 finPal
 """
 
         return self.send_email(to_email, subject, html_body, text_body)
