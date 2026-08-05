@@ -190,9 +190,16 @@ export const Transactions: React.FC = () => {
             <>
               {/* Summary Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                {/* All three come from the transactions endpoint's `summary`,
+                    and `/api/v1/transactions/` filters to the caller — so these
+                    are the caller's own, unlike the Dashboard's income card,
+                    which is the household's. That pair is the disagreement the
+                    tags exist to explain: the same two figures can differ and
+                    both be right. */}
                 <StatCard
                   label="Total Income"
                   value={formatMoney(totalIncome, { currency, signed: true })}
+                  scope="yours"
                   accentColor="#22c55e"
                   icon={<ArrowUpRight size={24} color="#22c55e" />}
                   valueColor="#22c55e"
@@ -200,6 +207,7 @@ export const Transactions: React.FC = () => {
                 <StatCard
                   label="Total Expenses"
                   value={formatMoney(-Math.abs(totalExpense), { currency })}
+                  scope="yours"
                   accentColor="#ef4444"
                   icon={<ArrowDownRight size={24} color="#ef4444" />}
                   valueColor="#ef4444"
@@ -207,6 +215,7 @@ export const Transactions: React.FC = () => {
                 <StatCard
                   label="Net Balance"
                   value={formatMoney(netBalance, { currency, signed: true })}
+                  scope="yours"
                   accentColor="#fbbf24"
                   icon={<Calendar size={24} color="#fbbf24" />}
                   valueColor={netBalance >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}

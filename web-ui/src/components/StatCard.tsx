@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { tabular } from '../styles/money';
+import { ScopeTag } from './ScopeTag';
+import type { Scope } from '../utils/scope';
 
 interface StatCardProps {
   label: string;
@@ -9,9 +11,15 @@ interface StatCardProps {
   icon: React.ReactNode;
   subtitle?: React.ReactNode;
   valueColor?: string;
+  /**
+   * Whose money this figure covers (AUDIT.md D-01). Optional: a card showing
+   * something that is not a per-owner total leaves it off. `mixed` renders no
+   * tag, so those cards say it in their `subtitle` instead.
+   */
+  scope?: Scope;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, icon, subtitle, valueColor }) => {
+export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, icon, subtitle, valueColor, scope }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -31,7 +39,18 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, i
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
         <div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>{label}</p>
+          <p style={{
+            color: 'var(--text-secondary)',
+            fontSize: '14px',
+            marginBottom: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexWrap: 'wrap',
+          }}>
+            {label}
+            {scope && <ScopeTag scope={scope} />}
+          </p>
           {/* Tabular figures: every stat card on every page holds a money
               value, so one change here makes the whole app's numbers align in a
               column instead of reading as a ragged edge. */}

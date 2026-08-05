@@ -19,14 +19,30 @@ logger = logging.getLogger(__name__)
 ns = Namespace('accounts', description='Account operations')
 
 # Define request/response models
+#
+# This is the body POST and PUT advertise via `@ns.expect`, so it has to be a
+# body that works. It listed two fields that were never real (AUDIT.md D-05):
+#
+#   'account_number'  no column on Account, no handler, nothing anywhere. The
+#                     mobile form had an "Account Number (last 4 digits)" input
+#                     because of this line, and every value typed into it was
+#                     discarded on save.
+#   'is_active'       also not a column. The nearest real thing is `status`
+#                     ('active' / 'inactive' / 'closed'), which no write handler
+#                     accepts, so advertising a boolean spelling of it would just
+#                     be a second way to be ignored.
+#
+# Nothing rejected them: `validate_request` loads with `unknown=EXCLUDE`, so a
+# client following the docs got a 201 and silently lost part of what it sent.
+# The fields below are the ones `AccountInput` accepts and the handlers apply.
+# `tests/integration/test_accounts_documented_fields.py` asserts that, by
+# POSTing every documented field and reading the row back out of the database.
 account_model = ns.model('Account', {
     'name': fields.String(required=True, description='Account name'),
     'account_type': fields.String(required=True, description='Account type (checking, savings, credit, etc.)'),
     'balance': fields.Float(description='Initial balance'),
     'currency_code': fields.String(description='Currency code'),
     'institution': fields.String(description='Financial institution name'),
-    'account_number': fields.String(description='Account number (last 4 digits)'),
-    'is_active': fields.Boolean(description='Whether account is active'),
     'color': fields.String(description='Account color (hex code)'),
 })
 

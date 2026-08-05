@@ -476,6 +476,7 @@ const BudgetsMinimal = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                 <StatCard
                   label="Total Budgeted"
+                  scope="household"
                   value={formatCurrency(totalBudgeted)}
                   accentColor="#3b82f6"
                   icon={<DollarSign size={24} color="#3b82f6" />}
@@ -483,6 +484,7 @@ const BudgetsMinimal = () => {
                 />
                 <StatCard
                   label="Total Spent"
+                  scope="household"
                   value={formatCurrency(totalSpent)}
                   accentColor={spentColor}
                   icon={<TrendingDown size={24} color={spentColor} />}
@@ -499,6 +501,7 @@ const BudgetsMinimal = () => {
                 />
                 <StatCard
                   label="Remaining"
+                  scope="household"
                   value={formatCurrency(Math.abs(totalRemaining))}
                   accentColor={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
                   icon={<TrendingUp size={24} color={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'} />}
