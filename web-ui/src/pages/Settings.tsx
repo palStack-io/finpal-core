@@ -1094,8 +1094,12 @@ export const Settings: React.FC = () => {
                       "That's what pals do – they show up and help with the everyday stuff."
                     </p>
                     <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '16px' }}>
-                      © {new Date().getFullYear()} {branding.parentBrand} · finPal is free
-                      software under the{' '}
+                      {/* "finPal Core", not "finPal": the project is dual licensed —
+                          this repository is the AGPL Core, and Premium is
+                          proprietary. Claiming the whole product is free software
+                          would be wrong in the other direction. */}
+                      © {new Date().getFullYear()} {branding.parentBrand} · finPal Core is
+                      free software under the{' '}
                       <a
                         href="https://www.gnu.org/licenses/agpl-3.0.html"
                         target="_blank"
