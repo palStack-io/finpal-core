@@ -35,6 +35,41 @@ def _coerce_date(value):
     return datetime.utcnow()
 
 
+def validate_split_value(split_value, split_method, amount):
+    """`split_value` means different things per split method, so its valid range
+    cannot be expressed in the schema.
+
+    Public because `TransactionDetail.put` needs the identical rules: it reads
+    `data` directly rather than through `TransactionInput`, and a field validated on
+    create but not on update is just a slower way to store a bad number.
+    """
+    if split_value is None:
+        return
+    if split_method == 'equal':
+        # `calculate_splits` never reads it for an equal split, so accepting it
+        # would store a number that changes nothing — the same kind of lie as
+        # dropping it silently. The web form agrees: it only sends the field when
+        # the method is not `equal`.
+        raise TransactionPayloadInvalid({'split_value': [
+            'An equal split has no payer share to set.']})
+    if split_value < 0:
+        raise TransactionPayloadInvalid({'split_value': [
+            'The payer share cannot be negative.']})
+    if split_method == 'percentage' and split_value > 100:
+        # Above 100 the remainder goes negative and an *expense* starts crediting
+        # the other participants.
+        raise TransactionPayloadInvalid({'split_value': [
+            'A percentage share cannot exceed 100.']})
+    if split_method == 'custom' and split_value > (amount or 0):
+        raise TransactionPayloadInvalid({'split_value': [
+            "The payer's amount cannot exceed the transaction total."]})
+
+
+def validated_category_splits(raw, total_amount, user_id):
+    """Public alias of `_validated_category_splits`, for the update handler."""
+    return _validated_category_splits(raw, total_amount, user_id)
+
+
 def _validated_category_splits(raw, total_amount, user_id):
     """Normalise `{category_id: amount}` into a list of (category_id, amount).
 
@@ -155,30 +190,9 @@ def build_transaction(payload, user_id):
             raise TransactionPayloadInvalid({'destination_account_id': [
                 'Source and destination accounts cannot be the same.']})
 
-    # `split_value` means different things per split method, so its range cannot be
-    # expressed in the schema.
     split_value = validated.get('split_value')
-    if split_value is not None:
-        split_method = payload.get('split_method', 'equal')
-        amount = validated.get('amount') or 0
-        if split_method == 'equal':
-            # `calculate_splits` never reads it for an equal split, so accepting it
-            # would store a number that changes nothing — which is the same kind of
-            # lie as dropping it silently. The web form agrees: it only sends the
-            # field when the method is not `equal`.
-            raise TransactionPayloadInvalid({'split_value': [
-                'An equal split has no payer share to set.']})
-        if split_value < 0:
-            raise TransactionPayloadInvalid({'split_value': [
-                'The payer share cannot be negative.']})
-        if split_method == 'percentage' and split_value > 100:
-            # Above 100 the remainder goes negative and an *expense* starts
-            # crediting the other participants.
-            raise TransactionPayloadInvalid({'split_value': [
-                'A percentage share cannot exceed 100.']})
-        if split_method == 'custom' and split_value > amount:
-            raise TransactionPayloadInvalid({'split_value': [
-                "The payer's amount cannot exceed the transaction total."]})
+    validate_split_value(split_value, payload.get('split_method', 'equal'),
+                         validated.get('amount') or 0)
 
     # Category splits. Validated here rather than in the schema because the checks
     # are cross-field: the amounts have to sum to the transaction total, and each
