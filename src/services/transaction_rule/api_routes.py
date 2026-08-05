@@ -214,28 +214,69 @@ def test_rule():
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
 
+        # Two shapes are accepted, because the live client sends the second one and
+        # this handler only ever understood the first.
+        #
+        # web-ui posts `{...ruleData, test_transaction}` — an *unsaved* rule plus a
+        # sample — so that the user can try a rule out before saving it
+        # (services/api/transactionRules.ts:84). This handler required `rule_id`, so
+        # every one of those calls got `400 rule_id is required` and the "test rule"
+        # button never worked. It predates the route consolidation: this blueprint
+        # already won `/test` over the flask-restx handler, which did accept the
+        # unsaved shape and was therefore dead code.
         rule_id = data.get('rule_id')
-        transaction_data = data.get('transaction_data', {})
+        transaction_data = (data.get('transaction_data')
+                            or data.get('test_transaction') or {})
 
-        if not rule_id:
-            return jsonify({'error': 'rule_id is required'}), 400
+        if rule_id:
+            rule = TransactionRule.query.filter_by(
+                id=rule_id, user_id=identity).first()
+            if not rule:
+                return jsonify({'error': 'Rule not found'}), 404
+            saved = True
+        else:
+            if not data.get('pattern'):
+                return jsonify({
+                    'error': 'Either rule_id, or a pattern to test, is required'
+                }), 400
+            # Built, never added to the session, so previewing cannot save a rule.
+            rule = TransactionRule(
+                user_id=identity,
+                name=data.get('name', 'Test rule'),
+                pattern=data['pattern'],
+                pattern_field=data.get('pattern_field', 'description'),
+                is_regex=data.get('is_regex', False),
+                case_sensitive=data.get('case_sensitive', False),
+                amount_min=data.get('amount_min'),
+                amount_max=data.get('amount_max'),
+                transaction_type_filter=data.get('transaction_type_filter'),
+                auto_category_id=data.get('auto_category_id'),
+                auto_account_id=data.get('auto_account_id'),
+                auto_transaction_type=data.get('auto_transaction_type'),
+                auto_notes=data.get('auto_notes'),
+                priority=data.get('priority', 50),
+                active=True,
+            )
+            # `apply` increments `match_count` on the instance. Harmless for an
+            # unsaved rule, but it must not be flushed by a later commit in the same
+            # request, hence never adding it to the session.
+            saved = False
 
-        rule = TransactionRule.query.filter_by(id=rule_id, user_id=identity).first()
-
-        if not rule:
-            return jsonify({'error': 'Rule not found'}), 404
-
-        # Test if rule matches
         matches = rule.matches(transaction_data)
 
-        # If it matches, show what would be applied
         result = {
+            'success': True,
             'matches': matches,
-            'rule': rule.to_dict()
+            'test_transaction': transaction_data,
         }
+        if saved:
+            result['rule'] = rule.to_dict()
 
         if matches:
-            applied_data = rule.apply(transaction_data.copy())
+            applied_data = rule.apply(dict(transaction_data))
+            # `result` is what web-ui reads; `applied_changes` is kept for any caller
+            # written against the older response.
+            result['result'] = applied_data
             result['applied_changes'] = applied_data
 
         return jsonify(result), 200

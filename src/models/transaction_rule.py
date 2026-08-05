@@ -117,8 +117,11 @@ class TransactionRule(db.Model):
         Returns:
             dict: Updated transaction data with rule actions applied
         """
-        # Update match counter
-        self.match_count += 1
+        # Update match counter. `match_count`'s `default=0` is a *column* default,
+        # applied on insert, so it is None on an instance that has never been saved —
+        # and the rule preview builds exactly such an instance to try an unsaved rule
+        # against a sample. `+= 1` on None raises TypeError.
+        self.match_count = (self.match_count or 0) + 1
         self.last_matched = datetime.utcnow()
 
         # Apply category
