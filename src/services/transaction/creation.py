@@ -102,7 +102,7 @@ def build_transaction(payload, user_id):
         split_method=payload.get('split_method', 'equal'),
         split_with=payload.get('split_with', ''),
         paid_by=payload.get('paid_by', user_id),
-        group_id=validated.get('group_id'),
+        group_id=group_id,  # the membership-checked value from above
         user_id=user_id,
     )
 
