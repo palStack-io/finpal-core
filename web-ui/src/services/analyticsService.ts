@@ -20,13 +20,11 @@ export interface SpendingTrend {
   category?: string;
 }
 
-export interface CategoryBreakdown {
-  category_id: number;
-  category_name: string;
-  amount: number;
-  percentage: number;
-  count: number;
-}
+// `CategoryBreakdown` used to sit here, declaring
+// category_id/category_name/amount/percentage/count. No endpoint returns that
+// shape, and its only consumers were the four dead methods removed alongside it.
+// `CategoryTotal` below is what `/analytics/categories/top` and the dashboard's
+// `top_categories` actually send.
 
 /**
  * What /analytics/categories/top actually returns.
@@ -53,26 +51,76 @@ export interface MonthlyComparison {
   net_change_pct: number;
 }
 
-export interface DashboardData {
-  metrics: DashboardMetrics;
-  spending_trends: SpendingTrend[];
-  income_trends: SpendingTrend[];
-  top_categories: CategoryBreakdown[];
-  monthly_comparison: MonthlyComparison[];
-  recent_transactions: any[];
+/**
+ * A transaction as `/analytics/dashboard` serializes it — not the shape
+ * `/api/v1/transactions/` returns. `category` and `account` degrade to the
+ * strings 'Uncategorized' / 'Unknown' when absent rather than to null.
+ */
+export interface DashboardExpense {
+  id: number;
+  description: string;
+  amount: number;
+  date: string | null;
+  transaction_type: string;
+  category: { name: string; color: string | null; icon: string | null } | 'Uncategorized';
+  account: { name: string; color: string | null } | 'Unknown';
 }
 
-export interface StatsData {
+/**
+ * What `/analytics/dashboard` actually returns, verified against the deployed
+ * endpoint and against the handler that builds the payload.
+ *
+ * The previous declaration described none of it: `metrics`, `spending_trends`,
+ * `income_trends`, `monthly_comparison` and `recent_transactions` have never
+ * appeared in this response, while everything Dashboard.tsx reads — `net_worth`,
+ * `current_month_income`, `current_month_expenses_only`, `expenses` — was
+ * absent. Eight of the page's typecheck errors were the compiler correctly
+ * reporting that this interface was fiction; the page was right about the server.
+ *
+ * `total_*` are year-to-date and `current_month_*` are this month. A card
+ * labelled "monthly" must read the latter — confusing the two is what PR #41
+ * fixed.
+ */
+export interface DashboardData {
+  net_worth: number;
   total_income: number;
+  total_expenses_only: number;
   total_expenses: number;
+  current_month_total: number;
+  current_month_expenses_only: number;
+  current_month_income: number;
+  net_cash_flow: number;
+  savings_rate: number;
+  total_assets: number;
+  total_debts: number;
+  investment_total: number;
+  expenses: DashboardExpense[];
+  top_categories: CategoryTotal[];
+  monthly_labels: string[];
+  monthly_amounts: number[];
+}
+
+/**
+ * What `/analytics/stats` returns: the dashboard payload plus a few extra fields.
+ *
+ * The previous declaration listed `average_daily_spending`,
+ * `average_transaction_size`, `transaction_count`, `top_spending_day`,
+ * `top_spending_category`, `spending_by_category` and `spending_by_month` — none
+ * of which the endpoint has ever produced. Nobody noticed because the endpoint
+ * 500'd on every call: it serialized live SQLAlchemy instances by walking
+ * `__dict__` until `RecursionError`. Fixed server-side.
+ */
+export interface StatsData extends DashboardData {
+  monthly_income: number[];
+  category_names: string[];
+  category_totals: number[];
+  tag_names: string[];
+  tag_totals: string[] | number[];
+  tag_colors: string[];
+  liquidity_ratio: number;
+  account_growth: number;
+  spending_trend: number;
   net_balance: number;
-  average_daily_spending: number;
-  average_transaction_size: number;
-  transaction_count: number;
-  top_spending_day: string;
-  top_spending_category: string;
-  spending_by_category: CategoryBreakdown[];
-  spending_by_month: MonthlyComparison[];
 }
 
 export const analyticsService = {
@@ -126,44 +174,6 @@ export const analyticsService = {
   },
 
   /**
-   * Get income trends over time
-   */
-  async getIncomeTrends(
-    period: 'daily' | 'weekly' | 'monthly' = 'daily',
-    startDate?: string,
-    endDate?: string
-  ): Promise<SpendingTrend[]> {
-    const params = new URLSearchParams();
-    params.append('period', period);
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-
-    const response = await api.get<{
-      success: boolean;
-      trends: SpendingTrend[];
-    }>(`/api/v1/analytics/income-trends?${params.toString()}`);
-    return response.data.trends;
-  },
-
-  /**
-   * Get category breakdown
-   */
-  async getCategoryBreakdown(
-    startDate?: string,
-    endDate?: string
-  ): Promise<CategoryBreakdown[]> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-
-    const response = await api.get<{
-      success: boolean;
-      categories: CategoryBreakdown[];
-    }>(`/api/v1/analytics/category-breakdown?${params.toString()}`);
-    return response.data.categories;
-  },
-
-  /**
    * Category totals over a date range, highest first.
    *
    * `type` picks the direction: 'expense' is spending, 'income' is where money
@@ -214,54 +224,6 @@ export const analyticsService = {
       summary: DashboardMetrics;
     }>('/api/v1/analytics/summary');
     return response.data.summary;
-  },
-
-  /**
-   * Generate custom report
-   */
-  async generateReport(
-    reportType: 'spending' | 'income' | 'category' | 'budget',
-    startDate: string,
-    endDate: string,
-    options?: {
-      category_id?: number;
-      account_id?: number;
-      format?: 'json' | 'csv' | 'pdf';
-    }
-  ): Promise<any> {
-    const params = new URLSearchParams();
-    params.append('type', reportType);
-    params.append('start_date', startDate);
-    params.append('end_date', endDate);
-    if (options?.category_id) params.append('category_id', options.category_id.toString());
-    if (options?.account_id) params.append('account_id', options.account_id.toString());
-    if (options?.format) params.append('format', options.format);
-
-    const response = await api.get(
-      `/api/v1/analytics/reports?${params.toString()}`,
-      {
-        responseType: options?.format === 'pdf' ? 'blob' : 'json',
-      }
-    );
-    return response.data;
-  },
-
-  /**
-   * Get net worth over time
-   */
-  async getNetWorthTrend(
-    period: 'daily' | 'weekly' | 'monthly' = 'monthly',
-    months: number = 12
-  ): Promise<Array<{ date: string; net_worth: number }>> {
-    const params = new URLSearchParams();
-    params.append('period', period);
-    params.append('months', months.toString());
-
-    const response = await api.get<{
-      success: boolean;
-      trend: Array<{ date: string; net_worth: number }>;
-    }>(`/api/v1/analytics/net-worth?${params.toString()}`);
-    return response.data.trend;
   },
 
   /**

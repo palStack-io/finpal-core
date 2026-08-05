@@ -148,38 +148,6 @@ export const groupService = {
   },
 
   /**
-   * Remove member from group
-   */
-  async removeGroupMember(groupId: number, userId: number): Promise<void> {
-    await api.delete(`/api/v1/groups/${groupId}/members/${userId}`);
-  },
-
-  /**
-   * Get group expenses
-   */
-  async getGroupExpenses(id: number): Promise<GroupExpense[]> {
-    const response = await api.get<{ success: boolean; expenses: GroupExpense[] }>(
-      `/api/v1/groups/${id}/expenses`
-    );
-    return response.data.expenses;
-  },
-
-  /**
-   * Create a group expense
-   */
-  async createGroupExpense(
-    groupId: number,
-    data: CreateGroupExpenseData
-  ): Promise<GroupExpense> {
-    const response = await api.post<{
-      success: boolean;
-      expense: GroupExpense;
-      message: string;
-    }>(`/api/v1/groups/${groupId}/expenses`, data);
-    return response.data.expense;
-  },
-
-  /**
    * Get group balances (who owes whom)
    */
   async getGroupBalances(id: number): Promise<GroupBalance[]> {
@@ -191,31 +159,6 @@ export const groupService = {
     return response.data.balances;
   },
 
-  /**
-   * Record a settlement
-   */
-  async recordSettlement(
-    groupId: number,
-    data: CreateSettlementData
-  ): Promise<Settlement> {
-    const response = await api.post<{
-      success: boolean;
-      settlement: Settlement;
-      message: string;
-    }>(`/api/v1/groups/${groupId}/settle`, data);
-    return response.data.settlement;
-  },
-
-  /**
-   * Get settlements for a group
-   */
-  async getGroupSettlements(id: number): Promise<Settlement[]> {
-    const response = await api.get<{
-      success: boolean;
-      settlements: Settlement[];
-    }>(`/api/v1/groups/${id}/settlements`);
-    return response.data.settlements;
-  },
 };
 
 export default groupService;

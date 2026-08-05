@@ -177,63 +177,6 @@ export const transactionService = {
     return response.data.transactions;
   },
 
-  /**
-   * Bulk create or update transactions
-   */
-  async bulkCreateTransactions(
-    transactions: CreateTransactionData[]
-  ): Promise<Transaction[]> {
-    const response = await api.post<{
-      success: boolean;
-      transactions: Transaction[];
-      message: string;
-    }>('/api/v1/transactions/bulk', { transactions });
-    return response.data.transactions;
-  },
-
-  /**
-   * Export transactions
-   */
-  async exportTransactions(
-    filters?: TransactionFilters,
-    format: 'csv' | 'json' = 'csv'
-  ): Promise<Blob> {
-    const params = new URLSearchParams();
-    params.append('format', format);
-
-    if (filters?.start_date) params.append('start_date', filters.start_date);
-    if (filters?.end_date) params.append('end_date', filters.end_date);
-    if (filters?.category_id)
-      params.append('category_id', filters.category_id.toString());
-    if (filters?.account_id)
-      params.append('account_id', filters.account_id.toString());
-    if (filters?.type) params.append('type', filters.type);
-
-    const response = await api.get(`/api/v1/transactions/export?${params.toString()}`, {
-      responseType: 'blob',
-    });
-
-    return response.data;
-  },
-
-  /**
-   * Split a transaction
-   */
-  async splitTransaction(
-    id: number,
-    splitData: {
-      split_method: string;
-      split_with: string;
-      amounts?: number[];
-    }
-  ): Promise<Transaction> {
-    const response = await api.post<{
-      success: boolean;
-      transaction: Transaction;
-      message: string;
-    }>(`/api/v1/transactions/${id}/split`, splitData);
-    return response.data.transaction;
-  },
 };
 
 export default transactionService;
