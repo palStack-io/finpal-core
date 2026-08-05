@@ -108,8 +108,17 @@ def build_transaction(payload, user_id):
 
 
 def create_transaction(payload, user_id):
-    """Build, persist and return a transaction. Commits."""
+    """Build, persist and return a transaction. Commits.
+
+    The balance move belongs here rather than in `build_transaction`, because
+    `build_transaction` returns an *unsaved* row and a caller may discard it — a
+    balance mutation left in the session by an abandoned build would commit with
+    whatever came next.
+    """
+    from src.services.transaction.balances import apply_on_add
+
     expense = build_transaction(payload, user_id)
     db.session.add(expense)
+    apply_on_add(expense)
     db.session.commit()
     return expense

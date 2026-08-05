@@ -574,44 +574,20 @@ class TransactionService:
 
         return False, []
 
+    # Both of these now delegate to src/services/transaction/balances.py, which the
+    # flask-restx handlers also use. They were the original implementation, and
+    # keeping a second copy here is what let the two sides drift: the arithmetic
+    # stayed correct in this class while the handlers that actually serve traffic
+    # stopped calling it at all.
     def _update_account_balances_on_add(self, account_id, destination_account_id, transaction_type, amount):
         """Update account balances when adding a transaction"""
-        if not account_id:
-            return
-
-        account = Account.query.get(account_id)
-        if not account:
-            return
-
-        if transaction_type == 'expense':
-            account.balance -= amount
-        elif transaction_type == 'income':
-            account.balance += amount
-        elif transaction_type == 'transfer' and destination_account_id:
-            account.balance -= amount
-            destination_account = Account.query.get(destination_account_id)
-            if destination_account:
-                destination_account.balance += amount
+        from src.services.transaction.balances import _move
+        _move(account_id, destination_account_id, transaction_type, amount, 1)
 
     def _update_account_balances_on_delete(self, account_id, destination_account_id, transaction_type, amount):
         """Reverse account balance changes when deleting a transaction"""
-        if not account_id:
-            return
-
-        account = Account.query.get(account_id)
-        if not account:
-            return
-
-        # Reverse the effect
-        if transaction_type == 'expense':
-            account.balance += amount
-        elif transaction_type == 'income':
-            account.balance -= amount
-        elif transaction_type == 'transfer' and destination_account_id:
-            account.balance += amount
-            destination_account = Account.query.get(destination_account_id)
-            if destination_account:
-                destination_account.balance -= amount
+        from src.services.transaction.balances import _move
+        _move(account_id, destination_account_id, transaction_type, amount, -1)
 
 
 # Tag Management (part of Transaction Service)
