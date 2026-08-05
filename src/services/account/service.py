@@ -358,7 +358,12 @@ class SimpleFinService:
     """Service class for SimpleFin integration operations"""
 
     def __init__(self):
-        pass
+        # Four methods below use `self.repo`, and this was `pass`, so every one of
+        # them raised AttributeError before doing any work — SimpleFin sync 500'd for
+        # every user on every call. `AccountService` above already constructs the
+        # same repository this way, and `AccountRepository` provides all three
+        # methods used here, so the constructor was simply never written.
+        self.repo = AccountRepository()
 
     def save_simplefin_token(self, user_id, access_url):
         """

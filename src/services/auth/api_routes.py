@@ -18,6 +18,17 @@ from werkzeug.security import generate_password_hash
 
 import logging
 
+# Werkzeug raises HTTPException from inside handler bodies — BadRequest from a bare
+# `request.get_json()` on a malformed body being the common case. Each route-level
+# `except Exception` that answers with a 500 is preceded by `except HTTPException:
+# raise`, so a correct 4xx is not rewritten as a server fault. Without it
+# `POST /api/v1/auth/login` answered a malformed body with a 500.
+#
+# Deliberately NOT applied to the two catches here that are not route-level: the
+# module-list fallback, and the verification-email guard whose whole purpose is that
+# registration succeeds even if mail fails.
+from werkzeug.exceptions import HTTPException  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 # Create API Blueprint
@@ -148,7 +159,9 @@ def register():
             }
         }), 201
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
@@ -199,7 +212,9 @@ def login():
             }
         }), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
 
@@ -216,7 +231,9 @@ def refresh():
             'access_token': access_token
         }), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
 
@@ -251,7 +268,9 @@ def get_current_user():
             'created_at': user.created_at.isoformat() if user.created_at else None
         }), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
 
@@ -265,6 +284,8 @@ def logout():
         if not RevokedToken.is_revoked(jti):
             db.session.add(RevokedToken(jti=jti))
             db.session.commit()
+    except HTTPException:
+        raise
     except Exception:
         db.session.rollback()
         logger.exception('Failed to revoke token on logout')
@@ -328,7 +349,9 @@ def complete_onboarding():
             'modules': _get_user_modules(user.id),
         }), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
@@ -368,7 +391,9 @@ def verify_email():
             }
         }), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
@@ -412,7 +437,9 @@ def resend_verification():
 
         return jsonify({'message': 'Verification email sent'}), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
@@ -453,7 +480,9 @@ def forgot_password():
 
         return jsonify({'success': True, 'message': 'If the email exists, a reset link has been sent'}), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'error': 'An internal error occurred'}), 500
@@ -547,7 +576,9 @@ def reset_password():
 
         return jsonify({'success': True, 'message': 'Password reset successfully'}), 200
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
         logger.exception('Unhandled error in auth endpoint')
         return jsonify({'success': False, 'error': 'An internal error occurred'}), 500
@@ -655,6 +686,8 @@ def _complete_native_signin(provider, claims, full_name=None):
         # from_oidc raises ValueError only with an authored, user-facing message
         # ("already linked to X"). Not the str(e) leak CLAUDE.md forbids.
         return jsonify({'error': str(exc)}), 409
+    except HTTPException:
+        raise
     except Exception:
         db.session.rollback()
         logger.exception('Native OIDC sign-in failed to resolve a user')

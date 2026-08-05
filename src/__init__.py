@@ -8,7 +8,7 @@ import logging
 from contextlib import contextmanager
 
 import pytz
-from flask import Flask
+from flask import Flask, jsonify, request
 from sqlalchemy import text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from src.config import get_config
@@ -229,6 +229,39 @@ def create_app(config_name=None):
         app.logger.info("REST API v1 registered at /api/v1")
     except Exception as e:
         app.logger.warning(f"REST API registration failed: {e}")
+
+    # An /api/ path answers in JSON, including when it fails.
+    #
+    # Werkzeug raises HTTPException from inside handlers — BadRequest from a
+    # malformed body being the common case — and Flask's default renderer answers
+    # with an HTML page. The legacy blueprints previously hid that by catching the
+    # exception themselves and returning 500, which was worse; with that removed, a
+    # JSON client asking for JSON was getting `<!doctype html>` and Flask's stock
+    # "The browser (or proxy) sent a request..." wording.
+    #
+    # Scoped to /api/ so non-API routes keep the normal error pages, and it defers to
+    # `e.description` only for the safe, framework-generated text — the handler
+    # message, never an application exception, which is what `str(e)` used to leak.
+    from werkzeug.exceptions import HTTPException as _HTTPException
+
+    # Both `error` and `message` carry the status name, because the two clients read
+    # different keys and neither can be changed in lockstep with this: web reads
+    # `data.error` (AddTransactionForm, GroupDetail) and mobile reads `data.message`
+    # in most places and `data.error` in a couple. That is also the shape the JWT
+    # loaders above already use. The value is the HTTP status name — "Bad Request" —
+    # not `e.description`, whose BadRequest wording ("The browser (or proxy) sent a
+    # request...") is meaningless to an API client, and never an application
+    # exception, which is what the `str(e)` returns used to leak.
+    @app.errorhandler(_HTTPException)
+    def _json_http_errors(e):
+        if not request.path.startswith('/api/'):
+            return e
+        return jsonify({
+            'success': False,
+            'error': e.name,
+            'message': e.name,
+            'status': e.code,
+        }), (e.code or 500)
 
     # Health check endpoint
     @app.route('/health')

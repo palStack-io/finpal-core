@@ -17,13 +17,16 @@ export const API_CONFIG = {
       login: '/api/v1/auth/login',
       register: '/api/v1/auth/register',
       logout: '/api/v1/auth/logout',
-      profile: '/api/v1/auth/profile',
       refresh: '/api/v1/auth/refresh',
+      // There is no `profile` entry: it pointed at `/api/v1/auth/profile`, which no
+      // blueprint has ever served. The route is `/api/v1/auth/me`. Its only caller
+      // was `authService.getCurrentUser`, which nothing called in turn.
     },
     transactions: {
-      // The trailing slash is load-bearing on `list`: it is the paginating,
-      // filtering restx handler. `create` deliberately has none — that is the
-      // legacy blueprint's POST, which is the one clients use.
+      // Both spellings now reach the same flask-restx handler — the legacy
+      // blueprint's rules are retired and it is no longer registered, so the
+      // trailing slash on `list` is no longer load-bearing. Left as-is because
+      // changing a URL clients already use buys nothing.
       list: '/api/v1/transactions/',
       create: '/api/v1/transactions',
       get: (id: number) => `/api/v1/transactions/${id}`,
@@ -42,10 +45,10 @@ export const API_CONFIG = {
       update: (id: string) => `/api/v1/budgets/${id}`,
       delete: (id: string) => `/api/v1/budgets/${id}`,
     },
-    dashboard: {
-      stats: '/api/v1/dashboard/stats',
-      charts: '/api/v1/dashboard/charts',
-    },
+    // There is no `dashboard` block: `stats` and `charts` named
+    // /api/v1/dashboard/stats and /charts, neither of which any blueprint has
+    // served. Nothing referenced them. The real endpoint is
+    // /api/v1/analytics/dashboard, which `analyticsService` already uses directly.
   },
 } as const;
 

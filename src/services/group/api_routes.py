@@ -8,6 +8,16 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.services.group.service import GroupService
 from src.extensions import db
 
+# Werkzeug raises HTTPException from inside handler bodies — BadRequest from a bare
+# `request.get_json()` on a malformed body being the common case. Each route-level
+# `except Exception` that answers with a 500 is preceded by `except HTTPException:
+# raise`, so a correct 4xx is not rewritten as a server fault. Without it
+# `POST /api/v1/auth/login` answered a malformed body with a 500.
+from werkzeug.exceptions import HTTPException  # noqa: E402
+import logging  # noqa: E402
+
+logger = logging.getLogger(__name__)
+
 # Create API Blueprint
 api_bp = Blueprint('group_api', __name__, url_prefix='/api/v1/groups')
 
@@ -55,8 +65,11 @@ def get_groups():
 
         return jsonify({'groups': groups_data}), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:group_id>', methods=['GET'])
@@ -96,8 +109,11 @@ def get_group(group_id):
 
         return jsonify({'group': group_data}), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('', methods=['POST'])
@@ -138,9 +154,12 @@ def create_group():
         else:
             return jsonify({'error': message}), 400
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:group_id>', methods=['PUT', 'PATCH'])
@@ -170,9 +189,12 @@ def update_group(group_id):
         else:
             return jsonify({'error': message}), 400
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:group_id>', methods=['DELETE'])
@@ -189,9 +211,12 @@ def delete_group(group_id):
         else:
             return jsonify({'error': message}), 400
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:group_id>/balances', methods=['GET'])
@@ -211,8 +236,11 @@ def get_group_balances(group_id):
 
         return jsonify({'balances': balance_data.get('simplified_debts', [])}), 200
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @api_bp.route('/<int:group_id>/members', methods=['POST'])
@@ -241,6 +269,9 @@ def add_group_member(group_id):
         else:
             return jsonify({'error': message}), 400
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.exception('Unhandled error')
+        return jsonify({'error': 'An internal error occurred'}), 500
