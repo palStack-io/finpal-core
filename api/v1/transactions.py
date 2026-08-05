@@ -371,8 +371,16 @@ class TransactionDetail(Resource):
             # form posts one payload object to either endpoint, so every edit of a
             # split transaction silently lost them.
             from src.services.transaction.creation import (
-                TransactionPayloadInvalid, validate_split_value,
-                validated_category_splits)
+                TransactionPayloadInvalid, validate_paid_by,
+                validate_split_value, validated_category_splits)
+
+            try:
+                # After the assignments above, so the group being checked against is
+                # the one the transaction will actually be in.
+                validate_paid_by(transaction.paid_by, transaction.group_id,
+                                 current_user_id)
+            except TransactionPayloadInvalid as exc:
+                return _refuse(exc.errors)
 
             if 'split_value' in data:
                 transaction.split_value = data['split_value']

@@ -35,6 +35,51 @@ def _coerce_date(value):
     return datetime.utcnow()
 
 
+def validate_paid_by(paid_by, group_id, caller_id):
+    """`paid_by` decides who owes whom, so it cannot be an arbitrary id.
+
+    Flagged by automated review when `paid_by` first got a `put` branch: assigned
+    unchecked, a caller can attribute their own spending to anyone, and the named
+    user then carries it through `Expense.calculate_splits`.
+
+    The rule:
+
+    * a group transaction may name any **member of that group** — this is the real
+      case, and the one that must not break: `GroupDetail.tsx:115` records a
+      settlement with another member's id;
+    * without a group there is no shared context in which someone else could have
+      paid, so the only honest value is the caller.
+
+    Note that "is in my household" is **not** a usable boundary here:
+    `src/utils/household.py:get_all_user_ids` returns every user on the instance, so
+    it would permit anyone.
+
+    Public because `TransactionDetail.put` needs the identical rule; a field checked
+    on create and not on update is just a slower way to store a bad value.
+    """
+    if paid_by is None or paid_by == caller_id:
+        return
+
+    from src.models.user import User
+
+    if not User.query.filter_by(id=paid_by).first():
+        raise TransactionPayloadInvalid({'paid_by': [
+            'Unknown user.']})
+
+    if group_id is None:
+        raise TransactionPayloadInvalid({'paid_by': [
+            'Only you can have paid a transaction that is not in a group.']})
+
+    from src.models.associations import group_users
+    from src.models.group import Group
+    is_member = db.session.query(Group.id).join(
+        group_users, group_users.c.group_id == Group.id
+    ).filter(Group.id == group_id, group_users.c.user_id == paid_by).first()
+    if not is_member:
+        raise TransactionPayloadInvalid({'paid_by': [
+            "That user is not a member of this transaction's group."]})
+
+
 def validate_split_value(split_value, split_method, amount):
     """`split_value` means different things per split method, so its valid range
     cannot be expressed in the schema.
@@ -189,6 +234,10 @@ def build_transaction(payload, user_id):
             # row that claims a movement which never happened.
             raise TransactionPayloadInvalid({'destination_account_id': [
                 'Source and destination accounts cannot be the same.']})
+
+    # Checked after `group_id`, because whether another user may be named as the
+    # payer depends on that group's membership.
+    validate_paid_by(payload.get('paid_by'), group_id, user_id)
 
     split_value = validated.get('split_value')
     validate_split_value(split_value, payload.get('split_method', 'equal'),

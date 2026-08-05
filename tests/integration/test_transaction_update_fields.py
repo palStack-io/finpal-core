@@ -315,16 +315,115 @@ def test_group_id_on_update_is_membership_checked(client, db, auth_headers):
     assert _row(tid).group_id is None
 
 
-def test_paid_by_can_be_changed(client, db, auth_headers):
-    """Who paid feeds `calculate_splits`, so correcting it changes who owes whom."""
+def test_paid_by_reaches_the_row_on_update(client, db, auth_headers):
+    """That `put` has a working `paid_by` branch at all.
+
+    This test originally set the payer to an unrelated user on an *ungrouped*
+    transaction, and passed — which is precisely the hole automated review flagged on
+    the commit that added the branch. It now asserts the same plumbing within the
+    rule: the value reaches the row, and the caller naming themselves is always
+    valid. Who *else* may be named is covered by
+    `test_paid_by_may_be_another_member_of_the_transactions_group` and the two
+    refusal tests below.
+    """
     user = UserFactory()
     other = UserFactory()
     tid = _create(client, user, auth_headers)
-    assert _row(tid).paid_by == user.id
+
+    # Start from a state where someone else is the payer, set up directly rather
+    # than through the API, since the API now refuses to put it there.
+    _row(tid).paid_by = other.id
+    db.session.commit()
 
     resp = client.put('/api/v1/transactions/%d' % tid,
-                      headers=auth_headers(user), json={'paid_by': other.id})
+                      headers=auth_headers(user), json={'paid_by': user.id})
 
     assert resp.status_code == 200, resp.get_data(as_text=True)[:300]
-    assert _row(tid).paid_by == other.id, (
+    assert _row(tid).paid_by == user.id, (
         'the payer correction was accepted with a 200 and discarded')
+
+
+def test_paid_by_must_be_a_real_user(client, db, auth_headers):
+    """`paid_by` decides who owes whom, so it cannot be an arbitrary string.
+
+    Flagged by automated review on the branch that first gave `paid_by` a `put`
+    branch: assigning it unchecked lets a caller attribute their own spending to
+    anyone, and the named user then carries it in `calculate_splits`.
+    """
+    user = UserFactory()
+    tid = _create(client, user, auth_headers)
+
+    resp = client.put('/api/v1/transactions/%d' % tid,
+                      headers=auth_headers(user),
+                      json={'paid_by': 'nobody@nowhere.invalid'})
+
+    assert resp.status_code == 400, (
+        'accepted a payer who does not exist; got %s' % resp.status_code)
+    assert _row(tid).paid_by == user.id
+
+
+def test_paid_by_cannot_name_a_stranger_on_an_ungrouped_transaction(
+        client, db, auth_headers):
+    """With no group there is no shared context that would let someone else have
+    paid, so the only honest value is the caller.
+
+    The household is not a boundary here: `get_all_user_ids()` returns *every* user
+    on the instance, so "is in my household" would permit anyone.
+    """
+    user = UserFactory()
+    stranger = UserFactory()
+    tid = _create(client, user, auth_headers)
+
+    resp = client.put('/api/v1/transactions/%d' % tid,
+                      headers=auth_headers(user), json={'paid_by': stranger.id})
+
+    assert resp.status_code == 400, (
+        "a stranger was recorded as having paid the caller's ungrouped expense; "
+        'got %s' % resp.status_code)
+    assert _row(tid).paid_by == user.id
+
+
+def test_paid_by_may_be_another_member_of_the_transactions_group(
+        client, db, auth_headers):
+    """The legitimate case, and the one the rule must not break.
+
+    `GroupDetail.tsx:115` records a settlement with `paid_by` set to another
+    member's id, alongside that group's `group_id`.
+    """
+    from src.models.group import Group
+
+    payer = UserFactory()
+    other = UserFactory()
+    group = Group(name='Flat', created_by=payer.id,
+                  default_split_method='equal', auto_include_all=False)
+    group.members.extend([payer, other])
+    db.session.add(group)
+    db.session.commit()
+    tid = _create(client, payer, auth_headers, group_id=group.id)
+
+    resp = client.put('/api/v1/transactions/%d' % tid,
+                      headers=auth_headers(payer), json={'paid_by': other.id})
+
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:300]
+    assert _row(tid).paid_by == other.id
+
+
+def test_paid_by_is_checked_on_create_too(client, db, auth_headers):
+    """Both paths, or `put` and `post` disagree — the asymmetry this file exists
+    for."""
+    user = UserFactory()
+    stranger = UserFactory()
+
+    resp = client.post('/api/v1/transactions', headers=auth_headers(user), json={
+        'description': 'Not yours to attribute',
+        'amount': 10.0,
+        'date': '2026-08-05',
+        'transaction_type': 'expense',
+        'currency_code': 'USD',
+        'paid_by': stranger.id,
+    })
+
+    assert resp.status_code == 400, (
+        'create accepted a stranger as payer; got %s' % resp.status_code)
+    assert Expense.query.filter_by(
+        description='Not yours to attribute').first() is None
