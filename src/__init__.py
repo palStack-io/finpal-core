@@ -308,12 +308,13 @@ def _seed_reference_data(app):
 # blueprint wins and the flask-restx handler is dead code.
 #
 # These are NOT approved — they are recorded so that no *new* ones can appear
-# unnoticed. Removing them is not a matter of deleting the loser: web-ui calls
-# `/api/v1/transactions` (no slash) and hits the blueprint, while mobile calls
-# `/api/v1/transactions/` (trailing slash) and hits restx. The two clients run on
-# different implementations of the same resource, which is exactly how S-06 came
-# to be fixed for mobile and still broken for the web. Untangling that needs
-# client changes, so it is tracked in ROADMAP.md rather than done here.
+# unnoticed. The transactions entry has now been removed from this set, because
+# the duplicate is gone: the legacy GET list handler is retired, so the restx
+# rule serves both `/api/v1/transactions` and `/api/v1/transactions/` (this app
+# sets `url_map.strict_slashes = False`). That was the case this comment used to
+# describe — two clients on two implementations of one resource, which is how
+# S-06 came to be fixed for mobile and left broken for the web. The rest still
+# stand and still need client changes; tracked in ROADMAP.md.
 _KNOWN_DUPLICATE_RULES = {
     # Compared by URL *shape* (converter parameter names stripped) — see _shape.
     '/api/v1/categories',
@@ -325,7 +326,6 @@ _KNOWN_DUPLICATE_RULES = {
     '/api/v1/transaction-rules',
     '/api/v1/transaction-rules/<int>',
     '/api/v1/transaction-rules/test',
-    '/api/v1/transactions',
 }
 
 

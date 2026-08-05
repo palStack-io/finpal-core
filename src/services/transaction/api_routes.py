@@ -18,58 +18,32 @@ api_bp = Blueprint('transaction_api', __name__, url_prefix='/api/v1/transactions
 transaction_service = TransactionService()
 
 
-@api_bp.route('', methods=['GET'])
-@jwt_required()
-def get_transactions():
-    """Get all transactions for the current user"""
-    try:
-        identity = get_jwt_identity()
-
-        # Get all transactions and splits
-        expenses, expense_splits = transaction_service.get_all_transactions(identity)
-
-        # Format transactions for API response
-        transactions = []
-        for expense in expenses:
-            # Get splits for this expense
-            splits = expense_splits.get(expense.id, {})
-
-            transaction_data = {
-                'id': expense.id,
-                'name': expense.description,
-                'description': expense.description,
-                'amount': float(expense.amount),
-                'date': expense.date.strftime('%Y-%m-%d'),
-                'category': {'id': expense.category_id, 'name': expense.category.name} if expense.category else None,
-                'category_id': expense.category_id,
-                'type': 'income' if expense.transaction_type == 'income' else 'expense',
-                'transaction_type': expense.transaction_type,
-                'account': {'id': expense.account_id, 'name': expense.account.name} if expense.account else None,
-                'account_id': expense.account_id,
-                'currency_code': expense.currency_code or 'USD',
-                'group': {'id': expense.group_id, 'name': expense.group.name} if expense.group else None,
-                'group_id': expense.group_id,
-                'paid_by': expense.paid_by,
-                'split_method': expense.split_method,
-                'splits': splits
-            }
-            transactions.append(transaction_data)
-
-        # Calculate totals
-        total_income = sum(t['amount'] for t in transactions if t['type'] == 'income')
-        total_expense = sum(abs(t['amount']) for t in transactions if t['type'] == 'expense')
-
-        return jsonify({
-            'transactions': transactions,
-            'summary': {
-                'total_income': total_income,
-                'total_expense': total_expense,
-                'net_balance': total_income - total_expense
-            }
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# The GET list handler that used to live here has been retired.
+#
+# It was the handler web-ui actually reached, because Werkzeug matches the exact
+# rule `/api/v1/transactions` (this blueprint, registered first) before the restx
+# rule `/api/v1/transactions/`. It read **zero** query parameters: `page`,
+# `per_page`, `start_date`, `end_date`, `category_id`, `account_id`, `type` and
+# `search` were all built by the client and silently discarded, so every render
+# loaded the entire history and filtered it in the browser. It also returned no
+# `pagination` key, while the MSW mock for this URL returned one — so the
+# contract test passed against a shape the server never sent.
+#
+# Everything it did, `TransactionList.get` in `api/v1/transactions.py` now does:
+# the filters are honoured, and `summary` is computed over the whole filtered
+# query rather than the current page.
+#
+# Removing the rule rather than fixing it is deliberate, and it needs no client
+# change: this app sets `url_map.strict_slashes = False`, so with no exact GET
+# rule for the slash-less path, the restx rule `/api/v1/transactions/` matches
+# **both** spellings and serves them itself. Verified by asserting the payload of
+# `GET /api/v1/transactions` in
+# `tests/integration/test_transactions_list_api.py` — it comes back paginated,
+# with `summary`, and honouring the filters. No redirect is involved.
+#
+# The POST below stays. It is the create endpoint web-ui uses, the restx POST on
+# the slashed rule is not equivalent to it, and leaving an exact rule here keeps
+# creates off the shared path.
 
 
 # The detail handlers (GET/PUT/PATCH/DELETE on /<int:transaction_id>) used to live
