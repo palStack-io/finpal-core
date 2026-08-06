@@ -14,9 +14,10 @@ class NotificationService:
             msg = Message(subject=subject, recipients=[to], html=html_body)
             mail.send(msg)
             return True, 'Email sent successfully'
-        except Exception as e:
-            current_app.logger.error(f"Email error: {str(e)}")
-            return False, f'Error: {str(e)}'
+        except Exception:
+            # An SMTP failure names the mail host and the server's refusal.
+            current_app.logger.exception('Email error')
+            return False, 'Could not send the email'
 
     def send_budget_alert(self, user_id, budget):
         """Send budget overspend alert"""

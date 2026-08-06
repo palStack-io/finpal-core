@@ -17,9 +17,10 @@ class InvestmentService:
             db.session.add(portfolio)
             db.session.commit()
             return True, 'Portfolio created!', portfolio
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error: {str(e)}', None
+            current_app.logger.exception('Error creating portfolio')
+            return False, 'Could not create the portfolio', None
 
     def add_investment(self, portfolio_id, user_id, symbol, name, shares, purchase_price):
         try:
@@ -30,9 +31,10 @@ class InvestmentService:
             db.session.add(investment)
             db.session.commit()
             return True, 'Investment added!', investment
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error: {str(e)}', None
+            current_app.logger.exception('Error adding investment')
+            return False, 'Could not add the investment', None
 
     def update_prices(self, portfolio_id):
         """Fetch current prices from yfinance for every investment in the portfolio."""
@@ -59,9 +61,10 @@ class InvestmentService:
 
         try:
             db.session.commit()
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Commit failed: {str(e)}'
+            current_app.logger.exception('Error saving updated prices')
+            return False, 'Could not save the updated prices'
 
         msg = f'Updated {updated} price(s)'
         if failed:

@@ -162,10 +162,10 @@ class DemoService:
                 'existing': existing_count,
                 'message': f'Demo accounts ready: {created_count} created, {existing_count} already existed'
             }
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            logger.error(f"Failed to seed demo accounts: {str(e)}")
-            return {'success': False, 'error': str(e)}
+            logger.exception('Failed to seed demo accounts')
+            return {'success': False, 'error': 'Could not seed the demo accounts'}
 
     @staticmethod
     def _seed_user_data(user, account_data):
@@ -865,7 +865,7 @@ class DemoService:
                 db.session.commit()
 
             return {'success': True, 'message': 'Demo user data reset successfully'}
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            logger.error(f"Failed to reset demo user {user_id}: {str(e)}")
-            return {'success': False, 'error': str(e)}
+            logger.exception('Failed to reset demo user %s', user_id)
+            return {'success': False, 'error': 'Could not reset the demo user'}

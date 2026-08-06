@@ -359,10 +359,11 @@ class Account(Resource):
             _delete_all_user_data(user_id)
             db.session.delete(user)
             db.session.commit()
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f'Account delete error for {user_id}: {e}')
-            return {'message': f'Delete failed: {str(e)}'}, 500
+            logger.exception('Account delete error for %s', user_id)
+            return {'message': 'Could not delete the account. Nothing was '
+                               'removed — please try again.'}, 500
 
         return {'message': 'Account deleted successfully'}, 200
 
@@ -488,16 +489,25 @@ class Import(Resource):
 
         try:
             data = json.load(file)
-        except Exception as e:
-            return {'message': f'Invalid JSON: {str(e)}'}, 400
+        except json.JSONDecodeError as e:
+            # The position is the user's own file and is what they need to fix
+            # it; `str(e)` is not, because a decoder can quote the offending
+            # bytes back. Read the structured attributes instead.
+            return {'message': 'That file is not valid JSON '
+                               f'(line {e.lineno}, column {e.colno}).'}, 400
+        except Exception:
+            logger.exception('Could not read the uploaded backup for %s',
+                             user_id)
+            return {'message': 'That file could not be read as JSON.'}, 400
 
         try:
             stats = _import_user_data(user_id, data)
             return {'message': 'Data imported successfully', 'stats': stats}, 200
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f'Import error for {user_id}: {e}')
-            return {'message': f'Import failed: {str(e)}'}, 400
+            logger.exception('Import error for %s', user_id)
+            return {'message': 'The import failed and nothing was changed. '
+                               'Check the file is a finPal export.'}, 400
 
 
 @ns.route('/clear-cache')
@@ -560,9 +570,11 @@ class ResetCategories(Resource):
             Category.query.filter_by(user_id=user_id).delete(synchronize_session=False)
 
             db.session.commit()
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return {'message': f'Reset failed: {str(e)}'}, 500
+            logger.exception('Category reset failed for %s', user_id)
+            return {'message': 'Could not reset categories. Your existing '
+                               'categories were left as they were.'}, 500
 
         result = seed_user_defaults(user_id)
         return {
@@ -597,10 +609,11 @@ class DeleteAllData(Resource):
         try:
             _delete_all_user_data(user_id)
             db.session.commit()
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f'delete-all-data error for {user_id}: {e}')
-            return {'message': f'Delete failed: {str(e)}'}, 500
+            logger.exception('delete-all-data error for %s', user_id)
+            return {'message': 'Could not delete your data. Nothing was '
+                               'removed — please try again.'}, 500
 
         return {'message': 'All data deleted successfully'}, 200
 

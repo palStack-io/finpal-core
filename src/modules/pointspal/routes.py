@@ -306,9 +306,10 @@ class SyncTrigger(Resource):
         try:
             result = sync_from_pointspal()
             return result, 200
-        except Exception as e:
-            current_app.logger.error(f"Manual pointsPal sync failed: {e}")
-            return {'status': 'error', 'error': str(e)}, 500
+        except Exception:
+            current_app.logger.exception('Manual pointsPal sync failed')
+            return {'status': 'error',
+                    'error': 'pointsPal sync failed — see the server log'}, 500
 
 
 @points_ns.route('/programs')

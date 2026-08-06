@@ -4,6 +4,7 @@ Business logic for category and category mapping management
 """
 
 from datetime import datetime, timedelta
+from flask import current_app
 from src.extensions import db
 from src.models.category import Category, CategoryMapping
 from src.models.transaction import Expense
@@ -70,9 +71,10 @@ class CategoryService:
             db.session.add(category)
             db.session.commit()
             return True, 'Category added successfully', category
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error adding category: {str(e)}', None
+            current_app.logger.exception('Error adding category')
+            return False, 'Error adding category', None
 
     def update_category(self, category_id, user_id, name=None, icon=None, color=None):
         """Update a category - Returns (success, message)"""
@@ -96,9 +98,10 @@ class CategoryService:
         try:
             db.session.commit()
             return True, 'Category updated successfully'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error updating category: {str(e)}'
+            current_app.logger.exception('Error updating category')
+            return False, 'Error updating category'
 
     def delete_category(self, category_id, user_id):
         """Delete a category - Returns (success, message)"""
@@ -145,9 +148,10 @@ class CategoryService:
             db.session.commit()
 
             return True, 'Category deleted successfully'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error deleting category: {str(e)}'
+            current_app.logger.exception('Error deleting category')
+            return False, 'Error deleting category'
 
     # Category Mapping Methods
 
@@ -187,9 +191,10 @@ class CategoryService:
             db.session.add(mapping)
             db.session.commit()
             return True, 'Category mapping rule added successfully'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error adding mapping: {str(e)}'
+            current_app.logger.exception('Error adding category mapping')
+            return False, 'Error adding mapping'
 
     def update_mapping(self, mapping_id, user_id, keyword=None, category_id=None, is_regex=None, priority=None):
         """Update a category mapping - Returns (success, message)"""
@@ -212,9 +217,10 @@ class CategoryService:
         try:
             db.session.commit()
             return True, 'Category mapping updated successfully'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error updating mapping: {str(e)}'
+            current_app.logger.exception('Error updating category mapping')
+            return False, 'Error updating mapping'
 
     def toggle_mapping(self, mapping_id, user_id):
         """Toggle mapping active status - Returns (success, message, new_status)"""
@@ -231,9 +237,10 @@ class CategoryService:
             db.session.commit()
             status = "activated" if mapping.active else "deactivated"
             return True, f'Category mapping {status} successfully', mapping.active
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error toggling mapping: {str(e)}', None
+            current_app.logger.exception('Error toggling category mapping')
+            return False, 'Error toggling mapping', None
 
     def delete_mapping(self, mapping_id, user_id):
         """Delete a category mapping - Returns (success, message)"""
@@ -248,9 +255,10 @@ class CategoryService:
             db.session.delete(mapping)
             db.session.commit()
             return True, 'Category mapping deleted successfully'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error deleting mapping: {str(e)}'
+            current_app.logger.exception('Error deleting category mapping')
+            return False, 'Error deleting mapping'
 
     def bulk_categorize_transactions(self, user_id):
         """Categorize all uncategorized transactions - Returns (success, message, categorized_count, total_count)"""
@@ -276,6 +284,7 @@ class CategoryService:
             db.session.commit()
             return True, f'Successfully categorized {categorized_count} out of {total_count} transactions', categorized_count, total_count
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error: {str(e)}', 0, 0
+            current_app.logger.exception('Error bulk-categorizing transactions')
+            return False, 'Could not categorize transactions', 0, 0

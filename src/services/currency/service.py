@@ -5,6 +5,7 @@ Business logic for currency management and exchange rates
 
 import requests
 from datetime import datetime
+from flask import current_app
 from src.extensions import db
 from src.models.currency import Currency
 
@@ -59,9 +60,10 @@ class CurrencyService:
         try:
             db.session.commit()
             return True, f'Currency {code} added successfully', currency
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error adding currency: {str(e)}', None
+            current_app.logger.exception('Error adding currency %s', code)
+            return False, f'Could not add currency {code}', None
     
     def update_currency(self, code, name=None, symbol=None, rate_to_base=None, is_base=None):
         """
@@ -93,9 +95,10 @@ class CurrencyService:
         try:
             db.session.commit()
             return True, f'Currency {code} updated successfully', currency
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error updating currency: {str(e)}', None
+            current_app.logger.exception('Error updating currency %s', code)
+            return False, f'Could not update currency {code}', None
     
     def delete_currency(self, code):
         """
@@ -114,9 +117,11 @@ class CurrencyService:
             db.session.delete(currency)
             db.session.commit()
             return True, f'Currency {code} deleted successfully'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error deleting currency: {str(e)}'
+            current_app.logger.exception('Error deleting currency %s', code)
+            return False, (f'Could not delete currency {code}. It may still be '
+                           'used by an account or a transaction.')
     
     def set_base_currency(self, code):
         """
@@ -142,9 +147,11 @@ class CurrencyService:
             
             db.session.commit()
             return True, f'Base currency successfully changed to {code}'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error changing base currency: {str(e)}'
+            current_app.logger.exception('Error changing base currency to %s',
+                                         code)
+            return False, 'Could not change the base currency'
     
     def update_exchange_rates(self):
         """

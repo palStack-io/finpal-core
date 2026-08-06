@@ -66,10 +66,13 @@ class AuthService:
 
             return True, 'Account created successfully! You can now log in.', user
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error creating user: {str(e)}")
-            return False, f'Error creating account: {str(e)}', None
+            # A duplicate email arrives here as an IntegrityError naming the
+            # unique constraint and the row — which would both leak the schema
+            # and answer "does this address have an account?".
+            current_app.logger.exception('Error creating user')
+            return False, 'Could not create the account', None
 
     def generate_user_color(self, user_id):
         """
@@ -120,10 +123,10 @@ class AuthService:
             user.set_password(new_password)
             db.session.commit()
             return True, 'Password reset successful! You can now log in.', user
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error resetting password: {str(e)}")
-            return False, f'Error resetting password: {str(e)}', None
+            current_app.logger.exception('Error resetting password')
+            return False, 'Error resetting password', None
 
     # Admin User Management Methods
 
@@ -159,10 +162,10 @@ class AuthService:
 
             return True, 'User added successfully!', user
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error creating user: {str(e)}")
-            return False, f'Error creating user: {str(e)}', None
+            current_app.logger.exception('Error creating user')
+            return False, 'Error creating user', None
 
     def admin_delete_user(self, user_id, current_user_id):
         """
@@ -268,10 +271,10 @@ class AuthService:
             current_app.logger.info(f"User {user_id} deleted successfully")
             return True, 'User deleted successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error deleting user: {str(e)}", exc_info=True)
-            return False, f'Error deleting user: {str(e)}'
+            current_app.logger.exception('Error deleting user')
+            return False, 'Error deleting user'
 
     def admin_reset_password(self, user_id, new_password, confirm_password):
         """
@@ -290,10 +293,10 @@ class AuthService:
             user.set_password(new_password)
             db.session.commit()
             return True, f'Password reset successful for {user.name}!', user
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error resetting password: {str(e)}")
-            return False, f'Error resetting password: {str(e)}', None
+            current_app.logger.exception('Error resetting password')
+            return False, 'Error resetting password', None
 
     def admin_toggle_admin_status(self, user_id, current_user_id):
         """
@@ -316,10 +319,10 @@ class AuthService:
             status = "admin" if user.is_admin else "regular user"
             return True, f'User {user.name} is now a {status}!', user.is_admin
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error toggling admin status: {str(e)}")
-            return False, f'Error updating user: {str(e)}', None
+            current_app.logger.exception('Error toggling admin status')
+            return False, 'Error updating user', None
 
     # Helper Methods for Default Data Creation
 
