@@ -2,7 +2,16 @@
  * User Types
  */
 
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR' | 'CAD' | 'AUD';
+/**
+ * The currencies the app supports.
+ *
+ * `JPY` was missing here while `Settings.tsx:142` offers it and the backend seeds it
+ * (`src/cli.py:200`), so a user could select a currency this type said did not exist —
+ * and `getBranding` fell back to USD for it, branding a yen account "DollarPal" with a
+ * `$`. Found via D-45, because the vacuous typecheck gate meant the resulting
+ * assignment error was never reported.
+ */
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR' | 'JPY' | 'CAD' | 'AUD';
 
 export interface ServerFeatures {
   simplefin: boolean;
