@@ -72,7 +72,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
       };
 
       if (formData.parent_id) {
-        data.parent_id = parseInt(formData.parent_id);
+        data.parent_id = parseInt(String(formData.parent_id), 10);
       }
 
       if (category?.id) {
