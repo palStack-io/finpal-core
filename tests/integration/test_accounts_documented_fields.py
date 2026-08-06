@@ -23,8 +23,19 @@ from tests.factories import UserFactory
 
 ENDPOINT = '/api/v1/accounts/'
 
-# The documented name differs from the column for exactly one field.
-DOCUMENTED_TO_ATTRIBUTE = {'account_type': 'type'}
+# The documented name differs from the column for two fields.
+#
+# `owner_id` is the household member an account is assigned to (item A of the D-18
+# build). It writes `Account.user_id`, which already existed — ownership needed no new
+# column, which matters because `db.create_all()` would never have added one to an
+# existing table on the deploy.
+DOCUMENTED_TO_ATTRIBUTE = {'account_type': 'type', 'owner_id': 'user_id'}
+
+# `owner_id` is the one documented field whose valid values depend on the database:
+# it must name a real household member, so no literal can stand in for it here. The
+# round-trip test substitutes a second household member and asserts the row moved to
+# them — which is a stronger check than the other fields get, not a weaker one.
+A_HOUSEHOLD_MEMBER = '<resolved at request time>'
 
 # A value of the right shape for each documented field, used to prove the write
 # path keeps it. Anything documented and missing here fails the coverage test
@@ -37,6 +48,7 @@ SAMPLE_VALUES = {
     'currency_code': 'USD',
     'institution': 'Test Bank',
     'color': '#3b82f6',
+    'owner_id': A_HOUSEHOLD_MEMBER,
 }
 
 
@@ -76,14 +88,19 @@ def test_posting_the_documented_body_persists_every_field(client, auth_headers,
     A status code cannot catch this. The request succeeds either way — what
     differs is whether what the client sent is still there afterwards.
     """
-    resp = client.post(ENDPOINT, json=dict(SAMPLE_VALUES),
+    housemate = UserFactory()
+    body = dict(SAMPLE_VALUES, owner_id=housemate.id)
+
+    resp = client.post(ENDPOINT, json=body,
                        headers=auth_headers(user, password='secret'))
     assert resp.status_code in (200, 201), resp.get_json()
 
-    account = Account.query.filter_by(user_id=user.id,
-                                      name=SAMPLE_VALUES['name']).one()
+    # Looked up by name, not by owner: the point of `owner_id` is that the row does
+    # NOT belong to the caller, so keying this lookup to `user.id` would make the
+    # assertion below unreachable.
+    account = Account.query.filter_by(name=body['name']).one()
 
-    for field, sent in SAMPLE_VALUES.items():
+    for field, sent in body.items():
         attribute = DOCUMENTED_TO_ATTRIBUTE.get(field, field)
         stored = getattr(account, attribute)
         if isinstance(sent, float):

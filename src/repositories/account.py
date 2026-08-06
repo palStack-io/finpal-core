@@ -4,6 +4,22 @@ from src.models.transaction import Expense
 from src.extensions import db
 
 
+def _scope(user_ids):
+    """Coerce a scope argument to a list of user IDs, refusing a bare string.
+
+    `get_by_external_id` and `get_by_import_source` used to take a single `user_id`
+    and now take a list. A stale caller passing the string through would not raise:
+    `.in_('alice@test.com')` iterates the string **character by character** and
+    quietly matches nothing, which is a dedupe failure that creates duplicate
+    accounts rather than an error anyone would see. So it is refused loudly.
+    """
+    if isinstance(user_ids, str):
+        raise TypeError(
+            'scope must be a list of user IDs, not the string %r — passing a '
+            'single id here silently matches nothing' % user_ids)
+    return list(user_ids)
+
+
 class AccountRepository:
     def get_all_for_user(self, user_id):
         """All accounts owned by a single user."""
@@ -28,14 +44,42 @@ class AccountRepository:
         """
         return Account.query.filter_by(name=name, user_id=user_id).first()
 
-    def get_by_external_id(self, external_id, user_id):
-        """Account with a matching SimpleFin / external ID."""
-        return Account.query.filter_by(external_id=external_id, user_id=user_id).first()
+    def get_by_id_in_household(self, account_id, user_ids: list):
+        """Account by primary key, if it belongs to one of `user_ids`, else None.
 
-    def get_by_import_source(self, user_id, import_source: str):
-        """All accounts with a given import source for a user."""
-        return Account.query.filter_by(
-            user_id=user_id, import_source=import_source
+        The household counterpart of `get_by_id_and_user`. Detail, update, delete and
+        balance all used the caller-scoped version while the list route was
+        household-scoped, so a housemate saw a row and got a 404 opening it — D-43.
+        """
+        return Account.query.filter(
+            Account.id == account_id, Account.user_id.in_(_scope(user_ids))
+        ).first()
+
+    def get_by_external_id(self, external_id, user_ids: list):
+        """Account with a matching SimpleFin / external ID, within a scope.
+
+        **Takes a list of user IDs, not one user.** Ownership is reassignable now, so
+        keying dedupe to the caller means that after member A assigns an imported
+        account to member B, A's next import matches nothing and creates a **second
+        row for the same `external_id`**. The scope is passed in rather than resolved
+        here so the decision stays visible at the call site.
+        """
+        return Account.query.filter(
+            Account.external_id == external_id,
+            Account.user_id.in_(_scope(user_ids)),
+        ).first()
+
+    def get_by_import_source(self, user_ids: list, import_source: str):
+        """All accounts with a given import source, within a scope.
+
+        **Takes a list of user IDs, not one user** — see `get_by_external_id`. A
+        reassigned account would otherwise drop out of every sync: the account moves
+        to B while the credential stays with A, and `SimpleFin.user_id` is unique per
+        user so B has no token of their own.
+        """
+        return Account.query.filter(
+            Account.user_id.in_(_scope(user_ids)),
+            Account.import_source == import_source,
         ).all()
 
     def transaction_count(self, account_id) -> int:

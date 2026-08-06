@@ -67,4 +67,75 @@ describe('API error precedence', () => {
         + `status code instead of its reason: ${offenders.join(', ')}`
       : '').toEqual([]);
   });
+
+  /**
+   * The shape the check above is blind to, found while adding a reachable 400 to
+   * account creation (item A of the D-18 build).
+   *
+   * `AddAccountForm.tsx` read `(err as {message?: string}).message || 'Failed to
+   * create account'` and `EditAccountForm.tsx` read `err.message || 'Failed to
+   * update account'`. Neither reads `response.data.error` **anywhere**, so the
+   * precedence check above — which needs both reads present in one expression to
+   * fire — could never see them. The server's reason is not merely deprioritised
+   * here, it is never consulted, which is strictly worse: there is no branch to
+   * reorder.
+   *
+   * Keyed to the catch binding rather than to a file or a fallback string: find
+   * `catch (x)`, take the block, and require that a block reading `x.message` also
+   * reads `.response`. That distinguishes it from the three sites that read a
+   * *result* object's `.message` (`ResetPassword`, `ForgotPassword`, `Accounts`),
+   * which are successful responses carrying a server-authored message and are not
+   * errors at all.
+   */
+  it('never reads only axios\'s message, ignoring the server\'s reason', () => {
+    const offenders: string[] = [];
+
+    for (const file of files) {
+      const src = readFileSync(file, 'utf8');
+      const pattern = /\bcatch\s*\(\s*([A-Za-z_$][\w$]*)[^)]*\)\s*\{/g;
+      let match: RegExpExecArray | null;
+
+      while ((match = pattern.exec(src)) !== null) {
+        const binding = match[1];
+        const body = blockAfter(src, pattern.lastIndex - 1);
+        // Does this catch read the error's own `.message`, directly or through a cast?
+        const readsMessage = new RegExp(
+          `(?:\\b${binding}\\s*\\.\\s*message\\b)|(?:\\(\\s*${binding}\\s+as\\b[^)]*\\)\\s*\\.\\s*message\\b)`,
+        ).test(body);
+        if (readsMessage && !/\.\s*response\b/.test(body)) {
+          const line = src.slice(0, match.index).split('\n').length;
+          offenders.push(`${relative(SRC, file)}:${line}`);
+        }
+      }
+    }
+
+    expect(offenders, offenders.length
+      ? `these catches show axios's "Request failed with status code N" and never `
+        + `read the server's error, so a 4xx reason never reaches the user: `
+        + `${offenders.join(', ')}`
+      : '').toEqual([]);
+  });
+
+  it('the catch-block scanner actually finds catch blocks', () => {
+    // Same guard as above, one level down: if the block extractor silently
+    // returned nothing, the check would pass while inspecting nothing.
+    const found = files.reduce((n, f) => {
+      const src = readFileSync(f, 'utf8');
+      return n + (src.match(/\bcatch\s*\(/g) || []).length;
+    }, 0);
+    expect(found).toBeGreaterThan(20);
+  });
 });
+
+/** The `{...}` block starting at `open`, brace-matched. */
+function blockAfter(src: string, open: number): string {
+  let depth = 0;
+  for (let i = open; i < src.length; i += 1) {
+    if (src[i] === '{') depth += 1;
+    else if (src[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return src.slice(open, i + 1);
+    }
+  }
+  return src.slice(open);
+}

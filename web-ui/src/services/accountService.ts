@@ -30,6 +30,16 @@ export interface CreateAccountData {
   institution?: string;
   account_number?: string;
   is_active?: boolean;
+  color?: string;
+  /**
+   * The household member to assign this account to — a user ID, which in finPal is
+   * an email address. Omit it to assign the account to the calling user.
+   *
+   * Must be a household member: a demo account or an unknown id is refused with a
+   * 400 whose `error` names the reason, so any caller must surface
+   * `response.data.error` rather than axios's own message.
+   */
+  owner_id?: string;
 }
 
 export interface UpdateAccountData {
@@ -42,6 +52,8 @@ export interface UpdateAccountData {
   is_active?: boolean;
   external_id?: string;
   color?: string;
+  /** Reassign the account to a different household member. See CreateAccountData. */
+  owner_id?: string;
 }
 
 export interface AccountBalanceResponse {

@@ -7,6 +7,8 @@ from src.extensions import db
 from schemas import account_schema, accounts_schema
 from schemas.input_schemas import account_input
 from src.utils.validation import validate_request, validation_error_response
+from src.utils.household import visible_user_ids, is_household_member
+from src.repositories.account import AccountRepository
 from src.services.account.service import AccountService
 from datetime import datetime
 import logging
@@ -44,6 +46,13 @@ account_model = ns.model('Account', {
     'currency_code': fields.String(description='Currency code'),
     'institution': fields.String(description='Financial institution name'),
     'color': fields.String(description='Account color (hex code)'),
+    # Deliberately NOT required: omitting it assigns the account to the caller, and
+    # a required-field claim the server does not enforce breaks a generated client
+    # exactly as badly as a missing route (#68).
+    'owner_id': fields.String(
+        description='Household member to assign this account to. '
+                    'Defaults to the calling user. Must be a household member — '
+                    'a demo account or an unknown id is refused with 400.'),
 })
 
 
@@ -56,12 +65,15 @@ class AccountList(Resource):
     @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get all accounts for household"""
-        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
         try:
-            # Get all accounts for the household
-            accounts = Account.query.filter(Account.user_id.in_(get_all_user_ids())).all()
+            # `visible_user_ids`, not `get_all_user_ids`: the latter includes demo
+            # accounts, and the detail route below excludes them. Leaving this one
+            # wider would put a row in the list that its viewer cannot open — the
+            # exact list/detail disagreement D-43 is.
+            accounts = AccountRepository().get_all_for_household(
+                visible_user_ids(current_user_id))
 
             # Serialize
             result = accounts_schema.dump(accounts)
@@ -95,6 +107,7 @@ class AccountList(Resource):
             balance=validated.get('balance', 0),
             currency_code=validated.get('currency_code', 'USD'),
             color=validated.get('color'),
+            owner_id=validated.get('owner_id'),
         )
 
         if not success:
@@ -113,7 +126,10 @@ class AccountDetail(Resource):
         """Get a specific account by ID"""
         current_user_id = get_jwt_identity()
 
-        account = Account.query.filter_by(id=id, user_id=current_user_id).first()
+        # Household-scoped, matching the list route. Caller-scoped here was D-43: the
+        # list showed a housemate's account and opening it answered 404.
+        account = AccountRepository().get_by_id_in_household(
+            id, visible_user_ids(current_user_id))
 
         if not account:
             return {'success': False, 'error': 'Account not found'}, 404
@@ -132,7 +148,10 @@ class AccountDetail(Resource):
         """Update an account"""
         current_user_id = get_jwt_identity()
 
-        account = Account.query.filter_by(id=id, user_id=current_user_id).first()
+        # Household-scoped, matching the list route. Caller-scoped here was D-43: the
+        # list showed a housemate's account and opening it answered 404.
+        account = AccountRepository().get_by_id_in_household(
+            id, visible_user_ids(current_user_id))
 
         if not account:
             return {'success': False, 'error': 'Account not found'}, 404
@@ -156,6 +175,17 @@ class AccountDetail(Resource):
                 account.color = data['color']
             if 'external_id' in data:
                 account.external_id = data['external_id']
+            if 'owner_id' in data:
+                # Reassignment. Refused for a non-member so that a demo account or a
+                # stranger's id cannot be handed household property, and refused
+                # before the commit so a rejected reassignment leaves nothing behind.
+                if not is_household_member(data['owner_id']):
+                    db.session.rollback()
+                    return {
+                        'success': False,
+                        'error': 'Owner must be a member of this household',
+                    }, 400
+                account.user_id = data['owner_id']
 
             db.session.commit()
 
@@ -199,7 +229,10 @@ class AccountBalance(Resource):
         """Get calculated balance for an account"""
         current_user_id = get_jwt_identity()
 
-        account = Account.query.filter_by(id=id, user_id=current_user_id).first()
+        # Household-scoped, matching the list route. Caller-scoped here was D-43: the
+        # list showed a housemate's account and opening it answered 404.
+        account = AccountRepository().get_by_id_in_household(
+            id, visible_user_ids(current_user_id))
 
         if not account:
             return {'success': False, 'error': 'Account not found'}, 404
@@ -367,7 +400,7 @@ class SimpleFinImport(Resource):
 
         simplefin_service = SimpleFinService()
         success, message, results = simplefin_service.import_simplefin_accounts(
-            current_user_id, account_ids
+            current_user_id, account_ids, owner_id=data.get('owner_id')
         )
 
         if success:

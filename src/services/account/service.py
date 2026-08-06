@@ -15,6 +15,7 @@ from src.models.currency import Currency
 from src.models.user import User
 from src.utils.currency_converter import convert_currency, get_base_currency
 from src.utils.helpers import auto_categorize_transaction
+from src.utils.household import visible_user_ids
 from src.repositories.account import AccountRepository
 
 
@@ -61,13 +62,31 @@ class AccountService:
 
         return True, 'Success', account_data
 
-    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None):
+    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None, owner_id=None):
         """
         Add a new account
         Returns (success, message, account)
+
+        `user_id` is the **caller**; `owner_id` is the household member the account is
+        assigned to, defaulting to the caller. Under the household model settled on
+        2026-08-06 accounts are assignable to a member, and attribution for every
+        transaction derives from the account — so this is where that attribution is
+        decided.
+
+        The membership check lives here rather than in the handler so that every
+        caller of the service gets it, not only the one route. It refuses a demo
+        account and an id that is not on the instance **the same way**: a demo
+        account is a row on the instance but is not a household member, and letting
+        one hold household property is D-42 by another door.
         """
         if not name or not account_type:
             return False, 'Account name and type are required', None
+
+        if owner_id and owner_id != user_id:
+            from src.utils.household import is_household_member
+            if not is_household_member(owner_id):
+                return False, 'Owner must be a member of this household', None
+            user_id = owner_id
 
         try:
             balance = float(balance) if balance else 0
@@ -133,7 +152,11 @@ class AccountService:
         if not account:
             return False, 'Account not found'
 
-        if account.user_id != user_id:
+        # Household-scoped: accounts are household property under the settled model,
+        # so a member may delete a housemate's account — the same ruling #69 made for
+        # categories. `visible_user_ids` keeps the demo sandbox symmetric in both
+        # directions, which plain membership would not.
+        if account.user_id not in visible_user_ids(user_id):
             return False, 'You do not have permission to delete this account'
 
         try:
@@ -421,13 +444,35 @@ class SimpleFinService:
     # Account import
     # ------------------------------------------------------------------
 
-    def import_simplefin_accounts(self, user_id, simplefin_account_ids):
+    def import_simplefin_accounts(self, user_id, simplefin_account_ids,
+                                  owner_id=None):
         """
         Given a list of SimpleFin account IDs chosen by the user, create or
         update Account rows in the database.
         Returns (success, message, list_of_result_dicts)
+
+        `user_id` is the caller, whose SimpleFin credential is used for the fetch.
+        `owner_id` is the household member the imported accounts are **assigned** to,
+        defaulting to the caller — the settled household model names this case
+        explicitly ("similar to when we pull from simplefin we can assign it").
+
+        These are deliberately two different people. The credential belongs to whoever
+        connected it (`SimpleFin.user_id` is unique per user), while ownership answers
+        whose money it is; conflating them is what made reassignment break both dedupe
+        and sync. So the settings lookup below stays keyed to the caller and only the
+        created row's owner changes.
+
+        Assignment is per import batch rather than per account: the picker at this step
+        chooses who the accounts being pulled belong to. Reassigning an individual
+        account afterwards is `PUT /accounts/<id>` with `owner_id`.
         """
         from integrations.simplefin.client import SimpleFin as SimpleFinClient
+
+        owner = owner_id or user_id
+        if owner != user_id:
+            from src.utils.household import is_household_member
+            if not is_household_member(owner):
+                return False, 'Owner must be a member of this household', []
 
         settings = SimpleFin.query.filter_by(user_id=user_id).first()
         if not settings or not settings.access_url:
@@ -449,7 +494,11 @@ class SimpleFinService:
                 if acc['id'] not in simplefin_account_ids:
                     continue
 
-                existing = self.repo.get_by_external_id(acc['id'], user_id)
+                # Household-scoped, not caller-scoped: an imported account that has
+                # since been assigned to another member must still be *matched* here,
+                # or this creates a second row for the same external_id.
+                existing = self.repo.get_by_external_id(
+                    acc['id'], visible_user_ids(user_id))
 
                 if existing:
                     existing.balance = acc['balance']
@@ -469,7 +518,7 @@ class SimpleFinService:
                         color=acc.get('color', '#3b82f6'),
                         import_source='simplefin',
                         external_id=acc['id'],
-                        user_id=user_id,
+                        user_id=owner,
                         last_sync=datetime.utcnow(),
                     )
                     db.session.add(account)
@@ -503,7 +552,11 @@ class SimpleFinService:
         account = self.repo.get_by_id(account_id)
         if not account:
             return False, 'Account not found', 0
-        if account.user_id != user_id:
+        # Household-scoped: the account's owner and the holder of the SimpleFin
+        # credential are now two different people. `SimpleFin.user_id` is unique per
+        # user, so keying this to the owner means a reassigned account can never be
+        # synced by anyone — the owner has no token and the token holder is refused.
+        if account.user_id not in visible_user_ids(user_id):
             return False, 'Permission denied', 0
         if account.import_source != 'simplefin':
             return False, 'Not a SimpleFin account', 0
@@ -602,7 +655,8 @@ class SimpleFinService:
         Sync all SimpleFin accounts for a user.
         Returns (success, message, list_of_per_account_results)
         """
-        sf_accounts = self.repo.get_by_import_source(user_id, 'simplefin')
+        sf_accounts = self.repo.get_by_import_source(
+            visible_user_ids(user_id), 'simplefin')
 
         if not sf_accounts:
             return True, 'No SimpleFin accounts to sync', []

@@ -77,6 +77,12 @@ class AccountInput(Schema):
     institution = fields.Str(validate=validate.Length(max=100))
     color = fields.Str(validate=validate.Length(max=20))
     status = fields.Str(validate=validate.OneOf(['active', 'inactive', 'closed']))
+    # The household member this account is assigned to. Optional, and it must stay
+    # optional: omitting it assigns the account to the caller, and the documentation
+    # gate proves a field swagger calls required is one the server really refuses
+    # without. Membership is checked in AccountService, not here — marshmallow cannot
+    # see the database, and a demo account is a valid id that must still be refused.
+    owner_id = fields.Str(validate=validate.Length(min=1, max=120))
 
 
 class BudgetInput(Schema):
