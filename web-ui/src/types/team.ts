@@ -6,7 +6,17 @@
 export type TeamRole = 'owner' | 'admin' | 'member' | 'viewer';
 
 export interface TeamMember {
-  id: number;
+  /**
+   * The user's ID, which in finPal **is their email address** — `User.id` is a
+   * `String(120)` primary key and `/api/v1/team/members` returns `u.id` here.
+   *
+   * This was declared `number` and never matched what the server sends. Nothing
+   * compared it to anything, so the compiler had no reason to complain and the
+   * value flowed through to `removeMember`/`updateMemberRole` (whose routes are
+   * `<path:member_id>`, so they worked). Corrected because the account owner picker
+   * sends this as `owner_id`, where a wrong type would be a real bug.
+   */
+  id: string;
   name: string;
   email: string;
   role: TeamRole;

@@ -63,6 +63,26 @@ FORBIDDEN_KEYS = {
 ACCOUNT_KEYS = {
     'id', 'name', 'account_type', 'balance', 'currency_code', 'institution',
     'status', 'color', 'user_id', 'current_balance',
+    # Added deliberately in item A of the D-18 build, and the redaction question
+    # was considered rather than waved through, because this file asks for that.
+    #
+    # `owner` is `{id, name, color, emoji}` for the household member the account is
+    # assigned to. It exists because the transactions page has to show *whose*
+    # account each row is, and `user_id` — already in this set, so already reachable
+    # by a read token — is an email address rather than something to put on screen.
+    #
+    # **The increment is a display name, a hex colour and an emoji.** The email was
+    # already here, so this does not newly expose an identifier; it does mean a
+    # member's *name* now reaches an LLM through the same path. That is PII and not a
+    # credential, it is the minimum needed for the label, and it is flagged here as a
+    # redaction candidate for the MCP layer rather than being assumed harmless: an
+    # MCP client summarising spending needs "whose account", not who they are, so
+    # `owner.name` is the field to consider dropping there first.
+    #
+    # Note this also arrives inside `TRANSACTION_KEYS['account']`, which nests
+    # AccountSchema — that nesting is what makes the per-row label possible without
+    # a second request.
+    'owner',
 }
 CATEGORY_KEYS = {
     'id', 'name', 'icon', 'color', 'parent_id', 'is_system', 'user_id',

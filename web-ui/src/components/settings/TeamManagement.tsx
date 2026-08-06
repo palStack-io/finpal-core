@@ -261,7 +261,7 @@ export const TeamManagement: React.FC = () => {
     }
   };
 
-  const handleRemoveMember = async (id: number, name: string) => {
+  const handleRemoveMember = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to remove ${name} from the team?`)) return;
 
     try {
@@ -273,7 +273,7 @@ export const TeamManagement: React.FC = () => {
     }
   };
 
-  const handleUpdateRole = async (id: number, newRole: TeamRole) => {
+  const handleUpdateRole = async (id: string, newRole: TeamRole) => {
     try {
       await teamService.updateMemberRole(id, newRole);
       showToast('Role updated successfully', 'success');

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette, CreditCard } from 'lucide-react';
+import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette, CreditCard, Users } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
 import { pointspalService, WalletCard } from '../../modules/pointspal/service';
+import { teamService } from '../../services/teamService';
+import { TeamMember } from '../../types/team';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 
@@ -19,6 +21,15 @@ interface AccountFormValues {
   currency: string;
   description: string;
   color: string;
+  /**
+   * The household member this account belongs to. Empty means "the signed-in user",
+   * which is what the server does when `owner_id` is omitted.
+   *
+   * Accounts are assignable to a member under the household model, and every
+   * transaction's attribution derives from its account — so this one field is what
+   * makes per-member figures possible at all.
+   */
+  ownerId: string;
 }
 
 const ACCOUNT_COLORS = [
@@ -59,6 +70,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       currency: 'USD',
       description: '',
       color: 'var(--accent-blue)',
+      ownerId: '',
     },
   });
 
@@ -69,10 +81,18 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
   const [success, setSuccess] = useState(false);
   const [walletCards, setWalletCards] = useState<WalletCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<number | ''>('');
+  const [members, setMembers] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     setValue('color', getDefaultColorForType(watchType));
   }, [watchType, setValue]);
+
+  // The household. A single-member household gets no picker at all — see the render
+  // below — so this failing closed simply means the account goes to the caller,
+  // which is the server's default too.
+  useEffect(() => {
+    teamService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
 
   useEffect(() => {
     if (watchType === 'credit') {
@@ -89,6 +109,9 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
         balance: parseFloat(data.balance),
         currency_code: data.currency,
         color: data.color,
+        // Omitted entirely when blank, so the server applies its own default rather
+        // than being handed an empty string to interpret.
+        ...(data.ownerId ? { owner_id: data.ownerId } : {}),
       });
 
       if (data.type === 'credit' && selectedCardId && newAccount?.id) {
@@ -110,9 +133,14 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       showToast('Account created successfully', 'success');
       setTimeout(() => { onSuccess(); }, 1000);
     } catch (err) {
-      const msg = (err as { message?: string }).message || 'Failed to create account';
+      // The server's reason first. Assigning an account to someone who is not a
+      // household member is a reachable 400 now, and axios always populates
+      // `err.message` with "Request failed with status code 400" — so reading that
+      // first showed the user a status code instead of what was wrong.
+      const e = err as { response?: { data?: { error?: string } }; message?: string };
+      const msg = e.response?.data?.error || e.message || 'Failed to create account';
       setApiError(msg);
-      showToast('Failed to create account', 'error');
+      showToast(msg, 'error');
     }
   };
 
@@ -258,6 +286,39 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           <option value="AUD" style={{ background: 'var(--bg-primary)' }}>AUD (A$)</option>
         </select>
       </div>
+
+      {/*
+        Owner. Rendered only for a household of more than one — with a single member
+        there is nothing to choose and an unnecessary control implies otherwise.
+      */}
+      {members.length > 1 && (
+        <div>
+          <label htmlFor="account-owner" style={labelStyle}>
+            <Users size={16} style={iconInlineStyle} />
+            Belongs to
+          </label>
+          <select
+            id="account-owner"
+            disabled={isSubmitting}
+            style={{ ...inputStyle, cursor: 'pointer' }}
+            {...focusHandlers}
+            {...register('ownerId')}
+          >
+            <option value="" style={{ background: 'var(--bg-primary)' }}>
+              Me
+            </option>
+            {members.map((member) => (
+              <option key={member.id} value={member.id}
+                      style={{ background: 'var(--bg-primary)' }}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Transactions on this account count towards whoever it belongs to.
+          </p>
+        </div>
+      )}
 
       {/* pointsPal rewards card link (credit only) */}
       {watchType === 'credit' && (

@@ -126,10 +126,17 @@ class CategoryService:
         return category.user_id in self.household_user_ids()
 
     def household_user_ids(self):
-        """The real household: everyone on the instance except demo accounts."""
-        from src.models.user import User
-        return [u.id for u in User.query.with_entities(User.id)
-                .filter(User.is_demo_user.isnot(True)).all()]
+        """The real household: everyone on the instance except demo accounts.
+
+        Delegates to `src.utils.household`, where this was promoted during item A of
+        the D-18 build. It was defined here first, by D-42's fix; the account and
+        portfolio permissions needed the same list, and two hand-rolled copies of
+        "who is in the household" is how the definition drifts. Kept as a method so
+        #71's guard — which pins that this differs from `get_all_user_ids()` — keeps
+        watching the same thing.
+        """
+        from src.utils.household import household_user_ids
+        return household_user_ids()
 
     def update_category(self, category_id, user_id, name=None, icon=None, color=None):
         """Update a category - Returns (success, message)"""

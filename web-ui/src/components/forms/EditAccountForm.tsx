@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
+import { teamService } from '../../services/teamService';
+import { TeamMember } from '../../types/team';
 import { formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 
@@ -43,12 +45,21 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
     institution: account.institution || '',
     accountNumber: account.accountNumber || '',
     description: '',
-    color: account.color || getDefaultColorForType(account.type || 'checking')
+    color: account.color || getDefaultColorForType(account.type || 'checking'),
+    // Prefilled from the row so the control opens showing the current owner rather
+    // than defaulting to the signed-in user, which would silently reassign the
+    // account on any unrelated edit.
+    ownerId: account.ownerId || ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    teamService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -82,7 +93,10 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
         currency_code: formData.currency,
         institution: formData.institution,
         account_number: formData.accountNumber,
-        color: formData.color
+        color: formData.color,
+        // Only sent when it names someone, so an edit made while the members list is
+        // still loading cannot blank the owner.
+        ...(formData.ownerId ? { owner_id: formData.ownerId } : {})
       });
 
       setSuccess(true);
@@ -93,8 +107,11 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
         onSuccess();
       }, 1000);
     } catch (err: any) {
-      setError(err.message || 'Failed to update account');
-      showToast('Failed to update account', 'error');
+      // Server's reason first — reassigning an account to a non-member is a
+      // reachable 400, and axios's own message is only ever the status code.
+      const msg = err.response?.data?.error || err.message || 'Failed to update account';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -304,6 +321,43 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           <option value="AUD" style={{ background: 'var(--bg-primary)' }}>AUD (A$)</option>
         </select>
       </div>
+
+      {/*
+        Owner. Reassigning an account moves every transaction on it to the new member
+        for attribution purposes, which is why the caption says so rather than leaving
+        it to be discovered from a changed dashboard figure.
+      */}
+      {members.length > 1 && (
+        <div>
+          <label htmlFor="edit-account-owner" style={labelStyle}>Belongs to</label>
+          <select
+            id="edit-account-owner"
+            name="ownerId"
+            value={formData.ownerId}
+            onChange={handleChange}
+            disabled={isSubmitting}
+            style={{ ...inputStyle, cursor: 'pointer' }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--brand-main-green)';
+              e.currentTarget.style.background = 'var(--input-bg-focus)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--input-border)';
+              e.currentTarget.style.background = 'var(--input-bg)';
+            }}
+          >
+            {members.map((member) => (
+              <option key={member.id} value={member.id}
+                      style={{ background: 'var(--bg-primary)' }}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Moving this account also moves its transactions to that person.
+          </p>
+        </div>
+      )}
 
       {/* Color Picker */}
       <div>

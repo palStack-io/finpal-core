@@ -55,14 +55,14 @@ export const teamService = {
   /**
    * Remove a member from the team
    */
-  async removeMember(id: number): Promise<void> {
+  async removeMember(id: string): Promise<void> {
     await api.delete(`/api/v1/team/members/${id}`);
   },
 
   /**
    * Update a member's role
    */
-  async updateMemberRole(id: number, role: TeamRole): Promise<void> {
+  async updateMemberRole(id: string, role: TeamRole): Promise<void> {
     const data: UpdateMemberRoleRequest = { role };
     await api.put(`/api/v1/team/members/${id}/role`, data);
   },

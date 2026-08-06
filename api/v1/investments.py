@@ -4,6 +4,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.investment import Portfolio, Investment, InvestmentTransaction
 from src.extensions import db
+from src.utils.household import visible_user_ids, is_household_member
 from schemas import (
     portfolio_schema, portfolios_schema,
     investment_schema, investments_schema,
@@ -33,6 +34,11 @@ portfolio_model = ns.model('Portfolio', {
     'name': fields.String(required=True, description='Portfolio name'),
     'description': fields.String(description='Portfolio description'),
     'account_id': fields.Integer(description='Linked account ID'),
+    # Not required — omitting it assigns the portfolio to the caller.
+    'owner_id': fields.String(
+        description='Household member to assign this portfolio to. '
+                    'Defaults to the calling user. Must be a household member — '
+                    'a demo account or an unknown id is refused with 400.'),
 })
 
 investment_model = ns.model('Investment', {
@@ -64,11 +70,13 @@ class PortfolioList(Resource):
         err = _investments_required()
         if err:
             return err
-        from src.utils.household import get_all_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all portfolios for the household
-        portfolios = Portfolio.query.filter(Portfolio.user_id.in_(get_all_user_ids())).all()
+        # `visible_user_ids`, not `get_all_user_ids`: the latter includes demo
+        # accounts while the detail route below excludes them, which would leave a
+        # row in the list that its viewer cannot open (D-43).
+        portfolios = Portfolio.query.filter(
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))).all()
 
         # Serialize
         result = portfolios_schema.dump(portfolios)
@@ -88,6 +96,18 @@ class PortfolioList(Resource):
             return err
         current_user_id = get_jwt_identity()
         data = request.get_json()
+
+        # Investments are assignable to a member exactly as accounts are; the settled
+        # model names them in the same breath. Refused for a non-member so a demo
+        # account cannot be handed household property.
+        owner_id = (data or {}).get('owner_id')
+        if owner_id and owner_id != current_user_id:
+            if not is_household_member(owner_id):
+                return {
+                    'success': False,
+                    'error': 'Owner must be a member of this household',
+                }, 400
+            current_user_id = owner_id
 
         try:
             new_portfolio = Portfolio(
@@ -128,7 +148,10 @@ class PortfolioDetail(Resource):
             return err
         current_user_id = get_jwt_identity()
 
-        portfolio = Portfolio.query.filter_by(id=id, user_id=current_user_id).first()
+        # Household-scoped, matching the list route above (D-43).
+        portfolio = Portfolio.query.filter(
+            Portfolio.id == id,
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))).first()
 
         if not portfolio:
             return {'success': False, 'error': 'Portfolio not found'}, 404
@@ -151,7 +174,10 @@ class PortfolioDetail(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        portfolio = Portfolio.query.filter_by(id=id, user_id=current_user_id).first()
+        # Household-scoped, matching the list route above (D-43).
+        portfolio = Portfolio.query.filter(
+            Portfolio.id == id,
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))).first()
 
         if not portfolio:
             return {'success': False, 'error': 'Portfolio not found'}, 404
@@ -188,7 +214,10 @@ class PortfolioDetail(Resource):
             return err
         current_user_id = get_jwt_identity()
 
-        portfolio = Portfolio.query.filter_by(id=id, user_id=current_user_id).first()
+        # Household-scoped, matching the list route above (D-43).
+        portfolio = Portfolio.query.filter(
+            Portfolio.id == id,
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))).first()
 
         if not portfolio:
             return {'success': False, 'error': 'Portfolio not found'}, 404
@@ -226,7 +255,7 @@ class InvestmentList(Resource):
 
         # Build query
         query = db.session.query(Investment).join(Portfolio).filter(
-            Portfolio.user_id == current_user_id
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))
         )
 
         if portfolio_id:
@@ -266,10 +295,12 @@ class InvestmentList(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        # Verify portfolio belongs to user
-        portfolio = Portfolio.query.filter_by(
-            id=data.get('portfolio_id'),
-            user_id=current_user_id
+        # Verify the portfolio is one this caller may use. Household-scoped, matching
+        # the portfolio routes — otherwise a housemate's portfolio opens but adding a
+        # holding to it answers 404.
+        portfolio = Portfolio.query.filter(
+            Portfolio.id == data.get('portfolio_id'),
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))
         ).first()
 
         if not portfolio:
@@ -346,7 +377,7 @@ class InvestmentDetail(Resource):
 
         investment = db.session.query(Investment).join(Portfolio).filter(
             Investment.id == id,
-            Portfolio.user_id == current_user_id
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))
         ).first()
 
         if not investment:
@@ -379,7 +410,7 @@ class InvestmentDetail(Resource):
 
         investment = db.session.query(Investment).join(Portfolio).filter(
             Investment.id == id,
-            Portfolio.user_id == current_user_id
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))
         ).first()
 
         if not investment:
@@ -418,7 +449,7 @@ class InvestmentDetail(Resource):
 
         investment = db.session.query(Investment).join(Portfolio).filter(
             Investment.id == id,
-            Portfolio.user_id == current_user_id
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))
         ).first()
 
         if not investment:
@@ -457,7 +488,7 @@ class TransactionList(Resource):
 
         # Build query
         query = db.session.query(InvestmentTransaction).join(Investment).join(Portfolio).filter(
-            Portfolio.user_id == current_user_id
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))
         )
 
         if investment_id:
@@ -487,7 +518,7 @@ class TransactionList(Resource):
         # Verify investment belongs to user
         investment = db.session.query(Investment).join(Portfolio).filter(
             Investment.id == data.get('investment_id'),
-            Portfolio.user_id == current_user_id
+            Portfolio.user_id.in_(visible_user_ids(current_user_id))
         ).first()
 
         if not investment:

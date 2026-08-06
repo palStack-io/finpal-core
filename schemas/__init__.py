@@ -82,9 +82,29 @@ class AccountSchema(Schema):
     # Calculated balance
     current_balance = fields.Method('get_current_balance', dump_only=True)
 
+    # Who this account belongs to, presentably. `user_id` is the authoritative
+    # answer but it is an email address; the transactions page has to show *Bob*
+    # next to a row, with his colour and emoji, which is the per-row "whose account
+    # this is" label the settled household model calls for.
+    owner = fields.Method('get_owner', dump_only=True)
+
     def get_current_balance(self, obj):
         """Get calculated balance from transactions"""
         return obj.get_balance() if hasattr(obj, 'get_balance') else obj.balance
+
+    def get_owner(self, obj):
+        """The owning member, or None if the relationship is not loaded."""
+        user = getattr(obj, 'user', None)
+        if user is None:
+            return None
+        return {
+            'id': user.id,
+            # `name` is nullable, and the id is an email address, so fall back to
+            # its local part rather than rendering "None" beside a figure.
+            'name': user.name or user.id.split('@')[0],
+            'color': user.user_color,
+            'emoji': user.profile_emoji,
+        }
 
 
 class BudgetSchema(Schema):
