@@ -116,7 +116,8 @@ def test_sync_returns_401_when_unauthenticated(client, db):
     assert resp.status_code == 401
 
 
-def test_internal_errors_do_not_leak_exception_text(client, db, auth_headers, monkeypatch):
+def test_internal_errors_do_not_leak_exception_text(app, client, db, auth_headers,
+                                                    monkeypatch):
     """A 500 must not hand the client the exception string.
 
     finpal_core/CLAUDE.md: "never return str(e) to the client — log the
@@ -131,9 +132,21 @@ def test_internal_errors_do_not_leak_exception_text(client, db, auth_headers, mo
             ' (host=10.0.0.5 port=5432 user=finpal_admin)'
         )
 
-    # get_jwt_identity is imported into the module's namespace, so patching it
-    # there makes the /me handler raise inside its own try block.
-    monkeypatch.setattr('src.services.auth.api_routes.get_jwt_identity', boom)
+    # get_jwt_identity is imported into the handler module's namespace, so
+    # patching it there makes the /me handler raise inside its own try block.
+    #
+    # The module moved: the auth routes were `src.services.auth.api_routes` until
+    # they were ported onto flask-restx. A monkeypatch target is a *string*, so
+    # nothing failed at import — this test errored with ModuleNotFoundError the
+    # moment the port landed, which is the good outcome. It is resolved through
+    # the routing table rather than hardcoded again, so the next move of these
+    # handlers keeps this test pointed at whatever actually serves /auth/me.
+    import importlib
+    endpoint, _ = app.url_map.bind('localhost').match(
+        '/api/v1/auth/me', method='GET')
+    handler_module = app.view_functions[endpoint].__module__
+    importlib.import_module(handler_module)
+    monkeypatch.setattr(f'{handler_module}.get_jwt_identity', boom)
 
     resp = client.get('/api/v1/auth/me', headers=auth_headers(user))
 

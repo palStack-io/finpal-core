@@ -31,9 +31,28 @@ def test_auth_routes_are_no_longer_duplicated(app):
     duplicated = {p: sorted(eps) for p, eps in auth_rules.items() if len(eps) > 1}
     assert not duplicated, f'auth rules are shadowed again: {duplicated}'
 
+    # This used to assert `endpoint == 'auth_api.logout'`, naming the blueprint
+    # that served it. That is a guard keyed to a spelling, and it went off the
+    # moment the handlers were ported onto flask-restx — the third time this
+    # project has watched a name-keyed guard fire on a rename instead of on a
+    # defect. What it was really protecting is that the assertions below run
+    # against whatever is live, and the no-duplicates check above already
+    # guarantees there is only one candidate.
+    #
+    # Re-keyed to the property that actually matters now: the handler serving
+    # /auth/logout must be one flask-restx knows about, because a route restx
+    # does not own is a route absent from swagger — which is exactly the defect
+    # this port existed to fix. Asserted through the swagger document itself, not
+    # through an endpoint name, so it survives the next rename too.
     endpoint, _ = app.url_map.bind('localhost').match(
         '/api/v1/auth/logout', method='POST')
-    assert endpoint == 'auth_api.logout'
+    assert endpoint in app.view_functions
+
+    spec = app.test_client().get('/api/v1/swagger.json').get_json()
+    assert '/auth/logout' in spec['paths'], (
+        'POST /api/v1/auth/logout is not in swagger, so it is served by '
+        'something restx does not document: %s' % sorted(spec['paths'])[:10])
+    assert 'post' in spec['paths']['/auth/logout']
 
 
 # --- S-08: logout must revoke the token -------------------------------------
