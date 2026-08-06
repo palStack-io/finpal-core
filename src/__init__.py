@@ -206,9 +206,12 @@ def create_app(config_name=None):
     from src.services.category import api_bp as category_api_bp
     app.register_blueprint(category_api_bp)
 
-    # Auth API
-    from src.services.auth import api_bp as auth_api_bp
-    app.register_blueprint(auth_api_bp)
+    # No Auth API blueprint: all thirteen of its routes are flask-restx
+    # Resources in api/v1/auth.py now, so they finally appear in swagger — the
+    # blueprint's routes did not, which is why the documented API had no login,
+    # no register and no refresh. Deleting the registration has to land in the
+    # same commit as those Resources, or _assert_no_new_duplicate_routes raises
+    # at app creation. See src/services/auth/__init__.py.
 
     # No Transaction API blueprint: every route it carried shadowed
     # api/v1/transactions.py, and all of them are now retired. See
