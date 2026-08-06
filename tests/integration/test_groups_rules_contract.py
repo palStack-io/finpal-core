@@ -220,19 +220,59 @@ def test_group_update_refuses_an_empty_name(client, headers, group_id, slash):
     assert detail['name'] == 'Flat'
 
 
-@BOTH_SPELLINGS
-def test_group_update_never_returns_the_exception_text(client, headers,
-                                                       group_id, slash):
-    """CLAUDE.md forbids `str(e)` in a response; `update_settings` still does it,
-    so the new path must not become a second route to that."""
-    resp = client.put(f'/api/v1/groups/{group_id}{slash}', headers=headers,
-                      json={'default_split_values': '{bad json'})
+def test_group_update_never_returns_the_exception_text(client, db, headers,
+                                                       group_id, monkeypatch):
+    """CLAUDE.md forbids `str(e)` in a response, and restoring the edit route
+    made that path reachable: `update_group` delegates any settings change to
+    `update_settings` and propagates its message straight into
+    `jsonify({'error': message})`.
 
-    body = resp.get_json()
-    if resp.status_code >= 400:
-        assert 'Traceback' not in str(body)
-        assert 'Error updating settings:' not in str(body.get('error', '')), (
-            'the raw exception text reached the client')
+    The commit is forced to fail, because the obvious probe does not reach this
+    branch at all — `update_settings` swallows malformed `default_split_values`
+    with a bare `except: pass` and answers 200. A first version of this test
+    guarded its assertions behind `if status >= 400` and therefore asserted
+    **nothing**, which is the D-37 lesson: a check that inspects nothing looks
+    exactly like a check that passes.
+    """
+    secret = 'psycopg2.errors.UndefinedColumn: column "xyzzy" does not exist'
+
+    def explode():
+        raise RuntimeError(secret)
+
+    monkeypatch.setattr(db.session, 'commit', explode)
+
+    resp = client.put(f'/api/v1/groups/{group_id}', headers=headers,
+                      json={'default_split_method': 'percentage'})
+
+    assert resp.status_code >= 400, (
+        'the commit was forced to fail, so this must not report success')
+    error = resp.get_json()['error']
+    assert secret not in error, f'the raw exception text reached the client: {error}'
+    assert 'xyzzy' not in error and 'Traceback' not in error
+
+
+@BOTH_SPELLINGS
+def test_group_update_tells_absent_from_explicit_null(client, headers,
+                                                      group_id, slash):
+    """Both are `None` after `data.get(...)`, so the handler cannot distinguish
+    them and treats null as "not mentioned".
+
+    Pinned because restx with a marshmallow/reqparse schema is exactly the
+    technology that materialises *absent* fields as explicit nulls — a port that
+    did so would clear every unmentioned field on a partial update and still pass
+    the rest of this file.
+    """
+    client.put(f'/api/v1/groups/{group_id}', headers=headers,
+               json={'name': 'Kept', 'description': 'Kept too'})
+
+    resp = client.put(f'/api/v1/groups/{group_id}{slash}', headers=headers,
+                      json={'default_split_method': 'equal'})
+
+    assert resp.status_code == 200
+    detail = client.get(f'/api/v1/groups/{group_id}',
+                        headers=headers).get_json()['group']
+    assert detail['name'] == 'Kept', 'an unmentioned field must survive'
+    assert detail['description'] == 'Kept too'
 
 
 @BOTH_SPELLINGS
