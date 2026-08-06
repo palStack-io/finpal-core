@@ -47,6 +47,13 @@ class GroupService:
         Create a new group
         Returns (success, message, group)
         """
+        # Checked here rather than left to the NOT NULL constraint. Without it
+        # `Group(name=None)` reached the database and the IntegrityError became
+        # the client's error message, which is how the psycopg2 leak below was
+        # found — and `update_group` already refuses an empty name this way.
+        if not name or not str(name).strip():
+            return False, 'Group name is required', None
+
         try:
             # Create group
             group = Group(
@@ -84,10 +91,10 @@ class GroupService:
 
             return True, 'Group created successfully!', group
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error creating group: {str(e)}")
-            return False, f'Error creating group: {str(e)}', None
+            current_app.logger.exception('Error creating group')
+            return False, 'Error creating group', None
 
     def add_member(self, group_id, user_id, new_member_id):
         """
@@ -116,10 +123,10 @@ class GroupService:
             db.session.commit()
             return True, f'{new_member.name} added to group successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error adding member: {str(e)}")
-            return False, f'Error adding member: {str(e)}'
+            current_app.logger.exception('Error adding member')
+            return False, 'Error adding member'
 
     def remove_member(self, group_id, user_id, member_id):
         """
@@ -147,10 +154,10 @@ class GroupService:
             db.session.commit()
             return True, f'{member.name} removed from group successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error removing member: {str(e)}")
-            return False, f'Error removing member: {str(e)}'
+            current_app.logger.exception('Error removing member')
+            return False, 'Error removing member'
 
     def delete_group(self, group_id, user_id):
         """
@@ -190,10 +197,10 @@ class GroupService:
 
             return True, 'Group deleted successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error deleting group: {str(e)}")
-            return False, f'Error deleting group: {str(e)}'
+            current_app.logger.exception('Error deleting group')
+            return False, 'Error deleting group'
 
     def update_group(self, group_id, user_id, name=None, description=None,
                      default_split_method=None, default_payer=None,
@@ -417,7 +424,7 @@ class SettlementService:
 
             return True, 'Settlement recorded successfully!', settlement
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error adding settlement: {str(e)}")
-            return False, f'Error recording settlement: {str(e)}', None
+            current_app.logger.exception('Error adding settlement')
+            return False, 'Error recording settlement', None
