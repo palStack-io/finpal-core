@@ -76,24 +76,60 @@ class CategoryService:
             current_app.logger.exception('Error adding category')
             return False, 'Error adding category', None
 
-    def _in_household(self, category):
-        """Whether `category` belongs to this instance's household.
+    def can_manage(self, category, user_id):
+        """Whether `user_id` may view, edit or delete `category`.
 
         Categories are **household property** — owner decision 2026-08-06, and the
         ruling that closed D-20: "budget, categories and rest is for household".
-        A household is the instance, so `get_all_user_ids()` is the membership
-        list and this is a real check rather than a tautology only while
-        cross-household isolation does not exist. `user_id` stays on the row as a
-        record of who created it, not as a permission.
-
-        Replaces `category.user_id != user_id`, which made a household-wide list
-        and a per-user detail view disagree about the same row: mobile listed a
+        So this replaces `category.user_id != user_id`, which made a household-wide
+        list and a per-user detail view disagree about the same row: mobile listed a
         housemate's category and then answered 403 when it was opened, and once
         web-ui's list became household-wide its delete button would have started
-        answering 400.
+        answering 400. `user_id` stays on the row as a record of who created it,
+        not as a permission.
+
+        **Demo accounts are on the instance but are NOT household members**, and
+        that distinction is the whole reason this is not a one-line
+        `category.user_id in get_all_user_ids()`. It was written that way first and
+        it was a privilege escalation: `get_all_user_ids()` has no `is_demo_user`
+        filter, demo accounts ship with a **published** password
+        (`src/services/demo/service.py`), and they sign in through the ordinary
+        `/auth/login` — so anyone who knew the demo credentials could rename and
+        delete the real household's categories on any instance running
+        `DEMO_MODE=true`. Watched answering 200 with the row gone before this fix.
+
+        Sandboxing is symmetric, and each direction protects something different:
+        a demo visitor must not touch the household's data, and the household must
+        not delete the rows a demo persona is built from, or the tour breaks for the
+        next visitor.
+
+        Scoped deliberately to this service rather than to `get_all_user_ids()`
+        itself. That function has 38 callers — accounts, budgets, every analytics
+        query — and some may include demo rows on purpose for the demo experience to
+        work. Narrowing it globally is a change for the D-18 build to make with all
+        38 in view; narrowing it here is contained to the permission this port
+        widened.
         """
-        from src.utils.household import get_all_user_ids
-        return category.user_id in get_all_user_ids()
+        from src.models.user import User
+
+        owner_is_demo = bool(
+            User.query.with_entities(User.is_demo_user)
+            .filter_by(id=category.user_id).scalar())
+        caller_is_demo = bool(
+            User.query.with_entities(User.is_demo_user)
+            .filter_by(id=user_id).scalar())
+
+        if owner_is_demo or caller_is_demo:
+            # Either side being a demo account collapses this to plain ownership.
+            return category.user_id == user_id
+
+        return category.user_id in self.household_user_ids()
+
+    def household_user_ids(self):
+        """The real household: everyone on the instance except demo accounts."""
+        from src.models.user import User
+        return [u.id for u in User.query.with_entities(User.id)
+                .filter(User.is_demo_user.isnot(True)).all()]
 
     def update_category(self, category_id, user_id, name=None, icon=None, color=None):
         """Update a category - Returns (success, message)"""
@@ -101,7 +137,7 @@ class CategoryService:
         if not category:
             return False, 'Category not found'
 
-        if not self._in_household(category):
+        if not self.can_manage(category, user_id):
             return False, 'You don\'t have permission to edit this category'
 
         if category.is_system:
@@ -128,7 +164,7 @@ class CategoryService:
         if not category:
             return False, 'Category not found'
 
-        if not self._in_household(category):
+        if not self.can_manage(category, user_id):
             return False, 'You don\'t have permission to delete this category'
 
         if category.is_system:
@@ -141,7 +177,6 @@ class CategoryService:
             # 'Other' — scoping this to the caller would have found *their* Other,
             # or nothing, and `category_id` would go NULL. Prefers the owner's own
             # 'Other' so rows stay with their member where one exists.
-            from src.utils.household import get_all_user_ids
             other_category = Category.query.filter_by(
                 name='Other',
                 user_id=category.user_id,
@@ -149,7 +184,10 @@ class CategoryService:
             ).first() or Category.query.filter(
                 Category.name == 'Other',
                 Category.is_system.is_(True),
-                Category.user_id.in_(get_all_user_ids()),
+                # Household only — a demo account's 'Other' must never become the
+                # home for a real member's orphaned transactions, or the demo
+                # seeder wiping its own rows would take them along.
+                Category.user_id.in_(self.household_user_ids()),
             ).first()
 
             if category.subcategories:

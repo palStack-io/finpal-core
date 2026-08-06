@@ -12,5 +12,7 @@ one were two different implementations of `GET/POST /api/v1/categories`, and
 `url_map.strict_slashes = False` let a trailing slash choose between them — web-ui
 reaching the per-user one and mobile the household-wide one. `CategoryService` is
 what the Resources delegate to and keeps its name; its permission checks moved from
-per-user to household (`_in_household`), which is the ruling, not a side effect.
+per-user to household (`can_manage`), which is the ruling, not a side effect —
+with demo accounts explicitly excluded, because they are on the instance but are
+not household members and their password is published.
 """
