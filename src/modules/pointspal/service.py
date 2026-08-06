@@ -47,8 +47,11 @@ def sync_from_pointspal() -> dict:
         response.raise_for_status()
         data = response.json()
     except Exception as e:
+        # The log keeps the detail; the response must not, because a requests
+        # failure names the host, the proxy and any credential in the URL.
         _write_sync_log(status='error', error_message=str(e))
-        return {'status': 'error', 'error': str(e)}
+        logger.exception('pointsPal catalogue fetch failed')
+        return {'status': 'error', 'error': 'Could not fetch the pointsPal catalogue'}
 
     programs = data.get('programs', [])
     schema_version = data.get('schema_version')
@@ -198,10 +201,10 @@ def add_user_card(user_id: str, data: dict) -> tuple:
         db.session.commit()
         return True, 'Card added to wallet', _card_to_dict(card)
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        logger.error(f"add_user_card error: {e}")
-        return False, str(e), None
+        logger.exception('add_user_card error')
+        return False, 'Could not add the card to your wallet', None
 
 
 def update_user_card(card_id: int, user_id: str, data: dict) -> tuple:
@@ -232,10 +235,10 @@ def update_user_card(card_id: int, user_id: str, data: dict) -> tuple:
         db.session.commit()
         return True, 'Card updated', _card_to_dict(card)
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        logger.error(f"update_user_card error: {e}")
-        return False, str(e), None
+        logger.exception('update_user_card error')
+        return False, 'Could not update the card', None
 
 
 def delete_user_card(card_id: int, user_id: str) -> tuple:
@@ -250,9 +253,10 @@ def delete_user_card(card_id: int, user_id: str) -> tuple:
         db.session.delete(card)
         db.session.commit()
         return True, 'Card removed from wallet'
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return False, str(e)
+        logger.exception('remove_user_card error')
+        return False, 'Could not remove the card'
 
 
 def verify_user_card(card_id: int, user_id: str) -> tuple:
@@ -441,10 +445,10 @@ def create_card_link(user_id: str, data: dict) -> tuple:
         db.session.commit()
         return True, 'Account linked', _link_to_dict(link)
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        logger.error(f"create_card_link error: {e}")
-        return False, str(e), None
+        logger.exception('create_card_link error')
+        return False, 'Could not link the account', None
 
 
 def update_card_link(link_id: int, user_id: str, data: dict) -> tuple:
@@ -476,9 +480,10 @@ def update_card_link(link_id: int, user_id: str, data: dict) -> tuple:
         db.session.commit()
         return True, 'Link updated', _link_to_dict(link)
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return False, str(e), None
+        logger.exception('update_card_link error')
+        return False, 'Could not update the link', None
 
 
 def delete_card_link(link_id: int, user_id: str) -> tuple:
@@ -493,9 +498,10 @@ def delete_card_link(link_id: int, user_id: str) -> tuple:
         db.session.delete(link)
         db.session.commit()
         return True, 'Link removed'
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return False, str(e)
+        logger.exception('delete_card_link error')
+        return False, 'Could not remove the link'
 
 
 # ---------------------------------------------------------------------------
@@ -809,10 +815,10 @@ def generate_pr_url(card_id: int, user_id: str) -> tuple:
         card.community_pr_url = url
         card.updated_at = datetime.utcnow()
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        logger.error(f'generate_pr_url commit error: {e}')
-        return False, str(e), None
+        logger.exception('generate_pr_url commit error')
+        return False, 'Could not record the submission', None
 
     return True, 'PR URL generated', url
 

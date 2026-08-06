@@ -304,12 +304,12 @@ def seed_demo_users():
             'credentials': demo_credentials,
             'count': len(demo_credentials)
         }
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        logger.error(f"Failed to create demo data: {str(e)}")
+        logger.exception('Failed to create demo data')
         return {
             'success': False,
-            'error': str(e)
+            'error': 'Failed to create the demo data'
         }
 
 
@@ -336,12 +336,12 @@ def delete_demo_users():
             'success': True,
             'deleted_count': deleted_count
         }
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        logger.error(f"Failed to delete demo users: {str(e)}")
+        logger.exception('Failed to delete demo users')
         return {
             'success': False,
-            'error': str(e)
+            'error': 'Failed to delete the demo users'
         }
 
 

@@ -160,8 +160,12 @@ class ResendInvitation(Resource):
                 inviter_name=admin.name or admin.id,
                 invite_link=invite_link,
             )
-        except Exception as e:
-            return {'message': f'Failed to resend email: {e}'}, 500
+        except Exception:
+            # An SMTP failure's text carries the mail host, the port and the
+            # server's own refusal reason. It belongs in the log, not the body.
+            logger.exception('Failed to resend invitation %s', invitation_id)
+            return {'message': 'Could not send the invitation email. Check the '
+                               'mail settings and try again.'}, 500
 
         return {'message': 'Invitation resent'}, 200
 

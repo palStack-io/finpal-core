@@ -239,10 +239,10 @@ def bulk_apply_rules(user_id, rule_ids=None):
             'transactions_processed': len(transactions),
             'transactions_updated': updated_count
         }
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        logger.error(f"Bulk rule application failed: {str(e)}")
+        logger.exception('Bulk rule application failed')
         return {
             'success': False,
-            'error': str(e)
+            'error': 'Could not apply the rules to your transactions'
         }

@@ -172,10 +172,10 @@ class TransactionService:
 
             return True, f'{transaction_type.capitalize()} added successfully', expense.id
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error adding transaction: {str(e)}", exc_info=True)
-            return False, f'Error: {str(e)}', None
+            current_app.logger.exception('Error adding transaction')
+            return False, 'Could not save the transaction', None
 
     def delete_transaction(self, transaction_id, user_id):
         """
@@ -209,10 +209,11 @@ class TransactionService:
 
             return True, 'Transaction deleted successfully'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error deleting transaction {transaction_id}: {str(e)}")
-            return False, f'Error: {str(e)}'
+            current_app.logger.exception('Error deleting transaction %s',
+                                         transaction_id)
+            return False, 'Could not delete the transaction'
 
     def get_transaction(self, transaction_id, user_id):
         """
@@ -260,9 +261,10 @@ class TransactionService:
 
             return True, 'Success', transaction_data
 
-        except Exception as e:
-            current_app.logger.error(f"Error retrieving transaction {transaction_id}: {str(e)}")
-            return False, f'Error: {str(e)}', None
+        except Exception:
+            current_app.logger.exception('Error retrieving transaction %s',
+                                         transaction_id)
+            return False, 'Could not load the transaction', None
 
     def update_transaction(self, transaction_id, user_id, form_data):
         """
@@ -340,8 +342,14 @@ class TransactionService:
                                 amount=amount
                             )
                             db.session.add(cat_split)
-                except (json.JSONDecodeError, ValueError) as e:
-                    return False, f'Invalid category split data: {str(e)}'
+                except (json.JSONDecodeError, ValueError):
+                    # A ValueError here is `float()` on the caller's own input,
+                    # so the text is theirs — but SQLAlchemy coercion errors
+                    # arrive by the same door carrying row data, so say what is
+                    # wrong rather than quoting the exception.
+                    current_app.logger.exception('Invalid category split data')
+                    return False, ('Invalid category split data — each split '
+                                   'needs a category and a numeric amount')
             else:
                 # Clear splits only on an explicit "off"; a bare category_id
                 # change is not a request to discard them.
@@ -400,10 +408,10 @@ class TransactionService:
 
             return True, 'Transaction updated successfully'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error updating transaction: {str(e)}", exc_info=True)
-            return False, f'Error: {str(e)}'
+            current_app.logger.exception('Error updating transaction')
+            return False, 'Could not update the transaction'
 
     # Transaction Listing Methods
 
@@ -622,10 +630,10 @@ class TagService:
             db.session.add(tag)
             db.session.commit()
             return True, 'Tag added successfully', tag
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error adding tag: {str(e)}")
-            return False, f'Error adding tag: {str(e)}', None
+            current_app.logger.exception('Error adding tag')
+            return False, 'Error adding tag', None
 
     def delete_tag(self, tag_id, user_id):
         """
@@ -643,7 +651,7 @@ class TagService:
             db.session.delete(tag)
             db.session.commit()
             return True, 'Tag deleted successfully'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error deleting tag: {str(e)}")
-            return False, f'Error deleting tag: {str(e)}'
+            current_app.logger.exception('Error deleting tag')
+            return False, 'Error deleting tag'

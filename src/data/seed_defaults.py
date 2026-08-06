@@ -153,11 +153,11 @@ def seed_user_defaults(user_id):
         logger.info(f"Seeding complete for user {user_id}: {summary}")
         return summary
 
-    except Exception as e:
-        logger.error(f"Error seeding defaults for user {user_id}: {str(e)}")
+    except Exception:
+        logger.exception('Error seeding defaults for user %s', user_id)
         return {
             'success': False,
-            'error': str(e),
+            'error': 'Failed to load default data',
             'message': 'Failed to load default data'
         }
 

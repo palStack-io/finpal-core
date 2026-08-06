@@ -241,10 +241,11 @@ class AccountService:
             db.session.commit()
             return True, f'Imported {imported_count} transactions ({skipped_count} skipped)', imported_count, skipped_count
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error importing CSV: {str(e)}")
-            return False, f'Error importing CSV: {str(e)}', 0, 0
+            current_app.logger.exception('Error importing CSV')
+            return False, ('Could not import that CSV. Check it has a header '
+                           'row and a date, description and amount column.'), 0, 0
 
     def _detect_csv_delimiter(self, file_content):
         """Detect CSV delimiter from file content"""
@@ -386,10 +387,12 @@ class SimpleFinService:
             db.session.commit()
             return True, 'SimpleFin connected successfully'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error saving SimpleFin token: {str(e)}")
-            return False, f'Error connecting SimpleFin: {str(e)}'
+            # The access URL is a credential and appears in the SQL of any
+            # failing INSERT, so this one leaked the secret it was storing.
+            current_app.logger.exception('Error saving SimpleFin token')
+            return False, 'Error connecting SimpleFin'
 
     def disconnect_simplefin(self, user_id):
         """
@@ -405,10 +408,10 @@ class SimpleFinService:
             else:
                 return False, 'No SimpleFin connection found'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error disconnecting SimpleFin: {str(e)}")
-            return False, f'Error disconnecting SimpleFin: {str(e)}'
+            current_app.logger.exception('Error disconnecting SimpleFin')
+            return False, 'Error disconnecting SimpleFin'
 
     def get_simplefin_settings(self, user_id):
         """Get SimpleFin settings for a user"""
@@ -480,10 +483,10 @@ class SimpleFinService:
             db.session.commit()
             return True, f'{len(results)} account(s) processed', results
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error importing SimpleFin accounts: {str(e)}")
-            return False, str(e), []
+            current_app.logger.exception('Error importing SimpleFin accounts')
+            return False, 'Could not import the SimpleFin accounts', []
 
     # ------------------------------------------------------------------
     # Transaction sync
@@ -588,12 +591,11 @@ class SimpleFinService:
             db.session.commit()
             return True, f'Synced {imported_count} new transaction(s)', imported_count
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(
-                f"SimpleFin sync error for account {account_id}: {str(e)}"
-            )
-            return False, str(e), 0
+            current_app.logger.exception(
+                'SimpleFin sync error for account %s', account_id)
+            return False, 'Could not sync transactions for this account', 0
 
     def sync_all_accounts(self, user_id):
         """
@@ -637,7 +639,7 @@ class SimpleFinService:
             account.external_id = None
             db.session.commit()
             return True, 'Account disconnected from SimpleFin'
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error disconnecting account: {str(e)}")
-            return False, f'Error: {str(e)}'
+            current_app.logger.exception('Error disconnecting account')
+            return False, 'Could not disconnect the account'

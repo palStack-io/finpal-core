@@ -57,10 +57,10 @@ class RecurringService:
             db.session.commit()
             return True, 'Recurring expense added successfully!', recurring
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error adding recurring: {str(e)}")
-            return False, f'Error: {str(e)}', None
+            current_app.logger.exception('Error adding recurring expense')
+            return False, 'Could not save the recurring expense', None
 
     def update_recurring(self, recurring_id, user_id, **kwargs):
         """Update a recurring expense"""
@@ -76,9 +76,10 @@ class RecurringService:
             db.session.commit()
             return True, 'Recurring expense updated successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error: {str(e)}'
+            current_app.logger.exception('Error updating recurring expense')
+            return False, 'Could not update the recurring expense'
 
     def toggle_recurring(self, recurring_id, user_id):
         """Toggle active status of recurring expense"""
@@ -92,9 +93,10 @@ class RecurringService:
             status = "activated" if recurring.active else "deactivated"
             return True, f'Recurring expense {status}!', recurring.active
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error: {str(e)}', None
+            current_app.logger.exception('Error toggling recurring expense')
+            return False, 'Could not change the recurring expense', None
 
     def delete_recurring(self, recurring_id, user_id):
         """Delete a recurring expense"""
@@ -107,9 +109,10 @@ class RecurringService:
             db.session.commit()
             return True, 'Recurring expense deleted successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error: {str(e)}'
+            current_app.logger.exception('Error deleting recurring expense')
+            return False, 'Could not delete the recurring expense'
 
     def detect_recurring_patterns(self, user_id):
         """Detect recurring transaction patterns"""
@@ -131,6 +134,7 @@ class RecurringService:
             db.session.commit()
             return True, 'Pattern ignored successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return False, f'Error: {str(e)}'
+            current_app.logger.exception('Error ignoring recurring pattern')
+            return False, 'Could not ignore that pattern'

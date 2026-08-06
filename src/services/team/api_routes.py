@@ -3,6 +3,7 @@ API Routes for Team / Household management
 Invite users, list members, manage roles
 """
 
+import logging
 import os
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -10,6 +11,11 @@ from src.models.user import User
 from src.models.invitation import Invitation
 from src.extensions import db
 
+logger = logging.getLogger(__name__)
+
+# NOTE: this blueprint is not registered anywhere — `/api/v1/team/*` is served
+# by the restx namespace in `api/v1/team.py`. Its twin of the resend handler is
+# what actually leaked, and was fixed there too.
 api_bp = Blueprint('team_api', __name__, url_prefix='/api/v1/team')
 
 
@@ -153,8 +159,10 @@ def resend_invitation(invitation_id):
             inviter_name=admin.name or admin.id,
             invite_link=invite_link,
         )
-    except Exception as e:
-        return jsonify({'error': f'Failed to resend email: {e}'}), 500
+    except Exception:
+        logger.exception('Failed to resend invitation %s', invitation_id)
+        return jsonify({'error': 'Could not send the invitation email. Check '
+                                 'the mail settings and try again.'}), 500
 
     return jsonify({'message': 'Invitation resent'}), 200
 

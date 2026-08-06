@@ -139,10 +139,10 @@ class BudgetService:
 
             return True, 'Budget added successfully!', budget
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error adding budget: {str(e)}")
-            return False, f'Error adding budget: {str(e)}', None
+            current_app.logger.exception('Error adding budget')
+            return False, 'Error adding budget', None
 
     def update_budget(self, budget_id, user_id, category_id=None, name=None, amount=None,
                       period=None, include_subcategories=None, start_date=None, is_recurring=None):
@@ -185,10 +185,10 @@ class BudgetService:
             db.session.commit()
             return True, 'Budget updated successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error updating budget: {str(e)}")
-            return False, f'Error updating budget: {str(e)}'
+            current_app.logger.exception('Error updating budget')
+            return False, 'Error updating budget'
 
     def toggle_budget(self, budget_id, user_id):
         """
@@ -209,10 +209,10 @@ class BudgetService:
             status = "activated" if budget.active else "deactivated"
             return True, f'Budget {status} successfully!', budget.active
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error toggling budget: {str(e)}")
-            return False, f'Error toggling budget: {str(e)}', None
+            current_app.logger.exception('Error toggling budget')
+            return False, 'Error toggling budget', None
 
     def delete_budget(self, budget_id, user_id):
         """
@@ -231,10 +231,10 @@ class BudgetService:
             db.session.commit()
             return True, 'Budget deleted successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error deleting budget: {str(e)}")
-            return False, f'Error deleting budget: {str(e)}'
+            current_app.logger.exception('Error deleting budget')
+            return False, 'Error deleting budget'
 
     # Budget Analysis Methods
 
