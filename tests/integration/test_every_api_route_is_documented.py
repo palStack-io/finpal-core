@@ -38,17 +38,14 @@ import pytest
 # the Swagger UI and its root redirect. They are not part of the API and restx
 # does not document itself, so they stay here permanently.
 #
-# The four `categories/{}` rules are the last plain-blueprint family
-# (src/services/category/api_routes.py). restx owns only the collection route,
-# while the detail route — which both mobile and web-ui call — is the
-# blueprint's. Porting it is step 1b, and doing so must delete those four lines.
+# **Everything else is documented.** The four `categories/{}` rules were here until
+# the category blueprint — the last plain-Flask blueprint in the app — was ported
+# onto restx. This gate is what removed them: its two-sided assertion failed the
+# moment they became documented and named exactly which lines to delete, which is
+# the behaviour it was written for.
 UNDOCUMENTED = {
     ('GET', '/api/v1'),
     ('GET', '/api/v1/docs'),
-    ('GET', '/api/v1/categories/{}'),
-    ('PUT', '/api/v1/categories/{}'),
-    ('PATCH', '/api/v1/categories/{}'),
-    ('DELETE', '/api/v1/categories/{}'),
 }
 
 METHODS = {'GET', 'POST', 'PUT', 'PATCH', 'DELETE'}

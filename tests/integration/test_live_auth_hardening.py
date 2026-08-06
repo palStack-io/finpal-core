@@ -189,21 +189,33 @@ def test_differing_methods_on_one_path_are_not_a_duplicate(app):
     _assert_no_new_duplicate_routes(probe)
 
 
-def test_the_one_remaining_duplicate_is_the_deferred_categories_collection(app):
-    """Everything else has been resolved; this one is a deferred decision.
+def test_no_route_collision_is_allowlisted_any_more(app):
+    """There are no deliberate duplicates left, and none should come back.
 
-    `category_api.get_categories` filters to the caller and
-    `api.categories_category_list` returns the whole household, so choosing a
-    winner decides whether a category belongs to a person or a household — the
-    question the owner deferred to the money-model revamp (AUDIT D-18/D-20).
+    This test used to assert the *opposite* — that `_KNOWN_DUPLICATE_ROUTES` held
+    exactly the categories collection, because `category_api.get_categories`
+    filtered to the caller while `api.categories_category_list` returned the whole
+    household, and choosing a winner would have decided whether a category belongs
+    to a person or a household by accident. That was D-20, deferred with the
+    owner's "redo it, don't patch it".
+
+    The owner settled the model on 2026-08-06 — a household is the instance and
+    "budget, categories and rest is for household" — so the blueprint is deleted,
+    one handler serves both slash spellings, and the allowlist is empty.
+
+    **Asserted as empty rather than as "categories are absent from it"**, so it
+    also catches the next port that widens the allowlist instead of resolving the
+    collision. That is the failure mode the allowlist invites: a duplicate listed
+    here means two clients can be served different code for one URL and no other
+    test will notice, because `/x` and `/x/` are not the same `(path, method)` to
+    the shadowing guard.
     """
     from src import _KNOWN_DUPLICATE_ROUTES, _assert_no_new_duplicate_routes
 
-    assert _KNOWN_DUPLICATE_ROUTES == {
-        ('/api/v1/categories', 'GET'),
-        ('/api/v1/categories', 'POST'),
-    }, _KNOWN_DUPLICATE_ROUTES
-    # The real app boots, which means every actual duplicate is accounted for.
+    assert _KNOWN_DUPLICATE_ROUTES == set(), (
+        'a route collision is allowlisted again — resolve it or justify it here: '
+        f'{sorted(_KNOWN_DUPLICATE_ROUTES)}')
+    # The real app boots, which means there are no unaccounted duplicates either.
     _assert_no_new_duplicate_routes(app)
 
 

@@ -76,13 +76,32 @@ class CategoryService:
             current_app.logger.exception('Error adding category')
             return False, 'Error adding category', None
 
+    def _in_household(self, category):
+        """Whether `category` belongs to this instance's household.
+
+        Categories are **household property** — owner decision 2026-08-06, and the
+        ruling that closed D-20: "budget, categories and rest is for household".
+        A household is the instance, so `get_all_user_ids()` is the membership
+        list and this is a real check rather than a tautology only while
+        cross-household isolation does not exist. `user_id` stays on the row as a
+        record of who created it, not as a permission.
+
+        Replaces `category.user_id != user_id`, which made a household-wide list
+        and a per-user detail view disagree about the same row: mobile listed a
+        housemate's category and then answered 403 when it was opened, and once
+        web-ui's list became household-wide its delete button would have started
+        answering 400.
+        """
+        from src.utils.household import get_all_user_ids
+        return category.user_id in get_all_user_ids()
+
     def update_category(self, category_id, user_id, name=None, icon=None, color=None):
         """Update a category - Returns (success, message)"""
         category = self.get_category(category_id)
         if not category:
             return False, 'Category not found'
 
-        if category.user_id != user_id:
+        if not self._in_household(category):
             return False, 'You don\'t have permission to edit this category'
 
         if category.is_system:
@@ -109,17 +128,28 @@ class CategoryService:
         if not category:
             return False, 'Category not found'
 
-        if category.user_id != user_id:
+        if not self._in_household(category):
             return False, 'You don\'t have permission to delete this category'
 
         if category.is_system:
             return False, 'System categories cannot be deleted'
 
         try:
+            # The fallback category for orphaned transactions is looked up across
+            # the household, not just under `user_id`. Deleting a housemate's
+            # category is allowed now, and their transactions must land in a real
+            # 'Other' — scoping this to the caller would have found *their* Other,
+            # or nothing, and `category_id` would go NULL. Prefers the owner's own
+            # 'Other' so rows stay with their member where one exists.
+            from src.utils.household import get_all_user_ids
             other_category = Category.query.filter_by(
                 name='Other',
-                user_id=user_id,
+                user_id=category.user_id,
                 is_system=True
+            ).first() or Category.query.filter(
+                Category.name == 'Other',
+                Category.is_system.is_(True),
+                Category.user_id.in_(get_all_user_ids()),
             ).first()
 
             if category.subcategories:
