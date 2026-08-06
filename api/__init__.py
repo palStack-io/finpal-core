@@ -5,6 +5,7 @@ Provides JSON API endpoints for web and mobile frontends
 
 from flask import Blueprint
 from flask_restx import Api
+from werkzeug.exceptions import HTTPException
 from flask_jwt_extended.exceptions import (
     NoAuthorizationError,
     InvalidHeaderError,
@@ -71,6 +72,36 @@ def handle_expired_token(error):
 @api.errorhandler(DecodeError)
 def handle_jwt_decode_error(error):
     return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
+
+
+@api.errorhandler(HTTPException)
+def handle_http_exception(error):
+    """Give restx routes the same error body the rest of the API sends.
+
+    `src/__init__.py` registers an app-level `_HTTPException` handler answering
+    `{success, error, message, status}`, and its comment says why both keys are
+    there: web reads `data.error` and mobile reads `data.message`. **restx never
+    reached it** — `Api.error_router` intercepts exceptions raised inside its own
+    blueprint — so every restx path answered a bare `{'message': ...}` carrying
+    werkzeug's "The browser (or proxy) sent a request that this server could not
+    understand", which the app-level comment already calls meaningless to an API
+    client. `data.error` was simply absent on ~120 paths.
+
+    That surfaced while porting the transaction-rules blueprint onto restx: the
+    blueprint answered a malformed body with the four-key shape and the ported
+    resource answered restx's, which would have been a silent contract change for
+    the one family the port was supposed to leave alone. Fixing it here keeps the
+    port faithful and closes the same gap for every other restx route.
+
+    Same value choice as the app-level handler: the status *name*, never
+    `e.description` and never an application exception's text.
+    """
+    return {
+        'success': False,
+        'error': error.name,
+        'message': error.name,
+        'status': error.code,
+    }, (error.code or 500)
 
 # Import and register namespaces (will be created next)
 from api.v1 import auth, analytics, transactions, accounts, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources, agent_actions, access_tokens
