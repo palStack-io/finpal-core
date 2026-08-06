@@ -3,6 +3,7 @@ import { Pencil, Trash2, Plus, Search, X, CheckCircle, ExternalLink, ChevronDown
 import { pointspalService, WalletCard, CardTransaction, Program } from '../service';
 import CardFace from '../components/CardFace';
 import { Loading } from '../../../components/common/Loading';
+import { ScopeTag } from '../../../components/ScopeTag';
 
 // ── Common category slugs shown for manual earn-rate entry ───────────────────
 
@@ -597,6 +598,7 @@ const MyCards: React.FC = () => {
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>My Cards</h1>
+          <div style={{ marginTop: 6 }}><ScopeTag scope="yours" /></div>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Balances, earn rates, cap rules, and verification status.</p>
         </div>
         <button onClick={() => setEditingCard(null)} style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
