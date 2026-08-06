@@ -11,7 +11,6 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
@@ -21,6 +20,12 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "erasableSyntaxOnly": false,
+    /* Declared twice in this file until 2026-08-06 — `true` up in "Bundler mode" and
+       `false` here. TypeScript takes the last one, so the effective value has always
+       been `false` and removing the earlier `true` changes nothing it compiles. It was
+       not harmless, though: vite's oxc transformer *refuses* to load a tsconfig with a
+       duplicate field, so any vitest run resolving this config failed outright with
+       TSCONFIG_ERROR rather than running the tests. Found via D-45. */
     "verbatimModuleSyntax": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": false

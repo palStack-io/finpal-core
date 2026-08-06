@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { Currency } from '../types/user';
 import { getBranding } from '../config/branding';
 import { TransactionRules } from '../components/TransactionRules';
 import { CategoryManagement } from '../components/CategoryManagement';
@@ -507,7 +508,7 @@ export const Settings: React.FC = () => {
                     </label>
                     <select
                       value={profileData.currency}
-                      onChange={(e) => setProfileData({...profileData, currency: e.target.value})}
+                      onChange={(e) => setProfileData({...profileData, currency: e.target.value as Currency})}
                       style={{
                         width: '100%',
                         padding: '12px',

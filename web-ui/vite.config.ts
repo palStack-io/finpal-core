@@ -1,4 +1,6 @@
-import { defineConfig } from 'vite'
+// `defineConfig` from 'vitest/config', not 'vite': the `test` block below is
+// vitest's, and vite's own UserConfigExport has no such key.
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/

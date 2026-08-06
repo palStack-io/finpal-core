@@ -110,7 +110,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </div>
 
       <div style={contentRowStyle}>
-        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+        {/*
+          `Sidebar` is `React.FC` with no props and reads its own state, so `isOpen`
+          and `onClose` were being passed to a component that ignores them. Removed
+          rather than implemented: the sidebar has no open/closed rendering at all and
+          giving it one is a design change, not a type fix.
+
+          That leaves the hamburger in `Header` doing nothing but swapping its own
+          icon — recorded as AUDIT D-46 rather than quietly fixed here.
+        */}
+        <Sidebar />
 
         <div style={columnStyle}>
           <Header onMenuToggle={toggleSidebar} isSidebarOpen={isSidebarOpen} />

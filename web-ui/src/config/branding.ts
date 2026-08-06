@@ -3,7 +3,14 @@
  * Handles currency-based branding (DollarPal vs EuroPal)
  */
 
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR' | 'CAD' | 'AUD';
+/**
+ * Re-exported, not redeclared. This file had its own copy of the union and the two had
+ * already drifted — every consumer importing `Currency` from here got a different type
+ * from the one in `types/user.ts`, and nothing reported it because the typecheck gate
+ * compiled zero files (D-45). Adding `JPY` to the canonical union is what surfaced it.
+ */
+export type { Currency } from '../types/user';
+import type { Currency } from '../types/user';
 
 export interface BrandingConfig {
   appName: string;
@@ -46,6 +53,14 @@ const brandingMap: Record<Currency, BrandingConfig> = {
     currencySymbol: '₹',
     currencyCode: 'INR',
     locale: 'en-IN',
+  },
+  JPY: {
+    appName: 'YenPal',
+    internalName: 'finPal',
+    parentBrand: 'palStack',
+    currencySymbol: '¥',
+    currencyCode: 'JPY',
+    locale: 'ja-JP',
   },
   CAD: {
     appName: 'DollarPal',

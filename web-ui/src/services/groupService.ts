@@ -20,6 +20,14 @@ export interface CreateGroupData {
   name: string;
   description?: string;
   member_ids?: number[];
+  /**
+   * All three are accepted by the server (`api/v1/groups.py`) and are sent by
+   * `Groups.tsx`; only this type lagged behind. They were previously discarded with
+   * a 201, which is why the swagger model names them explicitly now.
+   */
+  default_split_method?: string;
+  auto_include_all?: boolean;
+  default_split_values?: Record<string, number>;
 }
 
 export interface UpdateGroupData {
