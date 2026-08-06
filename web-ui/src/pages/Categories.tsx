@@ -178,8 +178,18 @@ export const Categories: React.FC = () => {
             }}>
               Categories
             </h1>
+            {/* Says household because this list now IS household-wide. The
+                slash-less `GET /api/v1/categories` used to be served by a
+                separate per-user handler (D-20); one implementation serves both
+                spellings now, so the page shows every member's categories and
+                the counts below are household counts. Stating it follows the
+                D-01 rule that a screen showing shared figures says whose they
+                are — the `scope="household"` prop on StatCard does this
+                elsewhere, but these stat blocks are hand-rolled Cards.
+                A per-member filter is coming with the D-18 build; until then
+                this sentence is the only thing telling the user. */}
             <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-              Organize your transactions with categories
+              Organize transactions with categories — shared across your household
             </p>
           </div>
           <Button variant="primary" onClick={() => setShowCreateModal(true)}>

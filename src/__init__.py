@@ -202,9 +202,12 @@ def create_app(config_name=None):
         app.logger.warning(f"Demo timeout setup failed: {e}")
 
     # Register API blueprints
-    # Category API
-    from src.services.category import api_bp as category_api_bp
-    app.register_blueprint(category_api_bp)
+    # No Category API blueprint: all five of its routes are flask-restx Resources
+    # in api/v1/categories.py now. It was the last plain-Flask blueprint, and the
+    # last route collision — its slash-less collection rule and restx's slashed one
+    # served *different implementations* to web-ui and mobile, which is D-20.
+    # Deleting it converges them, which the owner authorised on 2026-08-06 by
+    # settling the household model. See src/services/category/__init__.py.
 
     # No Auth API blueprint: all thirteen of its routes are flask-restx
     # Resources in api/v1/auth.py now, so they finally appear in swagger — the
@@ -347,18 +350,25 @@ def _seed_reference_data(app):
 #
 # Everything this set used to list has been resolved. What is left is one
 # deliberate deferral:
-_KNOWN_DUPLICATE_ROUTES = {
-    # The categories *collection* only. `category_api.get_categories` filters to
-    # the calling user; `api.categories_category_list` returns every category in
-    # the household. web-ui reaches the first and mobile the second, so the two
-    # clients genuinely see different rows — but picking a side decides whether a
-    # category belongs to a person or to a household, which is the question the
-    # owner deferred on 2026-08-05 ("redo it, don't patch it") and which AUDIT.md
-    # tracks as D-20 feeding the D-18 revamp. Converging it here would settle
-    # that by accident.
-    ('/api/v1/categories', 'GET'),
-    ('/api/v1/categories', 'POST'),
-}
+# Deliberate route collisions, i.e. one (path, method) served by two handlers with
+# the trailing slash deciding which. **This is empty, and that is the point.**
+#
+# Its sole entry was the categories collection (D-20): `category_api.get_categories`
+# filtered to the calling user while `api.categories_category_list` returned the
+# whole household, so web-ui and mobile genuinely saw different rows. It was
+# allowlisted rather than fixed because picking a side decides whether a category
+# belongs to a person or to a household — the question the owner deferred on
+# 2026-08-05 with "redo it, don't patch it".
+#
+# The owner settled it on 2026-08-06: a household is the instance, ownership sits on
+# the *account*, and "budget, categories and rest is for household". So the
+# blueprint is deleted, one handler serves both spellings, and the collision is gone
+# rather than tolerated.
+#
+# Adding an entry here should feel expensive. It means two clients can be served
+# different code for the same URL and no test will notice, because
+# `/x` and `/x/` are not the same (path, method) to the shadowing guard.
+_KNOWN_DUPLICATE_ROUTES = set()
 
 
 def _route_shape(rule):
