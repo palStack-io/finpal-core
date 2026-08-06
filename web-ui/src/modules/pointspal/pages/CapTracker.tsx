@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { pointspalService, CapCard, CapSummary } from '../service';
 import CapProgressCard from '../components/CapProgressCard';
 import { Loading } from '../../../components/common/Loading';
+import { ScopeTag } from '../../../components/ScopeTag';
 
 type Period = 'monthly' | 'quarterly' | 'annual';
 
@@ -9,6 +10,16 @@ const periodLabels: Record<Period, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   annual: 'Annual',
+};
+
+/**
+ * The noun for "this ___". `periodLabels` above are adjectives for the toggle
+ * buttons, and reusing them in a sentence produced "Pts earned this monthly".
+ */
+const periodNouns: Record<Period, string> = {
+  monthly: 'month',
+  quarterly: 'quarter',
+  annual: 'year',
 };
 
 const CapTracker: React.FC = () => {
@@ -69,6 +80,7 @@ const CapTracker: React.FC = () => {
         <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>
           Cap Tracker
         </h1>
+        <div style={{ marginTop: 6 }}><ScopeTag scope="yours" /></div>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
           Real-time spend vs. earn caps — know exactly when to switch cards.
         </p>
@@ -133,7 +145,7 @@ const CapTracker: React.FC = () => {
             <div style={cardStyle}>
               <div style={cardTitle}>Period Summary</div>
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Pts earned this {period}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Pts earned this {periodNouns[period]}</div>
                 <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--ink)', lineHeight: 1.1 }}>
                   {summary.pts_earned.toLocaleString()}
                 </div>

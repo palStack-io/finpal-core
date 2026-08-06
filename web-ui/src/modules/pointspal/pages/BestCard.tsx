@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { pointspalService, RecommendationResult } from '../service';
 import RecommendTable from '../components/RecommendTable';
 import { Loading } from '../../../components/common/Loading';
+import { ScopeTag } from '../../../components/ScopeTag';
 
 const CATEGORIES = [
   { label: '✈️ Travel',        value: 'travel' },
@@ -17,7 +18,9 @@ const CATEGORIES = [
 const BestCard: React.FC = () => {
   const [category, setCategory] = useState('groceries');
   const [merchant, setMerchant] = useState('');
-  const [amount, setAmount] = useState('84.50');
+  // Empty, not a pre-filled figure. '84.50' looked like the user's own data and
+  // was invented — the page's empty state already says to enter an amount.
+  const [amount, setAmount] = useState('');
   const [result, setResult] = useState<RecommendationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,7 @@ const BestCard: React.FC = () => {
         <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>
           Best Card Recommender
         </h1>
+        <div style={{ marginTop: 6 }}><ScopeTag scope="yours" /></div>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
           Cap-aware recommendations — we factor in where you are against each card's limits right now.
         </p>
@@ -108,19 +112,21 @@ const BestCard: React.FC = () => {
                   placeholder="0.00"
                   style={{ ...inputStyle, flex: 1 }}
                 />
+                {/* handleFind silently returns on a non-positive amount, so without
+                    this the button looks live and does nothing. */}
                 <button
                   onClick={handleFind}
-                  disabled={loading}
+                  disabled={loading || !(parseFloat(amount) > 0)}
                   style={{
                     padding: '8px 16px',
-                    background: loading ? 'var(--g100)' : 'var(--g700)',
-                    color: loading ? 'var(--g700)' : '#fff',
+                    background: loading || !(parseFloat(amount) > 0) ? 'var(--g100)' : 'var(--g700)',
+                    color: loading || !(parseFloat(amount) > 0) ? 'var(--g700)' : '#fff',
                     border: 'none',
                     borderRadius: 'var(--rs)',
                     fontFamily: "'Bricolage Grotesque', sans-serif",
                     fontWeight: 700,
                     fontSize: 12,
-                    cursor: loading ? 'default' : 'pointer',
+                    cursor: loading || !(parseFloat(amount) > 0) ? 'default' : 'pointer',
                     whiteSpace: 'nowrap',
                     transition: 'all 0.15s',
                   }}
@@ -190,8 +196,11 @@ const BestCard: React.FC = () => {
                 </div>
                 {result.displaced_winner && (
                   <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.15)', borderRadius: 'var(--rs)', padding: '6px 12px', fontSize: 11, color: '#fff' }}>
-                    <span style={{ opacity: 0.8 }}>{result.displaced_winner.card_name} was your usual pick — but it's</span>{' '}
-                    <b>capped this {result.displaced_winner.cap_note}</b>
+                    {/* cap_note arrives as a complete phrase ("Cap at 65%", see
+                        routes.py), so welding it after "capped this" rendered
+                        "capped this Cap at 65%". It stands on its own after the dash. */}
+                    <span style={{ opacity: 0.8 }}>{result.displaced_winner.card_name} was your usual pick — but it is capped:</span>{' '}
+                    <b>{result.displaced_winner.cap_note}</b>
                   </div>
                 )}
               </div>

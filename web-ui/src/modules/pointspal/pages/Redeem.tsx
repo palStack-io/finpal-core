@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { pointspalService, RedemptionOverview, RedemptionOption } from '../service';
 import { Loading } from '../../../components/common/Loading';
+import { ScopeTag } from '../../../components/ScopeTag';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../../styles/layoutStyles';
 
 const cppStyle = (cpp: number): React.CSSProperties => {
@@ -245,6 +246,7 @@ const PageHeader: React.FC = () => (
     <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>
       Redemption Optimizer
     </h1>
+    <div style={{ marginTop: 6 }}><ScopeTag scope="yours" /></div>
     <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
       Maximize what your points are worth — ranked by cents per point.
     </p>

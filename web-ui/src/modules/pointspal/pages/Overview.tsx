@@ -4,6 +4,7 @@ import { pointspalService, Overview } from '../service';
 import CardFace from '../components/CardFace';
 import StaleCardBanner from '../components/StaleCardBanner';
 import { Loading } from '../../../components/common/Loading';
+import { ScopeTag } from '../../../components/ScopeTag';
 
 const PointsPalOverview: React.FC = () => {
   const navigate = useNavigate();
@@ -121,8 +122,14 @@ const PointsPalOverview: React.FC = () => {
               boxShadow: 'var(--sh-xs)',
             }}
           >
-            <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, marginBottom: 6 }}>
-              {label}
+            {/* Every figure here is the caller's own: routes.py filters
+                UserCard by user_id, so the whole row is `yours`. D-01's sweep
+                never reached this page because the module was switched off. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600 }}>
+                {label}
+              </div>
+              <ScopeTag scope="yours" />
             </div>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 24, color: valueColor, lineHeight: 1 }}>
               {value}
@@ -160,6 +167,13 @@ const PointsPalOverview: React.FC = () => {
               Manage all →
             </button>
           </div>
+          {/* Without this the panel rendered as a bare heading on a new install,
+              while every neighbouring panel had an empty state. */}
+          {data.cards.length === 0 && (
+            <div style={{ fontSize: 13, color: 'var(--muted)', padding: '4px 0 8px' }}>
+              No cards yet — add one to start tracking points.
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
             {data.cards.map((card) => {
               const barPct = Math.min((card.points / 100000) * 100, 100);

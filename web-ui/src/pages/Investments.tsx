@@ -15,6 +15,11 @@ import {
   BarChart3
 } from 'lucide-react';
 import { investmentService } from '../services/api/investments';
+// `GET /api/v1/investments/portfolios` filters on user_id.in_(get_all_user_ids()),
+// and its own docstring says "for household" — so these totals include every
+// member's holdings. D-01 labelled the other pages and mobile labelled this one;
+// web's copy was the gap.
+import { ScopeTag } from '../components/ScopeTag';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
@@ -252,6 +257,7 @@ export const Investments: React.FC = () => {
                   <DollarSign size={20} style={{ color: 'var(--brand-main-green)' }} />
                 </div>
                 <span style={bodyTextStyle}>Total Value</span>
+                <ScopeTag scope="household" />
               </div>
               <div style={bigNumberStyle}>
                 {formatCurrency(stats.totalValue)}
@@ -279,6 +285,7 @@ export const Investments: React.FC = () => {
                   )}
                 </div>
                 <span style={bodyTextStyle}>Total Gain/Loss</span>
+                <ScopeTag scope="household" />
               </div>
               <div style={{
                 color: stats.totalGain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)',
@@ -309,6 +316,7 @@ export const Investments: React.FC = () => {
                   <Package size={20} style={{ color: 'var(--brand-accent-gold)' }} />
                 </div>
                 <span style={bodyTextStyle}>Total Cost</span>
+                <ScopeTag scope="household" />
               </div>
               <div style={bigNumberStyle}>
                 {formatCurrency(stats.totalCost)}
