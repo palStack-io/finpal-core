@@ -563,34 +563,103 @@ def test_both_slash_spellings_answer_identically(client, headers, group_id,
 # The exact surface this contract was captured against, read off `app.url_map`
 # on 2026-08-05. Named individually rather than counted, because a route added
 # while another is removed keeps any count identical.
+#
+# Keyed on the URL, NOT on which endpoint serves it. The port moves these routes
+# from `group_api.*` / `transaction_rule_api.*` blueprints onto restx resources,
+# which is precisely the change this file exists to hold still — a guard keyed to
+# the endpoint name would go quiet the moment the port started, exactly when it
+# is most needed. What a client can call is the contract; what serves it is not.
+#
+# Shapes come from the app's own `_route_shape`, so the trailing slash and the
+# converter's variable name are normalised by the same definition the duplicate
+# guard uses. restx spells the collection `/x/` where the blueprint spelled it
+# `/x`, and `strict_slashes = False` makes those one route wearing two spellings.
 CAPTURED_SURFACE = {
     ('/api/v1/groups', 'GET'),
     ('/api/v1/groups', 'POST'),
-    ('/api/v1/groups/<int:group_id>', 'GET'),
-    ('/api/v1/groups/<int:group_id>', 'PUT'),
-    ('/api/v1/groups/<int:group_id>', 'PATCH'),
-    ('/api/v1/groups/<int:group_id>', 'DELETE'),
-    ('/api/v1/groups/<int:group_id>/balances', 'GET'),
-    ('/api/v1/groups/<int:group_id>/members', 'POST'),
+    ('/api/v1/groups/<int>', 'GET'),
+    ('/api/v1/groups/<int>', 'PUT'),
+    ('/api/v1/groups/<int>', 'PATCH'),
+    ('/api/v1/groups/<int>', 'DELETE'),
+    ('/api/v1/groups/<int>/balances', 'GET'),
+    ('/api/v1/groups/<int>/members', 'POST'),
     ('/api/v1/transaction-rules', 'GET'),
     ('/api/v1/transaction-rules', 'POST'),
-    ('/api/v1/transaction-rules/<int:rule_id>', 'GET'),
-    ('/api/v1/transaction-rules/<int:rule_id>', 'PUT'),
-    ('/api/v1/transaction-rules/<int:rule_id>', 'PATCH'),
-    ('/api/v1/transaction-rules/<int:rule_id>', 'DELETE'),
+    ('/api/v1/transaction-rules/<int>', 'GET'),
+    ('/api/v1/transaction-rules/<int>', 'PUT'),
+    ('/api/v1/transaction-rules/<int>', 'PATCH'),
+    ('/api/v1/transaction-rules/<int>', 'DELETE'),
     ('/api/v1/transaction-rules/test', 'POST'),
 }
+
+# Paths these two families own that are NOT part of the captured contract,
+# because they were already restx and never blueprint routes.
+_NOT_PORTED = {
+    ('/api/v1/groups/<int>/members', 'GET'),
+    ('/api/v1/groups/<int>/invite', 'POST'),
+    ('/api/v1/transaction-rules/bulk-apply', 'POST'),
+    ('/api/v1/transaction-rules/stats', 'GET'),
+    ('/api/v1/transaction-rules/suggest', 'POST'),
+}
+
+
+@pytest.mark.parametrize('url', ['/api/v1/transaction-rules',
+                                 '/api/v1/transaction-rules/'])
+def test_a_malformed_body_keeps_the_four_key_error_shape(client, headers, url):
+    """web reads `data.error`, mobile reads `data.message`, and both must survive
+    the port.
+
+    The app-level `_HTTPException` handler answers
+    `{success, error, message, status}`, but restx's `Api.error_router`
+    intercepts exceptions raised inside its own blueprint and never reached it —
+    so a ported resource would have answered a bare `{'message': ...}` carrying
+    werkzeug's "The browser (or proxy) sent a request..." and silently dropped
+    `data.error`. Fixed by registering the same shape on the restx Api, which
+    also closes the gap for the ~120 paths that were already restx.
+    """
+    resp = client.post(url, headers=headers, data='{not json')
+
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert body['error'] == 'Bad Request'
+    assert body['message'] == 'Bad Request'
+    assert body['success'] is False
+    assert body['status'] == 400
+
+
+def test_the_slashless_collection_405_became_a_404(client, headers):
+    """The one behaviour the port does NOT preserve, recorded rather than hidden.
+
+    restx registers the collection as `/x/`. With `strict_slashes = False`
+    werkzeug matches `/x` to it for an ALLOWED method, but raises NotFound rather
+    than MethodNotAllowed for a disallowed one — so `PUT /api/v1/transaction-rules`
+    answered 405 on the blueprint and answers 404 now. The slashed spelling still
+    answers 405.
+
+    Accepted because it is how every restx collection in this app has always
+    behaved (`PUT /api/v1/transactions` is a 404 today and predates this port),
+    because no client sends an unsupported verb to a collection, and because the
+    only alternative is registering a second slash-less rule — which is precisely
+    the duplicate the route guard exists to forbid.
+    """
+    assert client.put('/api/v1/transaction-rules', headers=headers,
+                      json={}).status_code == 404
+    assert client.put('/api/v1/transaction-rules/', headers=headers,
+                      json={}).status_code == 405
 
 
 def test_the_captured_surface_is_still_the_whole_surface(app):
     """Derived from the app's own url_map, so a route cannot join or leave these
-    two families and silently go uncaptured before the port."""
+    two families and silently go uncaptured — including while being ported."""
+    from src import _route_shape
+
     live = {
-        (str(rule), method)
+        (_route_shape(rule), method)
         for rule in app.url_map.iter_rules()
-        if rule.endpoint.startswith(('group_api.', 'transaction_rule_api.'))
+        if _route_shape(rule).startswith(('/api/v1/groups',
+                                          '/api/v1/transaction-rules'))
         for method in rule.methods - {'HEAD', 'OPTIONS'}
-    }
+    } - _NOT_PORTED
 
     assert live == CAPTURED_SURFACE, (
         f'added since capture: {sorted(live - CAPTURED_SURFACE)}; '

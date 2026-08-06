@@ -218,9 +218,11 @@ def create_app(config_name=None):
     from src.services.group import api_bp as group_api_bp
     app.register_blueprint(group_api_bp)
 
-    # Transaction Rule API
-    from src.services.transaction_rule import api_bp as transaction_rule_api_bp
-    app.register_blueprint(transaction_rule_api_bp)
+    # The transaction-rule blueprint was retired here: its six routes are now
+    # flask-restx resources in api/v1/transaction_rules.py, so they appear in
+    # swagger. Registration had to go in the same commit as the resources —
+    # keeping both would make `_assert_no_new_duplicate_routes` raise at app
+    # creation, which is the guard doing its job.
 
     # REST API v1
     try:
