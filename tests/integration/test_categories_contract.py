@@ -350,19 +350,45 @@ def test_fix_a_housemates_category_can_be_deleted(
     assert Category.query.get(category_id) is None
 
 
-def test_model_the_household_is_still_the_whole_instance(client, db, me, headers):
-    """The household is the instance, so there is no "outside" to test against.
+def test_model_the_household_is_the_instance_minus_demo_accounts(client, db, me):
+    """The two user lists this app has, and the difference that matters.
 
-    Kept as a statement of the model rather than a gap: if cross-household
-    isolation is ever introduced, this test is where it must be asserted, and it
-    should start failing loudly rather than silently passing. `get_all_user_ids()`
-    returning every user on the instance IS the household definition.
+    **This test used to assert the tautology that broke #69.** It said
+    "`get_all_user_ids()` returning every user on the instance IS the household
+    definition" and asserted exactly that — so it *certified* the claim that made a
+    demo account a household member with delete rights. It passed before the
+    escalation, during it, and after the fix, while describing something that was
+    never true of a permission check.
+
+    **A guard that certifies the wrong claim is worse than no guard**, because it
+    reads as coverage. That is a third entry in this project's collection, next to
+    "a check that inspects nothing" and "a guard keyed to a spelling".
+
+    So it now pins the *distinction* instead: `get_all_user_ids()` includes demo
+    accounts and `CategoryService.household_user_ids()` does not. Anything deciding
+    a permission must use the second. If the two ever agree, either demo mode is
+    gone or somebody widened the household again, and this fails.
     """
     from src.utils.household import get_all_user_ids
     from src.models.user import User
-    assert sorted(get_all_user_ids()) == sorted(u.id for u in User.query.all()), (
-        'get_all_user_ids no longer means "everyone on the instance", so the '
-        'household model has changed and the category scope needs revisiting')
+    from src.services.category.service import CategoryService
+
+    demo = UserFactory(is_demo_user=True)
+
+    everyone = sorted(get_all_user_ids())
+    household = sorted(CategoryService().household_user_ids())
+
+    assert everyone == sorted(u.id for u in User.query.all()), (
+        'get_all_user_ids no longer means "everyone on the instance" — its 38 '
+        'callers assume that, so check them before changing it')
+    assert demo.id in everyone, (
+        'get_all_user_ids no longer includes demo accounts. If that is now '
+        'deliberate, the narrowing inside CategoryService is redundant and the '
+        'other 37 callers need reviewing.')
+    assert demo.id not in household, (
+        'a demo account is inside the household list again — its password is '
+        'published, so this is a key to the real household (#70)')
+    assert me.id in household, 'a real user fell out of the household list'
 
 
 def test_fix_the_duplicate_route_allowlist_is_empty(client, db):
