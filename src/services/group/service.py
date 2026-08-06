@@ -288,10 +288,14 @@ class GroupService:
             db.session.commit()
             return True, 'Group settings updated successfully!'
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Error updating group settings: {str(e)}")
-            return False, f'Error updating settings: {str(e)}'
+            # `update_group` delegates here and propagates this message straight
+            # into `jsonify({'error': message})`, so returning `str(e)` sent
+            # SQLAlchemy's exception text to the client — which CLAUDE.md forbids
+            # and which restoring the edit route made reachable.
+            current_app.logger.exception('Error updating group settings')
+            return False, 'Error updating settings'
 
     def get_group_expenses(self, group_id):
         """Get all expenses for a group"""
