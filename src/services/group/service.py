@@ -195,6 +195,66 @@ class GroupService:
             current_app.logger.error(f"Error deleting group: {str(e)}")
             return False, f'Error deleting group: {str(e)}'
 
+    def update_group(self, group_id, user_id, name=None, description=None,
+                     default_split_method=None, default_payer=None,
+                     auto_include_all=None, default_split_values=None):
+        """Update a group's name, description and settings.
+
+        `api_routes.update_group` has called this since the initial commit and it
+        has never existed, so `PUT`/`PATCH /api/v1/groups/<id>` raised
+        AttributeError, was swallowed by the route's `except Exception` and
+        answered 500 — for every user, since the first commit. Both clients
+        render an edit form against it.
+
+        `update_settings` handled only the four settings fields and nothing ever
+        handled `name` or `description`, which is why this is a new method rather
+        than a rename. It delegates the settings half so there is one
+        implementation of that policy.
+
+        Returns (success, message).
+        """
+        group = Group.query.get(group_id)
+        if not group:
+            return False, 'Group not found'
+
+        # Creator-only, matching `update_settings`' existing stated policy — a
+        # group's split rules decide what every member owes, so widening this to
+        # any member is a deliberate product decision, not a detail of this fix.
+        if group.created_by != user_id:
+            return False, 'Only the group creator can update this group'
+
+        if name is not None:
+            if not str(name).strip():
+                return False, 'Group name cannot be empty'
+            group.name = str(name).strip()
+        if description is not None:
+            group.description = description
+
+        # Only reach the settings path when the request actually named one,
+        # so a plain rename cannot fail on settings validation.
+        if any(v is not None for v in (default_split_method, default_payer,
+                                       auto_include_all, default_split_values)):
+            success, message = self.update_settings(
+                group_id, user_id,
+                default_split_method=default_split_method,
+                default_payer=default_payer,
+                auto_include_all=auto_include_all,
+                default_split_values=default_split_values,
+            )
+            if not success:
+                return False, message
+            return True, 'Group updated successfully!'
+
+        try:
+            db.session.commit()
+            return True, 'Group updated successfully!'
+        except Exception:
+            db.session.rollback()
+            # Deliberately not `str(e)` — CLAUDE.md forbids returning the
+            # exception text to a client, and `update_settings` still does.
+            current_app.logger.exception('Error updating group')
+            return False, 'Error updating group'
+
     def update_settings(self, group_id, user_id, default_split_method=None, default_payer=None,
                        auto_include_all=None, default_split_values=None):
         """
