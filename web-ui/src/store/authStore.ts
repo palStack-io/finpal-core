@@ -38,7 +38,9 @@ export const useAuthStore = create<AuthStore>()(
         set({
           user,
           isAuthenticated: !!user,
-          hasCompletedOnboarding: user?.preferences !== undefined || user?.hasCompletedOnboarding || false,
+          // `user.preferences` was a leftover from an older payload shape and is
+          // never sent, so this always fell through to the flag below.
+          hasCompletedOnboarding: user?.hasCompletedOnboarding || false,
           isDemoUser: user?.is_demo_user || false,
         }),
 

@@ -758,9 +758,9 @@ const MyCards: React.FC = () => {
                           <div key={txn.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < txnCache[card.id].length - 1 ? '1px solid var(--border)' : 'none' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, fontSize: 11, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {txn.description || txn.category?.name || txn.category}
+                                {txn.description || txn.category}
                               </div>
-                              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{txn.category?.name || txn.category || 'Uncategorized'} · {txn.date} · {txn.rate}×</div>
+                              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{txn.category || 'Uncategorized'} · {txn.date} · {txn.rate}×</div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
                               <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--g700)' }}>+{txn.pts_earned.toLocaleString()} pts</div>

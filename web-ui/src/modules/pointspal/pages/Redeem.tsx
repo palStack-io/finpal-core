@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { pointspalService, RedemptionOverview, RedemptionOption } from '../service';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
-import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../../styles/layoutStyles';
+import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, tableStyle } from '../../../styles/layoutStyles';
 
 const cppStyle = (cpp: number): React.CSSProperties => {
   if (cpp >= 2.0) return { color: 'var(--g700)', fontWeight: 800 };

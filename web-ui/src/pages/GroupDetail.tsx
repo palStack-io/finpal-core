@@ -9,6 +9,10 @@ import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { Transaction } from '../services/api/transactions';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+// `formActionsStyle` is used by the settings modal's button row and was never
+// imported — a plain undefined-name error that nothing reported, because the
+// typecheck gate compiled zero files (D-45).
+import { formActionsStyle } from '../styles/formStyles';
 
 interface Member {
   id: string;

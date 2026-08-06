@@ -21,6 +21,12 @@ export interface Transaction {
     balance?: number;
   };
   account_id?: number;
+  /**
+   * The other side of a transfer. Accepted on create (D-26) and update (D-27) and
+   * read by `AddTransactionForm`, but missing from this type — which the vacuous
+   * typecheck gate (D-45) meant nothing ever reported.
+   */
+  destination_account_id?: number | null;
   currency_code: string;
   group?: string;
   group_id?: number;

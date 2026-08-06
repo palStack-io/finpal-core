@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:check": "tsc -b && vite build",
+    "_typecheck_note": "MUST be `tsc -b`, never `tsc --noEmit`. tsconfig.json is solution-style (files: [] + project references) and --noEmit does not follow references, so it compiles ZERO files and always exits 0. See AUDIT.md D-45.",
+    "typecheck": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview"
   },
