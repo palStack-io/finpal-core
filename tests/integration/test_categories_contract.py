@@ -377,3 +377,94 @@ def test_fix_the_duplicate_route_allowlist_is_empty(client, db):
         'a route collision is still allowlisted, so some (path, method) is '
         f'served by two handlers depending on its trailing slash: '
         f'{sorted(_KNOWN_DUPLICATE_ROUTES)}')
+
+
+# =============================================================================
+# DEMO SANDBOXING — found in review of the port above, and caused by it
+# =============================================================================
+# `can_manage` was first written as `category.user_id in get_all_user_ids()`, and
+# `get_all_user_ids()` returns EVERY user on the instance with no `is_demo_user`
+# filter. Demo accounts are rows in that list, they ship with a published password
+# (`demo1234`, in src/services/demo/service.py), and they sign in through the
+# ordinary `/auth/login`. So the widened permission handed anybody holding demo
+# credentials the ability to rename and delete the real household's categories.
+#
+# Watched happening before the fix: a demo token's `DELETE` of a real user's
+# category answered **200** and the row was gone. Before the port the same request
+# was refused, so this was introduced by the convergence, not uncovered by it.
+#
+# Not reachable on the maintainer's deploy — `DEMO_MODE` defaults to False and is
+# unset in all three readers, which is why a live demo login is refused — but
+# `DEMO_MODE=true` is a shipped option, and a self-hoster running a public demo is
+# exactly the person who sets it.
+#
+# Why no existing assertion caught it: `UserFactory()` creates non-demo users, so
+# all 828 tests and all 31 assertions above exercise only the intended caller.
+
+@pytest.fixture
+def demo(db):
+    return UserFactory(is_demo_user=True)
+
+
+@BOTH_SPELLINGS
+def test_demo_a_demo_account_cannot_delete_the_households_category(
+        client, db, me, demo, auth_headers, slash):
+    theirs = _make_category(me, 'RealGroceries')
+    category_id = theirs.id
+
+    resp = client.delete(f'/api/v1/categories/{category_id}{slash}',
+                         headers=auth_headers(demo))
+    assert resp.status_code == 400, (
+        'a demo account deleted a real household category — the published demo '
+        f'password is a household key: {resp.get_data(as_text=True)[:160]}')
+    assert Category.query.get(category_id) is not None, (
+        'the row is gone, so the refusal above was cosmetic')
+
+
+@BOTH_SPELLINGS
+def test_demo_a_demo_account_cannot_rename_the_households_category(
+        client, db, me, demo, auth_headers, slash):
+    theirs = _make_category(me, 'RealGroceries')
+
+    resp = client.put(f'/api/v1/categories/{theirs.id}{slash}',
+                      headers=auth_headers(demo), json={'name': 'Pwned'})
+    assert resp.status_code == 400
+    assert Category.query.get(theirs.id).name == 'RealGroceries'
+
+
+@BOTH_SPELLINGS
+def test_demo_a_demo_account_cannot_open_the_households_category(
+        client, db, me, demo, auth_headers, slash):
+    theirs = _make_category(me, 'RealGroceries')
+    resp = client.get(f'/api/v1/categories/{theirs.id}{slash}',
+                      headers=auth_headers(demo))
+    assert resp.status_code == 404
+
+
+@BOTH_SPELLINGS
+def test_demo_the_household_cannot_manage_a_demo_accounts_category_either(
+        client, db, me, demo, headers, slash):
+    """Symmetric, and it protects the demo experience rather than the household.
+
+    A demo instance is shared by strangers; letting a real member delete the rows
+    a demo persona is built from would break the tour for the next visitor.
+    """
+    theirs = _make_category(demo, 'DemoGroceries')
+
+    resp = client.delete(f'/api/v1/categories/{theirs.id}{slash}',
+                         headers=headers)
+    assert resp.status_code == 400
+    assert Category.query.get(theirs.id) is not None
+
+
+@BOTH_SPELLINGS
+def test_demo_a_demo_account_still_manages_its_own_categories(
+        client, db, demo, auth_headers, slash):
+    """The sandbox must not be a wall — the demo tour has to work."""
+    mine = _make_category(demo, 'DemoOwn')
+    category_id = mine.id
+
+    resp = client.delete(f'/api/v1/categories/{category_id}{slash}',
+                         headers=auth_headers(demo))
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:200]
+    assert Category.query.get(category_id) is None

@@ -125,7 +125,7 @@ class CategoryList(Resource):
 #     was per-user and is now household-wide. This is the D-20 fix and it is
 #     visible: the web category list starts showing every member's categories.
 #   * Editing and deleting are permitted for any category in the household, via
-#     `CategoryService._in_household`. Not optional — web-ui's delete button is the
+#     `CategoryService.can_manage`. Not optional — web-ui's delete button is the
 #     only live category mutation in either client, so a household-wide list with a
 #     per-user permission would have rendered rows whose delete answered 400.
 #   * `POST` now persists `color`, which restx validated and silently discarded.
@@ -159,7 +159,8 @@ class CategoryDetail(Resource):
         try:
             category = category_service.get_category(category_id)
 
-            if not category or not category_service._in_household(category):
+            if not category or not category_service.can_manage(
+                    category, get_jwt_identity()):
                 # One answer for "no such row" and "not in this household", so
                 # the endpoint is not an existence oracle for other instances.
                 return {'error': 'Category not found'}, 404
