@@ -372,6 +372,40 @@ REACHABLE = {
 }
 
 
+def test_the_sync_log_never_serves_the_exception_it_stored(client, db,
+                                                           auth_headers):
+    """Both detectors watch *returns*. This one leaks by being stored.
+
+    `_write_sync_log(status='error', error_message=str(e))` keeps the exception
+    text on purpose — it is the operator's only diagnostic for a failed catalogue
+    fetch. But it keeps it in a **database column**, and `GET
+    /pointspal/sync/status` already reads that very row. Only the handler's
+    hand-written field list stands between the two, so adding an obvious-looking
+    `'error': log.error_message` would restore the leak by a path no `return`
+    scan can see. Checked 2026-08-06: not served. Pinned so it stays that way.
+    """
+    from src.extensions import db as _db
+    from src.modules.pointspal.models import PointspalSyncLog
+
+    user = UserFactory()
+    headers = auth_headers(user)
+
+    _db.session.add(PointspalSyncLog(
+        status='error', programs_upserted=0,
+        error_message='HTTPSConnectionPool(host=raw.githubusercontent.com) '
+                      'Max retries exceeded with token ghp_SECRETLEAK'))
+    _db.session.commit()
+
+    resp = client.get('/api/v1/points/sync/status', headers=headers)
+
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    body = resp.get_data(as_text=True)
+    assert 'error' == resp.get_json()['status'], (
+        'the row under test must be the one being served')
+    for leak in ('ghp_SECRETLEAK', 'HTTPSConnectionPool', 'Max retries'):
+        assert leak not in body, f'the stored exception text is served: {body}'
+
+
 @pytest.mark.parametrize('case', sorted(REACHABLE))
 def test_no_reachable_write_reports_the_database_to_the_client(
         client, db, auth_headers, monkeypatch, case):
