@@ -491,7 +491,12 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
         onSuccess();
       }, 1000);
     } catch (err: any) {
-      setError(err.message || err.response?.data?.error || 'Failed to save rule');
+      // The server's named reason first. axios always populates `err.message`
+      // with "Request failed with status code 400", so reading it first meant a
+      // 400's `error` was never reachable — every other catch in this file
+      // already has this order. The two `throw new Error` checks above carry no
+      // `response`, so they still fall through to `err.message`.
+      setError(err.response?.data?.error || err.message || 'Failed to save rule');
     } finally {
       setIsSubmitting(false);
     }
