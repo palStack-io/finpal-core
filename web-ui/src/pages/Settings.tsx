@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Tag, Link, AlertCircle, Repeat, Info, Download, Trash2, X, Users, Home, ArrowLeft } from 'lucide-react';
+import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Link, AlertCircle, Info, Download, Trash2, X, Users, Home, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Currency } from '../types/user';
 import { getBranding } from '../config/branding';
-import { TransactionRules } from '../components/TransactionRules';
-import { CategoryManagement } from '../components/CategoryManagement';
 import { SimpleFinSettings } from '../components/import/SimpleFinSettings';
 import { InvestmentSettings } from '../components/investment/InvestmentSettings';
-import { RecurringTransactions } from '../components/RecurringTransactions';
 import { TeamManagement } from '../components/settings/TeamManagement';
 import { ImportSources } from '../components/settings/ImportSources';
 import { AgentAccess } from '../components/settings/AgentAccess';
@@ -121,9 +118,10 @@ export const Settings: React.FC = () => {
     ...(user?.modules && user.modules.length > 0
       ? [{ id: 'modules', label: 'Modules', icon: <Zap size={18} /> }]
       : []),
-    { id: 'categories', label: 'Categories', icon: <Tag size={18} /> },
-    { id: 'rules', label: 'Transaction Rules', icon: <Zap size={18} /> },
-    { id: 'recurring', label: 'Recurring', icon: <Repeat size={18} /> },
+    // Categories, Transaction Rules and Recurring were tabs here until 2026-08-07.
+    // They are FEATURES, not preferences, and they are now first-class nav entries
+    // under PLAN at /categories, /rules and /recurring. Settings keeps only actual
+    // settings. `settingsHasNoFeatures.test.ts` fails if any of them comes back.
     { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
     { id: 'preferences', label: 'Preferences', icon: <Palette size={18} /> },
     { id: 'data', label: 'Data & Privacy', icon: <Database size={18} /> },
@@ -821,18 +819,6 @@ export const Settings: React.FC = () => {
                       .map(m => <ModuleCard key={m.slug} manifest={m} />)}
                   </div>
                 </div>
-              )}
-
-              {activeTab === 'categories' && (
-                <CategoryManagement />
-              )}
-
-              {activeTab === 'rules' && (
-                <TransactionRules />
-              )}
-
-              {activeTab === 'recurring' && (
-                <RecurringTransactions />
               )}
 
               {activeTab === 'notifications' && (

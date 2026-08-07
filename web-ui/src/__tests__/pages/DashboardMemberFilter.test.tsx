@@ -43,7 +43,16 @@ vi.mock('../../contexts/ToastContext', () => ({
   ToastProvider: ({ children }: any) => children,
 }));
 
-const BASE = 'http://localhost';
+// A WILDCARD ORIGIN, not a hardcoded one. `*/api/v1/x` matches that path on ANY
+// origin, which is what makes these tests independent of whatever base URL the
+// environment hands axios.
+//
+// `http://localhost` worked on a developer's machine and matched NOTHING in CI,
+// where the requests arrive relative — the very first CI run of this suite failed
+// for exactly that reason. A bare path (`''`) is not the fix either: MSW resolves
+// it against the jsdom origin, which put it back on one specific base and broke
+// 51 tests. Only the wildcard is origin-agnostic.
+const BASE = '*';
 
 const ALICE = { id: 'alice@test.com', name: 'Alice', color: '#22c55e', emoji: '🌱' };
 const BOB = { id: 'bob@test.com', name: 'Bob', color: '#3b82f6', emoji: '🐟' };
@@ -125,7 +134,13 @@ function mockDashboard({ members = [ALICE, BOB] }: { members?: (typeof ALICE)[] 
       });
     }),
     http.get(`${BASE}/api/v1/accounts`, () => HttpResponse.json({ success: true, accounts: [] })),
-    http.get(`${BASE}/api/v1/budgets/`, () => HttpResponse.json({ success: true, budgets: [] }))
+    // NO trailing slash: `budgetService.getBudgets` requests `/api/v1/budgets`.
+    // This handler said `/budgets/` and therefore matched NOTHING, so the request
+    // escaped MSW and hit the real network — passing here only because something
+    // happened to be listening on jsdom's origin, and failing in CI with
+    // ECONNREFUSED. A trailing slash picking a different handler is this
+    // project's own oldest trap, this time in the mocks rather than the app.
+    http.get(`${BASE}/api/v1/budgets`, () => HttpResponse.json({ success: true, budgets: [] }))
   );
 
   return { analyticsCalls, transactionCalls };

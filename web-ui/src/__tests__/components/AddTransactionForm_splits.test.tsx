@@ -33,7 +33,16 @@ vi.mock('../../contexts/ToastContext', () => ({
   ToastProvider: ({ children }: any) => children,
 }));
 
-const BASE = 'http://localhost';
+// A WILDCARD ORIGIN, not a hardcoded one. `*/api/v1/x` matches that path on ANY
+// origin, which is what makes these tests independent of whatever base URL the
+// environment hands axios.
+//
+// `http://localhost` worked on a developer's machine and matched NOTHING in CI,
+// where the requests arrive relative — the very first CI run of this suite failed
+// for exactly that reason. A bare path (`''`) is not the fix either: MSW resolves
+// it against the jsdom origin, which put it back on one specific base and broke
+// 51 tests. Only the wildcard is origin-agnostic.
+const BASE = '*';
 
 beforeAll(() => {
   api.defaults.adapter = 'http';
@@ -69,7 +78,11 @@ function mockForm() {
     http.get(`${BASE}/api/v1/accounts`, () =>
       HttpResponse.json({ success: true, accounts: [
         { id: 1, name: 'Chase', currency_code: 'USD' }] })),
-    http.get(`${BASE}/api/v1/groups/`, () => HttpResponse.json({ success: true, groups: [] })),
+    // NO trailing slash — the form requests `/api/v1/groups`. With the slash this
+    // handler matched nothing and the request escaped MSW to the real network,
+    // which `onUnhandledRequest: 'error'` now makes impossible. Second instance
+    // of the same trailing-slash mismatch in these mocks, so it is a pattern.
+    http.get(`${BASE}/api/v1/groups`, () => HttpResponse.json({ success: true, groups: [] })),
     http.get(`${BASE}/api/v1/team/members`, () => HttpResponse.json([])),
     http.put(`${BASE}/api/v1/transactions/:id`, async ({ request }) => {
       bodies.push(await request.json());

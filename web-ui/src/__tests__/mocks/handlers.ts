@@ -2,7 +2,16 @@ import { http, HttpResponse } from 'msw';
 
 // MSW 2.x setupServer (Node) requires absolute URLs.
 // jsdom origin defaults to http://localhost.
-const BASE = 'http://localhost';
+// A WILDCARD ORIGIN, not a hardcoded one. `*/api/v1/x` matches that path on ANY
+// origin, which is what makes these tests independent of whatever base URL the
+// environment hands axios.
+//
+// `http://localhost` worked on a developer's machine and matched NOTHING in CI,
+// where the requests arrive relative — the very first CI run of this suite failed
+// for exactly that reason. A bare path (`''`) is not the fix either: MSW resolves
+// it against the jsdom origin, which put it back on one specific base and broke
+// 51 tests. Only the wildcard is origin-agnostic.
+const BASE = '*';
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const authHandlers = [
@@ -298,6 +307,18 @@ export const pointspalHandlers = [
   ),
 ];
 
+// ── Import review banner ──────────────────────────────────────────────────────
+// Every test that renders the Dashboard reaches this, because ImportReviewBanner
+// asks for it unconditionally. It was unhandled in all ten of them and therefore
+// went to the REAL NETWORK under the old `onUnhandledRequest: 'warn'`. None of
+// those tests is about the banner, so a default empty page is the right answer
+// rather than ten local handlers.
+const importHandlers = [
+  http.get(`${BASE}/api/v1/import-batches`, () =>
+    HttpResponse.json({ success: true, batches: [], total: 0, page: 1, pages: 0 })
+  ),
+];
+
 // ── Combined ──────────────────────────────────────────────────────────────────
 export const handlers = [
   ...authHandlers,
@@ -306,4 +327,5 @@ export const handlers = [
   ...budgetHandlers,
   ...categoryHandlers,
   ...pointspalHandlers,
+  ...importHandlers,
 ];
