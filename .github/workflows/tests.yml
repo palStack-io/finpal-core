@@ -61,3 +61,52 @@ jobs:
         # sqlite:///:memory: and builds the schema itself, so no database
         # service is needed. Secrets are stubbed in conftest.
         run: python -m pytest
+
+  web-ui:
+    name: web-ui (typecheck + vitest)
+    runs-on: ubuntu-latest
+    # *** THIS JOB DID NOT EXIST UNTIL 2026-08-07, AND THAT IS THE POINT. ***
+    #
+    # CI ran pytest and nothing else, so the ~180 vitest tests and the typecheck
+    # only ever ran when somebody remembered to run them locally. Every web-ui
+    # gate this project has built — the typecheck gate (D-45), the className
+    # resolution sweep (D-60), apiErrorPrecedence, uiHonesty, the page-shell
+    # pins, and now informationArchitecture — was unenforced on every PR.
+    #
+    # A gate that runs only when remembered is not a gate. The image build runs
+    # `vite build`, which strips types WITHOUT checking them, so nothing else
+    # was covering this either.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web-ui
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: web-ui
+        # `npm run typecheck` is `tsc -b`, NOT `tsc --noEmit`. tsconfig.json is
+        # solution-style (`files: []` + project references) and `--noEmit` does
+        # not follow references, so it compiles ZERO files and always exits 0 —
+        # that was live for five sessions. AUDIT D-45; typecheckGate.test.ts
+        # fails if the script ever reverts.
+        run: npm run typecheck
+
+      - name: Tests
+        working-directory: web-ui
+        # There is deliberately no `test` script in web-ui's package.json.
+        #
+        # One test in informationArchitecture.test.ts SKIPS here and is meant to:
+        # it compares web's nav vocabulary with mobile's, and mobile lives in the
+        # outer repo which this checkout does not contain. The skip is explicit,
+        # a companion assertion reports whether it ran, and the web-side pin is
+        # self-contained so nothing here silently inspects nothing.
+        run: npx vitest run

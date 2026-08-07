@@ -9,6 +9,9 @@ import {
   Users,
   LineChart,
   Settings,
+  Repeat,
+  Tags,
+  Filter,
   Sun,
   Moon,
   LogOut,
@@ -19,17 +22,53 @@ import { useAuthStore } from '../../store/authStore';
 import { moduleRegistry } from '../../modules';
 import type { ModuleManifest } from '../../modules/registry';
 
-const navItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Transactions', path: '/transactions', icon: ArrowLeftRight },
-  { name: 'Accounts', path: '/accounts', icon: Wallet },
-  { name: 'Budgets', path: '/budgets', icon: Target },
+/**
+ * The nav is grouped by WHAT YOU ARE DOING, and the headings are shared with
+ * mobile's `more.tsx` so the two clients answer "where do I find X?" the same way.
+ * `iaParity.test.ts` fails if these five headings and the mobile ones diverge.
+ *
+ * Categories, Recurring and Rules live here rather than inside Settings: they are
+ * features, not preferences, and Settings had grown to twelve tabs in a
+ * ~1,250-line file. See docs/superpowers/specs/2026-08-07-finpal-ia-and-mobile-parity-design.md.
+ */
+export const NAV_GROUP_HEADINGS = ['Money', 'Plan', 'Insight', 'Shared', 'Modules'] as const;
+
+const navGroups = [
+  {
+    heading: 'Money',
+    items: [
+      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Transactions', path: '/transactions', icon: ArrowLeftRight },
+      { name: 'Accounts', path: '/accounts', icon: Wallet },
+      // Investments is spliced in here when the feature is on — see the render.
+    ],
+  },
+  {
+    heading: 'Plan',
+    items: [
+      { name: 'Budgets', path: '/budgets', icon: Target },
+      { name: 'Recurring', path: '/recurring', icon: Repeat },
+      { name: 'Categories', path: '/categories', icon: Tags },
+      { name: 'Rules', path: '/rules', icon: Filter },
+    ],
+  },
+  { heading: 'Insight', items: [{ name: 'Analytics', path: '/analytics', icon: TrendingUp }] },
+  { heading: 'Shared', items: [{ name: 'Groups', path: '/groups', icon: Users }] },
 ];
 
-const navItemsAnalytics = [
-  { name: 'Analytics', path: '/analytics', icon: TrendingUp },
-  { name: 'Groups', path: '/groups', icon: Users },
-];
+const navGroupHeadingStyle: React.CSSProperties = {
+  padding: '4px 12px 2px',
+  fontSize: 10,
+  fontWeight: 700,
+  color: 'rgba(148,163,184,0.5)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  fontFamily: "'Bricolage Grotesque', sans-serif",
+};
+
+const NavGroupHeading: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={navGroupHeadingStyle}>{children}</div>
+);
 
 
 // ---------------------------------------------------------------------------
@@ -159,7 +198,9 @@ export const Sidebar: React.FC = () => {
     navigate('/login');
   };
 
-  const renderNavItems = (items: typeof navItems) =>
+  type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }> };
+
+  const renderNavItems = (items: readonly NavItem[]) =>
     items.map((item) => {
       const Icon = item.icon;
       return (
@@ -208,11 +249,20 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {renderNavItems(navItems)}
-        <div className="nav-divider" />
-        {features?.investments !== false && renderNavItems([{ name: 'Investments', path: '/investments', icon: LineChart }])}
-        {renderNavItems(navItemsAnalytics)}
-        <div className="nav-divider" />
+        {navGroups.map(group => {
+          // Investments is feature-gated and belongs with Accounts — both are
+          // "what you hold". Spliced at render rather than declared, so the
+          // group data stays a plain constant the parity test can read.
+          const items = group.heading === 'Money' && features?.investments !== false
+            ? [...group.items, { name: 'Investments', path: '/investments', icon: LineChart }]
+            : group.items;
+          return (
+            <React.Fragment key={group.heading}>
+              <NavGroupHeading>{group.heading}</NavGroupHeading>
+              {renderNavItems(items)}
+            </React.Fragment>
+          );
+        })}
 
         {/* ── Modules section — driven by moduleRegistry + user.modules ── */}
         {(() => {
@@ -223,9 +273,7 @@ export const Sidebar: React.FC = () => {
           if (visibleModules.length === 0) return null;
           return (
             <>
-              <div style={{ padding: '4px 12px 2px', fontSize: 10, fontWeight: 700, color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                Modules
-              </div>
+              <NavGroupHeading>Modules</NavGroupHeading>
               {visibleModules.map(m => <ModuleNavSection key={m.slug} manifest={m} />)}
             </>
           );

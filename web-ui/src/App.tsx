@@ -29,13 +29,17 @@ import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Accounts } from './pages/Accounts';
 import BudgetsMinimal from './pages/BudgetsMinimal';
-import { Categories } from './pages/Categories';
+// The canonical categories UI is the component Settings used to host, NOT the
+// 441-line `pages/Categories.tsx` that used to answer this route — that page was
+// unreachable (nothing linked to it) and materially less capable. Deleted.
+import { CategoryManagement } from './components/CategoryManagement';
+import { RecurringTransactions } from './components/RecurringTransactions';
+import { TransactionRules } from './components/TransactionRules';
 import { Groups } from './pages/Groups';
 import { GroupDetail } from './pages/GroupDetail';
 import { Analytics } from './pages/Analytics';
 import { Investments } from './pages/Investments';
 import { Settings } from './pages/Settings';
-import { SimpleFinSetup } from './pages/SimpleFinSetup';
 import { OidcCallback } from './pages/OidcCallback';
 
 /** Layout wrapper that adds sidebar for authenticated pages */
@@ -121,7 +125,23 @@ function App() {
               path="/categories"
               element={
                 <ProtectedRoute>
-                  <AppLayout><Categories /></AppLayout>
+                  <AppLayout><CategoryManagement /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/recurring"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><RecurringTransactions /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/rules"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><TransactionRules /></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -167,14 +187,11 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/simplefin"
-              element={
-                <ProtectedRoute>
-                  <AppLayout><SimpleFinSetup /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* /simplefin is DELETED, not moved. It rendered a 425-line page that
+                nothing linked to, duplicating `SimpleFinSettings` which is live in
+                Settings → Integrations. SimpleFin is configuration, not a daily
+                surface, so it stays there. D-46's precedent: delete the dead
+                control rather than build what it implies. */}
 
             {/* Module routes — driven by moduleRegistry, gated by user.modules */}
             {moduleRegistry
