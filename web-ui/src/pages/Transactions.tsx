@@ -483,6 +483,18 @@ export const Transactions: React.FC = () => {
       >
         {selectedTransaction && (
           <AddTransactionForm
+            /**
+             * **`key` is load-bearing, not tidiness.** The form seeds its splits
+             * editor from `transaction` in a lazy `useState` initializer, which
+             * runs once per mount. Selecting a second row without the panel
+             * closing in between (`handleRowClick` sets the transaction and
+             * opens the panel; it does not null it first) would reuse the
+             * component and leave row A's splits in row B's editor — and since
+             * D-54 an editor's contents are WRITTEN BACK, so saving would
+             * corrupt B. Remounting per id makes the initializer's contract
+             * true by construction rather than by luck of the unmount order.
+             */
+            key={selectedTransaction.id}
             transaction={selectedTransaction}
             onSuccess={handleTransactionSuccess}
             onCancel={() => { setIsEditPanelOpen(false); setSelectedTransaction(null); }}
