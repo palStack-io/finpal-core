@@ -12,8 +12,8 @@ import { getBranding } from '../config/branding';
 import { useTheme } from '../contexts/ThemeContext';
 import { CHART_COLORS } from '../config/theme';
 import { StatCard } from '../components/StatCard';
-import { DASHBOARD_FIGURE_SCOPE, MIXED_SCOPE_CAPTION } from '../utils/scope';
 import { SectionCard } from '../components/SectionCard';
+import { MemberFilter } from '../components/MemberFilter';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
@@ -83,6 +83,19 @@ export const Dashboard = () => {
   useEffect(() => {
     teamService.getMembers().then(setMembers).catch(() => setMembers([]));
   }, []);
+
+  /**
+   * **D-18 item E.** Every figure on this page now follows one filter, so the
+   * per-figure scope tags are gone. That is the whole argument for the control:
+   * a tag makes the user read four captions and reconcile them; a filter makes
+   * the scope one answer they chose.
+   *
+   * `null` is the whole household, which is the default the owner specified.
+   * Renders nothing for a one-member household — `MemberFilter` decides that, the
+   * same way it does on the transactions page.
+   */
+  const [memberId, setMemberId] = useState<string | null>(null);
+  const selectedMember = members.find((m) => m.id === memberId) || null;
   const [budgets, setBudgets] = useState<any[]>([]);
   const [monthlyAggregation, setMonthlyAggregation] = useState<any[]>([]);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
@@ -91,16 +104,21 @@ export const Dashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, [timeRange]);
+  }, [timeRange, memberId]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
 
       const [dashboardData, accountsData, transactionsData, budgetsData] = await Promise.all([
-        analyticsService.getDashboardData(),
+        // BOTH of these move together, and that is the D-51 lesson applied
+        // rather than repeated: #76 re-scoped the recent strip and left the
+        // figures alone, which is how the page came to describe two different
+        // sets of people at once. Whoever the filter names, it names for the
+        // whole page.
+        analyticsService.getDashboardData(memberId),
         accountService.getAccounts(),
-        transactionService.getTransactions({ per_page: 5 }),
+        transactionService.getTransactions({ per_page: 5, member_id: memberId || undefined }),
         budgetService.getBudgets()
       ]);
 
@@ -313,9 +331,22 @@ export const Dashboard = () => {
       <div style={pageContainerStyle}>
 
         {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-primary)' }}>Dashboard</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Welcome back!</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-primary)' }}>Dashboard</h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+              {selectedMember
+                ? `${selectedMember.name}'s money`
+                : 'Everyone sharing this finPal instance'}
+            </p>
+          </div>
+          {/* Top of page, not beside the cards: this narrows the WHOLE page, and
+              a control that sits next to one figure reads as belonging to it. */}
+          <MemberFilter
+            members={members}
+            value={memberId}
+            onChange={setMemberId}
+          />
         </div>
 
         {/* Flags an auto-import whose columns were guessed */}
@@ -323,22 +354,23 @@ export const Dashboard = () => {
 
         {/* Stat Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          {/* Each card says whose money it covers. The scoping is per field, not
-              per endpoint: this one payload carries the caller's own net worth
-              and expense share alongside the household's income. See
-              `utils/scope.ts` and the backend suite it points at. */}
+          {/* **No per-figure scope tags any more — D-18 item E.** They existed
+              because this one payload used to carry the caller's own net worth
+              and expense share alongside the household's income, so no single
+              caption was true for the page. Every figure now follows the member
+              filter above together, which answers the question once instead of
+              four times. `utils/scope.ts` keeps the vocabulary for the surfaces
+              that still need it. */}
           <StatCard
             label="Net Worth"
             value={formatCurrency(netWorth)}
-            scope={DASHBOARD_FIGURE_SCOPE.netWorth}
             accentColor="#22c55e"
             icon={<Wallet size={24} color="#22c55e" />}
-            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--brand-green-glow)', fontSize: '14px' }}>Your own accounts</span></>}
+            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--brand-green-glow)', fontSize: '14px' }}>Accounts and investments</span></>}
           />
           <StatCard
             label="Monthly Income"
             value={formatCurrency(monthlyIncome)}
-            scope={DASHBOARD_FIGURE_SCOPE.monthlyIncome}
             accentColor="#3b82f6"
             icon={<TrendingUp size={24} color="#3b82f6" />}
             subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current month earnings</span>}
@@ -346,24 +378,22 @@ export const Dashboard = () => {
           <StatCard
             label="Monthly Expenses"
             value={formatCurrency(monthlyExpenses)}
-            scope={DASHBOARD_FIGURE_SCOPE.monthlyExpenses}
             accentColor="#ef4444"
             icon={<TrendingDown size={24} color="#ef4444" />}
-            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--accent-red)', fontSize: '14px' }}>Your share this month</span></>}
+            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--accent-red)', fontSize: '14px' }}>Spending this month</span></>}
           />
-          {/* No tag, and no congratulation. `savings_rate` divides by the
-              household's income after subtracting only the caller's expenses
-              (AUDIT.md D-18), so neither "Yours" nor "Household" is true. The
-              subtitle used to read "Great job saving!" unconditionally — praise
-              for a number that reads 100% for a member who has entered nothing,
-              and 0% for someone with no income at all. */}
+          {/* Still no congratulation. The subtitle used to read "Great job
+              saving!" unconditionally — praise for a number that read 100% for a
+              member who had entered nothing and 0% for someone with no income at
+              all. The 100% case is fixed (D-18 item E: both terms now describe
+              the same people), the 0%-without-income case is not, and an
+              unconditional compliment is wrong either way. */}
           <StatCard
             label="Savings Rate"
             value={`${savingsRate.toFixed(1)}%`}
-            scope={DASHBOARD_FIGURE_SCOPE.savingsRate}
             accentColor="#fbbf24"
             icon={<PiggyBank size={24} color="#fbbf24" />}
-            subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{MIXED_SCOPE_CAPTION.savingsRate}</span>}
+            subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Of income, after expenses</span>}
           />
         </div>
 

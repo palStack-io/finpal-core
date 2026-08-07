@@ -62,6 +62,18 @@ export interface TransactionFilters {
   account_id?: number;
   type?: 'expense' | 'income' | 'transfer';
   search?: string;
+  /**
+   * Narrow to one household member. Server-side, so `summary` describes the same
+   * rows the list does.
+   *
+   * **This is the second declaration of this endpoint's filters in web-ui** —
+   * `services/api/transactions.ts` has its own, and it grew `member_id` in #76
+   * while this one did not. The Dashboard reads through *this* module, so the
+   * dashboard's recent strip could not be filtered until now. Same shape as
+   * D-45's duplicate `Currency` unions; recorded rather than merged here, because
+   * collapsing two service modules is not this PR's job.
+   */
+  member_id?: string;
 }
 
 export interface TransactionSummary {
@@ -103,6 +115,7 @@ export const transactionService = {
       params.append('account_id', filters.account_id.toString());
     if (filters?.type) params.append('type', filters.type);
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.member_id) params.append('member_id', filters.member_id);
 
     // Trailing slash: the paginating, filtering handler. Without it this hit a
     // legacy handler that read none of the parameters built above and returned

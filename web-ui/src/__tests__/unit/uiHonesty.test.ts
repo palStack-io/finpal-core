@@ -140,16 +140,38 @@ describe('B — a page that shows money says whose money it is', () => {
         /value_usd/.test(text);
       if (!showsMoney) return;
 
-      const saysWhose =
+      /**
+       * **Two ways to be honest, and the second was added for D-18 item E.**
+       *
+       * A *label* answers "whose money is this" for the reader. A *filter*
+       * answers it for the user, once, for the whole page — which is strictly
+       * better where every figure moves together, and is why the Dashboard's four
+       * per-figure tags were retired rather than kept alongside the control.
+       *
+       * The filter only counts when the page also **renders the current
+       * selection**: offering a control and never saying where it is currently
+       * pointed leaves exactly the ambiguity this gate exists to catch. So
+       * `selectedMember` is required beside `<MemberFilter`, not instead of it.
+       *
+       * `{selectedMember` — the JSX interpolation — not the bare identifier.
+       * Written the loose way first and probed: deleting the rendered subtitle
+       * left the gate green, because the `const selectedMember = …` declaration
+       * still matched. A guard keyed to a name that exists is not keyed to
+       * behaviour that happens.
+       */
+      const labelsEachFigure =
         /ScopeTag/.test(text) ||
         /scope=/.test(text) ||
         /MIXED_SCOPE_CAPTION/.test(text);
+      const filtersTheWholePage =
+        /<MemberFilter/.test(text) && /\{selectedMember\b/.test(text);
 
       expect(
-        saysWhose,
-        `${rel(file)} renders a currency figure but carries no scope label. ` +
-          `This instance is one household: state whether the figure is the ` +
-          `caller's or everyone's, per src/utils/scope.ts.`
+        labelsEachFigure || filtersTheWholePage,
+        `${rel(file)} renders a currency figure but neither labels its scope nor ` +
+          `offers a member filter whose current selection it states. This ` +
+          `instance is one household: say whether the figure is the caller's or ` +
+          `everyone's, per src/utils/scope.ts — with a tag, or with a filter.`
       ).toBe(true);
     }
   );

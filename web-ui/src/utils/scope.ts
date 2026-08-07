@@ -53,24 +53,19 @@ export const SCOPE_TITLE: Record<Scope, string> = {
 };
 
 /**
- * The scope of each figure the Dashboard shows.
+ * **The Dashboard's per-figure map used to live here and was retired by D-18
+ * item E (2026-08-06).** It said `netWorth: 'yours'`, `monthlyIncome:
+ * 'household'`, `monthlyExpenses: 'yours'` and `savingsRate: 'mixed'` — all true
+ * at the time, and all false now. Every dashboard figure describes the same
+ * people and follows one member filter, so the page states its scope once, in
+ * words, beside the control the user set. A tag alongside a filter would state it
+ * twice and disagree the moment either drifted.
  *
- * `savingsRate` derives from `net_cash_flow`, which subtracts the caller's own
- * expense share from the household's income (AUDIT.md D-18). A member who has
- * entered nothing therefore sees a 100% savings rate. Labelling cannot fix a
- * figure whose two terms have different owners; it needs an owner decision.
+ * The vocabulary above stays: `Investments` and the pointsPal pages still carry
+ * genuine per-figure tags, and the Analytics page still tags its charts
+ * `household` because it has no filter of its own yet (its own AUDIT row).
+ *
+ * `web-ui/src/__tests__/pages/DashboardMemberFilter.test.tsx` is where the
+ * dashboard's answer is asserted now — on the request and the rendered figures,
+ * not on a lookup table that could go on being true about nothing.
  */
-export const DASHBOARD_FIGURE_SCOPE = {
-  /** `calculate_asset_debt_trends` filters to the caller's own accounts. */
-  netWorth: 'yours',
-  /** The income loop applies no user filter and takes no split share. */
-  monthlyIncome: 'household',
-  /** The expense loop takes the caller's share of each split. */
-  monthlyExpenses: 'yours',
-  savingsRate: 'mixed',
-} as const satisfies Record<string, Scope>;
-
-/** What a `mixed` figure is made of, in words, since no tag fits it. */
-export const MIXED_SCOPE_CAPTION = {
-  savingsRate: 'Of household income, after your expenses',
-} as const;

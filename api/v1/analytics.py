@@ -7,6 +7,7 @@ from src.services.analytics.service import AnalyticsService
 from src.services.analytics.spending_summary import (
     GROUP_CATEGORY, InvalidSummaryRequest, parse_date, spending_summary)
 from src.utils.api_auth import api_auth_required
+from src.utils.household import member_read_scope
 import logging
 
 logger = logging.getLogger(__name__)
@@ -97,15 +98,34 @@ def _serialize_dashboard(dashboard_data):
 
 @ns.route('/dashboard')
 class Dashboard(Resource):
-    @ns.doc('get_dashboard_data', security='Bearer')
+    @ns.doc('get_dashboard_data', security='Bearer',
+            params={'member_id': 'Narrow every figure to one household member '
+                                 '(their accounts, plus any account-less rows '
+                                 'they entered). Omit for the whole household. '
+                                 'An id outside your household is a 403.'})
     @jwt_required()
     def get(self):
         """Get dashboard overview data with metrics, charts, and categories"""
         current_user_id = get_jwt_identity()
 
+        # D-18 item E. Resolved here rather than inside the service so the refusal
+        # is an HTTP answer rather than an exception crossing a layer — and so the
+        # service keeps taking a plain list of ids, which is what lets
+        # `/analytics/networth` and `/analytics/stats` reuse it unchanged.
+        member_id = request.args.get('member_id') or None
+        scope_ids = member_read_scope(current_user_id, member_id)
+        if scope_ids is None:
+            # 403, never an empty dashboard. A dashboard of zeroes is
+            # indistinguishable from a member who has nothing, so honouring an id
+            # the server rejects would make the filter lie in the quietest way
+            # available to it.
+            return {'success': False,
+                    'error': 'That member is not in your household.'}, 403
+
         try:
             # Get dashboard data from service
-            dashboard_data = analytics_service.get_dashboard_data(current_user_id)
+            dashboard_data = analytics_service.get_dashboard_data(
+                current_user_id, scope_ids=scope_ids)
             serializable_data = _serialize_dashboard(dashboard_data)
 
             return {

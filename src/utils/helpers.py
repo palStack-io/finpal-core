@@ -234,9 +234,15 @@ def sync_investments_with_accounts(user_id):
         db.session.rollback()  # Rollback on error
 
 
-def calculate_asset_debt_trends(current_user):
-    """
-    Calculate asset and debt trends for a user's accounts, including investments
+def calculate_asset_debt_trends(current_user, user_ids=None):
+    """Asset and debt trends for a set of members' accounts, including investments.
+
+    `user_ids` is the scope the figures describe. It defaults to the caller alone,
+    which is what every existing caller meant and keeps the unit tests honest; the
+    dashboard passes the household, or one member when the user has filtered to
+    them. Before this, net worth was ALWAYS the caller's own accounts while the
+    totals beside it covered the household — the mix D-18 was opened for, and the
+    reason a filter had to move every figure together or none of them.
     """
     from datetime import datetime, timedelta
     from src.models.account import Account
@@ -251,11 +257,10 @@ def calculate_asset_debt_trends(current_user):
     today = datetime.now()
     twelve_months_ago = today - timedelta(days=365)
 
-    # Get all accounts for the user
-    accounts = Account.query.filter_by(user_id=current_user.id).all()
+    scope = list(user_ids) if user_ids else [current_user.id]
 
-    # Get all portfolios for the user
-    portfolios = Portfolio.query.filter_by(user_id=current_user.id).all()
+    accounts = Account.query.filter(Account.user_id.in_(scope)).all()
+    portfolios = Portfolio.query.filter(Portfolio.user_id.in_(scope)).all()
 
     # Get user's preferred currency code
     user_currency_code = current_user.default_currency_code or 'USD'
