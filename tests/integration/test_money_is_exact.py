@@ -34,6 +34,7 @@ from decimal import Decimal
 import pytest
 
 from src.extensions import db
+from src.models.transaction import Expense
 from tests.factories import AccountFactory, UserFactory
 
 
@@ -110,13 +111,35 @@ def test_a_hundred_round_trips_do_not_drift(client, alice_h, alice):
         assert created.status_code in (200, 201), (
             f'create {i} failed with {created.status_code}: {created.get_json()}')
 
-        deleted = client.delete(
-            '/api/v1/transactions/%d' % created.get_json()['transaction']['id'],
-            headers=alice_h)
+        transaction_id = created.get_json()['transaction']['id']
+        deleted = client.delete('/api/v1/transactions/%d' % transaction_id,
+                                headers=alice_h)
         assert deleted.status_code in (200, 204), (
             f'delete {i} failed with {deleted.status_code}: {deleted.get_json()}. '
             f'The balance below would be off by exactly 0.07 per dropped delete, '
             f'which reads as drift and is not.')
+
+        # *** THE STATUS CODE ABOVE IS NOT ENOUGH, AND D-61 PROVED IT. ***
+        #
+        # The assertion added in #90 was supposed to tell a dropped request apart
+        # from drift. It cannot see the failure that actually happened: when a
+        # concurrent writer rolled this session's work back, `db.session.commit()`
+        # committed an *empty* transaction and raised nothing, so the handler
+        # answered a truthful **200** with the row still on disk. Measured — one
+        # such delete in 400 under D-61's race, with `delete_failed` at zero.
+        #
+        # So the check has to be the database, which is this project's own rule
+        # and the reason the row was found at all: assert on rendered output, a
+        # payload, or the database, never a status code.
+        assert Expense.query.filter(Expense.id == transaction_id).count() == 0, (
+            f'delete {i} answered {deleted.status_code} and the row SURVIVED. '
+            f'This is a lost write, not drift: the balance below will be off by '
+            f'0.07 for each one. Something rolled this request back — check '
+            f'whether a background thread is sharing the connection (D-61).')
+
+    assert Expense.query.count() == 0, (
+        f'{Expense.query.count()} transaction rows survived 100 deletes; the '
+        f'balance assertion below is measuring lost writes, not drift.')
 
     assert _balance(account.id) == Decimal('1104.55')
 

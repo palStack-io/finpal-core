@@ -39,6 +39,37 @@ os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 # meant every run seeded four demo users, 147 categories and 52 rules apiece
 # before the first test.
 os.environ['DEMO_MODE'] = 'False'
+
+# *** THE SUITE MUST NOT RUN A LIVE SCHEDULER. THIS IS THE SAME BUG AS THE URI
+# *** ABOVE, ONE EXTENSION OVER — AUDIT D-61.
+#
+# `scheduler_enabled()` reads the RUN_SCHEDULER **env var** and defaults to
+# 'true', and `init_extensions` calls `scheduler.start()` on that. The `app`
+# fixture below used to set SCHEDULER_API_ENABLED and APSCHEDULER_DAEMON in
+# `app.config` after create_app(), which gates *nothing* — it only read as
+# though it did. Measured under the suite's own configuration:
+#
+#     scheduler.running -> True, 7 jobs, csv_folder_scan next run in 299.99s
+#
+# So every run started a background thread and, five minutes in, executed
+# `csv_folder_scan` for real. That is not merely wasteful: the engine is
+# `sqlite:///:memory:`, which Flask-SQLAlchemy gives a **StaticPool** and
+# `check_same_thread=False` so the in-memory database can be shared — meaning
+# the scheduler thread issues statements on the **same DBAPI connection** as the
+# request under test, with the guard that would have complained switched off.
+#
+# The damage is silent. Reproduced by rescheduling the real job to 0.05s and
+# running 400 create/delete round trips: 13 requests answered
+# `400 Internal server error`, and one DELETE **answered 200 while its row
+# survived** — a committed-empty transaction. That last shape is what turned
+# main red once on the Flask 3 merge (#88), as a 0.07 discrepancy in
+# test_a_hundred_round_trips_do_not_drift, which reads as money drifting and is
+# not. With RUN_SCHEDULER=false the same 400 round trips are 400/400 clean.
+#
+# Assigned rather than `setdefault`-ed, for the same reason as the URI: a stray
+# RUN_SCHEDULER in the environment or a .env file must not be able to start a
+# background thread inside a test run.
+os.environ['RUN_SCHEDULER'] = 'false'
 # POINTSPAL_ENABLED is deliberately NOT set here. pointsPal is part of core and
 # enables itself; forcing it on would mean the suite never exercised that default,
 # and the deployed instance served none of pointsPal while these tests were green.
@@ -65,9 +96,13 @@ def app():
         'JWT_SECRET_KEY': 'test-secret-key',
         'SECRET_KEY': 'test-secret-key',
         'WTF_CSRF_ENABLED': False,
-        # Disable background tasks during tests
-        'SCHEDULER_API_ENABLED': False,
-        'APSCHEDULER_DAEMON': False,
+        # NOT the scheduler either. SCHEDULER_API_ENABLED and APSCHEDULER_DAEMON
+        # used to be set here as "disable background tasks during tests"; they
+        # gated nothing at all — `scheduler.start()` is gated on the
+        # RUN_SCHEDULER env var, set at the top of this file. They are deleted
+        # rather than left in place because two inert keys named after the thing
+        # you want off are worse than no keys: they are why a live scheduler went
+        # unnoticed for as long as it did. See D-61.
         # Login is rate limited to 10/min in production. The app fixture is
         # session-scoped and the limiter stores counters in memory, so leaving it
         # on would make the 11th test that calls auth_headers() fail with 429 —
