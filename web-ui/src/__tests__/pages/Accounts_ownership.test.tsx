@@ -31,7 +31,16 @@ vi.mock('../../contexts/ToastContext', () => ({
   ToastProvider: ({ children }: any) => children,
 }));
 
-const BASE = 'http://localhost';
+// A WILDCARD ORIGIN, not a hardcoded one. `*/api/v1/x` matches that path on ANY
+// origin, which is what makes these tests independent of whatever base URL the
+// environment hands axios.
+//
+// `http://localhost` worked on a developer's machine and matched NOTHING in CI,
+// where the requests arrive relative — the very first CI run of this suite failed
+// for exactly that reason. A bare path (`''`) is not the fix either: MSW resolves
+// it against the jsdom origin, which put it back on one specific base and broke
+// 51 tests. Only the wildcard is origin-agnostic.
+const BASE = '*';
 
 beforeAll(() => {
   api.defaults.adapter = 'http';
