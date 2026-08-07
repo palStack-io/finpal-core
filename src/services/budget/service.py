@@ -74,7 +74,7 @@ class BudgetService:
         Get a specific budget
         Returns (success, message, budget)
         """
-        budget = Budget.query.get(budget_id)
+        budget = db.session.get(Budget, budget_id)
         if not budget:
             return False, 'Budget not found', None
 
@@ -92,7 +92,7 @@ class BudgetService:
         """
         # Validate category if provided
         if category_id:
-            category = Category.query.get(category_id)
+            category = db.session.get(Category, category_id)
             if not category or category.user_id != user_id:
                 return False, 'Invalid category selected', None
 
@@ -150,7 +150,7 @@ class BudgetService:
         Update an existing budget
         Returns (success, message)
         """
-        budget = Budget.query.get(budget_id)
+        budget = db.session.get(Budget, budget_id)
         if not budget:
             return False, 'Budget not found'
 
@@ -195,7 +195,7 @@ class BudgetService:
         Toggle budget active status
         Returns (success, message, new_status)
         """
-        budget = Budget.query.get(budget_id)
+        budget = db.session.get(Budget, budget_id)
         if not budget:
             return False, 'Budget not found', None
 
@@ -219,7 +219,7 @@ class BudgetService:
         Delete a budget
         Returns (success, message)
         """
-        budget = Budget.query.get(budget_id)
+        budget = db.session.get(Budget, budget_id)
         if not budget:
             return False, 'Budget not found'
 
@@ -243,7 +243,7 @@ class BudgetService:
         Get spending breakdown by subcategory for a budget
         Returns (success, message, spending_data)
         """
-        budget = Budget.query.get(budget_id)
+        budget = db.session.get(Budget, budget_id)
         if not budget:
             return False, 'Budget not found', None
 
@@ -254,7 +254,7 @@ class BudgetService:
             return False, 'This budget does not include subcategories', None
 
         # Get category and its subcategories
-        category = Category.query.get(budget.category_id)
+        category = db.session.get(Category, budget.category_id)
         if not category:
             return False, 'Category not found', None
 
@@ -292,7 +292,7 @@ class BudgetService:
         Get all transactions for a budget
         Returns (success, message, transactions)
         """
-        budget = Budget.query.get(budget_id)
+        budget = db.session.get(Budget, budget_id)
         if not budget:
             return False, 'Budget not found', None
 
@@ -306,7 +306,7 @@ class BudgetService:
 
         if budget.include_subcategories:
             # Get category and all its subcategories
-            category = Category.query.get(budget.category_id)
+            category = db.session.get(Category, budget.category_id)
             category_ids = [budget.category_id]
             if category and category.subcategories:
                 category_ids.extend([sub.id for sub in category.subcategories])

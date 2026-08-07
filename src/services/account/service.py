@@ -46,7 +46,7 @@ class AccountService:
 
         transaction_count = self.repo.transaction_count(account_id)
 
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         default_currency = user.default_currency_code if user else 'USD'
 
         account_data = {
@@ -177,7 +177,7 @@ class AccountService:
         accounts = self.get_all_accounts(user_id)
 
         # Get user's preferred currency
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user_currency_code:
             user_currency_code = user.default_currency_code if user else None
 
@@ -332,7 +332,7 @@ class AccountService:
             category_id = auto_categorize_transaction(description, user_id)
 
         # Get currency
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         currency_code = row.get('Currency') or row.get('currency') or user.default_currency_code or 'USD'
 
         # Get account name if specified

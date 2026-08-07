@@ -29,7 +29,7 @@ class RecurringService:
 
     def get_recurring(self, recurring_id, user_id):
         """Get a specific recurring expense"""
-        recurring = RecurringExpense.query.get(recurring_id)
+        recurring = db.session.get(RecurringExpense, recurring_id)
         if not recurring or recurring.user_id != user_id:
             return None
         return recurring

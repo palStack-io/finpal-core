@@ -30,12 +30,12 @@ class GroupService:
         Get a specific group with member validation
         Returns (success, message, group)
         """
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
         if not group:
             return False, 'Group not found', None
 
         # Check if user is member
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if user not in group.members:
             return False, 'Access denied. You are not a member of this group.', None
 
@@ -66,7 +66,7 @@ class GroupService:
             )
 
             # Add creator as a member
-            creator = User.query.get(user_id)
+            creator = db.session.get(User, user_id)
             group.members.append(creator)
 
             # Add selected members
@@ -101,7 +101,7 @@ class GroupService:
         Add a member to a group
         Returns (success, message)
         """
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
         if not group:
             return False, 'Group not found'
 
@@ -133,7 +133,7 @@ class GroupService:
         Remove a member from a group
         Returns (success, message)
         """
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
         if not group:
             return False, 'Group not found'
 
@@ -164,7 +164,7 @@ class GroupService:
         Delete a group
         Returns (success, message)
         """
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
         if not group:
             return False, 'Group not found'
 
@@ -220,7 +220,7 @@ class GroupService:
 
         Returns (success, message).
         """
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
         if not group:
             return False, 'Group not found'
 
@@ -268,7 +268,7 @@ class GroupService:
         Update group settings
         Returns (success, message)
         """
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
         if not group:
             return False, 'Group not found'
 
@@ -311,7 +311,7 @@ class GroupService:
     def calculate_group_balances(self, group_id):
         """Calculate balances between group members"""
         expenses = self.get_group_expenses(group_id)
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
 
         if not group:
             return {'member_balances': {}, 'simplified_debts': []}
@@ -371,8 +371,8 @@ class GroupService:
 
                 amount_to_settle = min(debt, credit)
                 if amount_to_settle > 0.01:
-                    debtor = User.query.get(debtor_id)
-                    creditor = User.query.get(creditor_id)
+                    debtor = db.session.get(User, debtor_id)
+                    creditor = db.session.get(User, creditor_id)
 
                     simplified_debts.append({
                         'from': debtor.name if debtor and hasattr(debtor, 'name') else debtor_id,

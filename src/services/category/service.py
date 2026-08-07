@@ -37,7 +37,7 @@ class CategoryService:
 
     def get_category(self, category_id):
         """Get a specific category"""
-        return Category.query.get(category_id)
+        return db.session.get(Category, category_id)
 
     def has_default_categories(self, user_id):
         """Check if user already has default categories"""
@@ -273,7 +273,7 @@ class CategoryService:
 
     def update_mapping(self, mapping_id, user_id, keyword=None, category_id=None, is_regex=None, priority=None):
         """Update a category mapping - Returns (success, message)"""
-        mapping = CategoryMapping.query.get(mapping_id)
+        mapping = db.session.get(CategoryMapping, mapping_id)
         if not mapping:
             return False, 'Mapping not found'
 
@@ -299,7 +299,7 @@ class CategoryService:
 
     def toggle_mapping(self, mapping_id, user_id):
         """Toggle mapping active status - Returns (success, message, new_status)"""
-        mapping = CategoryMapping.query.get(mapping_id)
+        mapping = db.session.get(CategoryMapping, mapping_id)
         if not mapping:
             return False, 'Mapping not found', None
 
@@ -319,7 +319,7 @@ class CategoryService:
 
     def delete_mapping(self, mapping_id, user_id):
         """Delete a category mapping - Returns (success, message)"""
-        mapping = CategoryMapping.query.get(mapping_id)
+        mapping = db.session.get(CategoryMapping, mapping_id)
         if not mapping:
             return False, 'Mapping not found'
 

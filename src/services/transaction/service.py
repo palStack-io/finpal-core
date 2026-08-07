@@ -52,7 +52,7 @@ class TransactionService:
             currency_code = form_data.get('currency_code')
             if not currency_code:
                 # Get user's default currency
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
                 currency_code = user.default_currency_code if user else 'USD'
 
             # Get account information
@@ -62,7 +62,7 @@ class TransactionService:
             if account_id:
                 try:
                     account_id = int(account_id)
-                    account = Account.query.get(account_id)
+                    account = db.session.get(Account, account_id)
                     if account:
                         card_used = account.name
                 except ValueError:
@@ -184,7 +184,7 @@ class TransactionService:
         """
         try:
             # Find the transaction
-            expense = Expense.query.get(transaction_id)
+            expense = db.session.get(Expense, transaction_id)
             if not expense:
                 return False, 'Transaction not found'
 
@@ -222,7 +222,7 @@ class TransactionService:
         """
         try:
             # Find the transaction
-            expense = Expense.query.get(transaction_id)
+            expense = db.session.get(Expense, transaction_id)
             if not expense:
                 return False, 'Transaction not found', None
 
@@ -235,7 +235,7 @@ class TransactionService:
             formatted_date = expense.date.strftime('%Y-%m-%d')
             tag_ids = [tag.id for tag in expense.tags]
 
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             default_currency = user.default_currency_code if user else 'USD'
 
             transaction_data = {
@@ -273,7 +273,7 @@ class TransactionService:
         """
         try:
             # Verify transaction exists and belongs to current user
-            expense = Expense.query.get(transaction_id)
+            expense = db.session.get(Expense, transaction_id)
             if not expense:
                 return False, 'Transaction not found'
 
@@ -370,7 +370,7 @@ class TransactionService:
             if account_id and account_id != 'null':
                 try:
                     expense.account_id = int(account_id)
-                    account = Account.query.get(expense.account_id)
+                    account = db.session.get(Account, expense.account_id)
                     if account:
                         expense.card_used = account.name
                 except ValueError:
@@ -476,7 +476,7 @@ class TransactionService:
 
     def _handle_group_default_split(self, group_id, split_with_ids, paid_by, amount):
         """Handle split method when using group defaults"""
-        group = Group.query.get(group_id)
+        group = db.session.get(Group, group_id)
         if not group:
             return 'equal', None
 
@@ -517,7 +517,7 @@ class TransactionService:
 
         # Try to use group default split values
         if group_id:
-            group = Group.query.get(group_id)
+            group = db.session.get(Group, group_id)
             if group and group.default_split_method == split_method and group.default_split_values:
                 if isinstance(group.default_split_values, dict):
                     split_values = group.default_split_values
@@ -640,7 +640,7 @@ class TagService:
         Delete a tag
         Returns (success, message)
         """
-        tag = Tag.query.get(tag_id)
+        tag = db.session.get(Tag, tag_id)
         if not tag:
             return False, 'Tag not found'
 

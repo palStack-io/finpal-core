@@ -23,7 +23,7 @@ class AnalyticsService:
         from src.models.user import User
 
         now = datetime.now()
-        current_user = User.query.get(user_id)
+        current_user = db.session.get(User, user_id)
         base_currency = get_base_currency(current_user)
 
         # TWO scopes, and collapsing them is a defect either way.

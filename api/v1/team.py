@@ -142,7 +142,7 @@ class InvitationDetail(Resource):
         if not admin:
             return {'message': 'Admin access required'}, 403
 
-        invitation = Invitation.query.get(invitation_id)
+        invitation = db.session.get(Invitation, invitation_id)
         if not invitation:
             return {'message': 'Invitation not found'}, 404
 
@@ -165,7 +165,7 @@ class ResendInvitation(Resource):
         if not admin:
             return {'message': 'Admin access required'}, 403
 
-        invitation = Invitation.query.get(invitation_id)
+        invitation = db.session.get(Invitation, invitation_id)
         if not invitation:
             return {'message': 'Invitation not found'}, 404
 

@@ -99,7 +99,7 @@ def load_accounts(users):
             name=acc_data['name'],
             type=acc_data['type'],
             balance=acc_data['balance'],
-            currency_code=User.query.get(acc_data['user_id']).default_currency_code
+            currency_code=db.session.get(User, acc_data['user_id']).default_currency_code
         )
         db.session.add(account)
         created_accounts.append(account)
