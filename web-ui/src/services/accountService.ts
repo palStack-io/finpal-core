@@ -5,6 +5,21 @@
 
 import { api } from './api';
 
+/**
+ * Whose money an account is — the single source of truth for attribution across
+ * the app (owner decision, 2026-08-06). Added to `AccountSchema` by #72, so it
+ * arrives on every account payload and, because `TransactionSchema` nests
+ * `AccountSchema`, on every transaction payload too. That is why the "whose
+ * account this is" label on the transactions page costs no extra request.
+ */
+export interface AccountOwner {
+  /** A user ID, which in finPal is an email address. */
+  id: string;
+  name: string;
+  color?: string | null;
+  emoji?: string | null;
+}
+
 export interface Account {
   id: number;
   name: string;
@@ -14,7 +29,15 @@ export interface Account {
   institution?: string;
   account_number?: string;
   is_active: boolean;
-  user_id: number;
+  /**
+   * The owner's user ID. **Declared `number` until 2026-08-06** while
+   * `Account.user_id` is `String(120)` and user IDs are email addresses — the same
+   * lie as D-48's `paid_by`, and invisible for five sessions because the typecheck
+   * gate compiled zero files (D-45) and this page holds its accounts as `any[]`.
+   * Prefer `owner` for anything user-facing; this is the raw id.
+   */
+  user_id: string;
+  owner?: AccountOwner | null;
   created_at?: string;
   updated_at?: string;
   import_source?: 'simplefin' | 'csv' | 'manual';

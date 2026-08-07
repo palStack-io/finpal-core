@@ -10,6 +10,7 @@ import { AddAccountForm } from '../components/forms/AddAccountForm';
 import { EditAccountForm } from '../components/forms/EditAccountForm';
 import { CSVImportModal } from '../components/import/CSVImportModal';
 import { StatCard } from '../components/StatCard';
+import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -281,26 +282,11 @@ export const Accounts = () => {
                           }}>
                             {account.type}
                           </span>
-                          {/*
-                            Whose account this is. Shown only when the household has
-                            more than one member — with one member it is always "you"
-                            and a badge saying so is noise. The colour is the member's
-                            own, so the same person reads the same on every row.
-                          */}
-                          {members.length > 1 && account.owner && (
-                            <span style={{
-                              padding: '2px 10px',
-                              borderRadius: '9999px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              color: account.owner.color || 'var(--text-secondary)',
-                              background: 'var(--surface-hover)',
-                              border: '1px solid var(--border-light)',
-                            }}>
-                              {account.owner.emoji ? `${account.owner.emoji} ` : ''}
-                              {account.owner.name}
-                            </span>
-                          )}
+                          {/* Whose account this is. The badge moved into a shared
+                              component when the transactions page needed the
+                              identical thing on every row — see OwnerBadge for the
+                              single-member rule and why the colour matters. */}
+                          <OwnerBadge owner={account.owner} memberCount={members.length} />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                           <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>

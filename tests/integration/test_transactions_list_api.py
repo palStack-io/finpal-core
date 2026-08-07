@@ -221,12 +221,25 @@ def test_group_filter_excludes_ungrouped_rows(client, headers, ledger):
     assert ids.isdisjoint({row['id'] for row in ungrouped})
 
 
-def test_another_users_rows_are_never_returned(client, auth_headers, ledger):
-    """Transactions stay user-scoped even though accounts are household-scoped."""
-    stranger = UserFactory(password_plain='secret')
-    stranger_headers = auth_headers(stranger, password='secret')
+def test_a_demo_account_is_returned_no_household_rows(client, auth_headers, ledger):
+    """**Rewritten deliberately for D-18 items B+D — this test's premise inverted.**
 
-    body = get(client, stranger_headers)
+    It used to be `test_another_users_rows_are_never_returned`, and its docstring
+    read "Transactions stay user-scoped even though accounts are household-scoped".
+    That mismatch *was* the bug: one payload, four scopings (D-18). Transactions now
+    follow accounts, so another user on the instance is a housemate and their rows
+    are supposed to come back — see `test_transaction_scope_contract.py`.
+
+    What has NOT changed is the boundary around a demo account, which is on the
+    instance but is not a household member and signs in with a published password.
+    Re-keying the assertion to that boundary keeps a real leak test here instead of
+    leaving one that passes because the household happens to be empty.
+    """
+    demo = UserFactory(id='demo-list@finpal.demo', is_demo_user=True,
+                       password_plain='secret')
+    demo_headers = auth_headers(demo, password='secret')
+
+    body = get(client, demo_headers)
 
     assert body['transactions'] == []
     assert body['pagination']['total'] == 0
@@ -235,6 +248,21 @@ def test_another_users_rows_are_never_returned(client, auth_headers, ledger):
         'total_expense': 0.0,
         'net_balance': 0.0,
     }
+
+
+def test_a_housemates_rows_are_returned(client, auth_headers, ledger):
+    """The other half of the inversion, asserted rather than assumed.
+
+    Without this, the rewrite above would have removed the only test in this file
+    that says anything about whose rows the list contains.
+    """
+    housemate = UserFactory(password_plain='secret')
+    housemate_headers = auth_headers(housemate, password='secret')
+
+    body = get(client, housemate_headers)
+
+    assert body['pagination']['total'] > 0
+    assert body['summary']['total_expense'] > 0
 
 
 def test_slashless_path_is_served_by_the_paginating_handler(client, headers):

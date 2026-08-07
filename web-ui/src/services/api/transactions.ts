@@ -1,5 +1,6 @@
 import { api } from '../api';
 import { API_CONFIG } from '../../config/api';
+import type { AccountOwner } from '../accountService';
 
 export interface Transaction {
   id: number;
@@ -19,6 +20,14 @@ export interface Transaction {
     id: number;
     name: string;
     balance?: number;
+    /**
+     * Whose money this row is. Attribution comes from the account, not from
+     * `paid_by` and not from `split_with` (owner decision, 2026-08-06), so this is
+     * what the per-row owner label reads. Optional because a transaction's account
+     * can be deleted, which nulls `account_id` across that account's whole history
+     * — such rows fall back to whoever entered them, server-side.
+     */
+    owner?: AccountOwner | null;
   };
   account_id?: number;
   /**
@@ -71,6 +80,17 @@ export interface TransactionQuery {
   group_id?: number;
   type?: 'income' | 'expense' | 'transfer';
   search?: string;
+  /**
+   * Narrow to one household member — the accounts they own, plus any rows they
+   * entered that have no account at all. Omit it for the whole household.
+   *
+   * This narrows the **query**, not the rendered page, which is what keeps the
+   * three summary cards describing the rows on screen: the server computes
+   * `summary` over the whole filtered set. Passing an id outside the caller's
+   * household is a **403**, deliberately — an empty list would be
+   * indistinguishable from "that member has no transactions".
+   */
+  member_id?: string;
 }
 
 const toQueryString = (query: TransactionQuery = {}): string => {

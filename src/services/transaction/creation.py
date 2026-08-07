@@ -47,12 +47,23 @@ def validate_paid_by(paid_by, group_id, caller_id):
     * a group transaction may name any **member of that group** — this is the real
       case, and the one that must not break: `GroupDetail.tsx:115` records a
       settlement with another member's id;
-    * without a group there is no shared context in which someone else could have
-      paid, so the only honest value is the caller.
+    * without a group, the shared context is the **household**: a housemate really
+      can have fronted the cash for a row on your card, and under the settled model
+      (2026-08-06) that is exactly what `paid_by` is for.
 
-    Note that "is in my household" is **not** a usable boundary here:
-    `src/utils/household.py:get_all_user_ids` returns every user on the instance, so
-    it would permit anyone.
+    **The second rule used to be "the only honest value is the caller", and this
+    docstring rejected the household as a boundary — correctly, at the time.** The
+    only household helper then was `get_all_user_ids()`, which returns every user on
+    the instance *including demo accounts*, so keying to it would have permitted
+    anyone holding the published demo password. `visible_user_ids()` (D-42/D-47)
+    does not: it excludes demo accounts and collapses to the caller alone for a demo
+    login, so the sandbox stays symmetric and the boundary is now usable.
+
+    Filed as **D-49**, because the old rule did not merely under-permit — it made
+    the household transactions list unusable. `TransactionDetail.put` re-validates
+    the row's *existing* `paid_by` after every edit, so once the list went
+    household-wide, an account owner editing the description of a row a housemate
+    entered was refused with a `paid_by` error naming a field they never touched.
 
     Public because `TransactionDetail.put` needs the identical rule; a field checked
     on create and not on update is just a slower way to store a bad value.
@@ -67,8 +78,13 @@ def validate_paid_by(paid_by, group_id, caller_id):
             'Unknown user.']})
 
     if group_id is None:
-        raise TransactionPayloadInvalid({'paid_by': [
-            'Only you can have paid a transaction that is not in a group.']})
+        from src.utils.household import visible_user_ids
+
+        if str(paid_by) not in {str(u) for u in visible_user_ids(caller_id)}:
+            raise TransactionPayloadInvalid({'paid_by': [
+                'Only you or a member of your household can have paid a '
+                'transaction that is not in a group.']})
+        return
 
     from src.models.associations import group_users
     from src.models.group import Group

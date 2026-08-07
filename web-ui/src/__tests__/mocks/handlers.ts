@@ -272,6 +272,21 @@ export const categoryHandlers = [
 
 // ── pointsPal ─────────────────────────────────────────────────────────────────
 export const pointspalHandlers = [
+  /**
+   * A one-member household by default, which is what makes the owner badge, the
+   * member filter and the scope tags all hide themselves. Tests that care about a
+   * multi-member household override this — see `TransactionsHousehold.test.tsx`.
+   *
+   * A bare array, matching `api/v1/team.py:185`, which returns the list with no
+   * envelope around it.
+   */
+  http.get(`${BASE}/api/v1/team/members`, () =>
+    HttpResponse.json([
+      { id: 'u@test.com', name: 'Test', email: 'u@test.com', role: 'owner',
+        joinedAt: '2026-01-01' },
+    ])
+  ),
+
   http.get(`${BASE}/api/v1/pointspal/alerts`, () => HttpResponse.json([])),
 
   http.get(`${BASE}/api/v1/pointspal/overview`, () =>
