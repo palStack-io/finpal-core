@@ -81,12 +81,19 @@ def test_a_hundred_round_trips_do_not_drift(client, alice_h, alice):
     Nothing re-derives a balance, so whatever each write costs is permanent and
     additive. With floats this ends somewhere near 1104.5500000000186; with
     decimals it ends where it started, however many times it runs.
+
+    `0.07` rather than `0.1`, and checked rather than assumed: SQLite has no
+    native decimal and SQLAlchemy round-trips `Numeric` through float there, so a
+    value that happens to survive that round trip would make this read stronger
+    than it is. 0.07 does not divide cleanly in binary and still lands exactly, on
+    the engine CI actually runs. The stored *representation* is still only
+    provable on Postgres — see this file's docstring — and is, with psql.
     """
     account = AccountFactory(user_id=alice.id, balance=1104.55, type='checking')
 
     for _ in range(100):
         created = client.post('/api/v1/transactions/', headers=alice_h, json={
-            'description': 'x', 'amount': 0.1, 'date': '2026-08-07',
+            'description': 'x', 'amount': 0.07, 'date': '2026-08-07',
             'transaction_type': 'expense', 'account_id': account.id})
         client.delete('/api/v1/transactions/%d' % created.get_json()['transaction']['id'],
                       headers=alice_h)
