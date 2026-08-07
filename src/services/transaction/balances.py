@@ -18,6 +18,7 @@ Nothing here commits. The caller owns the transaction boundary, so a balance mov
 lands in the same commit as the row that caused it and a rollback takes both.
 """
 from src.models.account import Account
+from src.utils.money import money_or_zero
 
 
 def snapshot(expense):
@@ -47,7 +48,12 @@ def _move(account_id, destination_account_id, transaction_type, amount, directio
     if not account:
         return
 
-    delta = (amount or 0) * direction
+    # `money_or_zero`, not `amount or 0`: `account.balance` is `Numeric` and so
+    # reads back as a `Decimal`, while `amount` has usually just arrived from a
+    # JSON payload as a `float` — and `Decimal + float` raises rather than
+    # converting. This is the single boundary where a transaction's amount
+    # becomes money (D-58).
+    delta = money_or_zero(amount) * direction
 
     if transaction_type == 'expense':
         account.balance -= delta

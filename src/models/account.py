@@ -12,7 +12,7 @@ class Account(db.Model):
     type = db.Column(db.String(50), nullable=False)  # checking, savings, credit, etc.
     institution = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id', name='fk_account_user'), nullable=False)
-    balance = db.Column(db.Float, default=0.0)
+    balance = db.Column(db.Numeric(18, 2), default=0)
     currency_code = db.Column(db.String(3), db.ForeignKey('currencies.code', name='fk_account_currency'), nullable=True)
     last_sync = db.Column(db.DateTime, nullable=True)
     import_source = db.Column(db.String(50), nullable=True)

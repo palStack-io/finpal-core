@@ -4,11 +4,15 @@ Creates and configures the Flask application
 """
 
 import os
+import json
 import logging
 from contextlib import contextmanager
 
 import pytz
+from decimal import Decimal
+
 from flask import Flask, jsonify, request
+from flask.json.provider import DefaultJSONProvider
 from sqlalchemy import text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from src.config import get_config
@@ -65,11 +69,54 @@ def _first_boot_lock(app):
         if conn is not None:
             conn.close()
 
+class _DecimalJSONEncoder(json.JSONEncoder):
+    """Serialise `decimal.Decimal` as a JSON number.
+
+    **flask-restx does not use Flask's JSON provider.** `output_json` in
+    `flask_restx/representations.py` calls the standard library's `dumps`
+    directly, passing whatever is in `RESTX_JSON` — so setting `app.json` alone
+    fixes `jsonify` and leaves every `/api/v1` response 500ing on a `Decimal`.
+    Both are wired in `create_app`, and this class is what they share.
+    """
+
+    def default(self, o):
+        if isinstance(o, Decimal):
+            # `float` rather than `str`: the wire has always carried numbers here.
+            return float(o)
+        return super().default(o)
+
+
+class _DecimalJSONProvider(DefaultJSONProvider):
+    """The same rule for `jsonify` and for plain dicts returned by a view."""
+
+    @staticmethod
+    def default(o):
+        if isinstance(o, Decimal):
+            return float(o)
+        return DefaultJSONProvider.default(o)
+
+
 def create_app(config_name=None):
     """Create and configure the Flask application"""
 
     # Create Flask app
     app = Flask(__name__)
+
+    # **Money is `Decimal` now (AUDIT D-58), and `json` cannot serialise one.**
+    #
+    # Marshmallow's `fields.Float` coerces on dump, so every schema-serialised
+    # response was already fine — but the analytics service returns hand-built
+    # dicts of computed totals, and those would have 500'd with "Object of type
+    # Decimal is not JSON serializable". One provider covers marshmallow, restx's
+    # `output_json` and `jsonify` alike, which is why it is here rather than as a
+    # cast at each of the dozens of places a total is put into a dict.
+    #
+    # Emitted as a JSON **number**, not a string: every client reads these as
+    # numbers today and quoting them would be a silent contract change across two
+    # apps. The precision that matters is in the storage and the arithmetic; JSON
+    # has no decimal type to preserve it in either way.
+    app.json = _DecimalJSONProvider(app)
+    app.config['RESTX_JSON'] = {'cls': _DecimalJSONEncoder}
 
     # Apply ProxyFix so Flask respects X-Forwarded-Proto/Host/For from reverse proxies
     # This fixes HTTPS redirect URLs when behind SSL-terminating proxies (Traefik, Caddy, etc.)

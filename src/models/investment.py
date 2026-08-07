@@ -44,9 +44,9 @@ class Investment(db.Model):
     portfolio_id = db.Column(db.Integer, db.ForeignKey('portfolios.id'), nullable=False)
     symbol = db.Column(db.String(20), nullable=False)
     name = db.Column(db.String(100))
-    shares = db.Column(db.Float, nullable=False, default=0)
-    purchase_price = db.Column(db.Float, nullable=False, default=0)
-    current_price = db.Column(db.Float, default=0)
+    shares = db.Column(db.Numeric(20, 8), nullable=False, default=0)
+    purchase_price = db.Column(db.Numeric(18, 2), nullable=False, default=0)
+    current_price = db.Column(db.Numeric(18, 2), default=0)
     purchase_date = db.Column(db.DateTime, default=datetime.utcnow)
     last_update = db.Column(db.DateTime)
     notes = db.Column(db.Text)
@@ -87,10 +87,10 @@ class InvestmentTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     investment_id = db.Column(db.Integer, db.ForeignKey('investments.id'), nullable=False)
     transaction_type = db.Column(db.String(20), nullable=False)  # buy, sell, dividend, split
-    shares = db.Column(db.Float, nullable=False)
-    price = db.Column(db.Float, nullable=False)
+    shares = db.Column(db.Numeric(20, 8), nullable=False)
+    price = db.Column(db.Numeric(18, 2), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    fees = db.Column(db.Float, default=0)
+    fees = db.Column(db.Numeric(18, 2), default=0)
     notes = db.Column(db.Text)
     
     # Relationship

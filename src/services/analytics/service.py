@@ -1,4 +1,5 @@
 """Analytics Service - Dashboard and statistics"""
+from decimal import Decimal
 from datetime import datetime, timedelta
 from sqlalchemy import or_
 from src.models.transaction import Expense
@@ -79,7 +80,9 @@ class AnalyticsService:
                 month_key = expense.date.strftime('%Y-%m')
                 if month_key not in monthly_totals:
                     monthly_totals[month_key] = {
-                        'total': 0.0,
+                        # `Decimal('0')`, not `0.0`: this receives `expense.amount`,
+                        # which is `Decimal` since D-58, and `float += Decimal` raises.
+                        'total': Decimal('0'),
                         'by_card': {},
                         'contributors': {},
                         'by_account': {}
@@ -706,7 +709,10 @@ class AnalyticsService:
         debt_to_income = 0
         if total_income > 0:
             # Assume monthly debt payments are roughly 5% of total debt
-            monthly_debt_payment = total_debts * 0.05
+            # D-58: `Decimal * float` raises, so these four rule-of-thumb ratios
+            # are written as exact fractions rather than binary-float literals.
+            # They are heuristics either way; the change is the type, not the rule.
+            monthly_debt_payment = total_debts * Decimal('0.05')
             debt_to_income = round(monthly_debt_payment / (total_income / 12), 2) if total_income > 0 else 0
 
         # Calculate emergency fund months
@@ -714,15 +720,15 @@ class AnalyticsService:
         if total_expenses > 0:
             monthly_expenses = total_expenses / 12
             # Assume liquid assets are 30% of total assets for this calculation
-            liquid_assets = total_assets * 0.3
+            liquid_assets = total_assets * Decimal('0.3')
             emergency_fund_months = round(liquid_assets / monthly_expenses, 1) if monthly_expenses > 0 else 0
 
         # Calculate liquidity ratio (current assets / current liabilities)
         liquidity_ratio = 0
         if total_debts > 0:
             # Assume 30% of assets are liquid and 50% of debts are current
-            current_assets = total_assets * 0.3
-            current_liabilities = total_debts * 0.5
+            current_assets = total_assets * Decimal('0.3')
+            current_liabilities = total_debts * Decimal('0.5')
             liquidity_ratio = round(current_assets / current_liabilities, 1) if current_liabilities > 0 else 0
         else:
             liquidity_ratio = 5.0  # Very high liquidity if no debt
@@ -757,8 +763,9 @@ class AnalyticsService:
         from src.models.investment import Portfolio, Investment
 
         portfolios = Portfolio.query.filter_by(user_id=user_id).all()
-        total_cost = 0.0
-        total_current = 0.0
+        # Both receive `shares * price`, which is `Decimal` since D-58.
+        total_cost = Decimal('0')
+        total_current = Decimal('0')
 
         for portfolio in portfolios:
             for inv in portfolio.investments:

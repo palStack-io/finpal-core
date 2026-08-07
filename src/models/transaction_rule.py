@@ -24,8 +24,8 @@ class TransactionRule(db.Model):
     case_sensitive = db.Column(db.Boolean, default=False)
 
     # Advanced matching criteria
-    amount_min = db.Column(db.Float, nullable=True)  # Minimum amount to match
-    amount_max = db.Column(db.Float, nullable=True)  # Maximum amount to match
+    amount_min = db.Column(db.Numeric(18, 2), nullable=True)  # Minimum amount to match
+    amount_max = db.Column(db.Numeric(18, 2), nullable=True)  # Maximum amount to match
     transaction_type_filter = db.Column(db.String(20), nullable=True)  # Only match this transaction type
 
     # Actions to apply when rule matches
