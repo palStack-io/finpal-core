@@ -240,7 +240,7 @@ export const GroupDetail: React.FC = () => {
   return (
     <>
       <div style={pageContainerStyle}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="page-container">
 
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
@@ -265,7 +265,7 @@ export const GroupDetail: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
-                <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
+                <h1 className="page-title">
                   {group.name}
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{group.description || 'No description'}</p>

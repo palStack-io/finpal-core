@@ -392,12 +392,29 @@ body {
 }
 
 /* Utility Classes */
+/* U-03. This class existed and was used by NOTHING, while seven pages each
+   inlined a byte-identical <h1> style of their own. The values below were
+   28px/margin:0 and have been changed to 32px/margin-bottom:8px to match what
+   those seven pages actually render.
+
+   That direction is deliberate. Pointing the pages at the old values would have
+   SHRUNK every page title — the vocabulary had drifted from the app, so
+   "reconnect the pages to the design system" was not the no-op it looked like.
+   Reconciling the class to what ships keeps the rendering identical and makes
+   the class true; changing the size is a design decision and is not this. */
 .page-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0;
+  margin: 0 0 8px;
   transition: color 0.3s ease;
+}
+
+/* The outer wrapper the same seven pages inline. Only ever these two
+   properties, always together. */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .fp-card {

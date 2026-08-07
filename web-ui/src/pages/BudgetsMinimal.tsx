@@ -347,7 +347,7 @@ const BudgetsMinimal = () => {
   return (
     <>
       <div style={{ minHeight: '100vh', padding: '24px' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="page-container">
 
           {/* Simple Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>

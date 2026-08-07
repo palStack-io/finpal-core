@@ -178,12 +178,12 @@ export const Investments: React.FC = () => {
   return (
     <>
       <div style={pageContainerStyle}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="page-container">
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
+                <h1 className="page-title">
                   Investments
                 </h1>
                 <p style={bodyTextStyle}>Track and manage your investment portfolio</p>

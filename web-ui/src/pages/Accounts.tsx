@@ -165,12 +165,12 @@ export const Accounts = () => {
   return (
     <>
       <div style={pageContainerStyle}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="page-container">
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
+              <h1 className="page-title">
                 Accounts
               </h1>
               <p style={bodyTextStyle}>Manage all your financial accounts in one place</p>
