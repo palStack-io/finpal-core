@@ -155,7 +155,7 @@ class Settlement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     payer_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
     receiver_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(18, 2), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     description = db.Column(db.String(200), nullable=True, default="Settlement")
     

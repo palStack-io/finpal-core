@@ -12,14 +12,14 @@ class Budget(db.Model):
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     name = db.Column(db.String(100), nullable=True)  # Optional custom name for the budget
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(18, 2), nullable=False)
     period = db.Column(db.String(20), nullable=False)  # 'weekly', 'monthly', 'yearly'
     include_subcategories = db.Column(db.Boolean, default=True)
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     is_recurring = db.Column(db.Boolean, default=True)
     active = db.Column(db.Boolean, default=True)
     rollover = db.Column(db.Boolean, default=False)  # Rollover unused budget to next period
-    rollover_amount = db.Column(db.Float, default=0.0)  # Amount rolled over from previous period
+    rollover_amount = db.Column(db.Numeric(18, 2), default=0)  # Amount rolled over from previous period
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     transaction_types = db.Column(db.String(100), default='expense')  # comma-separated list of types to include
@@ -86,7 +86,11 @@ class Budget(db.Model):
             category_filter
         ).all()
         
-        total_spent = 0.0
+        # D-58: a `Decimal` accumulator, because every amount added to it is now
+        # `Decimal` and `float += Decimal` raises rather than converting. Started
+        # as `0.0` before, which is what made this the loudest site in the suite.
+        from decimal import Decimal
+        total_spent = Decimal('0')
         
         for expense in expenses:
             if expense.has_category_splits:

@@ -38,6 +38,11 @@ class ImportProfile(db.Model):
     date_format = db.Column(db.String(40), nullable=False, default='%Y-%m-%d')
     sign_convention = db.Column(db.String(20), nullable=False, default='negative_is_expense')
     origin = db.Column(db.String(20), nullable=False, default='manual')  # manual | heuristic
+    # Deliberately still a binary float, and the only one left after D-58.
+    # This is a 0..1 heuristic score for how sure the column mapper is; it never
+    # touches money and nothing accumulates it. Converting it would be scope
+    # creep with no payoff — `test_money_is_exact.py` names the columns that do
+    # hold money and this is not one of them.
     confidence = db.Column(db.Float, nullable=True)
     times_used = db.Column(db.Integer, nullable=False, default=0)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
@@ -54,6 +59,11 @@ class ImportBatch(db.Model):
     # relying on the scheduler gate alone.
     file_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
     mapping_used = db.Column(db.JSON, nullable=True)  # snapshot, not a pointer
+    # Deliberately still a binary float, and the only one left after D-58.
+    # This is a 0..1 heuristic score for how sure the column mapper is; it never
+    # touches money and nothing accumulates it. Converting it would be scope
+    # creep with no payoff — `test_money_is_exact.py` names the columns that do
+    # hold money and this is not one of them.
     confidence = db.Column(db.Float, nullable=True)
     row_count = db.Column(db.Integer, nullable=False, default=0)
     imported_count = db.Column(db.Integer, nullable=False, default=0)

@@ -11,11 +11,11 @@ class Expense(db.Model):
     __tablename__ = 'expenses'
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(200), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(18, 2), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     card_used = db.Column(db.String(150), nullable=False)
     split_method = db.Column(db.String(20), nullable=False)  # 'equal', 'custom', 'percentage'
-    split_value = db.Column(db.Float)  # deprecated - kept for backward compatibility
+    split_value = db.Column(db.Numeric(18, 2))  # deprecated - kept for backward compatibility
     paid_by = db.Column(db.String(50), nullable=False)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
@@ -23,7 +23,7 @@ class Expense(db.Model):
     split_details = db.Column(db.Text, nullable=True)  # JSON string storing custom split values for each user
     recurring_id = db.Column(db.Integer, db.ForeignKey('recurring_expenses.id'), nullable=True)
     currency_code = db.Column(db.String(3), db.ForeignKey('currencies.code'), nullable=True)
-    original_amount = db.Column(db.Float, nullable=True) # Amount in original currency
+    original_amount = db.Column(db.Numeric(18, 2), nullable=True) # Amount in original currency
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     transaction_type = db.Column(db.String(20), server_default='expense')  # 'expense', 'income', 'transfer'
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.id', name='fk_expense_account'), nullable=True)
@@ -66,6 +66,12 @@ class Expense(db.Model):
             users_map: Optional dict of {user_id: User} pre-fetched by the caller
                        to avoid N+1 queries. When None, individual DB lookups are used.
         """
+        # D-58: money is `Decimal` now, and `Decimal * float` raises rather than
+        # converting, so every value arriving from JSON or from `split_details`
+        # has to become money before it meets an amount. Imported here rather
+        # than at module scope: `src.utils.__init__` imports `helpers`, which
+        # imports this module.
+        from src.utils.money import CENTS, PRECISE, money_or_zero
         from src.models.user import User
 
         def _get_user(uid):
@@ -149,7 +155,7 @@ class Expense(db.Model):
                 total_assigned = 0
                 total_original_assigned = 0
                 
-                payer_percent = float(percentages.get(self.paid_by, 0))
+                payer_percent = money_or_zero(percentages.get(self.paid_by, 0), PRECISE)
                 payer_amount = (self.amount * payer_percent) / 100
                 payer_original_amount = (original_amount * payer_percent) / 100
                 
@@ -158,7 +164,7 @@ class Expense(db.Model):
                 total_original_assigned += payer_original_amount if self.paid_by not in split_with_ids else 0
                 
                 for user in split_users:
-                    user_percent = float(percentages.get(user['id'], 0))
+                    user_percent = money_or_zero(percentages.get(user['id'], 0), PRECISE)
                     user_amount = (self.amount * user_percent) / 100
                     user_original_amount = (original_amount * user_percent) / 100
 
@@ -173,14 +179,14 @@ class Expense(db.Model):
                     total_assigned += user_amount
                     total_original_assigned += user_original_amount
                 
-                if abs(total_assigned - self.amount) > 0.01:
+                if abs(money_or_zero(total_assigned) - money_or_zero(self.amount)) > CENTS:
                     difference = self.amount - total_assigned
                     if result['splits']:
                         result['splits'][-1]['amount'] += difference
                     elif result['payer']['amount'] > 0:
                         result['payer']['amount'] += difference
             else:
-                payer_percentage = self.split_value if self.split_value is not None else 0
+                payer_percentage = money_or_zero(self.split_value, PRECISE)
                 payer_amount = (self.amount * payer_percentage) / 100
                 payer_original_amount = (original_amount * payer_percentage) / 100
                 
@@ -206,7 +212,7 @@ class Expense(db.Model):
                 amounts = split_details.get('values', {})
                 total_assigned = 0
                 
-                payer_amount = float(amounts.get(self.paid_by, 0))
+                payer_amount = money_or_zero(amounts.get(self.paid_by, 0))
                 payer_ratio = payer_amount / self.amount if self.amount else 0
                 payer_original_amount = original_amount * payer_ratio
                 
@@ -214,7 +220,7 @@ class Expense(db.Model):
                 total_assigned += payer_amount if self.paid_by not in split_with_ids else 0
                 
                 for user in split_users:
-                    user_amount = float(amounts.get(user['id'], 0))
+                    user_amount = money_or_zero(amounts.get(user['id'], 0))
                     user_ratio = user_amount / self.amount if self.amount else 0
                     user_original_amount = original_amount * user_ratio
 
@@ -228,7 +234,7 @@ class Expense(db.Model):
                     })
                     total_assigned += user_amount
                 
-                if abs(total_assigned - self.amount) > 0.01:
+                if abs(money_or_zero(total_assigned) - money_or_zero(self.amount)) > CENTS:
                     difference = self.amount - total_assigned
                     if result['splits']:
                         result['splits'][-1]['amount'] += difference
@@ -264,7 +270,7 @@ class CategorySplit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     expense_id = db.Column(db.Integer, db.ForeignKey('expenses.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(18, 2), nullable=False)
     description = db.Column(db.String(200), nullable=True)
 
     # Relationships

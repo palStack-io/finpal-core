@@ -15,6 +15,7 @@ from datetime import datetime
 from schemas.input_schemas import transaction_input
 from src.extensions import db
 from src.models.transaction import CategorySplit, Expense
+from src.utils.money import CENTS, money_or_zero
 from src.utils.validation import validate_request
 
 
@@ -174,7 +175,11 @@ def _validated_category_splits(raw, total_amount, user_id):
     # account for the whole amount has no correct attribution, so refuse it.
     # The 0.01 tolerance is kept: thirds do not divide cleanly and refusing a
     # one-cent gap would make three-way splits impossible.
-    if abs(sum(amount for _, amount in splits) - total_amount) > 0.01:
+    # D-58: both sides are `Decimal` now, and the tolerance has to be one too —
+    # `Decimal > float` raises. `CENTS` is the same 0.01 the comment above
+    # describes, expressed exactly rather than as the nearest binary float.
+    if abs(money_or_zero(sum(amount for _, amount in splits))
+           - money_or_zero(total_amount)) > CENTS:
         raise TransactionPayloadInvalid({'category_splits': [
             'The split amounts must add up to the transaction amount.']})
 

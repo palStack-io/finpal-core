@@ -9,10 +9,10 @@ class RecurringExpense(db.Model):
     __tablename__ = 'recurring_expenses'
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(200), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(18, 2), nullable=False)
     card_used = db.Column(db.String(150), nullable=False)
     split_method = db.Column(db.String(20), nullable=False)  # 'equal', 'custom', 'percentage'
-    split_value = db.Column(db.Float, nullable=True)
+    split_value = db.Column(db.Numeric(18, 2), nullable=True)
     split_details = db.Column(db.Text, nullable=True)  # JSON string
     paid_by = db.Column(db.String(50), nullable=False)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
@@ -27,7 +27,7 @@ class RecurringExpense(db.Model):
     active = db.Column(db.Boolean, default=True)
     
     currency_code = db.Column(db.String(3), db.ForeignKey('currencies.code'), nullable=True)
-    original_amount = db.Column(db.Float, nullable=True)  # Amount in original currency
+    original_amount = db.Column(db.Numeric(18, 2), nullable=True)  # Amount in original currency
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     
     # Transaction type and account fields
@@ -88,7 +88,7 @@ class IgnoredRecurringPattern(db.Model):
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
     pattern_key = db.Column(db.String(255), nullable=False)  # Unique pattern identifier
     description = db.Column(db.String(200), nullable=False)  # For reference
-    amount = db.Column(db.Float, nullable=False)
+    amount = db.Column(db.Numeric(18, 2), nullable=False)
     frequency = db.Column(db.String(20), nullable=False)
     ignore_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
