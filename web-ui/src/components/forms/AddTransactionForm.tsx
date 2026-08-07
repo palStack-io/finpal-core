@@ -5,6 +5,8 @@ import { transactionsApi, Transaction } from '../../services/api/transactions';
 import { categoriesApi, Category } from '../../services/api/categories';
 import { groupsApi, Group } from '../../services/api/groups';
 import { accountService, Account } from '../../services/accountService';
+import { teamService } from '../../services/teamService';
+import { TeamMember } from '../../types/team';
 import { useAuthStore } from '../../store/authStore';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
@@ -84,6 +86,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -92,20 +95,44 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
     const loadData = async () => {
       try {
         setLoadingData(true);
-        const [categoriesData, accountsData, groupsData] = await Promise.all([
+        const [categoriesData, accountsData, groupsData, membersData] = await Promise.all([
           categoriesApi.getAll().catch(() => ({ categories: [] })),
           accountService.getAccounts().catch(() => []),
           groupsApi.getAll().catch(() => ({ groups: [] })),
+          teamService.getMembers().catch(() => []),
         ]);
         setCategories(categoriesData.categories || []);
         setAccounts(accountsData || []);
         setGroups(groupsData.groups || []);
+        setMembers(membersData || []);
       } finally {
         setLoadingData(false);
       }
     };
     loadData();
   }, []);
+
+  /**
+   * **This is item B of the D-18 build, and the item's own description is
+   * misleading.** "Assign a transaction to a member" sounds like a new owner
+   * picker on this form. Under the settled model (2026-08-06) attribution comes
+   * from the ACCOUNT, so assigning a transaction to Bob means putting it on one of
+   * Bob's accounts — and this form already collects `account_id`. A separate
+   * per-transaction owner field would reintroduce the two-sources-of-truth problem
+   * the model exists to remove, so B is that the picker says whose account each
+   * option is, not that it grows a field.
+   *
+   * The owner goes in the option's text because an `<option>` renders no markup —
+   * `OwnerBadge` cannot be used here, which is why this is a string and not a
+   * component. Suppressed for a one-member household, matching the badge and the
+   * filter: with one member every option would carry the same name.
+   */
+  const showOwners = members.length > 1;
+  const accountLabel = (account: Account) => {
+    const currency = account.currency_code || 'USD';
+    const owner = showOwners && account.owner ? ` — ${account.owner.name}` : '';
+    return `${account.name}${owner} (${currency})`;
+  };
 
   const onSubmit = async (data: TransactionFormValues) => {
     setApiError(null);
@@ -338,10 +365,16 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           </option>
           {accounts.map((account) => (
             <option key={account.id} value={account.id} style={bgPrimaryStyle}>
-              {account.name} ({account.currency_code || 'USD'})
+              {accountLabel(account)}
             </option>
           ))}
         </select>
+        {showOwners && (
+          <p style={hintTextStyle}>
+            The account decides whose transaction this is — pick one of theirs to
+            record it against a housemate.
+          </p>
+        )}
       </div>
 
       {/* Destination Account (transfers only) */}
@@ -363,7 +396,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
               .filter((account) => account.id.toString() !== watchAccountId)
               .map((account) => (
                 <option key={account.id} value={account.id} style={bgPrimaryStyle}>
-                  {account.name} ({account.currency_code || 'USD'})
+                  {accountLabel(account)}
                 </option>
               ))}
           </select>

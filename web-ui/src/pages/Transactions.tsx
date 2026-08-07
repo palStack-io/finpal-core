@@ -8,6 +8,11 @@ import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { StatCard } from '../components/StatCard';
 import { SectionCard } from '../components/SectionCard';
+import { MemberFilter } from '../components/MemberFilter';
+import { OwnerBadge } from '../components/OwnerBadge';
+import { teamService } from '../services/teamService';
+import { TeamMember } from '../types/team';
+import type { Scope } from '../utils/scope';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '12px' };
@@ -43,6 +48,22 @@ export const Transactions: React.FC = () => {
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
+  /**
+   * The household, and which member the list is narrowed to (`null` = everyone).
+   *
+   * `/api/v1/team/members` already excludes demo accounts, so this is the real
+   * household — the same list the account owner picker uses. Both the filter and
+   * the per-row owner badge hide themselves when it holds one member.
+   */
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [memberId, setMemberId] = useState<string | null>(null);
+
+  useEffect(() => {
+    teamService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
+
+  const selectedMember = members.find((m) => m.id === memberId) || null;
+
   // One formatter for the whole app, and it honours the user's currency rather
   // than hardcoding USD as this local copy did.
   const currency = user?.default_currency_code || 'USD';
@@ -71,6 +92,9 @@ export const Transactions: React.FC = () => {
         per_page: PER_PAGE,
         search: appliedSearch || undefined,
         type: filterType === 'all' ? undefined : filterType,
+        // Server-side, like `search` and `type`, so `summary` covers the same
+        // rows the list does. See MemberFilter's docstring.
+        member_id: memberId || undefined,
       });
       setTransactions(data.transactions);
       setTotalIncome(data.summary.total_income);
@@ -87,7 +111,7 @@ export const Transactions: React.FC = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [page, appliedSearch, filterType]);
+  }, [page, appliedSearch, filterType, memberId]);
 
   const handleTransactionSuccess = () => {
     setIsAddPanelOpen(false);
@@ -124,6 +148,28 @@ export const Transactions: React.FC = () => {
    * with the list bounded to one page, a bare count would be the page size and
    * read as the whole history.
    */
+  /**
+   * What the three summary cards are describing, given the current filter.
+   *
+   * A solo household gets no tag at all: with one member "HOUSEHOLD" and "YOURS"
+   * are the same set, and tagging a figure with a distinction that does not exist
+   * is the noise D-01's tags were criticised for in the first place.
+   */
+  const soloHousehold = members.length <= 1;
+  const scopeTag: Scope | undefined = (() => {
+    if (soloHousehold) return undefined;
+    if (!memberId) return 'household';
+    // `yours` means the signed-in user's own rows. Filtering to a HOUSEMATE is
+    // neither `yours` nor `household`, and there is no third tag — so it gets no
+    // tag and leans on the subtitle, which names them. Tagging Bob's money
+    // "YOURS" on Alice's screen would be exactly the class of untrue label the
+    // scope vocabulary exists to prevent.
+    return memberId === user?.id ? 'yours' : undefined;
+  })();
+  const scopeSubtitle = selectedMember
+    ? `${selectedMember.name || selectedMember.email} only`
+    : undefined;
+
   const sectionTitle = (() => {
     if (!pagination || pagination.total === 0) return 'All Transactions';
     if (pagination.pages <= 1) return `All Transactions (${pagination.total})`;
@@ -191,15 +237,23 @@ export const Transactions: React.FC = () => {
               {/* Summary Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                 {/* All three come from the transactions endpoint's `summary`,
-                    and `/api/v1/transactions/` filters to the caller — so these
-                    are the caller's own, unlike the Dashboard's income card,
-                    which is the household's. That pair is the disagreement the
-                    tags exist to explain: the same two figures can differ and
-                    both be right. */}
+                    which the server computes over the whole filtered query — so
+                    they describe exactly the rows the filter selected, not the
+                    page and not all time.
+
+                    The tag follows the filter rather than being fixed. It read
+                    `yours` until 2026-08-06, when the list became household-wide;
+                    leaving it would have printed "YOURS" over the household's
+                    money, which is worse than no tag at all. This is D-01's tag
+                    being retired by the filter rather than deleted: with a control
+                    on screen the scope is a choice the user made, and the tag just
+                    reflects it back. `subtitle` names the member, because
+                    "HOUSEHOLD" and "YOURS" cannot say *which* member. */}
                 <StatCard
                   label="Total Income"
                   value={formatMoney(totalIncome, { currency, signed: true })}
-                  scope="yours"
+                  scope={scopeTag}
+                  subtitle={scopeSubtitle}
                   accentColor="#22c55e"
                   icon={<ArrowUpRight size={24} color="#22c55e" />}
                   valueColor="#22c55e"
@@ -207,7 +261,8 @@ export const Transactions: React.FC = () => {
                 <StatCard
                   label="Total Expenses"
                   value={formatMoney(-Math.abs(totalExpense), { currency })}
-                  scope="yours"
+                  scope={scopeTag}
+                  subtitle={scopeSubtitle}
                   accentColor="#ef4444"
                   icon={<ArrowDownRight size={24} color="#ef4444" />}
                   valueColor="#ef4444"
@@ -215,7 +270,8 @@ export const Transactions: React.FC = () => {
                 <StatCard
                   label="Net Balance"
                   value={formatMoney(netBalance, { currency, signed: true })}
-                  scope="yours"
+                  scope={scopeTag}
+                  subtitle={scopeSubtitle}
                   accentColor="#fbbf24"
                   icon={<Calendar size={24} color="#fbbf24" />}
                   valueColor={netBalance >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
@@ -225,6 +281,14 @@ export const Transactions: React.FC = () => {
               {/* Search & Filter */}
               <SectionCard title="Filter Transactions">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                  {/* Renders nothing for a one-member household. Sits with the
+                      other filters rather than in the page header because it is
+                      one of three server-side filters, not a mode switch. */}
+                  <MemberFilter
+                    members={members}
+                    value={memberId}
+                    onChange={(id) => { setMemberId(id); setPage(1); }}
+                  />
                   <div style={{ flex: '1', minWidth: '250px', position: 'relative' }}>
                     <Search size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input
@@ -303,7 +367,7 @@ export const Transactions: React.FC = () => {
                                   <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
                                     {transaction.description || transaction.name}
                                   </p>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                     <span style={metaTextStyle}>{transaction.category?.name || 'Uncategorized'}</span>
                                     {transaction.account?.name && (
                                       <>
@@ -311,6 +375,15 @@ export const Transactions: React.FC = () => {
                                         <span style={metaTextStyle}>{transaction.account.name}</span>
                                       </>
                                     )}
+                                    {/* Whose money this row is. Free: the owner
+                                        already rides along on the nested account,
+                                        so this costs no extra request. Hidden for
+                                        a one-member household by the component. */}
+                                    <OwnerBadge
+                                      owner={transaction.account?.owner}
+                                      memberCount={members.length}
+                                      size="sm"
+                                    />
                                   </div>
                                 </div>
                               </div>
