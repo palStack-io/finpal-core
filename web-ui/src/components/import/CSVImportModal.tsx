@@ -726,7 +726,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
             <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
               Import Successful!
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+            <p className="fp-hint">
               Imported {result.imported} transactions
               {result.skipped > 0 && `, skipped ${result.skipped}`}
             </p>

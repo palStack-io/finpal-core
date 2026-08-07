@@ -153,7 +153,7 @@ export const SimpleFinSettings: React.FC = () => {
           marginBottom: '20px'
         }}>
           <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
-          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p className="fp-error-text">{error}</p>
         </div>
       )}
 
@@ -184,10 +184,10 @@ export const SimpleFinSettings: React.FC = () => {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+            <h3 className="fp-item-title">
               Connection Status
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+            <p className="fp-hint">
               {isConnected ? `Connected • ${accountCount} account(s)` : 'Not connected'}
             </p>
           </div>
@@ -205,7 +205,7 @@ export const SimpleFinSettings: React.FC = () => {
         </div>
 
         {lastSync && (
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+          <p className="fp-meta">
             Last synced: {new Date(lastSync).toLocaleString()}
           </p>
         )}

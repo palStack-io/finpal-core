@@ -268,7 +268,7 @@ export const GroupDetail: React.FC = () => {
                 <h1 className="page-title">
                   {group.name}
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{group.description || 'No description'}</p>
+                <p className="fp-hint">{group.description || 'No description'}</p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button

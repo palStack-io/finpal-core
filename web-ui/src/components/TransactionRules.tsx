@@ -128,7 +128,7 @@ export const TransactionRules: React.FC = () => {
             <Zap size={24} style={{ color: 'var(--brand-accent-gold)' }} />
             Transaction Rules
           </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          <p className="fp-hint">
             Automatically categorize and organize transactions based on patterns
           </p>
         </div>
@@ -296,7 +296,7 @@ export const TransactionRules: React.FC = () => {
                       </p>
                     )}
                     {rule.transaction_type_filter && (
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+                      <p className="fp-hint">
                         <strong>Type Filter:</strong> {rule.transaction_type_filter}
                       </p>
                     )}

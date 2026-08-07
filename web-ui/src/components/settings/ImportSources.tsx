@@ -196,7 +196,7 @@ export const ImportSources: React.FC = () => {
       {error && (
         <div style={bannerStyle('239, 68, 68')}>
           <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
-          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p className="fp-error-text">{error}</p>
         </div>
       )}
 
@@ -209,10 +209,10 @@ export const ImportSources: React.FC = () => {
 
       {/* Watched folders */}
       <div style={panelStyle}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+        <h3 className="fp-item-title">
           Watched Folders
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+        <p className="fp-hint-block">
           Drop a CSV into a watched folder and it is imported automatically.
         </p>
 
@@ -306,15 +306,15 @@ export const ImportSources: React.FC = () => {
 
       {/* Import history */}
       <div style={panelStyle}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+        <h3 className="fp-item-title">
           Import History
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+        <p className="fp-hint-block">
           Every automatic import, newest first. Undo removes the transactions it created.
         </p>
 
         {batches.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Nothing has been imported yet.</p>
+          <p className="fp-meta">Nothing has been imported yet.</p>
         ) : (
           batches.map((batch) => (
             <div key={batch.id} style={rowStyle}>

@@ -210,7 +210,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
               marginBottom: '20px'
             }}>
               <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
-              <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
+              <p className="fp-error-text">{error}</p>
             </div>
           )}
 
