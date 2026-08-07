@@ -148,11 +148,40 @@ def test_an_api_error_is_json_carrying_both_keys_the_clients_read(
     Deliberately *not* `e.description`: BadRequest's wording is "The browser (or
     proxy) sent a request that this server could not understand", which is
     meaningless to an API client and was the text the old `str(e)` returns leaked.
+
+    **The status is 415 under Flask 3, and was 400 under 2.2.** This request
+    declares `Content-Type: text/plain`, and Flask 2.3+ answers a non-JSON
+    content type with Unsupported Media Type rather than trying to parse it and
+    failing. That is the correct reading of the two statuses, so it is adopted
+    rather than forced back — and it costs the clients nothing, because the
+    subject of this test is the SHAPE, which is identical: the handler keys on
+    `HTTPException` in general, not on 400.
     """
     resp = client.post('/api/v1/categories',
                        headers={'Authorization': 'Bearer %s' % token,
                                 'Content-Type': 'text/plain'},
                        data='hello')
+
+    assert resp.status_code == 415, resp.status_code
+    assert resp.is_json, 'an API error answered with %s' % resp.content_type
+    body = resp.get_json()
+    assert body['error'] == 'Unsupported Media Type', body
+    assert body['message'] == 'Unsupported Media Type', body
+    assert body['success'] is False, body
+
+
+def test_unparseable_json_keeps_the_same_shape_on_400(app, client, db, token):
+    """The case a real client can actually reach, which the 415 above cannot.
+
+    axios sets `Content-Type: application/json` whenever it is handed an object,
+    so neither client ever produces the 415 above in normal use — they produce
+    this. Both statuses must carry both keys, or the clients' error rendering
+    breaks on whichever one went unasserted.
+    """
+    resp = client.post('/api/v1/categories',
+                       headers={'Authorization': 'Bearer %s' % token,
+                                'Content-Type': 'application/json'},
+                       data='{not json')
 
     assert resp.status_code == 400, resp.status_code
     assert resp.is_json, 'an API error answered with %s' % resp.content_type
