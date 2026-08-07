@@ -40,6 +40,13 @@ ENDPOINTS = [
     '/api/v1/analytics/cashflow?months=6',
     '/api/v1/analytics/health',
     '/api/v1/analytics/networth?months=12',
+    # Added after D-59: this one was missing, D-56 gave its handler a
+    # `scope_ids=scope_ids` argument without the line that defines `scope_ids`,
+    # and it raised NameError on every request until it was curled on the deploy.
+    # Both clients render it. `test_every_analytics_route_answers.py` is the
+    # inventory that makes a miss like this structurally impossible; this list
+    # stays because it also asserts the 403s, which that one does not.
+    '/api/v1/analytics/monthly-comparison?months=6',
 ]
 
 
