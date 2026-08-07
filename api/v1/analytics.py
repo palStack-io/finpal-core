@@ -461,6 +461,16 @@ class MonthlyComparison(Resource):
         from flask import request
         current_user_id = get_jwt_identity()
 
+        # D-59: this line was missing while the call below already forwarded
+        # `scope_ids`, so every request raised NameError. The route is rendered by
+        # BOTH clients and CI never touched it — see
+        # `test_every_analytics_route_answers.py`, which is derived from
+        # `app.url_map` precisely so a route cannot be missed by being absent from
+        # somebody's list.
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
         try:
             # Get months parameter (default to 6)
             months = request.args.get('months', default=6, type=int)
