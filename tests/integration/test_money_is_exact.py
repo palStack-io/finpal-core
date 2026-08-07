@@ -91,12 +91,32 @@ def test_a_hundred_round_trips_do_not_drift(client, alice_h, alice):
     """
     account = AccountFactory(user_id=alice.id, balance=1104.55, type='checking')
 
-    for _ in range(100):
+    # Both halves of every round trip are checked, and that is not defensive
+    # padding — it is the difference between a diagnosis and a mystery.
+    #
+    # This test failed once on main (the Flask 3 merge, #88) with
+    # `Decimal('1104.48') != Decimal('1104.55')`. 1104.55 - 1104.48 is exactly
+    # 0.07: ONE transaction's worth, so one delete of the hundred did not take
+    # effect. Unasserted, that surfaced as "money drifted by 7p" in the test
+    # whose entire subject is that money does not drift — pointing at D-58,
+    # which was fine, instead of at a single failed request.
+    #
+    # A drift bug and a dropped request produce the same number here and need
+    # opposite fixes, so the loop now says which one happened.
+    for i in range(100):
         created = client.post('/api/v1/transactions/', headers=alice_h, json={
             'description': 'x', 'amount': 0.07, 'date': '2026-08-07',
             'transaction_type': 'expense', 'account_id': account.id})
-        client.delete('/api/v1/transactions/%d' % created.get_json()['transaction']['id'],
-                      headers=alice_h)
+        assert created.status_code in (200, 201), (
+            f'create {i} failed with {created.status_code}: {created.get_json()}')
+
+        deleted = client.delete(
+            '/api/v1/transactions/%d' % created.get_json()['transaction']['id'],
+            headers=alice_h)
+        assert deleted.status_code in (200, 204), (
+            f'delete {i} failed with {deleted.status_code}: {deleted.get_json()}. '
+            f'The balance below would be off by exactly 0.07 per dropped delete, '
+            f'which reads as drift and is not.')
 
     assert _balance(account.id) == Decimal('1104.55')
 
