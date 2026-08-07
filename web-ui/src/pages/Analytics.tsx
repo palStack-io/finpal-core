@@ -4,8 +4,9 @@ import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { formatMoney, tabular } from '../styles/money';
-import { ScopeTag } from '../components/ScopeTag';
-import type { Scope } from '../utils/scope';
+import { MemberFilter } from '../components/MemberFilter';
+import { teamService } from '../services/teamService';
+import { TeamMember } from '../types/team';
 import {
   Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -105,9 +106,23 @@ export const Analytics: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * **D-56.** Every chart on this page now follows one filter, so the per-chart
+   * `household` tags are gone. `null` is the whole household, which is the
+   * default the owner specified; `MemberFilter` renders nothing for a solo
+   * household, where there is nobody to narrow to.
+   */
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [memberId, setMemberId] = useState<string | null>(null);
+  const selectedMember = members.find((m) => m.id === memberId) || null;
+
+  useEffect(() => {
+    teamService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
+
   useEffect(() => {
     loadAnalytics();
-  }, [timeRange]);
+  }, [timeRange, memberId]);
 
   const toISO = (d: Date) => d.toISOString().split('T')[0];
 
@@ -162,13 +177,16 @@ export const Analytics: React.FC = () => {
         cashflow, healthData, networth,
         currentExpenses, currentIncome, priorExpenses, priorIncome,
       ] = await Promise.all([
-        analyticsService.getCashFlowData(months),
-        analyticsService.getFinancialHealth(),
-        analyticsService.getNetWorthTrendData(12),
-        analyticsService.getTopSpendingCategories(50, current.start, current.end, 'expense'),
-        analyticsService.getTopSpendingCategories(50, current.start, current.end, 'income'),
-        analyticsService.getTopSpendingCategories(50, prior.start, prior.end, 'expense'),
-        analyticsService.getTopSpendingCategories(50, prior.start, prior.end, 'income'),
+        // All seven carry the same `memberId`. They move together or the page
+        // describes two different sets of people at once — D-51, which is the
+        // reason this filter covers a whole page rather than one chart.
+        analyticsService.getCashFlowData(months, memberId),
+        analyticsService.getFinancialHealth(memberId),
+        analyticsService.getNetWorthTrendData(12, memberId),
+        analyticsService.getTopSpendingCategories(50, current.start, current.end, 'expense', memberId),
+        analyticsService.getTopSpendingCategories(50, current.start, current.end, 'income', memberId),
+        analyticsService.getTopSpendingCategories(50, prior.start, prior.end, 'expense', memberId),
+        analyticsService.getTopSpendingCategories(50, prior.start, prior.end, 'income', memberId),
       ]);
 
       setCashFlowMonthly(cashflow);
@@ -358,10 +376,15 @@ export const Analytics: React.FC = () => {
               Analytics Dashboard
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-              Comprehensive insights into your financial health
+              {selectedMember
+                ? `${selectedMember.name}'s money`
+                : 'Everyone sharing this finPal instance'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Beside the range selector: both narrow the whole page, so they
+                belong together rather than beside any one chart. */}
+            <MemberFilter members={members} value={memberId} onChange={setMemberId} />
             <div style={{ display: 'flex', gap: '8px' }}>
               {(['week', 'month', 'year'] as const).map((range) => (
                 <button
@@ -498,7 +521,6 @@ export const Analytics: React.FC = () => {
                   to differ as long as each says what it is. */}
               <MetricCard
                 title="Total Income"
-                scope="household"
                 value={formatMoney(totals.income, { currency })}
                 change={previous && pctChange(totals.income, previous.income)}
                 icon={<TrendingUp size={24} />}
@@ -506,7 +528,6 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Total Expenses"
-                scope="household"
                 value={formatMoney(totals.expenses, { currency })}
                 change={previous && pctChange(totals.expenses, previous.expenses)}
                 higherIsBetter={false}
@@ -515,7 +536,6 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Net Savings"
-                scope="household"
                 value={formatMoney(totals.netSavings, { currency })}
                 change={previous && pctChange(totals.netSavings, previous.netSavings)}
                 icon={<DollarSign size={24} />}
@@ -523,7 +543,6 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Savings Rate"
-                scope="household"
                 value={`${totals.savingsRate.toFixed(1)}%`}
                 change={previous && pctChange(totals.savingsRate, previous.savingsRate)}
                 icon={<Target size={24} />}
@@ -1029,8 +1048,7 @@ const MetricCard: React.FC<{
   icon: React.ReactNode;
   color: string;
   /** Whose money this figure covers (AUDIT.md D-01). */
-  scope?: Scope;
-}> = ({ title, value, change, higherIsBetter = true, icon, color, scope }) => {
+}> = ({ title, value, change, higherIsBetter = true, icon, color }) => {
   const rose = change !== undefined && change > 0;
   const good = change === undefined || change === 0
     ? true
@@ -1080,8 +1098,11 @@ const MetricCard: React.FC<{
         gap: '6px',
         flexWrap: 'wrap',
       }}>
+        {/* The per-chart scope tag is gone with D-56: the page states its scope
+            once, beside the filter that sets it, instead of on every card. The
+            prop went with it rather than being left accepted-and-ignored — that
+            is a dead control (D-46), and this component takes no `scope` now. */}
         {title}
-        {scope && <ScopeTag scope={scope} />}
       </p>
       <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px', ...tabular }}>
         {value}
