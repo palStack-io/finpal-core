@@ -8,7 +8,7 @@
  * light/dark toggle at all.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
@@ -83,16 +83,6 @@ const containerStyle: React.CSSProperties = {
 };
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
   return (
     <div style={shellStyle}>
       <div style={wallpaperStyle} aria-hidden="true">
@@ -111,18 +101,24 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <div style={contentRowStyle}>
         {/*
-          `Sidebar` is `React.FC` with no props and reads its own state, so `isOpen`
-          and `onClose` were being passed to a component that ignores them. Removed
-          rather than implemented: the sidebar has no open/closed rendering at all and
-          giving it one is a design change, not a type fix.
+          AUDIT D-46, closed 2026-08-06 by DELETING the control rather than building
+          what it implied. Owner decision: web-ui is DESKTOP-ONLY — the native app
+          covers phones.
 
-          That leaves the hamburger in `Header` doing nothing but swapping its own
-          icon — recorded as AUDIT D-46 rather than quietly fixed here.
+          History, so nobody re-adds it: `Sidebar` is `React.FC` with no props and
+          reads its own state, so #74's `isOpen`/`onClose` were being passed to a
+          component that ignored them. Removing those left a hamburger in `Header`
+          that swapped its own icon and moved nothing. Measured before deciding:
+          `.sidebar` is `position: fixed` at `var(--sidebar-width)` = 240px with the
+          content at `margin-left: 240px`, and there is NO media query anywhere —
+          not in this file, not in `Sidebar.tsx`, not in `finpal-theme.css`. So the
+          button was the control for a drawer that never existed, and building one
+          is the web nav pass, not a bug fix.
         */}
         <Sidebar />
 
         <div style={columnStyle}>
-          <Header onMenuToggle={toggleSidebar} isSidebarOpen={isSidebarOpen} />
+          <Header />
 
           <main style={mainStyle}>
             <div style={containerStyle}>
