@@ -7,14 +7,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { getBranding } from '../../config/branding';
-import { Menu, X, User, LogOut, Bell } from 'lucide-react';
+import { User, LogOut, Bell } from 'lucide-react';
 
-interface HeaderProps {
-  onMenuToggle?: () => void;
-  isSidebarOpen?: boolean;
-}
-
-export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) => {
+/**
+ * No `onMenuToggle` / `isSidebarOpen`. The hamburger button they drove was removed
+ * on 2026-08-06 (AUDIT D-46) — see `Layout.tsx` for why. Header takes no props now.
+ */
+export const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -78,16 +77,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
         height: '64px', padding: '0 16px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={onMenuToggle}
-            aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
-            style={iconButtonStyle}
-            onMouseEnter={hoverIn}
-            onMouseLeave={hoverOut}
-          >
-            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '30px' }}>{user?.profile_emoji || '\u{1F60A}'}</span>
             <div>
