@@ -126,11 +126,39 @@ describe('the extracted typography roles carry their inline values', () => {
     for (const [prop, value] of decls) declares(selector, prop, value);
   });
 
-  it('.fp-input is left drifted ON PURPOSE, so nobody half-adopts it', () => {
-    // Five inputs inline `padding: 12px`; this rule still says `10px 14px`.
-    // Adopting it without reconciling would resize every one of them, which is
-    // the trap .page-title set. Recorded as a rule rather than a comment so the
-    // next slice cannot miss it.
-    declares('.fp-input', 'padding', '10px 14px');
+  it('.fp-input is RECONCILED to what ships, and the pin moved deliberately', () => {
+    // Was `10px 14px`, pinned at that value on purpose so the next slice had to
+    // reconcile it consciously rather than discover it mid-adoption. This is that
+    // slice, and this line changing is the record of the decision.
+    //
+    // `12px` is what the app renders: the rule was used by ZERO components, and
+    // all 11 inputs matching its shape inline a flat `padding: 12px`. So adopting
+    // the old value would have re-padded every one of them — the trap .page-title
+    // set in #87, where the rule said 28px and seven pages rendered 32px.
+    declares('.fp-input', 'padding', '12px');
+  });
+
+  it('.fp-input keeps the other eight properties its adopters depend on', () => {
+    // 10 elements dropped these from their inline styles in favour of the class.
+    // If any one of these is edited away, those inputs lose the property silently
+    // — jsdom applies no external stylesheet, so nothing renders differently in a
+    // test and only this textual pin can see it.
+    declares('.fp-input', 'background', 'var(--input-bg)');
+    declares('.fp-input', 'border', '1px solid var(--input-border)');
+    declares('.fp-input', 'border-radius', '8px');
+    declares('.fp-input', 'color', 'var(--text-primary)');
+    declares('.fp-input', 'font-size', '14px');
+    declares('.fp-input', 'width', '100%');
+    declares('.fp-input', 'outline', 'none');
+  });
+
+  it('.fp-input still carries the focus treatment that justified adopting it', () => {
+    // The 10 adopters had NO focus response of their own. 14 other components set
+    // exactly this pair imperatively in onFocus/onBlur, so this rule is the app's
+    // existing convention expressed declaratively — not a new invention. If the
+    // :focus block is dropped, those 10 inputs silently become the only ones in
+    // the app that do not react to focus.
+    declares('.fp-input:focus', 'background', 'var(--input-bg-focus)');
+    declares('.fp-input:focus', 'border-color', 'var(--brand-main-green)');
   });
 });
