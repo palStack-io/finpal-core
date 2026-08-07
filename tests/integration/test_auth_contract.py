@@ -439,11 +439,35 @@ def test_me_returns_the_profile(client, db, user, auth_headers, slash):
             'budgetAlerts': True,
             'transactionAlerts': True,
         },
+        'modules': DEFAULT_MODULES,
         'created_at': user.created_at.isoformat() if user.created_at else None,
     }
-    # `/me` is the only auth route carrying user_color and created_at, and the
-    # only one that does NOT carry `modules`.
-    assert 'modules' not in body
+    # `/me` is the only auth route carrying user_color and created_at.
+    #
+    # *** THIS BLOCK USED TO ASSERT `'modules' not in body`, AND THAT ASSERTION
+    # *** WAS THE DEFECT WRITTEN DOWN AS INTENDED BEHAVIOUR — AUDIT D-63.
+    #
+    # `POST /auth/login` has always returned `user.modules`. This endpoint did
+    # not, and the clients gate module nav AND module routes on that key, so a
+    # user object without it is a user entitled to nothing. `OidcCallback.tsx`
+    # builds its user from THIS payload — so an OIDC login made pointsPal vanish
+    # while a password login for the same user kept it.
+    #
+    # The old line did not merely fail to catch that. It **certified** it: a
+    # reader auditing this file would have concluded the omission was considered
+    # and deliberate, which is the worst shape a gap can take and is exactly the
+    # failure mode recorded after #69. A guard that pins the wrong claim is worse
+    # than no guard, because it reads as coverage.
+    #
+    # `DEFAULT_MODULES`, the constant this file already uses for the other auth
+    # endpoints — so /me is now held to the SAME module list as login rather than
+    # to a copy of it. pointsPal is part of core and enables itself (D-34).
+    #
+    # `test_user_shape_is_one_shape.py` is what holds the two endpoints to the
+    # same shape from now on, keyed to the WHOLE payload rather than to this one
+    # key — so the next gating field cannot repeat D-63 by being added to login
+    # alone.
+    assert body['modules'] == ['pointspal']
 
 
 @BOTH_SPELLINGS
