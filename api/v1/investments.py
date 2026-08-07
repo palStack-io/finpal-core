@@ -4,7 +4,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.investment import Portfolio, Investment, InvestmentTransaction
 from src.extensions import db
-from src.utils.household import visible_user_ids, is_household_member
+from src.utils.household import visible_user_ids, is_household_member, can_manage_owned
 from schemas import (
     portfolio_schema, portfolios_schema,
     investment_schema, investments_schema,
@@ -182,6 +182,14 @@ class PortfolioDetail(Resource):
         if not portfolio:
             return {'success': False, 'error': 'Portfolio not found'}, 404
 
+        # Owner or admin (D-47). Reads above stay household-wide; only mutation is
+        # narrowed. Checked after the fetch so an unknown id still answers 404.
+        if not can_manage_owned(portfolio.user_id, current_user_id):
+            return {
+                'success': False,
+                'error': 'Only the portfolio owner or a household admin can change this portfolio',
+            }, 403
+
         try:
             portfolio.name = data.get('name', portfolio.name)
             portfolio.description = data.get('description', portfolio.description)
@@ -221,6 +229,14 @@ class PortfolioDetail(Resource):
 
         if not portfolio:
             return {'success': False, 'error': 'Portfolio not found'}, 404
+
+        # Owner or admin (D-47). Reads above stay household-wide; only mutation is
+        # narrowed. Checked after the fetch so an unknown id still answers 404.
+        if not can_manage_owned(portfolio.user_id, current_user_id):
+            return {
+                'success': False,
+                'error': 'Only the portfolio owner or a household admin can change this portfolio',
+            }, 403
 
         try:
             db.session.delete(portfolio)

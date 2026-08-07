@@ -7,7 +7,7 @@ from src.extensions import db
 from schemas import account_schema, accounts_schema
 from schemas.input_schemas import account_input
 from src.utils.validation import validate_request, validation_error_response
-from src.utils.household import visible_user_ids, is_household_member
+from src.utils.household import visible_user_ids, is_household_member, can_manage_owned
 from src.repositories.account import AccountRepository
 from src.services.account.service import AccountService
 from datetime import datetime
@@ -155,6 +155,16 @@ class AccountDetail(Resource):
 
         if not account:
             return {'success': False, 'error': 'Account not found'}, 404
+
+        # Seeing a housemate's account and being allowed to change it are different
+        # questions. Reads above stay household-wide (D-43); mutation is owner-or-admin
+        # (D-47). Checked after the fetch so a non-existent id still answers 404 rather
+        # than leaking existence through a 403.
+        if not can_manage_owned(account.user_id, current_user_id):
+            return {
+                'success': False,
+                'error': 'Only the account owner or a household admin can change this account',
+            }, 403
 
         data = request.get_json() or {}
         if not data:
