@@ -401,10 +401,16 @@ class GroupMembers(Resource):
             return {'error': 'An internal error occurred'}, 500
 
 
+group_invite_model = ns.model('GroupInviteInput', {
+    'email': fields.String(required=True, description='Address to invite to the group'),
+})
+
+
 @ns.route('/<int:id>/invite')
 @ns.param('id', 'Group ID')
 class GroupInvite(Resource):
     @ns.doc('invite_to_group', security='Bearer')
+    @ns.expect(group_invite_model)
     @jwt_required()
     def post(self, id):
         """Invite a user to join a group by email"""

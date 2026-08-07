@@ -16,19 +16,11 @@ export interface Category {
   updated_at?: string;
 }
 
-export interface CreateCategoryData {
-  name: string;
-  icon?: string;
-  color?: string;
-  parent_id?: number;
-}
-
-export interface UpdateCategoryData {
-  name?: string;
-  icon?: string;
-  color?: string;
-  parent_id?: number;
-}
+// CreateCategoryData and UpdateCategoryData were the request shapes for the
+// three deleted methods below and had no other reader. The contract they
+// described is now in swagger — `Category` for POST and `CategoryUpdate` for
+// PUT/PATCH — which is the point of documenting the request bodies: the shapes
+// live in one place the server owns, instead of being retyped per client.
 
 export interface CategoryMapping {
   id: number;
@@ -57,39 +49,21 @@ export const categoryService = {
     return response.data.categories;
   },
 
-  /**
-   * Get a specific category by ID
-   */
-  async getCategory(id: number): Promise<Category> {
-    const response = await api.get<{ success: boolean; category: Category }>(
-      `/api/v1/categories/${id}`
-    );
-    return response.data.category;
-  },
-
-  /**
-   * Create a new category
-   */
-  async createCategory(data: CreateCategoryData): Promise<Category> {
-    const response = await api.post<{
-      success: boolean;
-      category: Category;
-      message: string;
-    }>('/api/v1/categories', data);
-    return response.data.category;
-  },
-
-  /**
-   * Update a category
-   */
-  async updateCategory(id: number, data: UpdateCategoryData): Promise<Category> {
-    const response = await api.put<{
-      success: boolean;
-      category: Category;
-      message: string;
-    }>(`/api/v1/categories/${id}`, data);
-    return response.data.category;
-  },
+  // getCategory, createCategory and updateCategory lived here and are deleted.
+  //
+  // Nothing called them. Categories.tsx uses getCategories and deleteCategory
+  // and does its own create/edit inline, so the three were unreachable from any
+  // screen — checked by following the chain rather than grepping the service,
+  // because a generic hook factory can call a method without ever naming it.
+  //
+  // Two of them were also WRONG, which is why they are deleted rather than
+  // wired up: both read `response.data.category`, but `GET /categories/{id}`
+  // returns a flat object and `PUT` returns `{message}` only, so each would
+  // have resolved to `undefined`. (`POST` does return that key — the roadmap
+  // note claiming no handler returns it is mistaken, and createCategory was the
+  // one correct member of the three. It goes too: it had no callers either, and
+  // POST /categories now carries a documented request model, so regenerating it
+  // is a one-liner if a screen ever needs it.)
 
   /**
    * Delete a category

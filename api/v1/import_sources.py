@@ -12,7 +12,7 @@ import logging
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 
 from src.extensions import db
 from src.models.import_source import ImportBatch, ImportProfile, ImportSource
@@ -62,6 +62,29 @@ def _serialize_batch(b):
     }
 
 
+import_source_model = ns.model('ImportSourceCreate', {
+    'path': fields.String(required=True, description='Directory to watch, inside the permitted import root'),
+    'scan_interval_minutes': fields.Integer(
+        required=False, description='How often to rescan; server default when omitted'),
+})
+
+remap_mapping_model = batches_ns.model('RemapMapping', {
+    # These three are required *inside* mapping - the handler loops over exactly
+    # these keys and 400s on any that is falsy.
+    'date': fields.String(required=True, description='CSV column holding the date'),
+    'description': fields.String(required=True, description='CSV column holding the description'),
+    'amount': fields.String(required=True, description='CSV column holding the amount'),
+})
+
+remap_model = batches_ns.model('RemapBatch', {
+    'csv': fields.String(required=True, description='Raw CSV content to re-map'),
+    'mapping': fields.Nested(remap_mapping_model, required=True,
+                             description='Column mapping to apply'),
+    'date_format': fields.String(required=False, description='strptime format for the date column'),
+    'sign_convention': fields.String(required=False, description='How to interpret the amount sign'),
+})
+
+
 @ns.route('')
 class ImportSourceList(Resource):
     @jwt_required()
@@ -72,6 +95,7 @@ class ImportSourceList(Resource):
         sources = ImportSource.query.filter_by(user_id=user_id).all()
         return {'sources': [_serialize_source(s) for s in sources]}, 200
 
+    @ns.expect(import_source_model)
     @jwt_required()
     @demo_restricted
     def post(self):
@@ -160,6 +184,7 @@ class ImportBatchItem(Resource):
 
 @batches_ns.route('/<int:batch_id>/remap')
 class ImportBatchRemap(Resource):
+    @batches_ns.expect(remap_model)
     @jwt_required()
     @demo_restricted
     def post(self, batch_id):

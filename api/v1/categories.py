@@ -36,6 +36,17 @@ category_model = ns.model('Category', {
 })
 
 
+# PUT and PATCH share this. Every field is optional: the handler rejects only a
+# wholly absent body, then reads each key with `.get()` and leaves the column
+# alone when it is missing. `Category` (the create model) is a different shape
+# and cannot be reused - it requires `name`.
+category_update_model = ns.model('CategoryUpdate', {
+    'name': fields.String(required=False, description='New display name'),
+    'icon': fields.String(required=False, description='New icon'),
+    'color': fields.String(required=False, description='New colour'),
+})
+
+
 @ns.route('/')
 class CategoryList(Resource):
     @ns.doc('list_categories', security='Bearer')
@@ -181,6 +192,7 @@ class CategoryDetail(Resource):
             return {'error': 'An internal error occurred'}, 500
 
     @ns.doc('update_category', security='Bearer')
+    @ns.expect(category_update_model)
     @jwt_required()
     def put(self, category_id):
         """Update a category"""
@@ -211,6 +223,7 @@ class CategoryDetail(Resource):
             return {'error': 'An internal error occurred'}, 500
 
     @ns.doc('patch_category', security='Bearer')
+    @ns.expect(category_update_model)
     @jwt_required()
     def patch(self, category_id):
         """Update a category (alias for PUT, which the blueprint shared)"""

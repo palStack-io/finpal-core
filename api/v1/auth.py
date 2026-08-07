@@ -117,6 +117,75 @@ register_model = ns.model('Register', {
     'password': fields.String(required=True, description='User password')
 })
 
+# The remaining seven auth bodies. Until now these routes appeared in swagger
+# with no body at all, so a generated client could see the route and had no way
+# to know what to send it — the same defect as a missing route, one level down.
+#
+# `required` here means *the handler rejects the request without it*, and every
+# one below was read off the handler's own guard rather than inferred from the
+# name. Getting that wrong in either direction is a real bug: `Register` claimed
+# `username` was required for two years while the handler defaults it, which
+# would have made the field mandatory in every generated client.
+
+verify_email_model = ns.model('VerifyEmail', {
+    'token': fields.String(required=True, description='Token from the verification email'),
+})
+
+resend_verification_model = ns.model('ResendVerification', {
+    'email': fields.String(required=True, description='Address to resend the verification email to'),
+})
+
+forgot_password_model = ns.model('ForgotPassword', {
+    'email': fields.String(required=True, description='Address to send the reset link to'),
+})
+
+reset_password_model = ns.model('ResetPasswordRequest', {
+    'token': fields.String(required=True, description='Token from the reset email'),
+    # NEITHER spelling is required, and that is not an oversight. The handler is
+    # `data.get('password') or data.get('new_password')` — it accepts either,
+    # because both are in the wild. Marking one required would make a generated
+    # client refuse the other, which the server accepts happily.
+    'password': fields.String(
+        required=False,
+        description='The new password. Interchangeable with new_password; send one of the two.'),
+    'new_password': fields.String(
+        required=False,
+        description='The new password. Interchangeable with password; send one of the two.'),
+})
+
+apple_signin_model = ns.model('AppleSignIn', {
+    'identity_token': fields.String(required=True, description='Identity token from Sign in with Apple'),
+    'full_name': fields.String(
+        required=False,
+        description='Only supplied by Apple on the very first authorisation, so it '
+                    'cannot be relied on for returning users.'),
+})
+
+oidc_signin_model = ns.model('OidcSignIn', {
+    'provider': fields.String(required=True, description='Native provider key, e.g. google'),
+    # One of these two is needed, but neither on its own: the guard is
+    # `if not id_token and not access_token`. Declaring either required would
+    # reject a request the server accepts.
+    'id_token': fields.String(
+        required=False, description='OIDC ID token. Supply this or access_token.'),
+    'access_token': fields.String(
+        required=False, description='OAuth access token. Supply this or id_token.'),
+    'full_name': fields.String(required=False, description='Display name from the provider'),
+})
+
+onboarding_model = ns.model('Onboarding', {
+    # Every field optional: the handler rejects only a wholly absent body and
+    # reads each key with a default.
+    'email': fields.String(required=False, description='Address being onboarded'),
+    'default_currency_code': fields.String(required=False, description="e.g. 'GBP'"),
+    'timezone': fields.String(required=False, description='IANA timezone name'),
+    'profile_emoji': fields.String(required=False, description='Avatar emoji'),
+    'notifications': fields.Boolean(required=False, description='Master notification switch'),
+    'push': fields.Boolean(required=False, description='Push notifications'),
+    'budgetAlerts': fields.Boolean(required=False, description='Budget threshold alerts'),
+    'transactionAlerts': fields.Boolean(required=False, description='New transaction alerts'),
+})
+
 # TokenResponse and UserResponse used to be declared here. Both were written for
 # the Resources deleted in #19 and referenced by nothing since — no `marshal_with`
 # anywhere in this file — so restx never emitted them into `definitions` and they
@@ -525,6 +594,7 @@ class Logout(Resource):
 @ns.route('/onboarding')
 class CompleteOnboarding(Resource):
     @ns.doc('complete_onboarding', security='Bearer')
+    @ns.expect(onboarding_model)
     @jwt_required()
     def post(self):
         """Complete onboarding — currency, timezone and notification prefs"""
@@ -587,6 +657,7 @@ class CompleteOnboarding(Resource):
 @ns.route('/verify-email')
 class VerifyEmail(Resource):
     @ns.doc('verify_email')
+    @ns.expect(verify_email_model)
     def post(self):
         """Verify a user's email with the token from their verification link"""
         try:
@@ -628,6 +699,7 @@ class VerifyEmail(Resource):
 @ns.route('/resend-verification')
 class ResendVerification(Resource):
     @ns.doc('resend_verification')
+    @ns.expect(resend_verification_model)
     def post(self):
         """Send a fresh verification email"""
         try:
@@ -675,6 +747,7 @@ class ResendVerification(Resource):
 @ns.route('/forgot-password')
 class ForgotPassword(Resource):
     @ns.doc('forgot_password')
+    @ns.expect(forgot_password_model)
     def post(self):
         """Request a password reset email"""
         try:
@@ -747,6 +820,7 @@ class AppleSignIn(Resource):
     decorators = [limiter.limit("10 per minute")]
 
     @ns.doc('apple_signin')
+    @ns.expect(apple_signin_model)
     def post(self):
         """Deprecated alias for POST /api/v1/auth/oidc with provider=apple.
 
@@ -787,6 +861,7 @@ class AppleSignIn(Resource):
 @ns.route('/reset-password')
 class ResetPassword(Resource):
     @ns.doc('reset_password')
+    @ns.expect(reset_password_model)
     def post(self):
         """Set a new password using the token from a reset email"""
         try:
@@ -832,6 +907,7 @@ class NativeOidcSignIn(Resource):
     decorators = [limiter.limit("10 per minute")]
 
     @ns.doc('native_oidc_signin')
+    @ns.expect(oidc_signin_model)
     def post(self):
         """Sign in with a provider ID token obtained natively on a device.
 

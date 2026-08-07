@@ -3,7 +3,8 @@ from __future__ import annotations
 import csv
 import io
 from flask import request
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields, reqparse
+from werkzeug.datastructures import FileStorage
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.extensions import db
 from src.services.csv_import import Mapping, MapperConfig, import_rows
@@ -21,6 +22,11 @@ logger = logging.getLogger(__name__)
 ns = Namespace('csv-import', description='CSV import operations')
 
 # Define request/response models
+# formData: the handler reads request.files['file'].
+preview_parser = reqparse.RequestParser()
+preview_parser.add_argument('file', location='files', type=FileStorage,
+                            required=True, help='CSV file to preview')
+
 csv_preview_model = ns.model('CSVPreview', {
     'columns': fields.List(fields.String, description='CSV column headers'),
     'sample_rows': fields.List(fields.Raw, description='First 5 rows of data'),
@@ -63,6 +69,7 @@ def _validate_csv_file(file):
 @ns.route('/preview')
 class CSVPreview(Resource):
     @ns.doc('preview_csv', security='Bearer')
+    @ns.expect(preview_parser)
     @jwt_required()
     def post(self):
         """Preview CSV file and return column headers and sample data"""

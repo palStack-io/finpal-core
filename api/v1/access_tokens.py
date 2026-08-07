@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 
 from src.extensions import db
 from src.models.agent_action import STATUS_PENDING, STATUS_REJECTED, AgentAction
@@ -40,6 +40,15 @@ def _serialize(token):
     }
 
 
+access_token_create_model = ns.model('AccessTokenCreate', {
+    'name': fields.String(required=True, description='Label for the token'),
+    # Optional with a default, and validated against VALID_SCOPES.
+    'scopes': fields.String(required=False, description="Defaults to 'read'"),
+    'expires_in_days': fields.Integer(
+        required=False, description='Lifetime in days; defaults to the server default'),
+})
+
+
 @ns.route('')
 class AccessTokenList(Resource):
     @jwt_required()
@@ -50,6 +59,7 @@ class AccessTokenList(Resource):
                   .order_by(PersonalAccessToken.created_at.desc()).all())
         return {'tokens': [_serialize(t) for t in tokens]}, 200
 
+    @ns.expect(access_token_create_model)
     @jwt_required()
     @demo_restricted
     def post(self):

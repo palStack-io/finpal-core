@@ -781,6 +781,7 @@ class FacadeCardList(Resource):
         return [_wallet_card_dict(c) for c in cards], 200
 
     @pointspal_ns.doc('add_wallet_card', security='Bearer')
+    @pointspal_ns.expect(card_input)
     @jwt_required()
     def post(self):
         """Add a card to the wallet."""
@@ -796,6 +797,7 @@ class FacadeCardList(Resource):
 @pointspal_ns.route('/cards/<int:card_id>')
 class FacadeCardItem(Resource):
     @pointspal_ns.doc('update_wallet_card', security='Bearer')
+    @pointspal_ns.expect(card_input)
     @jwt_required()
     def put(self, card_id):
         """Update a card in the wallet."""
