@@ -3,9 +3,23 @@
 `src/utils/household.py` says "One finPal instance = one household. All users
 share the same data", and `get_all_user_ids()` returns every user on the
 instance. `/accounts`, `/budgets`, `/categories`, `/investments` and the
-dashboard use it; `/api/v1/transactions/` filters to the caller. The owner's
-decision (2026-08-04, AUDIT.md D-01) is to **keep both scopings and label them**
-in the UI rather than change which query a handler uses.
+dashboard use it. The owner's decision (2026-08-04, AUDIT.md D-01) was to **keep
+both scopings and label them** in the UI rather than change which query a handler
+uses.
+
+**`/api/v1/transactions/` no longer filters to the caller — D-18 items B+D,
+2026-08-06.** It is household-scoped now, keyed to the owner of each row's account,
+with an optional `member_id` filter; see `test_transaction_scope_contract.py`. That
+retires D-01's per-figure tags on the transactions page only. **Everything this file
+characterises is unchanged**, because the analytics queries were deliberately left
+for item E: `api/v1/analytics.py` still takes no member parameter at all, so a
+dashboard filter would have had nothing to pass. That is why the dashboard did not
+get the control in the same pass — a filter that re-scoped the recent-transactions
+strip while net worth and savings rate ignored it would be an affordance that lies,
+which is D-18's own failure mode.
+
+So this file is still the before/after record it was written to be, and the "after"
+half of it is item E's job.
 
 Labelling only works if the labels are per field, because this one payload is
 not uniformly scoped:

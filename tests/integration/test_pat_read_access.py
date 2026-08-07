@@ -52,7 +52,19 @@ def test_a_read_write_token_can_also_read(client, db):
 
 
 def test_a_token_only_reads_its_own_users_data(client, db):
-    """The identity shim must resolve to the token's owner, not anyone else."""
+    """The identity shim must resolve to the token's owner, not anyone else.
+
+    **This survived the household change on purpose — D-50.** When the transactions
+    list went household-wide (D-18 items B+D), every read went with it, and a PAT
+    resolves through the same `get_jwt_identity()` shim. That would have widened a
+    long-lived credential's reach as a *side effect* of a UI decision.
+
+    `AgentAccess.tsx:386` tells the user "A token reads only your own data", and a
+    PAT is what gets pasted into an MCP client or a cron script. So token reads stay
+    caller-scoped and the household widening applies to sessions only. The two
+    users below are both ordinary household members now, which is precisely why this
+    test still has teeth: under the session rule the row WOULD be returned.
+    """
     owner = UserFactory()
     stranger = UserFactory()
     db.session.add(Expense(

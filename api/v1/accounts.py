@@ -565,11 +565,16 @@ class CSVExport(Resource):
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
 
-        # Build query
-        query = Expense.query.filter_by(user_id=current_user_id)
+        # Build query. Household-scoped, same predicate as the transactions list —
+        # `filter_by(user_id=current_user_id)` was D-43's shape in a second file:
+        # `/accounts` lists a housemate's account, so exporting it handed back a
+        # file with a header row and nothing under it.
+        from api.v1.transactions import _transactions_in_scope
+
+        query = _transactions_in_scope(current_user_id)
 
         if account_id:
-            query = query.filter_by(account_id=account_id)
+            query = query.filter(Expense.account_id == account_id)
 
         if start_date:
             try:

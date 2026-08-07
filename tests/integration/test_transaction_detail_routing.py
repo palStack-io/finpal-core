@@ -88,21 +88,57 @@ def test_get_and_delete_still_work_over_http(client, db, auth_headers):
     assert Expense.query.filter_by(id=expense.id).first() is None
 
 
-def test_another_users_transaction_is_not_reachable(client, db, auth_headers):
-    """The restx handler must scope by owner as the legacy one did."""
+def test_a_housemates_transaction_is_found_and_then_refused(client, db, auth_headers):
+    """**Rewritten deliberately for D-18 items B+D, not quietly deleted.**
+
+    This used to be `test_another_users_transaction_is_not_reachable` and asserted
+    404 on all three verbs, because transactions were per-user. Under the model the
+    owner settled on 2026-08-06 a row belongs to whoever owns its account and reads
+    are household-wide, so `UserFactory()` here is a *housemate*, not an intruder:
+    the row is legitimately visible.
+
+    **The status matters more than it looks.** A refusal is 403 — the row must be
+    FOUND and then refused. Answering 404 would mean the read scope had silently
+    narrowed, which is D-43, and it is the reason this file keeps a test on the
+    subject at all rather than losing one. The isolation half now lives in
+    `test_a_demo_account_still_cannot_reach_the_household` below, keyed to the
+    boundary that still exists.
+    """
     owner = UserFactory()
-    intruder = UserFactory()
+    housemate = UserFactory()
     expense = _expense(db, owner, description='Private')
 
-    for call, method in (
-            (client.get, 'GET'), (client.delete, 'DELETE')):
-        resp = call('/api/v1/transactions/%d' % expense.id,
-                    headers=auth_headers(intruder))
-        assert resp.status_code == 404, '%s leaked another user\'s row' % method
+    resp = client.get('/api/v1/transactions/%d' % expense.id,
+                      headers=auth_headers(housemate))
+    assert resp.status_code == 200, 'a housemate could not open a row they can see'
+
+    resp = client.delete('/api/v1/transactions/%d' % expense.id,
+                         headers=auth_headers(housemate))
+    assert resp.status_code == 403, 'refusal must be 403, never 404'
 
     resp = client.put('/api/v1/transactions/%d' % expense.id,
                       json={'description': 'Hijacked'},
-                      headers=auth_headers(intruder))
-    assert resp.status_code == 404
+                      headers=auth_headers(housemate))
+    assert resp.status_code == 403
+    db.session.refresh(expense)
+    assert expense.description == 'Private'
+
+
+def test_a_demo_account_still_cannot_reach_the_household(client, db, auth_headers):
+    """The isolation this file used to get from per-user scoping, re-keyed.
+
+    A demo account is on the instance but is NOT a household member, and it signs in
+    with a password published in this repository. It is the boundary that survived
+    the change, so it is what the leak test is keyed to now.
+    """
+    owner = UserFactory()
+    demo = UserFactory(id='demo-routing@finpal.demo', is_demo_user=True)
+    expense = _expense(db, owner, description='Private')
+
+    for call, method in ((client.get, 'GET'), (client.delete, 'DELETE')):
+        resp = call('/api/v1/transactions/%d' % expense.id,
+                    headers=auth_headers(demo))
+        assert resp.status_code == 404, '%s leaked the household to a demo login' % method
+
     db.session.refresh(expense)
     assert expense.description == 'Private'

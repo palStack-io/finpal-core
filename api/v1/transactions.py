@@ -2,8 +2,10 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.models.account import Account
 from src.models.transaction import CategorySplit, Expense
 from src.extensions import db
+from src.utils.household import can_manage_owned, visible_user_ids
 from src.services.transaction import balances
 from schemas import transaction_schema, transactions_schema
 from schemas.input_schemas import transaction_input
@@ -30,12 +32,14 @@ def _refuse(details):
 
 from src.models.personal_access_token import SCOPE_READ_WRITE  # noqa: E402
 from src.services.agent_guard.guard import guarded_write  # noqa: E402
-from src.utils.split_with import split_with_filter as _split_with_filter  # noqa: E402
 from src.models.personal_access_token import SCOPE_READ
 from src.utils.api_auth import api_auth_required
-# Was a local copy. Moved to src/utils/split_with.py so the six other query sites
-# share one implementation — the duplication is why S-06 stayed open while being
-# marked closed.
+# `src/utils/split_with.py` is deliberately NOT imported here any more. It used to
+# back this file's base query, and the owner's 2026-08-06 decision took `split_with`
+# out of attribution entirely — a row belongs to whoever owns its account. The helper
+# itself stays, and its six other query sites (the group and settlement screens) are
+# untouched: splitting a bill is still how the household settles up, it just no
+# longer answers "whose transaction is this".
 
 
 def _prior_category(transaction_id):
@@ -51,14 +55,121 @@ def _prior_category(transaction_id):
     return {'category_id': expense.category_id} if expense else None
 
 
-def _transactions_for_user(user_id):
-    """Base query: transactions owned by the user OR where they appear in split_with."""
-    return Expense.query.filter(
-        or_(
-            Expense.user_id == user_id,
-            _split_with_filter(Expense.split_with, str(user_id))
-        )
+def _owner_scope_filter(user_ids):
+    """Rows attributed to any of `user_ids`.
+
+    **A row belongs to whoever owns its ACCOUNT, full stop** — owner decision,
+    2026-08-06. `split_with` stays in the product for settling up, and the group and
+    settlement screens still read it, but it no longer answers "whose transaction is
+    this". A row Alice paid for on her card and split with Bob is Alice's; Bob's
+    share is a settlement matter, not an attribution one.
+
+    The second clause is the orphan rule, and it is not defensive padding.
+    `Expense.account_id` is nullable and
+    `AccountRepository.nullify_account_on_transactions` nulls it across an account's
+    entire history when the account is deleted, so account-less rows are reachable
+    and permanent. They fall back to `Expense.user_id` — who entered the row — which
+    is the only non-null field that can carry them.
+
+    Written as ONE predicate on purpose. The default household view and a
+    member-filtered view are both built from it, so they cannot disagree about which
+    rows a member owns. Because it reads `Account.user_id`, every caller must join
+    `Account` in — see `_scope_query`.
+    """
+    return or_(
+        Account.user_id.in_(user_ids),
+        and_(Expense.account_id.is_(None), Expense.user_id.in_(user_ids)),
     )
+
+
+def _scope_query(user_ids):
+    """`_owner_scope_filter` with the outer join it depends on.
+
+    The join must be OUTER: an inner join drops every account-less row before the
+    orphan clause can catch it, which would silently hide rows rather than
+    misattribute them. The ON clause is explicit because `Expense` has two foreign
+    keys to `accounts` (`account_id` and `destination_account_id`) and SQLAlchemy
+    cannot choose between them.
+    """
+    return (Expense.query
+            .outerjoin(Account, Expense.account_id == Account.id)
+            .filter(_owner_scope_filter(user_ids)))
+
+
+def _read_scope(user_id):
+    """The user IDs a *read* by `user_id` may cover.
+
+    `visible_user_ids`, never `household_user_ids` — it collapses to the caller
+    alone for a demo account. Demo accounts ship with a published password, so a
+    read keyed to the household puts the real household's money behind credentials
+    that are in the repository. That is D-42, and this is the same guard one level
+    down.
+
+    **A personal access token stays caller-scoped — D-50.** Widening reads to the
+    household would otherwise have widened them for PATs too, silently, as a side
+    effect rather than a decision. `AgentAccess.tsx:386` promises the user in as
+    many words: *"A token reads only your own data."* A PAT is a long-lived
+    credential pasted into an MCP client or a script, so quietly handing it a
+    housemate's money breaks a stated promise on exactly the surface where the
+    promise matters most. `g.pat` is set by `api_auth_required` and is None for an
+    ordinary session, which is what makes the two cases distinguishable at all.
+    """
+    from flask import g
+
+    if getattr(g, 'pat', None) is not None:
+        return [user_id]
+    return visible_user_ids(user_id)
+
+
+def _transactions_in_scope(user_id):
+    """Base query: every transaction `user_id` may see."""
+    return _scope_query(_read_scope(user_id))
+
+
+def _member_scope(caller_id, member_id):
+    """Resolve a `member_id` filter to a scope, as `(user_ids, error)`.
+
+    The filter is INTERSECTED with what the caller may see, rather than trusted.
+    Without that, a demo login reads the household's rows by passing an id — the
+    filter becomes a way around the scope it is supposed to sit inside.
+
+    A refusal is **403, not an empty list**: an empty list is indistinguishable from
+    "that member has no transactions", so a bad id would read as a real answer.
+    """
+    visible = _read_scope(caller_id)
+    if not member_id:
+        return visible, None
+    if str(member_id) not in {str(u) for u in visible}:
+        return None, ({'success': False,
+                       'error': 'Not a member of this household'}, 403)
+    return [member_id], None
+
+
+def _may_mutate(transaction, caller_id):
+    """Whether `caller_id` may change or delete this transaction.
+
+    Owner-or-admin — D-47's `can_manage_owned`, keyed to the **account's** owner —
+    **or** whoever entered the row. Both clauses are load-bearing:
+
+    * Without the account-owner clause this is not the settled model at all; it is
+      whose money the row is that decides, not who typed it in.
+    * Without the entered-by clause the rule is a NEW restriction rather than a port
+      of D-47: a housemate who enters a row against your card could no longer fix
+      their own typo. And more seriously, `can_manage_owned` returns False whenever
+      `owner_id` is falsy, so an orphaned row — one whose account was deleted —
+      would become uneditable and undeletable **by everyone**, permanently freezing
+      that account's whole history.
+
+    This runs only after the row has been FOUND through the read scope, so a refusal
+    is 403. Answering 404 would mean the read scope had silently narrowed, which is
+    D-43 returning.
+    """
+    if str(transaction.user_id) == str(caller_id):
+        return True
+    account = transaction.account
+    if account is None:
+        return False
+    return can_manage_owned(account.user_id, caller_id)
 
 
 def _totals_for(query):
@@ -107,7 +218,11 @@ transaction_model = ns.model('Transaction', {
     'notes': fields.String(description='Additional notes'),
     'split_method': fields.String(description='Split method: equal, custom, percentage'),
     'split_with': fields.String(description='Comma-separated user IDs to split with'),
-    'paid_by': fields.Integer(description='User ID who paid'),
+    # **D-48.** Declared `fields.Integer` until 2026-08-06 while
+    # `Expense.paid_by` is `String(50)` and user IDs are email addresses — so a
+    # client generated from this spec sent an int and the documented contract was
+    # simply false. Same class as #68/#69.
+    'paid_by': fields.String(description='User ID (email) who fronted the cash'),
 })
 
 
@@ -132,9 +247,15 @@ class TransactionList(Resource):
         transaction_type = request.args.get('type', type=str)
         search = request.args.get('search', type=str)
         group_id = request.args.get('group_id', type=int)
+        member_id = request.args.get('member_id', type=str)
 
-        # Build query
-        query = _transactions_for_user(current_user_id)
+        # Build query. `member_id` narrows the scope rather than filtering the
+        # result, so the summary totals — which `_totals_for` computes over the
+        # whole query — describe exactly the rows on screen.
+        scope, error = _member_scope(current_user_id, member_id)
+        if error:
+            return error
+        query = _scope_query(scope)
 
         # Apply filters
         if start_date:
@@ -260,7 +381,7 @@ class TransactionDetail(Resource):
         """Get a specific transaction by ID"""
         current_user_id = get_jwt_identity()
 
-        transaction = _transactions_for_user(current_user_id).filter(Expense.id == id).first()
+        transaction = _transactions_in_scope(current_user_id).filter(Expense.id == id).first()
 
         if not transaction:
             return {'success': False, 'error': 'Transaction not found'}, 404
@@ -285,10 +406,19 @@ class TransactionDetail(Resource):
         """Update a transaction"""
         current_user_id = get_jwt_identity()
 
-        transaction = Expense.query.filter_by(id=id, user_id=current_user_id).first()
+        # Found through the READ scope first, then refused — never 404'd. The list
+        # is household-wide, so keying this to the caller would put a row on screen
+        # that its viewer cannot open, which is exactly D-43.
+        transaction = _transactions_in_scope(current_user_id).filter(
+            Expense.id == id).first()
 
         if not transaction:
             return {'success': False, 'error': 'Transaction not found'}, 404
+
+        if not _may_mutate(transaction, current_user_id):
+            return {'success': False,
+                    'error': 'Only the account owner, a household admin or the '
+                             'person who entered this transaction can change it'}, 403
 
         data = request.get_json() or {}
         if not data:
@@ -455,10 +585,16 @@ class TransactionDetail(Resource):
         """Delete a transaction"""
         current_user_id = get_jwt_identity()
 
-        transaction = Expense.query.filter_by(id=id, user_id=current_user_id).first()
+        transaction = _transactions_in_scope(current_user_id).filter(
+            Expense.id == id).first()
 
         if not transaction:
             return {'success': False, 'error': 'Transaction not found'}, 404
+
+        if not _may_mutate(transaction, current_user_id):
+            return {'success': False,
+                    'error': 'Only the account owner, a household admin or the '
+                             'person who entered this transaction can delete it'}, 403
 
         try:
             # Snapshot before the delete: afterwards the row is gone and there is
@@ -489,7 +625,7 @@ class RecentTransactions(Resource):
         current_user_id = get_jwt_identity()
         limit = request.args.get('limit', 10, type=int)
 
-        transactions = _transactions_for_user(current_user_id).order_by(Expense.date.desc()).limit(limit).all()
+        transactions = _transactions_in_scope(current_user_id).order_by(Expense.date.desc()).limit(limit).all()
 
         result = transactions_schema.dump(transactions)
 

@@ -364,14 +364,23 @@ def test_paid_by_must_be_a_real_user(client, db, auth_headers):
 
 def test_paid_by_cannot_name_a_stranger_on_an_ungrouped_transaction(
         client, db, auth_headers):
-    """With no group there is no shared context that would let someone else have
-    paid, so the only honest value is the caller.
+    """`paid_by` decides who owes whom, so it cannot be an arbitrary id.
 
-    The household is not a boundary here: `get_all_user_ids()` returns *every* user
-    on the instance, so "is in my household" would permit anyone.
+    **The rule widened on 2026-08-06 and this test was re-keyed with it — D-49.** It
+    used to be "with no group, the only honest value is the caller", and its
+    docstring rejected the household as a boundary because `get_all_user_ids()`
+    returns every user on the instance *including demo accounts*. `visible_user_ids`
+    does not, so the boundary is usable now: a housemate really can have fronted the
+    cash for a row on your card, and refusing that made the household transactions
+    list unusable — an account owner editing a housemate's row was refused with a
+    `paid_by` error naming a field they never sent.
+
+    So the outsider here is a **demo account**: on the instance, not in the
+    household, and holding a password published in this repository. That is the
+    boundary that still exists, and the one worth a test.
     """
     user = UserFactory()
-    stranger = UserFactory()
+    stranger = UserFactory(id='demo-paidby@finpal.demo', is_demo_user=True)
     tid = _create(client, user, auth_headers)
 
     resp = client.put('/api/v1/transactions/%d' % tid,
@@ -408,11 +417,31 @@ def test_paid_by_may_be_another_member_of_the_transactions_group(
     assert _row(tid).paid_by == other.id
 
 
+def test_paid_by_may_be_a_housemate_on_an_ungrouped_transaction(
+        client, db, auth_headers):
+    """The case D-49 opened, pinned so the widening cannot silently un-widen.
+
+    Without this, re-tightening `validate_paid_by` back to "only the caller" would
+    leave every other test in this file green while making the household
+    transactions list unusable again.
+    """
+    user = UserFactory()
+    housemate = UserFactory()
+    tid = _create(client, user, auth_headers)
+
+    resp = client.put('/api/v1/transactions/%d' % tid,
+                      headers=auth_headers(user), json={'paid_by': housemate.id})
+
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:300]
+    assert _row(tid).paid_by == housemate.id
+
+
 def test_paid_by_is_checked_on_create_too(client, db, auth_headers):
     """Both paths, or `put` and `post` disagree — the asymmetry this file exists
-    for."""
+    for. D-49 widened the rule on both, so the outsider is a demo account on both.
+    """
     user = UserFactory()
-    stranger = UserFactory()
+    stranger = UserFactory(id='demo-paidby-create@finpal.demo', is_demo_user=True)
 
     resp = client.post('/api/v1/transactions', headers=auth_headers(user), json={
         'description': 'Not yours to attribute',
