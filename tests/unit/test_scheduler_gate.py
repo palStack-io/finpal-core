@@ -10,13 +10,6 @@ unit tests here are true statements about a function, not about the suite.
 
 The first test is the one that would have caught it.
 """
-import importlib
-
-
-def _reload_extensions():
-    import src.extensions
-    return importlib.reload(src.extensions)
-
 
 # --- the suite's own state, not the predicate's -------------------------------
 
@@ -63,22 +56,35 @@ def test_the_jobs_are_registered_even_though_none_run(app):
         'running, so the deployed scheduler would do nothing.')
 
 
+# These three used to call `importlib.reload(src.extensions)`, and that was both
+# unnecessary and actively dangerous. Unnecessary because `scheduler_enabled()`
+# reads `os.getenv` at CALL time, so monkeypatching the environment is enough —
+# which is how the rate-limit tests below have always done it. Dangerous because
+# **reload rebinds `src.extensions.scheduler` to a brand-new APScheduler while the
+# original keeps running**: measured, `running=True` before and `running=False`
+# after, at a different object id. Any later test doing
+# `from src.extensions import scheduler` would then see a stopped scheduler and
+# pass while a live one was still in the process — so the gate above was one
+# definition-order change away from going permanently blind, which is this
+# project's most-repeated failure mode. The same applies to `limiter`, and this is
+# the last module-reloading test in the suite.
+
 def test_scheduler_gate_defaults_to_enabled(monkeypatch):
+    from src.extensions import scheduler_enabled
     monkeypatch.delenv('RUN_SCHEDULER', raising=False)
-    ext = _reload_extensions()
-    assert ext.scheduler_enabled() is True
+    assert scheduler_enabled() is True
 
 
 def test_scheduler_gate_respects_false(monkeypatch):
+    from src.extensions import scheduler_enabled
     monkeypatch.setenv('RUN_SCHEDULER', 'false')
-    ext = _reload_extensions()
-    assert ext.scheduler_enabled() is False
+    assert scheduler_enabled() is False
 
 
 def test_scheduler_gate_accepts_zero(monkeypatch):
+    from src.extensions import scheduler_enabled
     monkeypatch.setenv('RUN_SCHEDULER', '0')
-    ext = _reload_extensions()
-    assert ext.scheduler_enabled() is False
+    assert scheduler_enabled() is False
 
 
 # --- rate limit storage ------------------------------------------------------
