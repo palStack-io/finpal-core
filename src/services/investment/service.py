@@ -40,7 +40,7 @@ class InvestmentService:
         """Fetch current prices from yfinance for every investment in the portfolio."""
         from integrations.investments.yfinance import get_stock_data_with_fallback
 
-        portfolio = Portfolio.query.get(portfolio_id)
+        portfolio = db.session.get(Portfolio, portfolio_id)
         if not portfolio:
             return False, 'Portfolio not found'
 

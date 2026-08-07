@@ -17,6 +17,7 @@ there is exactly one implementation.
 Nothing here commits. The caller owns the transaction boundary, so a balance move
 lands in the same commit as the row that caused it and a rollback takes both.
 """
+from src.extensions import db
 from src.models.account import Account
 from src.utils.money import money_or_zero
 
@@ -44,7 +45,7 @@ def _move(account_id, destination_account_id, transaction_type, amount, directio
         # Cash transactions carry no account. Nothing to move.
         return
 
-    account = Account.query.get(account_id)
+    account = db.session.get(Account, account_id)
     if not account:
         return
 
@@ -69,7 +70,7 @@ def _move(account_id, destination_account_id, transaction_type, amount, directio
         # by test_a_transfer_without_a_destination_moves_nothing; when
         # destination_account_id is wired up, that test is what has to change.
         account.balance -= delta
-        destination = Account.query.get(destination_account_id)
+        destination = db.session.get(Account, destination_account_id)
         if destination:
             destination.balance += delta
 

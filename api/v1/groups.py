@@ -451,7 +451,7 @@ class GroupInvite(Resource):
                 from src.models.invitation import Invitation
                 import os
 
-                current_user = User.query.get(current_user_id)
+                current_user = db.session.get(User, current_user_id)
                 inviter_name = getattr(current_user, 'name', current_user_id) if current_user else 'Someone'
 
                 # Create a household invitation if one doesn't already exist

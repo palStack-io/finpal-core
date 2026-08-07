@@ -122,7 +122,7 @@ def cancel_invitation(invitation_id):
     if not admin:
         return jsonify({'error': 'Admin access required'}), 403
 
-    invitation = Invitation.query.get(invitation_id)
+    invitation = db.session.get(Invitation, invitation_id)
     if not invitation:
         return jsonify({'error': 'Invitation not found'}), 404
 
@@ -143,7 +143,7 @@ def resend_invitation(invitation_id):
     if not admin:
         return jsonify({'error': 'Admin access required'}), 403
 
-    invitation = Invitation.query.get(invitation_id)
+    invitation = db.session.get(Invitation, invitation_id)
     if not invitation:
         return jsonify({'error': 'Invitation not found'}), 404
 

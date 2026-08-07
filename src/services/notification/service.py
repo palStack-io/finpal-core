@@ -1,7 +1,7 @@
 """Notification Service - Email notifications and alerts"""
 from flask import current_app
 from flask_mail import Message
-from src.extensions import mail
+from src.extensions import db, mail
 from src.models.user import User
 
 class NotificationService:
@@ -21,7 +21,7 @@ class NotificationService:
 
     def send_budget_alert(self, user_id, budget):
         """Send budget overspend alert"""
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return False, 'User not found'
 
@@ -41,7 +41,7 @@ class NotificationService:
         from src.models.transaction import Expense
         from src.services.email_service import email_service
 
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return False, 'User not found'
 
@@ -75,7 +75,7 @@ class NotificationService:
         top_category_name = None
         if top_category_id:
             from src.models.category import Category
-            cat = Category.query.get(top_category_id)
+            cat = db.session.get(Category, top_category_id)
             top_category_name = cat.name if cat else None
 
         report_data = {

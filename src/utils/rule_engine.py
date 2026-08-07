@@ -158,7 +158,7 @@ def suggest_rule_from_edit(transaction, new_category_id, user_id):
 
     # Get category name for display
     from src.models.category import Category
-    category = Category.query.get(new_category_id)
+    category = db.session.get(Category, new_category_id)
 
     if not category:
         return None

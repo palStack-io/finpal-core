@@ -209,7 +209,7 @@ def add_user_card(user_id: str, data: dict) -> tuple:
 
 def update_user_card(card_id: int, user_id: str, data: dict) -> tuple:
     """Returns (success, message, card_dict | None)"""
-    card = UserCard.query.get(card_id)
+    card = db.session.get(UserCard, card_id)
     if not card:
         return False, 'Card not found', None
     if card.user_id != user_id:
@@ -243,7 +243,7 @@ def update_user_card(card_id: int, user_id: str, data: dict) -> tuple:
 
 def delete_user_card(card_id: int, user_id: str) -> tuple:
     """Returns (success, message)"""
-    card = UserCard.query.get(card_id)
+    card = db.session.get(UserCard, card_id)
     if not card:
         return False, 'Card not found'
     if card.user_id != user_id:
@@ -261,7 +261,7 @@ def delete_user_card(card_id: int, user_id: str) -> tuple:
 
 def verify_user_card(card_id: int, user_id: str) -> tuple:
     """Mark a card as user-verified (high confidence). Returns (success, message)."""
-    card = UserCard.query.get(card_id)
+    card = db.session.get(UserCard, card_id)
     if not card:
         return False, 'Card not found'
     if card.user_id != user_id:
@@ -412,7 +412,7 @@ def create_card_link(user_id: str, data: dict) -> tuple:
 
     # Validate card belongs to user
     if user_card_id:
-        card = UserCard.query.get(user_card_id)
+        card = db.session.get(UserCard, user_card_id)
         if not card or card.user_id != user_id:
             return False, 'Card not found or permission denied', None
 
@@ -457,7 +457,7 @@ def update_card_link(link_id: int, user_id: str, data: dict) -> tuple:
     Pass user_card_id=null to unlink without deleting the record.
     Returns (success, message, link_dict | None)
     """
-    link = SimpleFinCardLink.query.get(link_id)
+    link = db.session.get(SimpleFinCardLink, link_id)
     if not link:
         return False, 'Link not found', None
     if link.user_id != user_id:
@@ -467,7 +467,7 @@ def update_card_link(link_id: int, user_id: str, data: dict) -> tuple:
         if 'user_card_id' in data:
             new_card_id = data['user_card_id']
             if new_card_id is not None:
-                card = UserCard.query.get(new_card_id)
+                card = db.session.get(UserCard, new_card_id)
                 if not card or card.user_id != user_id:
                     return False, 'Card not found or permission denied', None
             link.user_card_id = new_card_id
@@ -488,7 +488,7 @@ def update_card_link(link_id: int, user_id: str, data: dict) -> tuple:
 
 def delete_card_link(link_id: int, user_id: str) -> tuple:
     """Returns (success, message)"""
-    link = SimpleFinCardLink.query.get(link_id)
+    link = db.session.get(SimpleFinCardLink, link_id)
     if not link:
         return False, 'Link not found'
     if link.user_id != user_id:
@@ -520,7 +520,7 @@ def get_effective_rate(user_card_id: int, category: str) -> dict:
     Returns dict with keys: multiplier, multiplier_fallback, cap_amount,
     cap_period, tpg_cpp, effective_cpp, source
     """
-    card = UserCard.query.get(user_card_id)
+    card = db.session.get(UserCard, user_card_id)
     if not card:
         return _default_rate()
 
@@ -745,7 +745,7 @@ def generate_pr_url(card_id: int, user_id: str) -> tuple:
     """
     import urllib.parse
 
-    card = UserCard.query.get(card_id)
+    card = db.session.get(UserCard, card_id)
     if not card:
         return False, 'Card not found', None
     if card.user_id != user_id:
@@ -850,7 +850,7 @@ def get_alerts(user_id: str, include_dismissed: bool = False) -> list:
 
 
 def dismiss_alert(alert_id: int, user_id: str) -> tuple:
-    alert = OptimizerAlert.query.get(alert_id)
+    alert = db.session.get(OptimizerAlert, alert_id)
     if not alert:
         return False, 'Alert not found'
     if alert.user_id != user_id:

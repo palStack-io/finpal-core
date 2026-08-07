@@ -31,7 +31,7 @@ class AccountRepository:
 
     def get_by_id(self, account_id):
         """Account by primary key, or None."""
-        return Account.query.get(account_id)
+        return db.session.get(Account, account_id)
 
     def get_by_id_and_user(self, account_id, user_id):
         """Account owned by a specific user, or None."""

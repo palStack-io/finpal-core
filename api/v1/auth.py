@@ -968,7 +968,7 @@ class BackgroundSync(Resource):
         Called by the frontend on app open (once per browser session).
         """
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if user and not user.is_demo_user:
             _background_sync(current_app._get_current_object(), user_id)
         return {'status': 'sync started'}, 202

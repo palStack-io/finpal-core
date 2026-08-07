@@ -212,7 +212,7 @@ def sync_investments_with_accounts(user_id):
             if not portfolio.account_id:
                 continue
 
-            account = Account.query.get(portfolio.account_id)
+            account = db.session.get(Account, portfolio.account_id)
             if not account:
                 continue
 
