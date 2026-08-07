@@ -25,9 +25,30 @@ def _require_admin():
     return user
 
 
+team_invite_model = ns.model('TeamInvite', {
+    'email': fields.String(required=True, description='Address to invite'),
+    'role': fields.String(required=False, description="Role to grant; defaults to 'member'"),
+})
+
+member_role_model = ns.model('MemberRole', {
+    # Optional on purpose: `(data or {}).get('role', 'member')`. A body with no
+    # role is accepted and demotes the member to 'member'.
+    'role': fields.String(required=False, description="New role; defaults to 'member'"),
+})
+
+transfer_ownership_model = ns.model('TransferOwnership', {
+    'memberId': fields.String(required=True, description='User id (an email) to transfer ownership to'),
+})
+
+accept_invitation_model = ns.model('AcceptInvitation', {
+    'token': fields.String(required=True, description='Token from the invitation email'),
+})
+
+
 @ns.route('/invite')
 class Invite(Resource):
     @ns.doc('invite_user')
+    @ns.expect(team_invite_model)
     @jwt_required()
     def post(self):
         """Admin creates an invitation and sends an email"""
@@ -225,6 +246,7 @@ class MemberDetail(Resource):
 @ns.route('/members/<path:member_id>/role')
 class MemberRole(Resource):
     @ns.doc('update_member_role')
+    @ns.expect(member_role_model)
     @jwt_required()
     def put(self, member_id):
         """Admin updates a user's role"""
@@ -251,6 +273,7 @@ class MemberRole(Resource):
 @ns.route('/transfer-ownership')
 class TransferOwnership(Resource):
     @ns.doc('transfer_ownership')
+    @ns.expect(transfer_ownership_model)
     @jwt_required()
     def post(self):
         """Transfer admin status to another member"""
@@ -287,6 +310,7 @@ class LeaveTeam(Resource):
 @ns.route('/accept-invitation')
 class AcceptInvitation(Resource):
     @ns.doc('accept_invitation')
+    @ns.expect(accept_invitation_model)
     @jwt_required()
     def post(self):
         """Accept an invitation to join household"""

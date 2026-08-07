@@ -416,9 +416,22 @@ class TestRule(Resource):
             logger.exception('Unhandled error')
             return {'error': 'An internal error occurred'}, 500
 
+bulk_apply_model = ns.model('BulkApplyRules', {
+    # Optional: omitted means "apply every rule".
+    'rule_ids': fields.List(fields.Integer, required=False,
+                            description='Restrict to these rules; omit to apply all'),
+})
+
+suggest_rule_model = ns.model('SuggestRule', {
+    'transaction_id': fields.Integer(required=True, description='Transaction that was recategorised'),
+    'new_category_id': fields.Integer(required=True, description='Category it was moved to'),
+})
+
+
 @ns.route('/bulk-apply')
 class BulkApplyRules(Resource):
     @ns.doc('bulk_apply_rules', security='Bearer')
+    @ns.expect(bulk_apply_model)
     @jwt_required()
     def post(self):
         """Apply rules to all existing transactions"""
@@ -443,6 +456,7 @@ class BulkApplyRules(Resource):
 @ns.route('/suggest')
 class SuggestRule(Resource):
     @ns.doc('suggest_rule_from_edit', security='Bearer')
+    @ns.expect(suggest_rule_model)
     @jwt_required()
     def post(self):
         """Suggest a rule based on transaction edit"""

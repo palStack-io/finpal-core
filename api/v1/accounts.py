@@ -1,6 +1,7 @@
 """Accounts API endpoints"""
 from flask import request, current_app
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields, reqparse
+from werkzeug.datastructures import FileStorage
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.account import Account
 from src.extensions import db
@@ -39,6 +40,24 @@ ns = Namespace('accounts', description='Account operations')
 # The fields below are the ones `AccountInput` accepts and the handlers apply.
 # `tests/integration/test_accounts_documented_fields.py` asserts that, by
 # POSTing every documented field and reading the row back out of the database.
+simplefin_connect_model = ns.model('SimplefinConnect', {
+    'access_url': fields.String(required=True, description='SimpleFin access URL'),
+})
+
+simplefin_import_model = ns.model('SimplefinImport', {
+    'account_ids': fields.List(fields.String, required=True,
+                               description='SimpleFin account ids to import'),
+    'owner_id': fields.String(required=False,
+                              description='Household member to attribute the accounts to'),
+})
+
+# formData, not JSON: this endpoint reads request.files and request.form.
+csv_import_parser = reqparse.RequestParser()
+csv_import_parser.add_argument('csv_file', location='files', type=FileStorage,
+                               required=True, help='CSV file to import')
+csv_import_parser.add_argument('account_id', location='form', required=False,
+                               help='Account to import into')
+
 account_model = ns.model('Account', {
     'name': fields.String(required=True, description='Account name'),
     'account_type': fields.String(required=True, description='Account type (checking, savings, credit, etc.)'),
@@ -297,6 +316,7 @@ class AccountSync(Resource):
 @ns.route('/simplefin/connect')
 class SimpleFinConnect(Resource):
     @ns.doc('connect_simplefin', security='Bearer')
+    @ns.expect(simplefin_connect_model)
     @jwt_required()
     def post(self):
         """Save SimpleFin access token"""
@@ -390,6 +410,7 @@ class SimpleFinDisconnect(Resource):
 @ns.route('/simplefin/import')
 class SimpleFinImport(Resource):
     @ns.doc('import_simplefin_accounts', security='Bearer')
+    @ns.expect(simplefin_import_model)
     @jwt_required()
     def post(self):
         """
@@ -501,6 +522,7 @@ class SimpleFinFetch(Resource):
 @ns.route('/import-csv')
 class CSVImport(Resource):
     @ns.doc('import_csv', security='Bearer')
+    @ns.expect(csv_import_parser)
     @jwt_required()
     def post(self):
         """Import transactions from CSV file"""

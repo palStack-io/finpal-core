@@ -1,6 +1,7 @@
 """User management API endpoints"""
 from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields, reqparse
+from werkzeug.datastructures import FileStorage
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -50,6 +51,29 @@ password_reset_confirm_model = ns.model('PasswordResetConfirm', {
 
 delete_account_model = ns.model('DeleteAccount', {
     'password': fields.String(required=True, description='Password confirmation'),
+})
+
+# Multipart uploads are still request bodies a client has to construct, so they
+# are documented with a parser - restx emits these as formData parameters rather
+# than a JSON schema.
+avatar_parser = reqparse.RequestParser()
+avatar_parser.add_argument('avatar', location='files', type=FileStorage,
+                           required=True, help='Avatar image file')
+
+import_parser = reqparse.RequestParser()
+import_parser.add_argument('data', location='files', type=FileStorage,
+                           required=True, help='JSON backup file')
+
+delete_all_data_model = ns.model('DeleteAllData', {
+    'password': fields.String(required=True, description='Password confirmation'),
+})
+
+api_settings_model = ns.model('ApiSettings', {
+    # All optional: the handler updates a column only when its key is present,
+    # so an omitted field means "leave it alone" rather than "clear it".
+    'simplefinEnabled': fields.Boolean(required=False, description='Enable SimpleFin'),
+    'investmentTrackingEnabled': fields.Boolean(required=False, description='Enable investment tracking'),
+    'fmpApiKey': fields.String(required=False, description='Financial Modeling Prep API key'),
 })
 
 session_model = ns.model('Session', {
@@ -116,6 +140,7 @@ class Profile(Resource):
 @ns.route('/avatar')
 class Avatar(Resource):
     @ns.doc('upload_avatar')
+    @ns.expect(avatar_parser)
     @jwt_required()
     def post(self):
         """Upload user avatar image"""
@@ -474,6 +499,7 @@ class Export(Resource):
 @ns.route('/import')
 class Import(Resource):
     @ns.doc('import_data')
+    @ns.expect(import_parser)
     @jwt_required()
     def post(self):
         """Import user data from JSON backup"""
@@ -587,6 +613,7 @@ class ResetCategories(Resource):
 @ns.route('/delete-all-data')
 class DeleteAllData(Resource):
     @ns.doc('delete_all_data')
+    @ns.expect(delete_all_data_model)
     @jwt_required()
     def post(self):
         """Delete all user data (dangerous!)"""
@@ -656,6 +683,7 @@ class ApiSettings(Resource):
         }, 200
 
     @ns.doc('update_api_settings')
+    @ns.expect(api_settings_model)
     @jwt_required()
     @demo_restricted
     def put(self):

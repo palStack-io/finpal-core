@@ -244,9 +244,25 @@ class RecurringDetect(Resource):
             }, 500
 
 
+ignore_pattern_model = ns.model('IgnorePattern', {
+    'pattern_key': fields.String(required=True, description='Key of the detected pattern to ignore'),
+})
+
+create_from_pattern_model = ns.model('CreateFromPattern', {
+    'pattern_key': fields.String(required=True, description='Key of the detected pattern'),
+    # The rest override what the detector inferred; all optional.
+    'description': fields.String(required=False, description='Override the description'),
+    'amount': fields.Float(required=False, description='Override the amount'),
+    'frequency': fields.String(required=False, description='Override the frequency'),
+    'start_date': fields.String(required=False, description='Override the start date (YYYY-MM-DD)'),
+    'category_id': fields.Integer(required=False, description='Override the category'),
+})
+
+
 @ns.route('/ignore')
 class RecurringIgnore(Resource):
     @ns.doc('ignore_pattern', security='Bearer')
+    @ns.expect(ignore_pattern_model)
     @jwt_required()
     def post(self):
         """Ignore a detected recurring pattern"""
@@ -284,6 +300,7 @@ class RecurringIgnore(Resource):
 @ns.route('/create-from-pattern')
 class RecurringFromPattern(Resource):
     @ns.doc('create_from_pattern', security='Bearer')
+    @ns.expect(create_from_pattern_model)
     @jwt_required()
     def post(self):
         """Create recurring transaction from detected pattern"""
