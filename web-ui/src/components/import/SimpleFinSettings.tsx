@@ -340,16 +340,7 @@ export const SimpleFinSettings: React.FC = () => {
               }}
               placeholder="https://..."
               disabled={isLoading}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: 'var(--input-bg)',
-                border: '1px solid var(--input-border)',
-                borderRadius: '8px',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                outline: 'none'
-              }}
+              className="fp-input"
             />
           </div>
 

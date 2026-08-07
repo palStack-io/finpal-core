@@ -425,17 +425,36 @@ body {
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* U-03 — STILL UNUSED, AND DRIFTED. Left alone deliberately rather than
-   half-adopted. Five inputs inline the same eight properties as this rule but
-   with a flat `padding: 12px` where this says `10px 14px`, so whoever adopts it
-   must reconcile that first — exactly the trap .page-title set in #87. The
-   inline blocks are multi-line in the source and were not matched by the
-   single-line extraction pass in this PR; they are the obvious next slice. */
+/* U-03 — RECONCILED AND NOW ACTUALLY USED (slice 3). This rule said
+   `padding: 10px 14px` and shipped nowhere, while the inputs it describes all
+   inline a flat `padding: 12px`. So `12px` is what the app renders and `10px 14px`
+   was never on screen: adopting the rule as written would have re-padded every
+   input, which is exactly the trap `.page-title` set in #87 (it said 28px where
+   seven pages rendered 32px). Reconciled to what ships, then adopted — the same
+   order as #87, and the pin in pageShells.test.ts moved with it deliberately.
+
+   THE "FIVE INPUTS" THIS COMMENT USED TO CLAIM WAS WRONG, and the reason is worth
+   keeping: it came from a single-line extraction pass that could not see
+   multi-line style objects. A brace-matched sweep finds 26 blocks referencing
+   --input-border, of which 11 share this exact shape. ZERO of the 26 matched this
+   rule verbatim, so there was no zero-change adoption available at any site — the
+   reconciliation was mandatory, not tidiness. A measurement that undercounts by
+   half looks exactly like a measurement.
+
+   10 of the 11 are adopted. The 11th is Settings' disabled Email field, which
+   inlines --text-muted and `cursor: not-allowed`: correct disabled styling, and a
+   clean exclusion rather than a site needing an override.
+
+   The :focus rule below is not a new invention — 14 components already set this
+   exact pair (--brand-main-green border, --input-bg-focus background) imperatively
+   in onFocus/onBlur handlers. Adopting makes these 10 match that convention
+   declaratively instead of leaving them the only inputs with no focus response.
+   Retiring those 14 hand-rolled handlers in favour of this rule is the next slice. */
 .fp-input {
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 12px;
   color: var(--text-primary);
   font-size: 14px;
   width: 100%;

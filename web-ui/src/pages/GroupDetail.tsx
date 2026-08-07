@@ -599,17 +599,8 @@ export const GroupDetail: React.FC = () => {
                   placeholder="Email address"
                   value={newMemberEmail}
                   onChange={(e) => setNewMemberEmail(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'var(--input-bg)',
-                    border: '1px solid var(--input-border)',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    marginBottom: '24px',
-                    outline: 'none'
-                  }}
+                  className="fp-input"
+                  style={{ marginBottom: '24px' }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       handleAddMember();
@@ -698,16 +689,7 @@ export const GroupDetail: React.FC = () => {
                     placeholder="Group name"
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: 'var(--input-bg)',
-                      border: '1px solid var(--input-border)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
+                    className="fp-input"
                   />
                 </div>
                 <div style={{ marginBottom: '16px' }}>
@@ -719,17 +701,8 @@ export const GroupDetail: React.FC = () => {
                     value={groupDescription}
                     onChange={(e) => setGroupDescription(e.target.value)}
                     rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: 'var(--input-bg)',
-                      border: '1px solid var(--input-border)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '14px',
-                      outline: 'none',
-                      resize: 'vertical'
-                    }}
+                    className="fp-input"
+                    style={{ resize: 'vertical' }}
                   />
                 </div>
                 <div style={{ marginBottom: '24px' }}>
@@ -739,17 +712,8 @@ export const GroupDetail: React.FC = () => {
                   <select
                     value={defaultSplitMethod}
                     onChange={(e) => setDefaultSplitMethod(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: 'var(--input-bg)',
-                      border: '1px solid var(--input-border)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)',
-                      fontSize: '14px',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
+                    className="fp-input"
+                    style={{ cursor: 'pointer' }}
                   >
                     <option value="equal" style={secondaryBgStyle}>Equal Split</option>
                     <option value="percentage" style={secondaryBgStyle}>Percentage Split</option>

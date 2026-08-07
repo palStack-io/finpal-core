@@ -417,16 +417,7 @@ export const Settings: React.FC = () => {
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--input-border)',
-                        borderRadius: '8px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
+                      className="fp-input"
                     />
                   </div>
 
@@ -510,17 +501,8 @@ export const Settings: React.FC = () => {
                     <select
                       value={profileData.currency}
                       onChange={(e) => setProfileData({...profileData, currency: e.target.value as Currency})}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--input-border)',
-                        borderRadius: '8px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none',
-                        cursor: 'pointer'
-                      }}
+                      className="fp-input"
+                      style={{ cursor: 'pointer' }}
                     >
                       {currencies.map((curr) => (
                         <option key={curr} value={curr} style={{ background: 'var(--bg-secondary)' }}>{curr}</option>
@@ -535,17 +517,8 @@ export const Settings: React.FC = () => {
                     <select
                       value={profileData.timezone}
                       onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--input-border)',
-                        borderRadius: '8px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none',
-                        cursor: 'pointer'
-                      }}
+                      className="fp-input"
+                      style={{ cursor: 'pointer' }}
                     >
                       {timezones.map((tz) => (
                         <option key={tz} value={tz} style={{ background: 'var(--bg-secondary)' }}>{tz}</option>
@@ -717,16 +690,7 @@ export const Settings: React.FC = () => {
                       value={passwordData.confirmPassword}
                       onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
                       placeholder="Confirm new password"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--input-border)',
-                        borderRadius: '8px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
+                      className="fp-input"
                     />
                   </div>
 
@@ -1215,16 +1179,7 @@ export const Settings: React.FC = () => {
                 value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)}
                 placeholder="Your password"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'var(--input-bg)',
-                  border: '1px solid var(--input-border)',
-                  borderRadius: '8px',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
+                className="fp-input"
               />
             </div>
 
