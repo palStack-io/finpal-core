@@ -5,7 +5,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.models.account import Account
 from src.models.transaction import CategorySplit, Expense
 from src.extensions import db
-from src.utils.household import can_manage_owned, visible_user_ids
+from src.utils.household import (
+    can_manage_owned, owner_scope_filter, read_scope, scope_query,
+    visible_user_ids)
 from src.services.transaction import balances
 from schemas import transaction_schema, transactions_schema
 from schemas.input_schemas import transaction_input
@@ -55,70 +57,15 @@ def _prior_category(transaction_id):
     return {'category_id': expense.category_id} if expense else None
 
 
-def _owner_scope_filter(user_ids):
-    """Rows attributed to any of `user_ids`.
-
-    **A row belongs to whoever owns its ACCOUNT, full stop** — owner decision,
-    2026-08-06. `split_with` stays in the product for settling up, and the group and
-    settlement screens still read it, but it no longer answers "whose transaction is
-    this". A row Alice paid for on her card and split with Bob is Alice's; Bob's
-    share is a settlement matter, not an attribution one.
-
-    The second clause is the orphan rule, and it is not defensive padding.
-    `Expense.account_id` is nullable and
-    `AccountRepository.nullify_account_on_transactions` nulls it across an account's
-    entire history when the account is deleted, so account-less rows are reachable
-    and permanent. They fall back to `Expense.user_id` — who entered the row — which
-    is the only non-null field that can carry them.
-
-    Written as ONE predicate on purpose. The default household view and a
-    member-filtered view are both built from it, so they cannot disagree about which
-    rows a member owns. Because it reads `Account.user_id`, every caller must join
-    `Account` in — see `_scope_query`.
-    """
-    return or_(
-        Account.user_id.in_(user_ids),
-        and_(Expense.account_id.is_(None), Expense.user_id.in_(user_ids)),
-    )
-
-
-def _scope_query(user_ids):
-    """`_owner_scope_filter` with the outer join it depends on.
-
-    The join must be OUTER: an inner join drops every account-less row before the
-    orphan clause can catch it, which would silently hide rows rather than
-    misattribute them. The ON clause is explicit because `Expense` has two foreign
-    keys to `accounts` (`account_id` and `destination_account_id`) and SQLAlchemy
-    cannot choose between them.
-    """
-    return (Expense.query
-            .outerjoin(Account, Expense.account_id == Account.id)
-            .filter(_owner_scope_filter(user_ids)))
-
-
-def _read_scope(user_id):
-    """The user IDs a *read* by `user_id` may cover.
-
-    `visible_user_ids`, never `household_user_ids` — it collapses to the caller
-    alone for a demo account. Demo accounts ship with a published password, so a
-    read keyed to the household puts the real household's money behind credentials
-    that are in the repository. That is D-42, and this is the same guard one level
-    down.
-
-    **A personal access token stays caller-scoped — D-50.** Widening reads to the
-    household would otherwise have widened them for PATs too, silently, as a side
-    effect rather than a decision. `AgentAccess.tsx:386` promises the user in as
-    many words: *"A token reads only your own data."* A PAT is a long-lived
-    credential pasted into an MCP client or a script, so quietly handing it a
-    housemate's money breaks a stated promise on exactly the surface where the
-    promise matters most. `g.pat` is set by `api_auth_required` and is None for an
-    ordinary session, which is what makes the two cases distinguishable at all.
-    """
-    from flask import g
-
-    if getattr(g, 'pat', None) is not None:
-        return [user_id]
-    return visible_user_ids(user_id)
+# Promoted to `src/utils/household.py` during D-18 item E, so the analytics
+# service builds its figures from the SAME predicate this list is built from.
+# Two copies is how the list and the totals would start disagreeing about the
+# same rows again — which is what D-18 is. Re-exported under the old private
+# names because the tests and the rest of this module refer to them, and a rename
+# would have buried the move inside an unrelated diff.
+_owner_scope_filter = owner_scope_filter
+_scope_query = scope_query
+_read_scope = read_scope
 
 
 def _transactions_in_scope(user_id):

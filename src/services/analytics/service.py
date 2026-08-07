@@ -10,33 +10,50 @@ from src.models.currency import Currency
 from src.models.account import Account
 from src.models.associations import group_users
 from src.extensions import db
-from src.utils.split_with import split_with_filter
 
 class AnalyticsService:
     def __init__(self):
         pass
 
-    def get_dashboard_data(self, user_id):
+    def get_dashboard_data(self, user_id, scope_ids=None):
         """Get dashboard overview data"""
         from src.utils.helpers import get_base_currency, sync_investments_with_accounts, calculate_asset_debt_trends
-        from src.utils.household import get_all_user_ids
+        from src.utils.household import read_scope, scope_query
         from src.models.user import User
 
         now = datetime.now()
         current_user = User.query.get(user_id)
         base_currency = get_base_currency(current_user)
-        household_ids = get_all_user_ids()
 
-        # Fetch household expenses for the current year + 1 month buffer.
-        # This bounds the query as transaction history grows.
+        # TWO scopes, and collapsing them is a defect either way.
+        #
+        # `household_ids` is who the caller may read at all — `read_scope`, never
+        # `get_all_user_ids()`, which has no `is_demo_user` filter and therefore
+        # put the real household's money behind a published demo password (D-42's
+        # hole, one service over). It also carries D-50: a personal access token
+        # collapses to the caller, so widening this function did not silently
+        # widen every token with it.
+        #
+        # `scope_ids` is whose MONEY the figures describe — the same thing
+        # narrowed by `member_id`. Categories and budgets are HOUSEHOLD PROPERTY
+        # (owner decision, D-20), so they follow `household_ids` and do not shrink
+        # when the user filters to one member.
+        household_ids = read_scope(user_id)
+        if scope_ids is None:
+            scope_ids = household_ids
+
+        # Expenses for the current year + 1 month buffer, which bounds the query
+        # as history grows.
+        #
+        # `split_with_filter` is gone: a row belongs to whoever owns its ACCOUNT
+        # (owner decision 2026-08-06). #76 re-keyed the transactions list and left
+        # this query behind, so the list and these totals could disagree about the
+        # same rows. `scope_query` is the transactions list's own predicate,
+        # promoted to `src/utils/household.py` so there is exactly one of it.
         dashboard_start = datetime(now.year, 1, 1) - timedelta(days=31)
-        expenses = Expense.query.filter(
-            or_(
-                Expense.user_id.in_(household_ids),
-                split_with_filter(Expense.split_with, user_id)
-            ),
-            Expense.date >= dashboard_start
-        ).order_by(Expense.date.desc()).all()
+        expenses = (scope_query(scope_ids)
+                    .filter(Expense.date >= dashboard_start)
+                    .order_by(Expense.date.desc()).all())
 
         users = User.query.all()
         groups = Group.query.join(group_users).filter(group_users.c.user_id == user_id).all()
@@ -141,26 +158,22 @@ class AnalyticsService:
             if expense.date.year != current_year:
                 continue
 
-            splits = expense_splits[expense.id]
-            user_share = 0
-
-            # Find user's share
-            if splits['payer']['id'] == user_id:
-                user_share = splits['payer']['amount']
-            else:
-                for split in splits['splits']:
-                    if split['id'] == user_id:
-                        user_share = split['amount']
-                        break
-
-            # Add to totals
+            # **THE D-18 FIX.** This used to be the caller's SHARE of each split,
+            # while the income loop above summed whole amounts over the household
+            # — so `net_cash_flow` subtracted a caller-scoped figure from a
+            # household-scoped one and a member who had entered nothing saw a
+            # 100% savings rate. Attribution is the account's owner now, the query
+            # above is already scoped to exactly those rows, and the two terms
+            # finally describe the same people. The split shares are still
+            # computed and still used, by `_calculate_iou_data` — settling up is a
+            # different question from whose money it is.
             if not hasattr(expense, 'transaction_type') or expense.transaction_type == 'expense':
-                total_expenses += user_share
-                total_expenses_only += user_share
+                total_expenses += expense.amount
+                total_expenses_only += expense.amount
 
                 if expense.date.month == now.month and expense.date.year == now.year:
-                    current_month_total += user_share
-                    current_month_expenses_only += user_share
+                    current_month_total += expense.amount
+                    current_month_expenses_only += expense.amount
 
                 if expense.card_used:
                     unique_cards.add(expense.card_used)
@@ -169,7 +182,7 @@ class AnalyticsService:
         iou_data = self._calculate_iou_data(user_id, expenses, expense_splits)
 
         # Calculate budget summary
-        budget_summary = self._calculate_budget_summary(user_id, now)
+        budget_summary = self._calculate_budget_summary(user_id, now, household_ids)
 
         # Calculate derived metrics
         net_cash_flow = total_income - total_expenses_only
@@ -186,7 +199,8 @@ class AnalyticsService:
 
         # Calculate asset and debt trends
         try:
-            asset_debt_trends = calculate_asset_debt_trends(current_user)
+            asset_debt_trends = calculate_asset_debt_trends(current_user,
+                                                             user_ids=scope_ids)
         except Exception:
             asset_debt_trends = {
                 'months': [], 'assets': [], 'debts': [],
@@ -272,10 +286,19 @@ class AnalyticsService:
             net_balance=net_balance
         )
 
-    def _calculate_budget_summary(self, user_id, now):
-        """Calculate budget summary for the current month"""
-        from src.utils.household import get_all_user_ids
-        budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids()), Budget.active == True).all()
+    def _calculate_budget_summary(self, user_id, now, household_ids=None):
+        """Calculate budget summary for the current month.
+
+        Budgets are household property (D-20), so this takes the caller's whole
+        household rather than the member-narrowed scope — a filter that narrowed
+        the budget bar to one member would be claiming the budget itself is
+        theirs. `household_ids` is passed in rather than recomputed so the two
+        cannot drift; the default keeps the older callers working.
+        """
+        from src.utils.household import read_scope
+        if household_ids is None:
+            household_ids = read_scope(user_id)
+        budgets = Budget.query.filter(Budget.user_id.in_(household_ids), Budget.active == True).all()
 
         # Use a namespace object so template can access with dot notation
         from types import SimpleNamespace
@@ -408,17 +431,15 @@ class AnalyticsService:
         build twenty other fields the caller discards. This queries the window
         the caller actually asked for.
         """
-        from src.utils.household import get_all_user_ids
+        from src.utils.household import read_scope, scope_query
 
-        household_ids = get_all_user_ids()
+        household_ids = read_scope(user_id)
 
-        query = Expense.query.filter(
-            or_(
-                Expense.user_id.in_(household_ids),
-                split_with_filter(Expense.split_with, user_id)
-            ),
-            Expense.transaction_type == transaction_type
-        )
+        # Attribution is the ACCOUNT's owner (owner decision 2026-08-06), so this
+        # is the transactions list's own predicate rather than a second one.
+        # `split_with` no longer answers "whose row is this" anywhere.
+        query = scope_query(household_ids).filter(
+            Expense.transaction_type == transaction_type)
         if start is not None:
             query = query.filter(Expense.date >= start)
         if end is not None:
@@ -430,13 +451,12 @@ class AnalyticsService:
 
     def get_spending_trends(self, user_id, months=6):
         """Get spending trends over time"""
-        from src.utils.household import get_all_user_ids
-        household_ids = get_all_user_ids()
+        from src.utils.household import read_scope, scope_query
+        household_ids = read_scope(user_id)
         trends = []
         for i in range(months):
             month_date = datetime.now() - timedelta(days=30*i)
-            expenses = Expense.query.filter(
-                Expense.user_id.in_(household_ids),
+            expenses = scope_query(household_ids).filter(
                 Expense.date >= datetime(month_date.year, month_date.month, 1),
                 Expense.date < datetime(month_date.year, month_date.month + 1, 1) if month_date.month < 12
                     else datetime(month_date.year + 1, 1, 1)
@@ -452,18 +472,16 @@ class AnalyticsService:
 
         # Add monthly_income for stats page
         from src.models.transaction import Expense
-        from src.utils.household import get_all_user_ids
+        from src.utils.household import read_scope, scope_query
         from sqlalchemy import or_
 
-        household_ids = get_all_user_ids()
+        household_ids = read_scope(user_id)
 
         # Get all expenses for the household
-        expenses = Expense.query.filter(
-            or_(
-                Expense.user_id.in_(household_ids),
-                split_with_filter(Expense.split_with, user_id)
-            )
-        ).all()
+        # Attribution is the ACCOUNT's owner (owner decision 2026-08-06), so this
+        # is the transactions list's own predicate rather than a second one.
+        # `split_with` no longer answers "whose row is this" anywhere.
+        expenses = scope_query(household_ids).all()
 
         # Pre-calculate splits
         expense_splits = {}
@@ -543,17 +561,15 @@ class AnalyticsService:
         from sqlalchemy import or_
         from datetime import datetime, timedelta
         from calendar import month_abbr
-        from src.utils.household import get_all_user_ids
+        from src.utils.household import read_scope, scope_query
 
-        household_ids = get_all_user_ids()
+        household_ids = read_scope(user_id)
 
         # Get all transactions for the household
-        expenses = Expense.query.filter(
-            or_(
-                Expense.user_id.in_(household_ids),
-                split_with_filter(Expense.split_with, user_id)
-            )
-        ).all()
+        # Attribution is the ACCOUNT's owner (owner decision 2026-08-06), so this
+        # is the transactions list's own predicate rather than a second one.
+        # `split_with` no longer answers "whose row is this" anywhere.
+        expenses = scope_query(household_ids).all()
 
         # Pre-calculate splits
         expense_splits = {}

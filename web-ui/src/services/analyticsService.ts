@@ -127,11 +127,20 @@ export const analyticsService = {
   /**
    * Get dashboard overview data
    */
-  async getDashboardData(): Promise<DashboardData> {
+  /**
+   * `memberId` narrows every figure in the payload to one household member —
+   * their accounts, plus any account-less rows they entered. Omit for the whole
+   * household. An id outside the caller's household answers **403**, not an empty
+   * dashboard: a dashboard of zeroes is indistinguishable from a member who has
+   * nothing, so the refusal has to be visible. D-18 item E.
+   */
+  async getDashboardData(memberId?: string | null): Promise<DashboardData> {
     const response = await api.get<{
       success: boolean;
       data: DashboardData;
-    }>('/api/v1/analytics/dashboard');
+    }>('/api/v1/analytics/dashboard', {
+      params: memberId ? { member_id: memberId } : undefined,
+    });
     return response.data.data;
   },
 

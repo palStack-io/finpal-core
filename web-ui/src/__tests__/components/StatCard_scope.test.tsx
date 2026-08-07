@@ -14,11 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatCard } from '../../components/StatCard';
-import {
-  DASHBOARD_FIGURE_SCOPE,
-  MIXED_SCOPE_CAPTION,
-  SCOPE_TAG,
-} from '../../utils/scope';
+import { SCOPE_TAG } from '../../utils/scope';
 
 const renderCard = (scope?: 'yours' | 'household' | 'mixed') =>
   render(
@@ -63,20 +59,35 @@ describe('StatCard scope labelling', () => {
   });
 });
 
-describe('the Dashboard figure map', () => {
-  it('keeps income and expenses on different scopes', () => {
-    // The asymmetry the written summary of D-01 missed: the backend's income
-    // loop applies no user filter, while the expense loop takes the caller's
-    // split share. Asserted against the live handler in
-    // tests/integration/test_dashboard_scope_mix.py.
-    expect(DASHBOARD_FIGURE_SCOPE.monthlyIncome).toBe('household');
-    expect(DASHBOARD_FIGURE_SCOPE.monthlyExpenses).toBe('yours');
-    expect(DASHBOARD_FIGURE_SCOPE.netWorth).toBe('yours');
+/**
+ * **The Dashboard figure map is GONE — D-18 item E — and this block is rewritten
+ * rather than deleted, because deleting it would erase the reason it existed.**
+ *
+ * It asserted `monthlyIncome: 'household'`, `monthlyExpenses: 'yours'`,
+ * `netWorth: 'yours'` and `savingsRate: 'mixed'`. Every one of those was true and
+ * is now false: the dashboard's figures all describe the same people and follow
+ * one member filter. Left in place, this block would have kept **passing** — the
+ * map object still existed after the page stopped importing it — while
+ * certifying a claim that had stopped being true of anything. That is the shape
+ * #69/#71 hit, where a contract test went on asserting the exact definition that
+ * caused the hole.
+ *
+ * What replaces it is not another copy of the map. `StatCard`'s `scope` prop is
+ * still used by surfaces that genuinely mix scopes (Investments, pointsPal), so
+ * the rendering assertions above stay; the *Dashboard's* answer now lives in
+ * `DashboardMemberFilter.test.tsx`, asserted on the request and the rendered
+ * figures instead of on a lookup table.
+ */
+describe('the retired Dashboard figure map', () => {
+  it('is really gone, so nothing can quietly start reading it again', async () => {
+    const scope = await import('../../utils/scope');
+
+    expect('DASHBOARD_FIGURE_SCOPE' in scope).toBe(false);
+    expect('MIXED_SCOPE_CAPTION' in scope).toBe(false);
   });
 
-  it('gives the savings rate a caption instead of a tag', () => {
-    expect(DASHBOARD_FIGURE_SCOPE.savingsRate).toBe('mixed');
-    expect(MIXED_SCOPE_CAPTION.savingsRate).toMatch(/household/i);
-    expect(MIXED_SCOPE_CAPTION.savingsRate).toMatch(/your/i);
+  it('leaves the vocabulary itself intact for the surfaces that still mix scopes', () => {
+    expect(SCOPE_TAG.yours).toBe('YOURS');
+    expect(SCOPE_TAG.household).toBe('HOUSEHOLD');
   });
 });

@@ -1,51 +1,42 @@
-"""Which scope each `/analytics/dashboard` field carries.
+"""Which scope each `/analytics/dashboard` field carries — the before/after record.
 
-`src/utils/household.py` says "One finPal instance = one household. All users
-share the same data", and `get_all_user_ids()` returns every user on the
-instance. `/accounts`, `/budgets`, `/categories`, `/investments` and the
-dashboard use it. The owner's decision (2026-08-04, AUDIT.md D-01) was to **keep
-both scopings and label them** in the UI rather than change which query a handler
-uses.
+**THE MIX IS GONE. This file now characterises its absence, and that is the point
+of keeping it rather than deleting it.** It was written to pin the old behaviour so
+the UI's per-figure labels had something true to be written against; D-18 item E
+made every figure describe the same people, so the labels it justified are retired
+on the dashboard and these tests assert the new answer. Renaming the tests and
+inverting the assertions is deliberate — the git history of this one file is the
+clearest statement of what item E actually changed.
 
-**`/api/v1/transactions/` no longer filters to the caller — D-18 items B+D,
-2026-08-06.** It is household-scoped now, keyed to the owner of each row's account,
-with an optional `member_id` filter; see `test_transaction_scope_contract.py`. That
-retires D-01's per-figure tags on the transactions page only. **Everything this file
-characterises is unchanged**, because the analytics queries were deliberately left
-for item E: `api/v1/analytics.py` still takes no member parameter at all, so a
-dashboard filter would have had nothing to pass. That is why the dashboard did not
-get the control in the same pass — a filter that re-scoped the recent-transactions
-strip while net worth and savings rate ignored it would be an affordance that lies,
-which is D-18's own failure mode.
-
-So this file is still the before/after record it was written to be, and the "after"
-half of it is item E's job.
-
-Labelling only works if the labels are per field, because this one payload is
-not uniformly scoped:
+WHAT IT USED TO SAY, kept because the shape recurs:
 
     net_worth / total_assets / total_debts   the caller's own accounts
     total_expenses* / current_month_total    the caller's *share* of splits
     total_income / current_month_income      every income row in the household
     expenses / top_categories / monthly_*    every expense row in the household
 
-The income asymmetry is the one that is easy to get wrong: the income loop in
-`AnalyticsService.get_dashboard_data` sums `expense.amount` over the household
+The income asymmetry was the one that was easy to miss: the income loop in
+`AnalyticsService.get_dashboard_data` summed `expense.amount` over the household
 query with no split share and no user filter, while the expense loop a few lines
-below takes `user_share`. So a household member who has entered nothing sees
-somebody else's income as their own — and `net_cash_flow` and `savings_rate`,
-which subtract a user-scoped figure from a household-scoped one, come out as a
-100% savings rate for a user with no activity at all.
+below took `user_share`. So `net_cash_flow` and `savings_rate` subtracted a
+caller-scoped figure from a household-scoped one, and a member who had entered
+nothing saw the household's entire income as their surplus and a **100% savings
+rate**. That is what D-18 was opened for.
 
-These tests characterise that on purpose. They are what the UI labels are
-written against; if the scoping of a field ever changes, the label is wrong and
-one of these fails.
+WHAT IT SAYS NOW: every figure is the household by default and follows `member_id`
+together. Attribution is the account's owner, via the same `owner_scope_filter` the
+transactions list uses, so the list and the totals cannot disagree. The scope is no
+longer a caption the user has to read — it is an answer they chose.
 
-The other half of the pair is `mobile/src/utils/scope.ts`
-(`DASHBOARD_SUMMARY_SCOPE`) with `mobile/src/__tests__/scope.test.ts`. Nothing
-but these two files connects "what the backend does" to "what the screen claims",
-so if you change the scoping here, change the labels there — and keep the two
-docstrings pointing at each other.
+`test_analytics_scope_contract.py` is the oracle for the change itself: the demo
+sandbox, the PAT rule, the 403, and the filter. This file stays deliberately narrow
+— it is about which fields carry which scope, nothing else.
+
+The other half of the pair is `mobile/src/utils/scope.ts` and
+`web-ui/src/utils/scope.ts`, whose dashboard entries went with it. Nothing but
+these files connects "what the backend does" to "what the screen claims", so if
+the scoping changes again, change the labels there — and keep the docstrings
+pointing at each other.
 """
 
 from datetime import datetime
@@ -87,27 +78,34 @@ def _dashboard(client, auth_headers, user):
     return resp.get_json()['data']
 
 
-def test_expense_figures_are_the_callers_own_share(client, auth_headers, seeded,
-                                                   bystander):
-    """The bystander's expense totals stay at zero. Label: "yours"."""
+def test_expense_figures_now_cover_the_household(client, auth_headers, seeded,
+                                                 bystander):
+    """WAS: the bystander's expense totals stayed at zero, labelled "yours".
+
+    NOW: they are the household's, like the income figures they are subtracted
+    from. This is the assertion that flipped, and it is the whole of item E in one
+    number.
+    """
     data = _dashboard(client, auth_headers, bystander)
 
-    assert data['total_expenses_only'] == pytest.approx(0.0, abs=0.01)
-    assert data['current_month_expenses_only'] == pytest.approx(0.0, abs=0.01)
-    assert data['current_month_total'] == pytest.approx(0.0, abs=0.01)
+    assert data['total_expenses_only'] == pytest.approx(250.0, abs=0.01)
+    assert data['current_month_expenses_only'] == pytest.approx(250.0, abs=0.01)
+    assert data['current_month_total'] == pytest.approx(250.0, abs=0.01)
 
 
-def test_net_worth_covers_only_the_callers_own_accounts(client, auth_headers,
-                                                        seeded, bystander,
-                                                        spender):
-    """`calculate_asset_debt_trends` filters by `user_id`. Label: "yours".
+def test_net_worth_now_covers_the_household_like_everything_else(
+        client, auth_headers, seeded, bystander, spender):
+    """WAS: `calculate_asset_debt_trends` filtered to the caller. Label: "yours".
 
-    Note this is the same figure the Accounts screen shows, computed over a
-    different set of rows: `GET /accounts` is household-scoped, so summing the
-    accounts it lists gives the household's net worth. Two screens, one label,
-    two correct numbers — which is why both have to say whose they are.
+    NOW: it takes the same scope as the rest of the payload, so the two members
+    see the same household total and `member_id` narrows it for both.
+
+    The old docstring recorded the contradiction this removes: `GET /accounts` is
+    household-scoped, so summing the accounts that screen LISTS already gave the
+    household's net worth while the dashboard's own figure gave the caller's.
+    Two screens, one label, two different correct numbers. Now there is one.
     """
-    assert _dashboard(client, auth_headers, bystander)['total_assets'] == pytest.approx(0.0, abs=0.01)
+    assert _dashboard(client, auth_headers, bystander)['total_assets'] == pytest.approx(5000.0, abs=0.01)
     assert _dashboard(client, auth_headers, spender)['total_assets'] == pytest.approx(5000.0, abs=0.01)
 
 
@@ -134,17 +132,20 @@ def test_income_is_the_whole_household_not_the_callers_share(client, auth_header
     assert data['current_month_income'] == pytest.approx(4000.0, abs=0.01)
 
 
-def test_net_cash_flow_and_savings_rate_mix_the_two_scopes(client, auth_headers,
-                                                            seeded, bystander):
-    """AUDIT.md D-18: these two have no honest single-owner label.
+def test_net_cash_flow_and_savings_rate_no_longer_mix_two_scopes(
+        client, auth_headers, seeded, bystander):
+    """**AUDIT.md D-18, the symptom the row was opened for.**
 
-    `net_cash_flow = total_income - total_expenses_only` subtracts the caller's
-    share from the household's income. For a member who has entered nothing that
-    is the household's entire income as their surplus, and a 100% savings rate.
-    Labelling cannot fix a figure whose two terms have different owners; it needs
-    an owner decision about which scope the metric should use.
+    WAS: `net_cash_flow = total_income - total_expenses_only` subtracted the
+    caller's split share from the household's income, so the bystander — who has
+    entered nothing — saw the household's entire 4000 as their surplus and a
+    **100% savings rate**. There was no honest single-owner label for it, which is
+    what made this an owner decision rather than a copy change.
+
+    NOW: both terms are the household's. 4000 income less 250 of expenses is 3750,
+    and 93.75% is a number about the household that says so.
     """
     data = _dashboard(client, auth_headers, bystander)
 
-    assert data['net_cash_flow'] == pytest.approx(4000.0, abs=0.01)
-    assert data['savings_rate'] == pytest.approx(100.0, abs=0.01)
+    assert data['net_cash_flow'] == pytest.approx(3750.0, abs=0.01)
+    assert data['savings_rate'] == pytest.approx(93.75, abs=0.01)

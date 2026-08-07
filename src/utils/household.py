@@ -124,3 +124,106 @@ def can_manage_owned(owner_id, caller_id):
     if is_demo_user(owner_id) or is_demo_user(caller_id):
         return False
     return is_admin(caller_id)
+
+
+# --- Attribution ------------------------------------------------------------
+#
+# Promoted here from `api/v1/transactions.py` during D-18 item E, for the reason
+# that file's own docstring gives: the predicate has to be written ONCE. The
+# transactions list, the member filter and now the dashboard's figures are all
+# built from it, so they cannot disagree about which rows a member owns. A second
+# copy inside the analytics service is exactly what would let the list and the
+# totals drift, which is the shape D-18 was opened for.
+
+
+def owner_scope_filter(user_ids):
+    """Rows attributed to any of `user_ids`.
+
+    **A row belongs to whoever owns its ACCOUNT, full stop** — owner decision,
+    2026-08-06. `split_with` stays in the product for settling up, and the group
+    and settlement screens still read it, but it no longer answers "whose
+    transaction is this". A row Alice paid for on her card and split with Bob is
+    Alice's; Bob's share is a settlement matter, not an attribution one.
+
+    The second clause is the orphan rule, and it is not defensive padding.
+    `Expense.account_id` is nullable and
+    `AccountRepository.nullify_account_on_transactions` nulls it across an
+    account's entire history when the account is deleted, so account-less rows are
+    reachable and permanent. They fall back to `Expense.user_id` — who entered the
+    row — which is the only non-null field that can carry them.
+
+    Because it reads `Account.user_id`, every caller must join `Account` in — see
+    `scope_query`.
+    """
+    from sqlalchemy import and_, or_
+
+    from src.models.account import Account
+    from src.models.transaction import Expense
+
+    return or_(
+        Account.user_id.in_(user_ids),
+        and_(Expense.account_id.is_(None), Expense.user_id.in_(user_ids)),
+    )
+
+
+def scope_query(user_ids):
+    """`owner_scope_filter` with the outer join it depends on.
+
+    The join must be OUTER: an inner join drops every account-less row before the
+    orphan clause can catch it, which would silently hide rows rather than
+    misattribute them. The ON clause is explicit because `Expense` has two foreign
+    keys to `accounts` (`account_id` and `destination_account_id`) and SQLAlchemy
+    cannot choose between them.
+    """
+    from src.models.account import Account
+    from src.models.transaction import Expense
+
+    return (Expense.query
+            .outerjoin(Account, Expense.account_id == Account.id)
+            .filter(owner_scope_filter(user_ids)))
+
+
+def read_scope(user_id):
+    """The user IDs a *read* by `user_id` may cover.
+
+    `visible_user_ids`, never `household_user_ids` — it collapses to the caller
+    alone for a demo account. Demo accounts ship with a published password, so a
+    read keyed to the household puts the real household's money behind credentials
+    that are in the repository. That is D-42, and this is the same guard one level
+    down.
+
+    **A personal access token stays caller-scoped — D-50.** Widening reads to the
+    household would otherwise have widened them for PATs too, silently, as a side
+    effect rather than a decision. `AgentAccess.tsx:386` promises the user in as
+    many words: *"A token reads only your own data."* A PAT is a long-lived
+    credential pasted into an MCP client or a script, so quietly handing it a
+    housemate's money breaks a stated promise on exactly the surface where the
+    promise matters most. `g.pat` is set by `api_auth_required` and is None for an
+    ordinary session, which is what makes the two cases distinguishable at all.
+
+    **This is what `analytics` was missing.** Every query in the analytics service
+    scoped on `get_all_user_ids()`, which has no `is_demo_user` filter at all — so
+    a demo login's figures covered the real household's money and vice versa. Same
+    hole as D-42, one service over, and it had never been narrowed because nothing
+    in analytics had a scope decision written down.
+    """
+    from flask import g
+
+    if getattr(g, 'pat', None) is not None:
+        return [user_id]
+    return visible_user_ids(user_id)
+
+
+def member_read_scope(user_id, member_id):
+    """`read_scope`, optionally narrowed to one member.
+
+    Returns `None` when `member_id` names someone outside the caller's scope. The
+    caller answers **403** for that, never an empty list: an empty list is
+    indistinguishable from "that member has nothing", and a filter that silently
+    returns nothing for an id it refuses to honour is the affordance-that-lies
+    shape D-18 exists to remove.
+    """
+    scope = read_scope(user_id)
+    if member_id is None:
+        return scope
+    return [member_id] if member_id in scope else None
