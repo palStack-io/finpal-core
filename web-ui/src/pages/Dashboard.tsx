@@ -14,6 +14,9 @@ import { CHART_COLORS } from '../config/theme';
 import { StatCard } from '../components/StatCard';
 import { DASHBOARD_FIGURE_SCOPE, MIXED_SCOPE_CAPTION } from '../utils/scope';
 import { SectionCard } from '../components/SectionCard';
+import { OwnerBadge } from '../components/OwnerBadge';
+import { teamService } from '../services/teamService';
+import { TeamMember } from '../types/team';
 import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 
@@ -69,6 +72,17 @@ export const Dashboard = () => {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  /**
+   * The household roster, for the owner badge on the Recent Transactions strip.
+   *
+   * That strip is built from `/api/v1/transactions/`, which became household-scoped
+   * on 2026-08-06 — so it started showing housemates' rows. The rest of this page
+   * is untouched by that change and keeps its per-figure scope tags until item E.
+   */
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  useEffect(() => {
+    teamService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [monthlyAggregation, setMonthlyAggregation] = useState<any[]>([]);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
@@ -178,7 +192,12 @@ export const Dashboard = () => {
           transaction_type: txn.transaction_type || 'expense',
           category: txn.category || 'Uncategorized',
           date: txn.date ? new Date(txn.date).toLocaleDateString() : 'Invalid Date',
-          account: txn.account || 'Unknown'
+          account: txn.account || 'Unknown',
+          // Kept when flattening, because `/api/v1/transactions/` went
+          // household-scoped on 2026-08-06 (D-18 items B+D) and this strip is
+          // built from it. Without the owner the strip silently shows a
+          // housemate's rows with nothing saying whose they are.
+          owner: txn.account?.owner ?? null,
         }))
       );
 
@@ -532,7 +551,10 @@ export const Dashboard = () => {
                   </div>
                   <div>
                     <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500', marginBottom: '2px' }}>{txn.description}</p>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: 0 }}>{txn.category?.name || txn.category || 'Uncategorized'} · {txn.date}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: 0 }}>{txn.category?.name || txn.category || 'Uncategorized'} · {txn.date}</p>
+                      <OwnerBadge owner={txn.owner} memberCount={members.length} size="sm" />
+                    </div>
                   </div>
                 </div>
                 <span style={{
