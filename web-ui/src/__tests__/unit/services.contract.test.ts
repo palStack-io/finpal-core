@@ -8,9 +8,10 @@
  * The 'http' adapter is forced so MSW (Node interceptor) can catch Axios requests
  * instead of the XHR adapter that jsdom uses by default.
  */
-import { beforeAll, describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect, vi } from 'vitest';
 import { api } from '../../services/api';
 import transactionService from '../../services/transactionService';
+import { transactionsApi } from '../../services/api/transactions';
 import accountService from '../../services/accountService';
 import budgetService from '../../services/budgetService';
 import categoryService from '../../services/categoryService';
@@ -136,5 +137,57 @@ describe('categoryService contract', () => {
     const c = categories[0];
     expect(c).toHaveProperty('id');
     expect(c).toHaveProperty('name');
+  });
+});
+
+/**
+ * **One endpoint, one query builder — AUDIT D-57.**
+ *
+ * `services/transactionService.ts` and `services/api/transactions.ts` both
+ * describe `GET /api/v1/transactions/`. Each used to declare its own filter type
+ * *and* assemble its own `URLSearchParams`, and the two had drifted: #76 taught
+ * one of them `member_id` and not the other, so `Dashboard.tsx` — which reads
+ * through the first — could not filter its recent strip at all.
+ *
+ * Keyed to behaviour rather than to a type alias: send the same filters through
+ * both entry points and require the same URL. A filter added to one builder and
+ * not the other fails this, which is exactly what went unnoticed for a session.
+ */
+describe('the transactions endpoint has one query builder', () => {
+  it('sends the same request through both entry points', async () => {
+    const seen: string[] = [];
+    const spy = vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
+      seen.push(url);
+      return { data: { success: true, transactions: [], summary: {}, pagination: {} } } as any;
+    });
+
+    const filters = {
+      page: 2, per_page: 5, search: 'tesco',
+      type: 'expense' as const, member_id: 'bob@test.com',
+    };
+    await transactionService.getTransactions(filters);
+    await transactionsApi.getAll(filters);
+
+    spy.mockRestore();
+    expect(seen).toHaveLength(2);
+    const [viaService, viaApi] = seen.map((u) => {
+      const [path, qs] = u.split('?');
+      return path + '?' + [...new URLSearchParams(qs ?? '').entries()].sort().map(([k, v]) => `${k}=${v}`).join('&');
+    });
+    expect(viaService).toBe(viaApi);
+  });
+
+  it('carries every filter it was given, so the comparison is not two empty URLs', async () => {
+    const seen: string[] = [];
+    const spy = vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
+      seen.push(url);
+      return { data: { success: true, transactions: [], summary: {}, pagination: {} } } as any;
+    });
+
+    await transactionService.getTransactions({ member_id: 'bob@test.com', search: 'tesco' });
+
+    spy.mockRestore();
+    expect(seen[0]).toContain('member_id=bob%40test.com');
+    expect(seen[0]).toContain('search=tesco');
   });
 });

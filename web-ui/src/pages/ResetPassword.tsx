@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
 import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
+import { apiErrorMessage } from '../utils/apiError';
 
 export const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ export const ResetPassword: React.FC = () => {
     } catch (error: any) {
       console.error('Reset password error:', error);
       showToast(
-        error.response?.data?.message || 'An unexpected error occurred. Please try again.',
+        apiErrorMessage(error, 'An unexpected error occurred. Please try again.'),
         'error'
       );
     } finally {

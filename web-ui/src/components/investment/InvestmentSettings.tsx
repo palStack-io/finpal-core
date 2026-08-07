@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check, AlertCircle, TrendingUp, Key } from 'lucide-react';
 import { userService } from '../../services/userService';
+import { apiErrorMessage } from '../../utils/apiError';
 
 export const InvestmentSettings: React.FC = () => {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -44,7 +45,7 @@ export const InvestmentSettings: React.FC = () => {
       setSuccess(enabled ? 'Investment tracking enabled' : 'Investment tracking disabled');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update settings');
+      setError(apiErrorMessage(err, 'Failed to update settings'));
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +62,7 @@ export const InvestmentSettings: React.FC = () => {
       setSuccess('FMP API key saved successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save API key');
+      setError(apiErrorMessage(err, 'Failed to save API key'));
     } finally {
       setIsLoading(false);
     }

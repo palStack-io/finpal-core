@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, AlertCircle, Link2, Power, Settings } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { userService } from '../../services/userService';
+import { apiErrorMessage } from '../../utils/apiError';
 
 export const SimpleFinSettings: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -69,7 +70,7 @@ export const SimpleFinSettings: React.FC = () => {
       // Auto-enable SimpleFin after connection
       await handleToggleEnabled(true);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to connect SimpleFin');
+      setError(apiErrorMessage(err, 'Failed to connect SimpleFin'));
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +91,7 @@ export const SimpleFinSettings: React.FC = () => {
       setIsEnabled(false);
       await loadSimpleFinStatus();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to disconnect SimpleFin');
+      setError(apiErrorMessage(err, 'Failed to disconnect SimpleFin'));
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +109,7 @@ export const SimpleFinSettings: React.FC = () => {
       setSuccess(enabled ? 'SimpleFin enabled' : 'SimpleFin disabled');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update settings');
+      setError(apiErrorMessage(err, 'Failed to update settings'));
     } finally {
       setIsLoading(false);
     }

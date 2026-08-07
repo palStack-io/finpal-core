@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
+import { apiErrorMessage } from '../utils/apiError';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ export const Register: React.FC = () => {
     } catch (error: any) {
       console.error('Registration error:', error);
       showToast(
-        error.response?.data?.message || 'Registration failed. Please try again.',
+        apiErrorMessage(error, 'Registration failed. Please try again.'),
         'error'
       );
     } finally {

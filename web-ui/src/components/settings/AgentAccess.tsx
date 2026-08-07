@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, Check, Copy, KeyRound, Trash2, Undo2, X } from 'lucide-react';
 import API_CONFIG from '../../config/api';
 import { agentAccessService } from '../../services/agentAccessService';
+import { apiErrorMessage } from '../../utils/apiError';
 import type {
   AccessToken,
   AgentAction,
@@ -197,7 +198,7 @@ export const AgentAccess: React.FC = () => {
   // The API answers with {'error': ...}; fall back to message for anything
   // that goes through a different error path.
   const readError = (err: any, fallback: string) =>
-    err.response?.data?.error || err.response?.data?.message || fallback;
+    apiErrorMessage(err, fallback);
 
   const flash = (message: string) => {
     setSuccess(message);

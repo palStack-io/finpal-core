@@ -6,6 +6,7 @@ import { teamService } from '../../services/teamService';
 import { TeamMember } from '../../types/team';
 import { formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
+import { apiErrorMessage } from '../../utils/apiError';
 
 interface EditAccountFormProps {
   account: any;
@@ -109,7 +110,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
     } catch (err: any) {
       // Server's reason first — reassigning an account to a non-member is a
       // reachable 400, and axios's own message is only ever the status code.
-      const msg = err.response?.data?.error || err.message || 'Failed to update account';
+      const msg = apiErrorMessage(err, 'Failed to update account');
       setError(msg);
       showToast(msg, 'error');
     } finally {

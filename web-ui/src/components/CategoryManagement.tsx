@@ -3,6 +3,7 @@ import { Plus, Edit2, Trash2, Tag, Folder, Search, X } from 'lucide-react';
 import { categoriesApi, type Category } from '../services/api/categories';
 import { Modal } from './Modal';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 // Category icons mapping
 const categoryIcons: Record<string, string> = {
@@ -86,7 +87,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
         onSuccess();
       }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save category');
+      setError(apiErrorMessage(err, 'Failed to save category'));
     }
   };
 
@@ -342,7 +343,7 @@ export const CategoryManagement: React.FC = () => {
       await categoriesApi.delete(id);
       await loadCategories();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to delete category. It may have associated transactions.');
+      alert(apiErrorMessage(error, 'Failed to delete category. It may have associated transactions.'));
     }
   };
 

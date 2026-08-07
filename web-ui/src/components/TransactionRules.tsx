@@ -6,6 +6,7 @@ import { accountService, Account } from '../services/accountService';
 import { Modal } from './Modal';
 import { formActionsStyle, inputStyle, labelStyle } from '../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 const accentTextStyle: React.CSSProperties = { fontSize: '14px', color: 'var(--text-secondary)', margin: 0 };
 const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 };
@@ -45,7 +46,7 @@ export const TransactionRules: React.FC = () => {
       setStats(statsData?.stats || null);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load rules');
+      setError(apiErrorMessage(err, 'Failed to load rules'));
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export const TransactionRules: React.FC = () => {
       await transactionRulesApi.update(rule.id, { active: !rule.active });
       loadData();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to toggle rule');
+      setError(apiErrorMessage(err, 'Failed to toggle rule'));
     }
   };
 
@@ -67,7 +68,7 @@ export const TransactionRules: React.FC = () => {
       await transactionRulesApi.delete(ruleId);
       loadData();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete rule');
+      setError(apiErrorMessage(err, 'Failed to delete rule'));
     }
   };
 
@@ -104,7 +105,7 @@ export const TransactionRules: React.FC = () => {
         setError(result.error || 'Failed to apply rules');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to apply rules');
+      setError(apiErrorMessage(err, 'Failed to apply rules'));
     } finally {
       setApplyingRules(false);
     }
@@ -496,7 +497,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       // 400's `error` was never reachable — every other catch in this file
       // already has this order. The two `throw new Error` checks above carry no
       // `response`, so they still fall through to `err.message`.
-      setError(err.response?.data?.error || err.message || 'Failed to save rule');
+      setError(apiErrorMessage(err, 'Failed to save rule'));
     } finally {
       setIsSubmitting(false);
     }

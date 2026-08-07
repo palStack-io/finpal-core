@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import { getBranding, supportedCurrencies, type Currency } from '../config/branding';
 import type { OnboardingData } from '../types/user';
 import { DollarSign, Globe, Bell, Smile, ChevronRight, ChevronLeft } from 'lucide-react';
+import { apiErrorMessage } from '../utils/apiError';
 
 const timezones = [
   'America/New_York',
@@ -93,7 +94,7 @@ export const Onboarding: React.FC = () => {
     } catch (error: any) {
       console.error('Onboarding error:', error);
       showToast(
-        error.response?.data?.message || 'Failed to complete onboarding. Please try again.',
+        apiErrorMessage(error, 'Failed to complete onboarding. Please try again.'),
         'error'
       );
     } finally {

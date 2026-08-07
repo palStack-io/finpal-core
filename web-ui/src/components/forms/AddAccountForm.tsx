@@ -8,6 +8,7 @@ import { teamService } from '../../services/teamService';
 import { TeamMember } from '../../types/team';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
+import { apiErrorMessage } from '../../utils/apiError';
 
 interface AddAccountFormProps {
   onSuccess: () => void;
@@ -138,7 +139,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       // `err.message` with "Request failed with status code 400" — so reading that
       // first showed the user a status code instead of what was wrong.
       const e = err as { response?: { data?: { error?: string } }; message?: string };
-      const msg = e.response?.data?.error || e.message || 'Failed to create account';
+      const msg = apiErrorMessage(e, 'Failed to create account');
       setApiError(msg);
       showToast(msg, 'error');
     }
