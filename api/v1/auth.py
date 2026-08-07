@@ -555,6 +555,16 @@ class CurrentUser(Resource):
                 'default_currency_code': user.default_currency_code,
                 'timezone': user.timezone,
                 'hasCompletedOnboarding': user.has_completed_onboarding,  # camelCase
+                # *** modules WAS MISSING HERE AND login SENDS IT — D-63. ***
+                # The clients gate a module's nav entry AND its routes on
+                # `user.modules`, so a user object without the key is a user with
+                # no modules. `POST /auth/login` includes it; this endpoint did
+                # not, and `OidcCallback.tsx` builds its user from THIS payload —
+                # so signing in with OIDC made pointsPal silently disappear while
+                # signing in with a password kept it. Same user, same
+                # entitlement, different answer depending on the door used.
+                # One user shape, one source: `_get_user_modules`.
+                'modules': _get_user_modules(user.id),
                 'notifications': {
                     'email': user.notification_email,
                     'push': user.notification_push,
