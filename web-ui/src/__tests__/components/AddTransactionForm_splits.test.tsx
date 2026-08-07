@@ -69,7 +69,11 @@ function mockForm() {
     http.get(`${BASE}/api/v1/accounts`, () =>
       HttpResponse.json({ success: true, accounts: [
         { id: 1, name: 'Chase', currency_code: 'USD' }] })),
-    http.get(`${BASE}/api/v1/groups/`, () => HttpResponse.json({ success: true, groups: [] })),
+    // NO trailing slash — the form requests `/api/v1/groups`. With the slash this
+    // handler matched nothing and the request escaped MSW to the real network,
+    // which `onUnhandledRequest: 'error'` now makes impossible. Second instance
+    // of the same trailing-slash mismatch in these mocks, so it is a pattern.
+    http.get(`${BASE}/api/v1/groups`, () => HttpResponse.json({ success: true, groups: [] })),
     http.get(`${BASE}/api/v1/team/members`, () => HttpResponse.json([])),
     http.put(`${BASE}/api/v1/transactions/:id`, async ({ request }) => {
       bodies.push(await request.json());

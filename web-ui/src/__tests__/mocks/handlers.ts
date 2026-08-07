@@ -298,6 +298,18 @@ export const pointspalHandlers = [
   ),
 ];
 
+// ── Import review banner ──────────────────────────────────────────────────────
+// Every test that renders the Dashboard reaches this, because ImportReviewBanner
+// asks for it unconditionally. It was unhandled in all ten of them and therefore
+// went to the REAL NETWORK under the old `onUnhandledRequest: 'warn'`. None of
+// those tests is about the banner, so a default empty page is the right answer
+// rather than ten local handlers.
+const importHandlers = [
+  http.get(`${BASE}/api/v1/import-batches`, () =>
+    HttpResponse.json({ success: true, batches: [], total: 0, page: 1, pages: 0 })
+  ),
+];
+
 // ── Combined ──────────────────────────────────────────────────────────────────
 export const handlers = [
   ...authHandlers,
@@ -306,4 +318,5 @@ export const handlers = [
   ...budgetHandlers,
   ...categoryHandlers,
   ...pointspalHandlers,
+  ...importHandlers,
 ];

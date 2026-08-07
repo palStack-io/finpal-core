@@ -125,7 +125,13 @@ function mockDashboard({ members = [ALICE, BOB] }: { members?: (typeof ALICE)[] 
       });
     }),
     http.get(`${BASE}/api/v1/accounts`, () => HttpResponse.json({ success: true, accounts: [] })),
-    http.get(`${BASE}/api/v1/budgets/`, () => HttpResponse.json({ success: true, budgets: [] }))
+    // NO trailing slash: `budgetService.getBudgets` requests `/api/v1/budgets`.
+    // This handler said `/budgets/` and therefore matched NOTHING, so the request
+    // escaped MSW and hit the real network — passing here only because something
+    // happened to be listening on jsdom's origin, and failing in CI with
+    // ECONNREFUSED. A trailing slash picking a different handler is this
+    // project's own oldest trap, this time in the mocks rather than the app.
+    http.get(`${BASE}/api/v1/budgets`, () => HttpResponse.json({ success: true, budgets: [] }))
   );
 
   return { analyticsCalls, transactionCalls };
