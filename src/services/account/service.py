@@ -15,7 +15,7 @@ from src.models.currency import Currency
 from src.models.user import User
 from src.utils.currency_converter import convert_currency, get_base_currency
 from src.utils.helpers import auto_categorize_transaction
-from src.utils.household import visible_user_ids
+from src.utils.household import visible_user_ids, can_manage_owned
 from src.repositories.account import AccountRepository
 
 
@@ -152,11 +152,11 @@ class AccountService:
         if not account:
             return False, 'Account not found'
 
-        # Household-scoped: accounts are household property under the settled model,
-        # so a member may delete a housemate's account — the same ruling #69 made for
-        # categories. `visible_user_ids` keeps the demo sandbox symmetric in both
-        # directions, which plain membership would not.
-        if account.user_id not in visible_user_ids(user_id):
+        # Owner or admin (D-47). This was household-wide between #72 and that row,
+        # which let any member delete a housemate's account — and deleting also nulls
+        # `account_id` across the account's entire transaction history, two lines
+        # below. Reads stay household-wide; only mutation is narrowed.
+        if not can_manage_owned(account.user_id, user_id):
             return False, 'You do not have permission to delete this account'
 
         try:

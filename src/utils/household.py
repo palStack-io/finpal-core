@@ -74,7 +74,53 @@ def visible_user_ids(caller_id):
     """The user IDs whose data `caller_id` may see.
 
     The household for a member; the caller alone for a demo account.
+
+    **Reads only.** Seeing a housemate's account and being allowed to change it are
+    different questions — see `can_manage_owned`.
     """
     if is_demo_user(caller_id):
         return [caller_id]
     return household_user_ids()
+
+
+def is_admin(user_id):
+    """Whether this id is a household admin.
+
+    `is_admin` is already the household's authority flag: `api/v1/team.py` gates
+    adding, removing and re-roling members on it, `api/v1/import_sources.py` gates on
+    it, and the first registered user gets it (`api/v1/auth.py`).
+    """
+    return bool(User.query.with_entities(User.is_admin)
+                .filter_by(id=user_id).scalar())
+
+
+def can_manage_owned(owner_id, caller_id):
+    """Whether `caller_id` may MUTATE a thing owned by `owner_id`.
+
+    **Owner or admin — owner decision, 2026-08-06.** Everyone in the household still
+    *sees* every account and portfolio; only its owner and the admin may rename,
+    reassign or delete it. Between 2026-08-06 and this change the deployed rule was
+    "any household member", which let a housemate delete another member's account and
+    null `account_id` across its entire transaction history.
+
+    This is deliberately NOT the rule for categories. Categories are household
+    property with no owner at all (D-20), so there is nothing for an owner check to
+    key on. Accounts and investments are *assignable to a member*, and that is exactly
+    what makes an owner check meaningful for them.
+
+    It is also NOT the rule for SimpleFin sync, which stays household-scoped — see
+    `SimpleFinService.sync_account`. Refreshing an account is driven by whoever holds
+    the credential, not by who owns the money, and `SimpleFin.user_id` is unique per
+    user; keying sync to the owner would leave a reassigned account syncable by nobody.
+
+    Demo accounts collapse to plain ownership in both directions, keeping the sandbox
+    symmetric (D-42): a demo visitor manages only its own rows, and no demo account is
+    ever treated as an admin over real household data.
+    """
+    if not owner_id or not caller_id:
+        return False
+    if owner_id == caller_id:
+        return True
+    if is_demo_user(owner_id) or is_demo_user(caller_id):
+        return False
+    return is_admin(caller_id)

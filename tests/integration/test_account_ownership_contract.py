@@ -78,6 +78,13 @@ written here:
    change exists to remove — one demo account and you are back to seeing a row you
    cannot open.
 
+**Superseded in part, 2026-08-06:** this file originally asserted that *any*
+household member could update or delete a housemate's account. The owner narrowed
+mutation to **owner-or-admin** (D-47) hours later; the two affected tests are re-keyed
+above to pin what D-43 was really about — the row is *found* and then refused (403),
+never hidden (404). Read scope is unchanged and still household-wide. The full
+permission matrix lives in `test_account_manage_permissions.py`.
+
 **Not treated as a defect here, deliberately:** reassigning an account
 reattributes its whole transaction history, while `Expense.user_id` still records
 who entered each row. Those two disagree, and that disagreement is item E's subject
@@ -295,24 +302,44 @@ def test_fix_detail_get_reaches_a_housemates_account(client, alice_h, bob):
     assert resp.get_json()['account']['name'] == 'Bob Savings'
 
 
-def test_fix_detail_put_updates_a_housemates_account(client, alice_h, bob, db):
-    """D-43, the write half."""
+def test_fix_detail_put_finds_a_housemates_account_and_then_decides(
+        client, alice_h, bob, db):
+    """D-43, the write half — **re-keyed, and the reason matters.**
+
+    This originally asserted that any household member could rename a housemate's
+    account, because that is what #72 shipped on my stated assumption. **Owner
+    decision 2026-08-06 narrowed it to owner-or-admin (D-47)**, so the old assertion
+    is now the defect rather than the fix.
+
+    What D-43 was actually about survives, and is what this now pins: the route must
+    **find** the row instead of pretending it does not exist. The discriminating
+    detail is 403 rather than 404 — a 404 would mean the household read scope had
+    been narrowed back and the list would again show a row nothing else can reach.
+    """
     account = AccountFactory(name='Bob Savings', user_id=bob.id)
 
     resp = client.put(f'/api/v1/accounts/{account.id}', headers=alice_h,
-                      json={'name': 'Bob Renamed'})
-    assert resp.status_code == 200
-    assert db.session.get(Account, account.id).name == 'Bob Renamed'
+                      json={'name': 'Alice Renamed It'})
+
+    assert resp.status_code == 403, (
+        '404 here would mean D-43 regressed: the row is visible in the list, so it '
+        'must be found and then refused, not hidden')
+    assert db.session.get(Account, account.id).name == 'Bob Savings'
 
 
-def test_fix_detail_delete_removes_a_housemates_account(client, alice_h, bob, db):
-    """D-43, the destructive half. Household property means household-deletable,
-    which is the ruling #69 already made for categories."""
+def test_fix_detail_delete_finds_a_housemates_account_and_then_decides(
+        client, alice_h, bob, db):
+    """D-43, the destructive half — re-keyed for the same reason as the one above.
+
+    Deleting also nulls `account_id` across the account's whole transaction history,
+    which is why this is the operation the narrowing matters most for.
+    """
     account = AccountFactory(name='Bob Savings', user_id=bob.id)
 
     resp = client.delete(f'/api/v1/accounts/{account.id}', headers=alice_h)
-    assert resp.status_code == 200
-    assert db.session.get(Account, account.id) is None
+
+    assert resp.status_code == 403
+    assert db.session.get(Account, account.id) is not None
 
 
 def test_fix_balance_route_reaches_a_housemates_account(client, alice_h, bob):
