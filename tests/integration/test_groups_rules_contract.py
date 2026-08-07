@@ -616,8 +616,43 @@ def test_a_malformed_body_keeps_the_four_key_error_shape(client, headers, url):
     werkzeug's "The browser (or proxy) sent a request..." and silently dropped
     `data.error`. Fixed by registering the same shape on the restx Api, which
     also closes the gap for the ~120 paths that were already restx.
+
+    **The status split is a Flask 3 change, recorded rather than papered over.**
+    Under Flask 2.2 both cases below answered 400, because `get_json()` tried to
+    parse regardless of content type. Flask 2.3+ answers **415** when the request
+    does not claim to be JSON and reserves 400 for JSON that will not parse —
+    which is the correct reading of the two statuses, and is why this test now
+    pins both rather than forcing the old number back.
+
+    The thing that actually matters to the clients is unchanged: the four-key
+    shape holds for BOTH, because the handler keys on `HTTPException` generally
+    and not on 400 specifically.
     """
+    # No Content-Type header — auth_headers carries only Authorization.
     resp = client.post(url, headers=headers, data='{not json')
+
+    assert resp.status_code == 415, (
+        'Flask 3 answers 415 when the body does not claim to be JSON')
+    body = resp.get_json()
+    assert body['error'] == 'Unsupported Media Type'
+    assert body['message'] == 'Unsupported Media Type'
+    assert body['success'] is False
+    assert body['status'] == 415
+
+
+@pytest.mark.parametrize('url', ['/api/v1/transaction-rules',
+                                 '/api/v1/transaction-rules/'])
+def test_unparseable_json_still_answers_400_in_the_same_shape(client, headers, url):
+    """The other half of the Flask 3 split, and the case a real client hits.
+
+    axios sets `Content-Type: application/json` whenever it is given an object,
+    so both clients always claim JSON — meaning a genuine client fault lands
+    HERE, on 400, and not on the 415 above. Pinning only the 415 would leave the
+    status every real caller can actually provoke unasserted.
+    """
+    resp = client.post(url,
+                       headers={**headers, 'Content-Type': 'application/json'},
+                       data='{not json')
 
     assert resp.status_code == 400
     body = resp.get_json()
