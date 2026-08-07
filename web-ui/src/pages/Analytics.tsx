@@ -629,11 +629,11 @@ export const Analytics: React.FC = () => {
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                             <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }}></div>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{cat.name || 'Unknown'}</span>
+                            <span className="fp-hint">{cat.name || 'Unknown'}</span>
                           </div>
                           <div style={flexRowGap12}>
                             <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>({cat.percentage.toFixed(1)}%)</span>
+                            <span className="fp-meta">({cat.percentage.toFixed(1)}%)</span>
                           </div>
                         </div>
                       ))}
@@ -1109,7 +1109,7 @@ const MetricCard: React.FC<{
       </p>
       {change === undefined ? (
         // No comparable previous period. Saying so beats inventing a number.
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+        <p className="fp-meta">
           No previous period to compare
         </p>
       ) : (

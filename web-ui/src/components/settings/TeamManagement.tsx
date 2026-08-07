@@ -643,7 +643,7 @@ export const TeamManagement: React.FC = () => {
           <Crown size={20} />
           Transfer Ownership
         </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+        <p className="fp-hint-block">
           Transfer account ownership to another team member (This action cannot be undone)
         </p>
         <div style={{ ...panelStyle, padding: '24px', textAlign: 'center' }}>

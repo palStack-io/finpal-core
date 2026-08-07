@@ -511,7 +511,7 @@ const BudgetsMinimal = () => {
                 />
                 {/* Budget Health — custom layout, not a simple stat */}
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>Budget Health</p>
+                  <p className="fp-hint-block">Budget Health</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '10px' }}>
                     <span style={{ color: 'var(--brand-green-glow)' }}>{onTrack} on track</span>
                     <span style={{ color: 'var(--accent-yellow)' }}>{warning} at risk</span>

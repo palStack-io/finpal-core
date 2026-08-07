@@ -119,7 +119,7 @@ export const RecurringTransactions: React.FC = () => {
           <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
             Recurring Transactions
           </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          <p className="fp-hint">
             Manage automatic recurring transactions and detect patterns
           </p>
         </div>
@@ -159,7 +159,7 @@ export const RecurringTransactions: React.FC = () => {
           marginBottom: '20px'
         }}>
           <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
-          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p className="fp-error-text">{error}</p>
         </div>
       )}
 
@@ -195,7 +195,7 @@ export const RecurringTransactions: React.FC = () => {
               Detected Patterns ({patterns.length})
             </h3>
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+          <p className="fp-hint-block">
             We found these recurring transaction patterns. Create automatic recurring transactions or ignore them.
           </p>
 

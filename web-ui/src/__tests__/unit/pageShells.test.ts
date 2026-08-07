@@ -98,3 +98,39 @@ describe('the shells are actually used', () => {
     }
   });
 });
+
+describe('the extracted typography roles carry their inline values', () => {
+  /**
+   * Same contract as .page-title above: every value is copied from the inline
+   * block it replaced, so rendering is unchanged. Pinned in text because jsdom
+   * applies no external stylesheet — a rendering test cannot see these at all.
+   *
+   * These are named ROLES, not utilities. `.mb-16` would be hand-rolling the
+   * Tailwind this project deliberately removed; a "hint" or a "section title"
+   * is something the design has an opinion about, and a margin is not.
+   */
+  const cases: Array<[string, Array<[string, string]>]> = [
+    ['.fp-hint', [['color', 'var(--text-secondary)'], ['font-size', '14px']]],
+    ['.fp-hint-block', [['color', 'var(--text-secondary)'], ['font-size', '14px'],
+                        ['margin-bottom', '16px']]],
+    ['.fp-error-text', [['color', 'var(--accent-red)'], ['font-size', '14px'],
+                        ['margin', '0']]],
+    ['.fp-meta', [['color', 'var(--text-muted)'], ['font-size', '13px']]],
+    ['.fp-item-title', [['color', 'var(--text-primary)'], ['font-size', '16px'],
+                        ['font-weight', '600'], ['margin-bottom', '4px']]],
+    ['.fp-section-title', [['font-size', '18px'], ['font-weight', '600'],
+                           ['color', 'var(--text-primary)'], ['margin-bottom', '16px']]],
+  ];
+
+  it.each(cases)('%s', (selector, decls) => {
+    for (const [prop, value] of decls) declares(selector, prop, value);
+  });
+
+  it('.fp-input is left drifted ON PURPOSE, so nobody half-adopts it', () => {
+    // Five inputs inline `padding: 12px`; this rule still says `10px 14px`.
+    // Adopting it without reconciling would resize every one of them, which is
+    // the trap .page-title set. Recorded as a rule rather than a comment so the
+    // next slice cannot miss it.
+    declares('.fp-input', 'padding', '10px 14px');
+  });
+});

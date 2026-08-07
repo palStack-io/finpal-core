@@ -334,7 +334,7 @@ export const Dashboard = () => {
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-primary)' }}>Dashboard</h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+            <p className="fp-hint">
               {selectedMember
                 ? `${selectedMember.name}'s money`
                 : 'Everyone sharing this finPal instance'}
@@ -373,7 +373,7 @@ export const Dashboard = () => {
             value={formatCurrency(monthlyIncome)}
             accentColor="#3b82f6"
             icon={<TrendingUp size={24} color="#3b82f6" />}
-            subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Current month earnings</span>}
+            subtitle={<span className="fp-hint">Current month earnings</span>}
           />
           <StatCard
             label="Monthly Expenses"
@@ -393,7 +393,7 @@ export const Dashboard = () => {
             value={`${savingsRate.toFixed(1)}%`}
             accentColor="#fbbf24"
             icon={<PiggyBank size={24} color="#fbbf24" />}
-            subtitle={<span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Of income, after expenses</span>}
+            subtitle={<span className="fp-hint">Of income, after expenses</span>}
           />
         </div>
 
@@ -471,7 +471,7 @@ export const Dashboard = () => {
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <div style={flexRowGap8}>
                         <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }} />
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{cat.name}</span>
+                        <span className="fp-hint">{cat.name}</span>
                       </div>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{formatCurrency(cat.value)}</span>
                     </div>
@@ -497,7 +497,7 @@ export const Dashboard = () => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500' }}>{budget.category}</span>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+                  <span className="fp-hint">
                     {formatCurrency(budget.spent)} of {formatCurrency(budget.budget)}
                   </span>
                 </div>
@@ -754,7 +754,7 @@ export const Dashboard = () => {
       {/* Footer */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
         <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
+        <p className="fp-meta">Part of the {branding.parentBrand} ecosystem</p>
       </div>
     </>
   );

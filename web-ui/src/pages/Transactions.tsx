@@ -198,7 +198,7 @@ export const Transactions: React.FC = () => {
           <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 className="page-title">Transactions</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Track all your income and expenses</p>
+              <p className="fp-hint">Track all your income and expenses</p>
             </div>
             <button
               onClick={() => setIsAddPanelOpen(true)}
@@ -448,7 +448,7 @@ export const Transactions: React.FC = () => {
                       >
                         Previous
                       </button>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                      <span className="fp-meta">
                         Page {pagination.page} of {pagination.pages}
                       </span>
                       <button

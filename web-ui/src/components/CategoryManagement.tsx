@@ -783,7 +783,7 @@ export const CategoryManagement: React.FC = () => {
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '12px'
         }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+          <h3 className="fp-section-title">
             Suggested Categories
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>

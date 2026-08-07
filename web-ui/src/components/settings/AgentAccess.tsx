@@ -316,7 +316,7 @@ export const AgentAccess: React.FC = () => {
       {error && (
         <div style={bannerStyle('239, 68, 68')}>
           <AlertCircle size={20} style={{ color: 'var(--accent-red)', flexShrink: 0 }} />
-          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p className="fp-error-text">{error}</p>
         </div>
       )}
 
@@ -330,7 +330,7 @@ export const AgentAccess: React.FC = () => {
       {/* The plaintext, shown once */}
       {minted && (
         <div style={panelStyle}>
-          <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+          <h3 className="fp-item-title">
             {minted.token_info.name}
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '12px' }}>
@@ -380,10 +380,10 @@ export const AgentAccess: React.FC = () => {
 
       {/* Tokens */}
       <div style={panelStyle}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+        <h3 className="fp-item-title">
           Access Tokens
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+        <p className="fp-hint-block">
           A token reads only your own data. <strong>Read</strong> cannot change anything;
           <strong> read &amp; write</strong> lets a client propose changes, which still wait
           for you here.
@@ -532,15 +532,15 @@ export const AgentAccess: React.FC = () => {
 
       {/* Pending proposals */}
       <div style={panelStyle}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+        <h3 className="fp-item-title">
           Waiting for You
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+        <p className="fp-hint-block">
           Changes a client proposed. Nothing here has happened yet.
         </p>
 
         {pending.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Nothing is waiting.</p>
+          <p className="fp-meta">Nothing is waiting.</p>
         ) : (
           pending.map((action) => (
             <div key={action.id} style={{ ...rowStyle, alignItems: 'flex-start' }}>
@@ -610,15 +610,15 @@ export const AgentAccess: React.FC = () => {
 
       {/* Recent activity */}
       <div style={panelStyle}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+        <h3 className="fp-item-title">
           Recent Activity
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+        <p className="fp-hint-block">
           Everything a token has done, newest first.
         </p>
 
         {recent.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No activity yet.</p>
+          <p className="fp-meta">No activity yet.</p>
         ) : (
           recent.map((action) => (
             <div key={action.id} style={rowStyle}>

@@ -160,7 +160,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
             <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           </div>
-          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{error}</p>
+          <p className="fp-error-text">{error}</p>
         </div>
       )}
 

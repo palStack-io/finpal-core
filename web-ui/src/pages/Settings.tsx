@@ -781,10 +781,10 @@ export const Settings: React.FC = () => {
                   {/* SimpleFin */}
                   {features?.simplefin !== false ? (
                     <div style={{ marginBottom: '32px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                      <h3 className="fp-section-title">
                         SimpleFin
                       </h3>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                      <p className="fp-hint-block">
                         Connect your bank accounts automatically with SimpleFin. Import transactions and keep your accounts in sync.
                       </p>
                       <SimpleFinSettings />
@@ -799,10 +799,10 @@ export const Settings: React.FC = () => {
                   {/* Investment Tracking */}
                   {features?.investments !== false ? (
                     <div style={{ marginBottom: '32px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                      <h3 className="fp-section-title">
                         Investment Tracking
                       </h3>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                      <p className="fp-hint-block">
                         Track your stocks, ETFs, and other investments. Monitor portfolio performance and get real-time quotes.
                       </p>
                       <InvestmentSettings />
@@ -818,10 +818,10 @@ export const Settings: React.FC = () => {
                       _require_admin gate on /api/v1/import-sources */}
                   {user?.is_admin && (
                     <div style={{ marginBottom: '32px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                      <h3 className="fp-section-title">
                         Automatic CSV Import
                       </h3>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                      <p className="fp-hint-block">
                         Watch a folder on the server and import any CSV dropped into it. Import the
                         first file of a new bank format manually so the column mapping is learned.
                       </p>
@@ -832,10 +832,10 @@ export const Settings: React.FC = () => {
                   {/* Agent access — deliberately not admin-gated: tokens are
                       per-user and reach only that user's own data */}
                   <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                    <h3 className="fp-section-title">
                       Agent Access
                     </h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
+                    <p className="fp-hint-block">
                       Give an LLM or a script read access to your data, and let it
                       propose corrections. Changes that create transactions or move
                       budgets wait for your approval.
@@ -1131,7 +1131,7 @@ export const Settings: React.FC = () => {
             {/* Footer */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
               <img src="/palStack.png" alt="palStack" style={{ height: '24px', width: 'auto', opacity: 0.7 }} />
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Part of the {branding.parentBrand} ecosystem</p>
+              <p className="fp-meta">Part of the {branding.parentBrand} ecosystem</p>
             </div>
           </div>
         </div>

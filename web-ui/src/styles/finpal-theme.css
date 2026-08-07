@@ -425,6 +425,12 @@ body {
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* U-03 — STILL UNUSED, AND DRIFTED. Left alone deliberately rather than
+   half-adopted. Five inputs inline the same eight properties as this rule but
+   with a flat `padding: 12px` where this says `10px 14px`, so whoever adopts it
+   must reconcile that first — exactly the trap .page-title set in #87. The
+   inline blocks are multi-line in the source and were not matched by the
+   single-line extraction pass in this PR; they are the obvious next slice. */
 .fp-input {
   background: var(--input-bg);
   border: 1px solid var(--input-border);
@@ -477,4 +483,71 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+
+/* ---------------------------------------------------------------------------
+   U-03 — typography roles and component shells extracted from repeated inline
+   blocks. Every value below is copied from the inline style it replaces, so
+   rendering is unchanged; see pageShells.test.ts for why that is pinned in text
+   rather than by rendering (jsdom applies no external stylesheet).
+
+   These are NAMED ROLES, not utilities. `.mb-16` would be hand-rolling the
+   Tailwind this project deliberately removed — see the comment at the top of
+   index.css. A "hint" or a "section title" is a thing the design has an opinion
+   about; a margin is not.
+   --------------------------------------------------------------------------- */
+
+/* Secondary explanatory text under a control or heading. */
+.fp-hint {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* The same, where it introduces a block and needs space beneath. */
+.fp-hint-block {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* Inline validation / failure text. Semantic red stays literal per CLAUDE.md. */
+.fp-error-text {
+  color: var(--accent-red);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* De-emphasised supporting detail — timestamps, counts, footnotes. */
+.fp-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* The title of a row or card within a list. */
+.fp-item-title {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* The heading above a section of a page. */
+.fp-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+/* Full-width error banner above a form or list. */
+.fp-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  margin-bottom: 20px;
 }

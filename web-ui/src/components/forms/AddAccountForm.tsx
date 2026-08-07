@@ -199,7 +199,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
             <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           </div>
-          <p style={{ color: 'var(--accent-red)', fontSize: '14px', margin: 0 }}>{apiError}</p>
+          <p className="fp-error-text">{apiError}</p>
         </div>
       )}
 
