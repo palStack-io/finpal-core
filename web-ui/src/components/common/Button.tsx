@@ -104,8 +104,15 @@ export const Button: React.FC<ButtonProps> = ({
             fill="none"
             viewBox="0 0 24 24"
           >
+            {/* The two opacities are what make the spin legible: a faint full
+                ring behind a stronger arc. They were `opacity-25`/`opacity-75`,
+                Tailwind utilities that stopped resolving when the toolchain was
+                removed, which left ring and arc identically opaque and the
+                rotation invisible (D-60). Inline, not re-added as classes —
+                index.css explains why a Tailwind-shaped class comes back as a
+                mixed styling system. */}
             <circle
-              className="opacity-25"
+              style={{ opacity: 0.25 }}
               cx="12"
               cy="12"
               r="10"
@@ -113,7 +120,7 @@ export const Button: React.FC<ButtonProps> = ({
               strokeWidth="4"
             ></circle>
             <path
-              className="opacity-75"
+              style={{ opacity: 0.75 }}
               fill="currentColor"
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
