@@ -6,6 +6,7 @@ import { getBranding } from '../config/branding';
 import { groupService, type Group } from '../services/groupService';
 import { SlidePanel } from '../components/SlidePanel';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 interface GroupFormProps {
   onSuccess: () => void;
@@ -107,7 +108,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
         onSuccess();
       }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to create group');
+      setError(apiErrorMessage(err, 'Failed to create group'));
     }
   };
 

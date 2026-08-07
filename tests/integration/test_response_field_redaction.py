@@ -102,6 +102,18 @@ TRANSACTION_KEYS = {
     # `build_transaction` now refuses a group the caller is not a member of, so a
     # value here always names a group the reader already sees in /groups.
     'group_id',
+    # Added 2026-08-06 for AUDIT D-54, and reviewed against the redaction layer
+    # rather than just appended. `category_splits` is `{category_id: amount}`:
+    # opaque integer keys naming categories the reader already sees in
+    # `/categories/` — `_validated_category_splits` refuses any category that is
+    # not theirs — and float amounts that are a partition of the `amount` already
+    # in this same payload. So it exposes **no value the reader could not already
+    # compute**, and nothing account-identifying. `has_category_splits` is the
+    # boolean the server derives from it. **Nothing for the MCP layer to redact.**
+    # The reason for adding them is that they were write-only: the server refused
+    # an amount change on a split transaction until the splits were restated, and
+    # no client could learn what they were.
+    'category_splits', 'has_category_splits',
     # Added with the same reasoning: an account id the caller must already own for
     # the write to have been accepted, so it exposes nothing new, and omitting it
     # made a transfer's response claim the money went nowhere.

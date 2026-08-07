@@ -8,6 +8,7 @@ import { X, Search, AlertCircle, TrendingUp } from 'lucide-react';
 import { investmentService } from '../../services/api/investments';
 import { useToast } from '../../contexts/ToastContext';
 import { inputStyle, labelStyle } from '../../styles/formStyles';
+import { apiErrorMessage } from '../../utils/apiError';
 
 interface Portfolio {
   id: number;
@@ -70,7 +71,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
       }
     } catch (err: any) {
       console.error('Failed to search stock:', err);
-      const errorMsg = err.response?.data?.error || 'Failed to find stock. Please try again.';
+      const errorMsg = apiErrorMessage(err, 'Failed to find stock. Please try again.');
 
       // Check if it's a rate limit error
       if (errorMsg.includes('Stock not found') || err.response?.status === 404) {
@@ -117,7 +118,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
       handleClose();
     } catch (err: any) {
       console.error('Failed to add holding:', err);
-      setError(err.response?.data?.error || 'Failed to add holding. Please try again.');
+      setError(apiErrorMessage(err, 'Failed to add holding. Please try again.'));
     } finally {
       setIsSaving(false);
     }

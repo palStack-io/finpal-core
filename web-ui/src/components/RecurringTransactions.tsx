@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Repeat, Plus, X, Check, AlertCircle, Sparkles, Eye, EyeOff, Trash2, Edit2 } from 'lucide-react';
 import { recurringService, RecurringExpense, RecurringPattern } from '../services/recurringService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 
@@ -26,7 +27,7 @@ export const RecurringTransactions: React.FC = () => {
       setRecurring(data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load recurring transactions');
+      setError(apiErrorMessage(err, 'Failed to load recurring transactions'));
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ export const RecurringTransactions: React.FC = () => {
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to detect patterns');
+      setError(apiErrorMessage(err, 'Failed to detect patterns'));
     } finally {
       setDetectingPatterns(false);
     }
@@ -59,7 +60,7 @@ export const RecurringTransactions: React.FC = () => {
       setSuccess('Status updated successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to toggle status');
+      setError(apiErrorMessage(err, 'Failed to toggle status'));
     }
   };
 
@@ -74,7 +75,7 @@ export const RecurringTransactions: React.FC = () => {
       setSuccess('Recurring transaction deleted successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete recurring transaction');
+      setError(apiErrorMessage(err, 'Failed to delete recurring transaction'));
     }
   };
 
@@ -86,7 +87,7 @@ export const RecurringTransactions: React.FC = () => {
       setSuccess('Recurring transaction created from pattern!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to create recurring transaction');
+      setError(apiErrorMessage(err, 'Failed to create recurring transaction'));
     }
   };
 
@@ -97,7 +98,7 @@ export const RecurringTransactions: React.FC = () => {
       setSuccess('Pattern ignored');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to ignore pattern');
+      setError(apiErrorMessage(err, 'Failed to ignore pattern'));
     }
   };
 

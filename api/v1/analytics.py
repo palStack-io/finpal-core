@@ -96,6 +96,32 @@ def _serialize_dashboard(dashboard_data):
     }
 
 
+def _member_scope():
+    """`(scope_ids, error_response)` for this request's `?member_id=`.
+
+    D-56. Every analytics endpoint a client renders takes the same filter, and
+    they move together on purpose: a page whose charts followed a control while
+    the ones beside them ignored it is D-51, and `Analytics.tsx` draws all seven
+    on one screen.
+
+    An id outside the caller's scope is **403**, never an empty chart. Seven
+    silently-empty charts would be a worse lie than the per-chart tags this
+    replaces, because nothing on the page would say why.
+    """
+    member_id = request.args.get('member_id') or None
+    scope_ids = member_read_scope(get_jwt_identity(), member_id)
+    if scope_ids is None:
+        return None, ({'success': False,
+                       'error': 'That member is not in your household.'}, 403)
+    return scope_ids, None
+
+
+MEMBER_PARAM = {'member_id': 'Narrow every figure to one household member '
+                             '(their accounts, plus any account-less rows they '
+                             'entered). Omit for the whole household. An id '
+                             'outside your household is a 403.'}
+
+
 @ns.route('/dashboard')
 class Dashboard(Resource):
     @ns.doc('get_dashboard_data', security='Bearer',
@@ -140,14 +166,18 @@ class Dashboard(Resource):
 
 @ns.route('/stats')
 class Statistics(Resource):
-    @ns.doc('get_statistics', security='Bearer')
+    @ns.doc('get_statistics', security='Bearer', params=MEMBER_PARAM)
     @jwt_required()
     def get(self):
         """Get detailed statistics and charts data"""
         current_user_id = get_jwt_identity()
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
 
         try:
-            stats_data = analytics_service.get_stats_data(current_user_id)
+            stats_data = analytics_service.get_stats_data(current_user_id, scope_ids=scope_ids)
 
             # This endpoint used to 500 on every call. `get_stats_data` returns
             # `get_dashboard_data`'s dict, which holds live SQLAlchemy `Expense`
@@ -188,11 +218,15 @@ class Statistics(Resource):
 
 @ns.route('/trends')
 class Trends(Resource):
-    @ns.doc('get_spending_trends', security='Bearer')
+    @ns.doc('get_spending_trends', security='Bearer', params=MEMBER_PARAM)
     @jwt_required()
     def get(self):
         """Get spending trends over time"""
         current_user_id = get_jwt_identity()
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
 
         try:
             # Get trends from service (if method exists)
@@ -200,7 +234,8 @@ class Trends(Resource):
                 trends = analytics_service.get_spending_trends(current_user_id)
             else:
                 # Fallback: use dashboard data for trends
-                dashboard_data = analytics_service.get_dashboard_data(current_user_id)
+                dashboard_data = analytics_service.get_dashboard_data(
+                    current_user_id, scope_ids=scope_ids)
                 trends = {
                     'monthly_labels': dashboard_data.get('monthly_labels', []),
                     'monthly_expenses': dashboard_data.get('monthly_expenses', []),
@@ -223,7 +258,7 @@ class Trends(Resource):
 @ns.route('/categories/top')
 class TopCategories(Resource):
     @ns.doc('get_top_spending_categories', security='Bearer',
-            params={
+            params={**MEMBER_PARAM,
                 'limit': 'Maximum categories to return (default 8, max 50)',
                 'start_date': 'Inclusive ISO start date, e.g. 2026-03-01',
                 'end_date': 'Inclusive ISO end date',
@@ -233,6 +268,10 @@ class TopCategories(Resource):
     def get(self):
         """Get top categories by total, for a date range and direction"""
         current_user_id = get_jwt_identity()
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
 
         # These three were always sent by the web UI and always discarded: the
         # handler called get_dashboard_data(), whose category figures are pinned
@@ -266,7 +305,7 @@ class TopCategories(Resource):
         try:
             categories = analytics_service.get_top_categories(
                 current_user_id, limit=limit, start=start, end=end,
-                transaction_type=transaction_type)
+                transaction_type=transaction_type, scope_ids=scope_ids)
 
             return {
                 'success': True,
@@ -283,14 +322,19 @@ class TopCategories(Resource):
 
 @ns.route('/summary')
 class Summary(Resource):
-    @ns.doc('get_financial_summary', security='Bearer')
+    @ns.doc('get_financial_summary', security='Bearer', params=MEMBER_PARAM)
     @jwt_required()
     def get(self):
         """Get high-level financial summary (for dashboard metrics cards)"""
         current_user_id = get_jwt_identity()
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
 
         try:
-            dashboard_data = analytics_service.get_dashboard_data(current_user_id)
+            dashboard_data = analytics_service.get_dashboard_data(
+                current_user_id, scope_ids=scope_ids)
 
             # Extract key metrics for dashboard cards
             summary = {
@@ -324,11 +368,15 @@ class Summary(Resource):
 
 @ns.route('/cashflow')
 class CashFlow(Resource):
-    @ns.doc('get_cashflow_data', security='Bearer')
+    @ns.doc('get_cashflow_data', security='Bearer', params=MEMBER_PARAM)
     @jwt_required()
     def get(self):
         """Get cash flow data (monthly income, expenses, and savings)"""
         current_user_id = get_jwt_identity()
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
 
         # months was accepted by the service and never sent by the route, so the
         # Week/Month/Year selector could not change this chart.
@@ -337,7 +385,7 @@ class CashFlow(Resource):
             return {'success': False, 'error': 'months must be between 1 and 60'}, 400
 
         try:
-            cashflow_data = analytics_service.get_cashflow_data(current_user_id, months=months)
+            cashflow_data = analytics_service.get_cashflow_data(current_user_id, months=months, scope_ids=scope_ids)
 
             return {
                 'success': True,
@@ -351,14 +399,18 @@ class CashFlow(Resource):
 
 @ns.route('/health')
 class FinancialHealth(Resource):
-    @ns.doc('get_financial_health', security='Bearer')
+    @ns.doc('get_financial_health', security='Bearer', params=MEMBER_PARAM)
     @jwt_required()
     def get(self):
         """Get financial health metrics (debt-to-income, emergency fund, liquidity, etc.)"""
         current_user_id = get_jwt_identity()
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
 
         try:
-            health_data = analytics_service.get_financial_health(current_user_id)
+            health_data = analytics_service.get_financial_health(current_user_id, scope_ids=scope_ids)
 
             return {
                 'success': True,
@@ -372,19 +424,23 @@ class FinancialHealth(Resource):
 
 @ns.route('/networth')
 class NetWorth(Resource):
-    @ns.doc('get_networth_trend', security='Bearer')
+    @ns.doc('get_networth_trend', security='Bearer', params=MEMBER_PARAM)
     # Backs the MCP get_net_worth_trend tool.
     @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get net worth trend data (assets, liabilities, net worth over time)"""
         current_user_id = get_jwt_identity()
+        scope_ids, refusal = _member_scope()
+        if refusal:
+            return refusal
+
 
         months = _months_arg()
         if months is None:
             return {'success': False, 'error': 'months must be between 1 and 60'}, 400
 
         try:
-            networth_data = analytics_service.get_networth_trend(current_user_id, months=months)
+            networth_data = analytics_service.get_networth_trend(current_user_id, months=months, scope_ids=scope_ids)
 
             return {
                 'success': True,
@@ -398,7 +454,7 @@ class NetWorth(Resource):
 
 @ns.route('/monthly-comparison')
 class MonthlyComparison(Resource):
-    @ns.doc('get_monthly_comparison', security='Bearer')
+    @ns.doc('get_monthly_comparison', security='Bearer', params=MEMBER_PARAM)
     @jwt_required()
     def get(self):
         """Get month-over-month comparison with percentage changes"""
@@ -410,7 +466,7 @@ class MonthlyComparison(Resource):
             months = request.args.get('months', default=6, type=int)
 
             # Get comparison data from service
-            comparison_data = analytics_service.get_monthly_comparison(current_user_id, months)
+            comparison_data = analytics_service.get_monthly_comparison(current_user_id, months, scope_ids=scope_ids)
 
             return {
                 'success': True,

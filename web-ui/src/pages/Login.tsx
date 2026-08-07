@@ -5,6 +5,7 @@ import { authService } from '../services/authService';
 import { demoService, DemoAccount, DemoStatus } from '../services/demoService';
 import { useToast } from '../contexts/ToastContext';
 import { Eye, EyeOff, Clock, User as UserIcon } from 'lucide-react';
+import { apiErrorMessage } from '../utils/apiError';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -107,7 +108,7 @@ export const Login: React.FC = () => {
     } catch (error: any) {
       console.error('Login error:', error);
       showToast(
-        error.response?.data?.message || 'Login failed. Please check your credentials.',
+        apiErrorMessage(error, 'Login failed. Please check your credentials.'),
         'error'
       );
     } finally {
@@ -131,7 +132,7 @@ export const Login: React.FC = () => {
     } catch (error: any) {
       console.error('Demo login error:', error);
       showToast(
-        error.response?.data?.message || 'Demo login failed. Please try again.',
+        apiErrorMessage(error, 'Demo login failed. Please try again.'),
         'error'
       );
     } finally {

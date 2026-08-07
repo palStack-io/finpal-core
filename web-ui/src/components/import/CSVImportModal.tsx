@@ -8,6 +8,7 @@ import { X, Upload, FileText, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } 
 import { accountService, Account } from '../../services/accountService';
 import { api } from '../../services/api';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
+import { apiErrorMessage } from '../../utils/apiError';
 
 interface CSVImportModalProps {
   isOpen: boolean;
@@ -204,7 +205,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
         setStep('mapping');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to import transactions');
+      setError(apiErrorMessage(err, 'Failed to import transactions'));
       setStep('mapping');
     } finally {
       setIsLoading(false);

@@ -13,6 +13,7 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 // imported — a plain undefined-name error that nothing reported, because the
 // typecheck gate compiled zero files (D-45).
 import { formActionsStyle } from '../styles/formStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 interface Member {
   id: string;
@@ -129,7 +130,7 @@ export const GroupDetail: React.FC = () => {
       loadGroupData(); // Refresh data
     } catch (error: any) {
       console.error('Failed to record settlement:', error);
-      showToast(error.response?.data?.error || 'Failed to record settlement', 'error');
+      showToast(apiErrorMessage(error, 'Failed to record settlement'), 'error');
     }
   };
 
@@ -150,7 +151,7 @@ export const GroupDetail: React.FC = () => {
       loadGroupData(); // Refresh data
     } catch (error: any) {
       console.error('Failed to add member:', error);
-      showToast(error.response?.data?.error || 'Failed to add member', 'error');
+      showToast(apiErrorMessage(error, 'Failed to add member'), 'error');
     }
   };
 
@@ -203,7 +204,7 @@ export const GroupDetail: React.FC = () => {
       loadGroupData(); // Refresh data
     } catch (error: any) {
       console.error('Failed to update group:', error);
-      showToast(error.response?.data?.error || 'Failed to update group', 'error');
+      showToast(apiErrorMessage(error, 'Failed to update group'), 'error');
     }
   };
 

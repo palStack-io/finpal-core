@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, Check, FolderPlus, RefreshCw, Trash2, Undo2 } from 'lucide-react';
 import { importService } from '../../services/importService';
 import type { ImportBatch, ImportBatchStatus, ImportSource } from '../../services/importService';
+import { apiErrorMessage } from '../../utils/apiError';
 
 const panelStyle: React.CSSProperties = {
   padding: '20px',
@@ -113,7 +114,7 @@ export const ImportSources: React.FC = () => {
   // The API answers with {'error': ...}; fall back to message for anything
   // that goes through a different error path.
   const readError = (err: any, fallback: string) =>
-    err.response?.data?.error || err.response?.data?.message || fallback;
+    apiErrorMessage(err, fallback);
 
   const flash = (message: string) => {
     setSuccess(message);

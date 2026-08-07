@@ -423,7 +423,7 @@ class AnalyticsService:
         return sorted_categories[:limit] if limit else sorted_categories
 
     def get_top_categories(self, user_id, limit=8, start=None, end=None,
-                           transaction_type='expense'):
+                           transaction_type='expense', scope_ids=None):
         """Category totals for one date window, without the dashboard payload.
 
         /analytics/categories/top used to call get_dashboard_data, which loads
@@ -433,7 +433,7 @@ class AnalyticsService:
         """
         from src.utils.household import read_scope, scope_query
 
-        household_ids = read_scope(user_id)
+        household_ids = scope_ids or read_scope(user_id)
 
         # Attribution is the ACCOUNT's owner (owner decision 2026-08-06), so this
         # is the transactions list's own predicate rather than a second one.
@@ -449,10 +449,10 @@ class AnalyticsService:
             query.all(), {}, start=start, end=end, limit=limit,
             transaction_type=transaction_type)
 
-    def get_spending_trends(self, user_id, months=6):
+    def get_spending_trends(self, user_id, months=6, scope_ids=None):
         """Get spending trends over time"""
         from src.utils.household import read_scope, scope_query
-        household_ids = read_scope(user_id)
+        household_ids = scope_ids or read_scope(user_id)
         trends = []
         for i in range(months):
             month_date = datetime.now() - timedelta(days=30*i)
@@ -465,17 +465,17 @@ class AnalyticsService:
             trends.append({'month': month_date.strftime('%Y-%m'), 'total': total})
         return trends
 
-    def get_stats_data(self, user_id):
+    def get_stats_data(self, user_id, scope_ids=None):
         """Get detailed statistics data"""
         # Get base dashboard data
-        data = self.get_dashboard_data(user_id)
+        data = self.get_dashboard_data(user_id, scope_ids=scope_ids)
 
         # Add monthly_income for stats page
         from src.models.transaction import Expense
         from src.utils.household import read_scope, scope_query
         from sqlalchemy import or_
 
-        household_ids = read_scope(user_id)
+        household_ids = scope_ids or read_scope(user_id)
 
         # Get all expenses for the household
         # Attribution is the ACCOUNT's owner (owner decision 2026-08-06), so this
@@ -556,14 +556,14 @@ class AnalyticsService:
 
         return data
 
-    def get_cashflow_data(self, user_id, months=6):
+    def get_cashflow_data(self, user_id, months=6, scope_ids=None):
         """Get cash flow data for the last N months"""
         from sqlalchemy import or_
         from datetime import datetime, timedelta
         from calendar import month_abbr
         from src.utils.household import read_scope, scope_query
 
-        household_ids = read_scope(user_id)
+        household_ids = scope_ids or read_scope(user_id)
 
         # Get all transactions for the household
         # Attribution is the ACCOUNT's owner (owner decision 2026-08-06), so this
@@ -629,10 +629,10 @@ class AnalyticsService:
 
         return monthly_data
 
-    def get_monthly_comparison(self, user_id, months=6):
+    def get_monthly_comparison(self, user_id, months=6, scope_ids=None):
         """Get month-over-month comparison with percentage changes"""
         # Get cashflow data (already calculates monthly income/expenses)
-        cashflow = self.get_cashflow_data(user_id, months)
+        cashflow = self.get_cashflow_data(user_id, months, scope_ids=scope_ids)
 
         result = []
         for i, month_data in enumerate(cashflow):
@@ -684,12 +684,12 @@ class AnalyticsService:
 
         return result
 
-    def get_financial_health(self, user_id):
+    def get_financial_health(self, user_id, scope_ids=None):
         """Calculate financial health metrics"""
         from datetime import datetime
 
         # Get dashboard data for base calculations
-        dashboard_data = self.get_dashboard_data(user_id)
+        dashboard_data = self.get_dashboard_data(user_id, scope_ids=scope_ids)
 
         total_income = dashboard_data.get('total_income', 0)
         total_expenses = dashboard_data.get('total_expenses_only', 0)
@@ -774,7 +774,7 @@ class AnalyticsService:
 
         return None  # No priced positions — there is no return to report
 
-    def get_networth_trend(self, user_id, months=12):
+    def get_networth_trend(self, user_id, months=12, scope_ids=None):
         """Net worth over the months we have data for. Never more than that.
 
         There used to be a synthetic fallback that manufactured a 12-month series
@@ -792,7 +792,7 @@ class AnalyticsService:
         of the payload reports. An empty list is a valid answer; the caller shows
         an empty state.
         """
-        dashboard_data = self.get_dashboard_data(user_id)
+        dashboard_data = self.get_dashboard_data(user_id, scope_ids=scope_ids)
 
         current_assets = dashboard_data.get('total_assets', 0) or 0
         current_liabilities = dashboard_data.get('total_debts', 0) or 0

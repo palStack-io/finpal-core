@@ -10,6 +10,7 @@ import { useToast } from '../contexts/ToastContext';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { StatCard } from '../components/StatCard';
+import { apiErrorMessage } from '../utils/apiError';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -278,7 +279,7 @@ const BudgetsMinimal = () => {
       });
       loadData(); // Refresh budgets
     } catch (error: any) {
-      showToast((error as any).response?.data?.error || 'Failed to save budget', 'error');
+      showToast(apiErrorMessage(error, 'Failed to save budget'), 'error');
     }
   };
 

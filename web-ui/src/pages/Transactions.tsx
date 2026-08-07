@@ -14,6 +14,7 @@ import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import type { Scope } from '../utils/scope';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '12px' };
 
@@ -103,7 +104,7 @@ export const Transactions: React.FC = () => {
       setPagination(data.pagination);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load transactions');
+      setError(apiErrorMessage(err, 'Failed to load transactions'));
     } finally {
       setLoading(false);
     }
@@ -138,7 +139,7 @@ export const Transactions: React.FC = () => {
         await transactionsApi.delete(transactionId);
         fetchTransactions();
       } catch (err: any) {
-        alert(err.response?.data?.error || 'Failed to delete transaction');
+        alert(apiErrorMessage(err, 'Failed to delete transaction'));
       }
     }
   };

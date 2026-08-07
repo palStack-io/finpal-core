@@ -43,13 +43,44 @@ class TransactionSchema(Schema):
     notes = fields.Str(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
 
+    # One transaction attributed across several categories. **Write-only until
+    # 2026-08-06 (AUDIT D-54)**: `TransactionInput` accepted it and the update
+    # handler replaced the rows wholesale, but nothing ever served them back — so
+    # both clients started their splits editor blank and neither could ever
+    # *restate* them, while `TransactionDetail.put` refuses an amount change on a
+    # split transaction until they are restated. A refusal describing an action no
+    # UI could perform.
+    #
+    # **The read shape is exactly the write shape** — `{category_id: amount}`,
+    # keyed by a string because that is what `TransactionInput` accepts and what
+    # JSON object keys are. A list of objects would make one field two shapes,
+    # which is D-52 with extra steps, and would leave the mobile wire-contract
+    # gate permanently exempting a key it should be checking.
+    category_splits = fields.Method('get_category_splits', dump_only=True)
+    has_category_splits = fields.Bool(dump_only=True)
+
     # Nested relationships
     category = fields.Nested('CategorySchema', dump_only=True)
     account = fields.Nested('AccountSchema', dump_only=True)
     splits = fields.Method('get_splits', dump_only=True)
 
+    def get_category_splits(self, obj):
+        """`{category_id: amount}`, and `{}` rather than null when there are none.
+
+        An empty object lets a client write `Object.entries(...)` without a guard,
+        and keeps "this row has no splits" distinguishable from "this payload does
+        not carry the field" — which is the state that made D-54 invisible.
+        """
+        rows = getattr(obj, 'category_splits', None) or []
+        return {str(row.category_id): row.amount for row in rows}
+
     def get_splits(self, obj):
-        """Calculate and return split information"""
+        """Calculate and return split information.
+
+        Note this is the per-PERSON settlement structure, not the per-category
+        one above. Two different questions that were one word apart, and the
+        reason D-54 read as "the splits are already there".
+        """
         return obj.calculate_splits() if hasattr(obj, 'calculate_splits') else None
 
 

@@ -14,6 +14,7 @@ import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
 const actionBtnStyle: React.CSSProperties = { padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' };
@@ -138,7 +139,7 @@ export const Accounts = () => {
       );
     } catch (error: any) {
       showToast(
-        error?.response?.data?.error || 'Could not sync accounts',
+        apiErrorMessage(error, 'Could not sync accounts'),
         'error',
       );
     } finally {

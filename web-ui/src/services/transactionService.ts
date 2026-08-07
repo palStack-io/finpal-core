@@ -4,6 +4,7 @@
  */
 
 import { api } from './api';
+import { transactionsApi, TransactionQuery } from './api/transactions';
 
 export interface Transaction {
   id: number;
@@ -53,28 +54,21 @@ export interface UpdateTransactionData {
   split_with?: string;
 }
 
-export interface TransactionFilters {
-  page?: number;
-  per_page?: number;
-  start_date?: string;
-  end_date?: string;
-  category_id?: number;
-  account_id?: number;
-  type?: 'expense' | 'income' | 'transfer';
-  search?: string;
-  /**
-   * Narrow to one household member. Server-side, so `summary` describes the same
-   * rows the list does.
-   *
-   * **This is the second declaration of this endpoint's filters in web-ui** —
-   * `services/api/transactions.ts` has its own, and it grew `member_id` in #76
-   * while this one did not. The Dashboard reads through *this* module, so the
-   * dashboard's recent strip could not be filtered until now. Same shape as
-   * D-45's duplicate `Currency` unions; recorded rather than merged here, because
-   * collapsing two service modules is not this PR's job.
-   */
-  member_id?: string;
-}
+/**
+ * **This module used to declare its own copy of the endpoint's filters, and the
+ * two had already drifted — AUDIT D-57.** `services/api/transactions.ts` gained
+ * `member_id` in #76 and this one did not, so `Dashboard.tsx` — which reads
+ * through here — could not filter its recent strip at all until #79 added the
+ * field by hand. Same shape as D-45's duplicate `Currency` unions: two
+ * same-named types, consumers getting different ones, invisible until something
+ * needed the newer half.
+ *
+ * There is one declaration now, and it lives with the module that owns the HTTP
+ * call. Re-exported under the old name so existing imports keep working, because
+ * a rename would bury the fix inside an unrelated diff.
+ */
+export type TransactionFilters = TransactionQuery;
+
 
 export interface TransactionSummary {
   total_income: number;
@@ -100,38 +94,28 @@ export const transactionService = {
   /**
    * Get all transactions with optional filters
    */
+  /**
+   * Delegates to `transactionsApi.getAll` rather than rebuilding the query.
+   *
+   * This used to hand-assemble its own `URLSearchParams`, field by field — which
+   * is how `member_id` came to be honoured by one module and silently dropped by
+   * the other even after both types knew about it. One builder means a filter
+   * added anywhere is sent everywhere.
+   *
+   * The trailing slash still matters and now lives in `API_CONFIG`: without it
+   * this reaches a legacy handler that reads none of the parameters and returns
+   * no `pagination`, so `per_page` becomes a lie and every caller gets the whole
+   * history.
+   */
   async getTransactions(
     filters?: TransactionFilters
   ): Promise<PaginatedTransactions> {
-    const params = new URLSearchParams();
-
-    if (filters?.page) params.append('page', filters.page.toString());
-    if (filters?.per_page) params.append('per_page', filters.per_page.toString());
-    if (filters?.start_date) params.append('start_date', filters.start_date);
-    if (filters?.end_date) params.append('end_date', filters.end_date);
-    if (filters?.category_id)
-      params.append('category_id', filters.category_id.toString());
-    if (filters?.account_id)
-      params.append('account_id', filters.account_id.toString());
-    if (filters?.type) params.append('type', filters.type);
-    if (filters?.search) params.append('search', filters.search);
-    if (filters?.member_id) params.append('member_id', filters.member_id);
-
-    // Trailing slash: the paginating, filtering handler. Without it this hit a
-    // legacy handler that read none of the parameters built above and returned
-    // no `pagination` — so `per_page` was a lie and every caller got the whole
-    // history.
-    const response = await api.get<{
-      success: boolean;
-      transactions: Transaction[];
-      summary: TransactionSummary;
-      pagination: PaginatedTransactions['pagination'];
-    }>(`/api/v1/transactions/?${params.toString()}`);
+    const data = await transactionsApi.getAll(filters);
 
     return {
-      transactions: response.data.transactions,
-      summary: response.data.summary,
-      pagination: response.data.pagination,
+      transactions: data.transactions as unknown as Transaction[],
+      summary: data.summary,
+      pagination: data.pagination,
     };
   },
 

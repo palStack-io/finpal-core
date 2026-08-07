@@ -189,17 +189,26 @@ export const analyticsService = {
    * came from. The range and limit are honoured server-side — until recently
    * they were sent and ignored, so every range returned current-month figures.
    */
+  /**
+   * `memberId` narrows every figure to one household member. Omit for the whole
+   * household; an id outside the caller's household is a **403**, not an empty
+   * chart. D-56 — the seven endpoints `Analytics.tsx` renders take the same
+   * filter, and they move together, because a page whose charts followed a
+   * control while the ones beside them ignored it is D-51.
+   */
   async getTopSpendingCategories(
     limit: number = 5,
     startDate?: string,
     endDate?: string,
-    type: 'expense' | 'income' = 'expense'
+    type: 'expense' | 'income' = 'expense',
+    memberId?: string | null
   ): Promise<CategoryTotal[]> {
     const params = new URLSearchParams();
     params.append('limit', limit.toString());
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
     params.append('type', type);
+    if (memberId) params.append('member_id', memberId);
 
     const response = await api.get<{
       success: boolean;
@@ -238,7 +247,14 @@ export const analyticsService = {
   /**
    * Get cash flow data (income, expenses, savings over time)
    */
-  async getCashFlowData(months: number = 6): Promise<Array<{
+  /**
+   * `memberId` narrows every figure to one household member. Omit for the whole
+   * household; an id outside the caller's household is a **403**, not an empty
+   * chart. D-56 — the seven endpoints `Analytics.tsx` renders take the same
+   * filter, and they move together, because a page whose charts followed a
+   * control while the ones beside them ignored it is D-51.
+   */
+  async getCashFlowData(months: number = 6, memberId?: string | null): Promise<Array<{
     month: string;
     income: number;
     expenses: number;
@@ -254,14 +270,21 @@ export const analyticsService = {
         expenses: number;
         savings: number;
       }>;
-    }>(`/api/v1/analytics/cashflow?months=${months}`);
+    }>('/api/v1/analytics/cashflow', { params: { months, ...(memberId ? { member_id: memberId } : {}) } });
     return response.data.cashflow;
   },
 
   /**
    * Get financial health metrics
    */
-  async getFinancialHealth(): Promise<{
+  /**
+   * `memberId` narrows every figure to one household member. Omit for the whole
+   * household; an id outside the caller's household is a **403**, not an empty
+   * chart. D-56 — the seven endpoints `Analytics.tsx` renders take the same
+   * filter, and they move together, because a page whose charts followed a
+   * control while the ones beside them ignored it is D-51.
+   */
+  async getFinancialHealth(memberId?: string | null): Promise<{
     totalIncome: number;
     totalExpenses: number;
     netSavings: number;
@@ -285,14 +308,21 @@ export const analyticsService = {
         liquidityRatio: number;
         investmentReturn: number | null;
       };
-    }>('/api/v1/analytics/health');
+    }>('/api/v1/analytics/health', { params: memberId ? { member_id: memberId } : undefined });
     return response.data.health;
   },
 
   /**
    * Get net worth trend data (assets, liabilities, net worth)
    */
-  async getNetWorthTrendData(months: number = 12): Promise<Array<{
+  /**
+   * `memberId` narrows every figure to one household member. Omit for the whole
+   * household; an id outside the caller's household is a **403**, not an empty
+   * chart. D-56 — the seven endpoints `Analytics.tsx` renders take the same
+   * filter, and they move together, because a page whose charts followed a
+   * control while the ones beside them ignored it is D-51.
+   */
+  async getNetWorthTrendData(months: number = 12, memberId?: string | null): Promise<Array<{
     month: string;
     netWorth: number;
     assets: number;
@@ -306,7 +336,7 @@ export const analyticsService = {
         assets: number;
         liabilities: number;
       }>;
-    }>(`/api/v1/analytics/networth?months=${months}`);
+    }>('/api/v1/analytics/networth', { params: { months, ...(memberId ? { member_id: memberId } : {}) } });
     return response.data.networth;
   },
 };

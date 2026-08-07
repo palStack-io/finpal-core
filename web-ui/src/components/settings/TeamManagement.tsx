@@ -28,6 +28,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { TeamMember, Invitation, TeamRole } from '../../types/team';
+import { apiErrorMessage } from '../../utils/apiError';
 
 /** Semantic accent colours; deliberately not variablised — see CLAUDE.md. */
 const GREEN = '#22c55e';
@@ -194,7 +195,7 @@ export const TeamManagement: React.FC = () => {
       const data = await teamService.getMembers();
       setMembers(data);
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to load team members', 'error');
+      showToast(apiErrorMessage(error, 'Failed to load team members'), 'error');
     } finally {
       setIsLoadingMembers(false);
     }
@@ -206,7 +207,7 @@ export const TeamManagement: React.FC = () => {
       const data = await teamService.getInvitations();
       setInvitations(data);
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to load invitations', 'error');
+      showToast(apiErrorMessage(error, 'Failed to load invitations'), 'error');
     } finally {
       setIsLoadingInvitations(false);
     }
@@ -233,7 +234,7 @@ export const TeamManagement: React.FC = () => {
       setInviteRole('member');
       loadInvitations();
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to send invitation', 'error');
+      showToast(apiErrorMessage(error, 'Failed to send invitation'), 'error');
     } finally {
       setIsSendingInvite(false);
     }
@@ -247,7 +248,7 @@ export const TeamManagement: React.FC = () => {
       showToast('Invitation cancelled', 'success');
       loadInvitations();
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to cancel invitation', 'error');
+      showToast(apiErrorMessage(error, 'Failed to cancel invitation'), 'error');
     }
   };
 
@@ -257,7 +258,7 @@ export const TeamManagement: React.FC = () => {
       showToast('Invitation resent successfully', 'success');
       loadInvitations();
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to resend invitation', 'error');
+      showToast(apiErrorMessage(error, 'Failed to resend invitation'), 'error');
     }
   };
 
@@ -269,7 +270,7 @@ export const TeamManagement: React.FC = () => {
       showToast('Member removed successfully', 'success');
       loadMembers();
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to remove member', 'error');
+      showToast(apiErrorMessage(error, 'Failed to remove member'), 'error');
     }
   };
 
@@ -279,7 +280,7 @@ export const TeamManagement: React.FC = () => {
       showToast('Role updated successfully', 'success');
       loadMembers();
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Failed to update role', 'error');
+      showToast(apiErrorMessage(error, 'Failed to update role'), 'error');
     }
   };
 

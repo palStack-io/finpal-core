@@ -17,6 +17,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
 import type { ModuleManifest } from '../modules/registry';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { apiErrorMessage } from '../utils/apiError';
 
 // ---------------------------------------------------------------------------
 // ModuleCard — per-module hide/show toggle card for Settings > Modules tab
@@ -210,7 +211,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setSaveError(error.response?.data?.message || 'Failed to save profile changes');
+      setSaveError(apiErrorMessage(error, 'Failed to save profile changes'));
     } finally {
       setIsSaving(false);
     }
@@ -254,7 +255,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setSaveError(error.response?.data?.message || 'Failed to change password');
+      setSaveError(apiErrorMessage(error, 'Failed to change password'));
     } finally {
       setIsSaving(false);
     }
@@ -272,7 +273,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setSaveError(error.response?.data?.message || 'Failed to save notification settings');
+      setSaveError(apiErrorMessage(error, 'Failed to save notification settings'));
     } finally {
       setIsSaving(false);
     }
@@ -291,7 +292,7 @@ export const Settings: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error: any) {
-      setSaveError(error.response?.data?.message || 'Failed to export data');
+      setSaveError(apiErrorMessage(error, 'Failed to export data'));
     } finally {
       setIsExporting(false);
     }
@@ -312,7 +313,7 @@ export const Settings: React.FC = () => {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     } catch (error: any) {
-      setSaveError(error.response?.data?.message || 'Failed to delete account');
+      setSaveError(apiErrorMessage(error, 'Failed to delete account'));
       setIsDeleting(false);
     }
   };

@@ -102,7 +102,15 @@ describe('API error precedence', () => {
         const readsMessage = new RegExp(
           `(?:\\b${binding}\\s*\\.\\s*message\\b)|(?:\\(\\s*${binding}\\s+as\\b[^)]*\\)\\s*\\.\\s*message\\b)`,
         ).test(body);
-        if (readsMessage && !/\.\s*response\b/.test(body)) {
+        // `apiErrorMessage` IS reading the server's reason — it is the single
+        // place that does, since D-53. Before it existed, "reads `.response`"
+        // was the only available proxy for "consults the server"; the refactor
+        // that centralised the logic made that proxy fire on two catches whose
+        // only remaining mentions of `.message` were a COMMENT and a type
+        // annotation. A guard keyed to a spelling goes wrong in both directions,
+        // and this is the false-positive direction.
+        const delegates = /\bapiErrorMessage\s*\(/.test(body);
+        if (readsMessage && !delegates && !/\.\s*response\b/.test(body)) {
           const line = src.slice(0, match.index).split('\n').length;
           offenders.push(`${relative(SRC, file)}:${line}`);
         }
@@ -114,6 +122,37 @@ describe('API error precedence', () => {
         + `read the server's error, so a 4xx reason never reaches the user: `
         + `${offenders.join(', ')}`
       : '').toEqual([]);
+  });
+
+  /**
+   * **The helper has to stay the only reader, or `details` gets bypassed again.**
+   *
+   * D-53 was not that one file read the wrong key — it was that *every* file read
+   * `data.error`, which for a validation failure is the constant string
+   * "Validation error". The sentence the server wrote is in `details`, and the
+   * only thing that reads it is `utils/apiError.ts`. A new catch that reaches for
+   * `data.error` directly is that defect coming back, one site at a time, so this
+   * refuses it at the source rather than waiting for someone to notice a form
+   * saying nothing useful.
+   */
+  it('reads the server\'s reason in exactly one place', () => {
+    const readers = files
+      .filter((f) => !/utils[\\/]apiError\.ts$/.test(f))
+      .filter((f) => /\.\s*response\s*\??\.\s*data\s*\??\.\s*(error|details|message)\b/.test(readFileSync(f, 'utf8')))
+      .map((f) => relative(SRC, f));
+
+    expect(readers, readers.length
+      ? `these read the error body directly instead of going through `
+        + `apiErrorMessage, so they show "Validation error" rather than the `
+        + `server's actual sentence (AUDIT D-53): ${readers.join(', ')}`
+      : '').toEqual([]);
+  });
+
+  it('that one place really does read `details`', () => {
+    // Otherwise the check above would be satisfied by an empty helper.
+    const helper = readFileSync(join(SRC, 'utils', 'apiError.ts'), 'utf8');
+    expect(/\bdetails\b/.test(helper)).toBe(true);
+    expect(/\berror\b/.test(helper)).toBe(true);
   });
 
   it('the catch-block scanner actually finds catch blocks', () => {

@@ -10,6 +10,7 @@ import { TeamMember } from '../../types/team';
 import { useAuthStore } from '../../store/authStore';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
+import { apiErrorMessage } from '../../utils/apiError';
 
 interface AddTransactionFormProps {
   transaction?: Transaction;
@@ -82,7 +83,23 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
   const watchSplitMethod = watch('split_method');
   const watchAmount = watch('amount');
 
-  const [categorySplits, setCategorySplits] = useState<Array<{ category_id: string; amount: string; percentage: string }>>([]);
+  /**
+   * **Prefilled from the row since AUDIT D-54.** This was unconditionally `[]`,
+   * because nothing served a transaction's category splits back — so opening an
+   * edit showed no splits on a row that had them, and the server's own refusal
+   * ("its amount cannot change without restating the splits") was unanswerable
+   * from this form. `TransactionSchema` serves `{category_id: amount}` now, in
+   * exactly the shape the payload below sends.
+   */
+  const [categorySplits, setCategorySplits] = useState<Array<{ category_id: string; amount: string; percentage: string }>>(
+    () => Object.entries(transaction?.category_splits ?? {}).map(([category_id, amount]) => ({
+      category_id,
+      // Not reformatted: re-serialising a number the user never touched is how an
+      // untouched edit starts changing values.
+      amount: String(amount),
+      percentage: '',
+    }))
+  );
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -158,15 +175,26 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       if (data.type === 'transfer' && data.destination_account_id) {
         payload.destination_account_id = parseInt(data.destination_account_id);
       }
-      if (categorySplits.length > 0) {
-        const validSplits = categorySplits.filter((s) => s.category_id && s.amount);
-        if (validSplits.length > 0) {
-          payload.category_splits = validSplits.reduce((acc, split) => {
-            acc[split.category_id] = parseFloat(split.amount);
-            return acc;
-          }, {} as Record<string, number>);
-          payload.has_category_splits = true;
-        }
+      /**
+       * **Empty means two opposite things, and only the row tells them apart.**
+       *
+       * While the editor always opened blank (before D-54), an empty list could
+       * only mean "I did not touch them", and omitting the key — which the server
+       * reads as "leave them alone" — was right. Prefilled, an empty list on a row
+       * that ARRIVED with splits is a deliberate deletion, and omitting would make
+       * that deletion silently do nothing. `{}` is what clears them server-side.
+       *
+       * `has_category_splits` is NOT sent: `TransactionInput` declares it nowhere
+       * and the server derives it, so the old line here was a no-op.
+       */
+      const validSplits = categorySplits.filter((s) => s.category_id && s.amount);
+      if (validSplits.length > 0) {
+        payload.category_splits = validSplits.reduce((acc, split) => {
+          acc[split.category_id] = parseFloat(split.amount);
+          return acc;
+        }, {} as Record<string, number>);
+      } else if (transaction?.has_category_splits) {
+        payload.category_splits = {};
       }
 
       if (transaction) {
@@ -179,7 +207,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       setTimeout(() => { onSuccess(); }, 1000);
     } catch (err) {
       const e = err as { message?: string; response?: { data?: { error?: string } } };
-      setApiError(e.response?.data?.error || e.message || 'Failed to create transaction');
+      setApiError(apiErrorMessage(e, 'Failed to create transaction'));
     }
   };
 
