@@ -356,7 +356,7 @@ export const Analytics: React.FC = () => {
   return (
     <>
       <div style={pageContainerStyle}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="page-container">
         {/* Header */}
         <div style={{
           display: 'flex',

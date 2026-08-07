@@ -47,7 +47,7 @@ export const SimpleFinSetup: React.FC = () => {
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
+            <h1 className="page-title">
               SimpleFIN Connection
             </h1>
             <p style={bodyTextStyle}>Connect your SimpleFIN account to import transactions automatically</p>

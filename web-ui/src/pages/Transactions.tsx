@@ -192,12 +192,12 @@ export const Transactions: React.FC = () => {
   return (
     <>
       <div style={pageContainerStyle}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="page-container">
 
           {/* Header */}
           <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>Transactions</h1>
+              <h1 className="page-title">Transactions</h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Track all your income and expenses</p>
             </div>
             <button
