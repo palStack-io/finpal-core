@@ -41,36 +41,52 @@ api = Api(
 
 # Register JWT error handlers on the Flask-RESTX Api so they fire
 # before RESTX's generic 500 handler catches them.
+# Each of these needs a DOCSTRING, and it is not decoration: flask-restx uses it
+# as the response `description`, and OpenAPI makes description MANDATORY on a
+# response. Without them these eight emit `{}` into the document's root
+# `responses` object, and the whole spec then fails conversion with
+# "(Patchable) response.description is mandatory" — so no standard generator can
+# consume it. Found while wiring the OpenAPI type generation for mobile (item
+# 1c); `test_the_swagger_document_is_valid.py` now fails if one loses its
+# docstring.
 @api.errorhandler(NoAuthorizationError)
 def handle_no_authorization(error):
+    """No Authorization header was sent."""
     return {'message': 'Missing authorization token', 'error': 'authorization_required'}, 401
 
 @api.errorhandler(InvalidHeaderError)
 def handle_invalid_header(error):
+    """The Authorization header was malformed."""
     return {'message': 'Invalid authorization header', 'error': 'invalid_header'}, 401
 
 @api.errorhandler(JWTDecodeError)
 def handle_decode_error(error):
+    """The token could not be decoded."""
     return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
 
 @api.errorhandler(WrongTokenError)
 def handle_wrong_token(error):
+    """A refresh token was sent where an access token was required, or vice versa."""
     return {'message': 'Wrong token type', 'error': 'wrong_token'}, 401
 
 @api.errorhandler(RevokedTokenError)
 def handle_revoked_token(error):
+    """The token has been revoked by logging out."""
     return {'message': 'Token has been revoked', 'error': 'token_revoked'}, 401
 
 @api.errorhandler(FreshTokenRequired)
 def handle_fresh_token_required(error):
+    """This operation needs a freshly issued token, not a refreshed one."""
     return {'message': 'Fresh token required', 'error': 'fresh_token_required'}, 401
 
 @api.errorhandler(ExpiredSignatureError)
 def handle_expired_token(error):
+    """The token has expired."""
     return {'message': 'Token has expired', 'error': 'token_expired'}, 401
 
 @api.errorhandler(DecodeError)
 def handle_jwt_decode_error(error):
+    """The token is not a valid JWT."""
     return {'message': 'Invalid token', 'error': 'invalid_token'}, 401
 
 
