@@ -26,8 +26,8 @@
  * duplicated: any future resource with a module in both layers fails here.
  */
 import { describe, expect, it } from 'vitest';
-import { readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 
 const SERVICES = resolve(process.cwd(), 'src/services');
 const API = resolve(SERVICES, 'api');
@@ -78,4 +78,98 @@ describe('the retired modules stay retired', () => {
     '%s is not back', (name) => {
       expect(legacy).not.toContain(name);
     });
+});
+
+
+/**
+ * One input definition — U-03 slice 4, and the same lesson one layer over.
+ *
+ * There were TWO: the `.fp-input` CSS class and an `inputStyle` object in
+ * `src/styles/formStyles.ts`. They had drifted on padding (`12px` vs `12px 16px`),
+ * exactly as the two service layers above drifted on types and envelopes.
+ *
+ * **Why a class won, and why this cannot be "just use a shared style object".** An
+ * inline style beats a class rule at any specificity, INCLUDING `:focus`. So an
+ * element styled from a JS object cannot take its focus styling from CSS — which
+ * is why ten files had hand-rolled `onFocus`/`onBlur` handlers imperatively setting
+ * `borderColor` and `background` on every field. A class can express `:focus`; a
+ * style object structurally cannot. Reintroducing the object brings the handlers
+ * back with it.
+ */
+describe('inputs have one definition, and it is the class', () => {
+  const formStyles = readFileSync(resolve(process.cwd(), 'src/styles/formStyles.ts'), 'utf8');
+
+  it('no shared inputStyle object comes back', () => {
+    expect(/export const inputStyle/.test(formStyles)).toBe(false);
+  });
+
+  /** Every .tsx under src, excluding tests. */
+  const walk = (dir: string, out: string[] = []): string[] => {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) walk(full, out);
+      else if (entry.endsWith('.tsx') && !full.includes('__tests__')) out.push(full);
+    }
+    return out;
+  };
+  const FILES = walk(resolve(process.cwd(), 'src'));
+
+  /**
+   * Files that still style focus by hand, each with a reason.
+   *
+   * Four are AUTH PAGES, which keep their own visual scheme by owner decision and
+   * are explicitly out of scope for the theme work. The other two use a genuinely
+   * DIFFERENT focus treatment (a ring, or a translucent border) rather than the
+   * `.fp-input` pair — converging those is a design change, not a refactor.
+   */
+  const HAND_ROLLED_BY_DESIGN: Record<string, string> = {
+    'pages/Login.tsx': 'auth pages keep their own scheme — owner decision',
+    'pages/Register.tsx': 'auth pages keep their own scheme — owner decision',
+    'pages/ResetPassword.tsx': 'auth pages keep their own scheme — owner decision',
+    'pages/ForgotPassword.tsx': 'auth pages keep their own scheme — owner decision',
+    'pages/Transactions.tsx': 'different treatment (translucent green border), not the .fp-input pair',
+    'components/import/CSVImportModal.tsx': 'different treatment, not the .fp-input pair',
+  };
+
+  it('reads a non-trivial number of components, or the sweep is vacuous', () => {
+    expect(FILES.length).toBeGreaterThan(30);
+  });
+
+  it('the by-design list is not stale', () => {
+    // The other half. Without it an exemption for a file that no longer hand-rolls
+    // anything becomes a permanent hole to hide a real one in.
+    const stale = Object.keys(HAND_ROLLED_BY_DESIGN).filter(
+      (k) => !FILES.some((f) => f.endsWith(k)));
+    expect(stale).toEqual([]);
+  });
+
+  it('no component hand-rolls focus styling again', () => {
+    // *** KEYED TO THE MECHANISM: an assignment INSIDE an onFocus/onBlur handler.
+    //
+    // The first version matched `style.background = 'var(--brand-main-green)'`
+    // anywhere, and flagged five files whose only match was a BUTTON HOVER
+    // (`onMouseLeave` restoring a button's green). Legitimate code, wrong guard —
+    // the same false positive as the D-64 mechanism check and as
+    // apiErrorPrecedence before it. Matching a value is not matching a behaviour.
+    const offenders: string[] = [];
+    for (const f of FILES) {
+      if (Object.keys(HAND_ROLLED_BY_DESIGN).some((k) => f.endsWith(k))) continue;
+      const src = readFileSync(f, 'utf8');
+      for (const m of src.matchAll(/on(?:Focus|Blur)=\{/g)) {
+        let i = m.index! + m[0].length;
+        let depth = 1;
+        while (i < src.length && depth > 0) {
+          if (src[i] === '{') depth++;
+          else if (src[i] === '}') depth--;
+          i++;
+        }
+        const body = src.slice(m.index! + m[0].length, i - 1);
+        if (/style\.(borderColor|background)\s*=/.test(body)) {
+          offenders.push(f.replace(process.cwd(), ''));
+          break;
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });

@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, AlertCircle, TrendingUp } from 'lucide-react';
 import { investmentService } from '../../services/api/investments';
 import { useToast } from '../../contexts/ToastContext';
-import { inputStyle, labelStyle } from '../../styles/formStyles';
+import { labelStyle } from '../../styles/formStyles';
 import { apiErrorMessage } from '../../utils/apiError';
 
 interface Portfolio {
@@ -229,9 +229,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                     placeholder="e.g., AAPL, MSFT, GOOGL"
                     disabled={isSearching}
-                    style={{
-                      ...inputStyle,
-                      padding: '12px 40px 12px 12px',
+                    className="fp-input" style={{ padding: '12px 40px 12px 12px',
                       fontSize: '16px'
                     }}
                   />
@@ -341,9 +339,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                 <select
                   value={portfolioId || ''}
                   onChange={(e) => setPortfolioId(parseInt(e.target.value))}
-                  style={{
-                    ...inputStyle,
-                    cursor: 'pointer'
+                  className="fp-input" style={{ cursor: 'pointer'
                   }}
                 >
                   {portfolios.map(p => (
@@ -366,7 +362,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  style={inputStyle}
+                  className="fp-input"
                 />
               </div>
 
@@ -382,7 +378,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  style={inputStyle}
+                  className="fp-input"
                 />
               </div>
 
@@ -395,7 +391,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   type="date"
                   value={purchaseDate}
                   onChange={(e) => setPurchaseDate(e.target.value)}
-                  style={inputStyle}
+                  className="fp-input"
                 />
               </div>
 
@@ -409,9 +405,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add any notes about this investment..."
                   rows={3}
-                  style={{
-                    ...inputStyle,
-                    resize: 'vertical'
+                  className="fp-input" style={{ resize: 'vertical'
                   }}
                 />
               </div>

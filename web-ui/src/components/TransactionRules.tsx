@@ -4,7 +4,7 @@ import { transactionRulesApi, TransactionRule, CreateRuleData } from '../service
 import { categoriesApi, Category } from '../services/api/categories';
 import { accountService, Account } from '../services/accountService';
 import { Modal } from './Modal';
-import { formActionsStyle, inputStyle, labelStyle } from '../styles/formStyles';
+import { formActionsStyle, labelStyle } from '../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 
@@ -531,15 +531,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
           placeholder="e.g., Netflix Auto-Categorization"
           required
           disabled={isSubmitting}
-          style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          className="fp-input"
         />
       </div>
 
@@ -553,15 +545,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
           placeholder="e.g., starbucks, netflix, amazon"
           required
           disabled={isSubmitting}
-          style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          className="fp-input"
         />
       </div>
 
@@ -572,7 +556,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
           value={formData.pattern_field}
           onChange={handleChange}
           disabled={isSubmitting}
-          style={{ ...inputStyle, cursor: 'pointer' }}
+          className="fp-input" style={{ cursor: 'pointer' }}
         >
           <option value="description">Transaction Description/Name</option>
           <option value="amount">Amount</option>
@@ -618,15 +602,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               onChange={handleChange}
               placeholder="e.g., 10.00"
               disabled={isSubmitting}
-              style={inputStyle}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-                e.currentTarget.style.background = 'var(--input-bg-focus)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--input-border)';
-                e.currentTarget.style.background = 'var(--input-bg)';
-              }}
+              className="fp-input"
             />
           </div>
 
@@ -640,15 +616,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               onChange={handleChange}
               placeholder="e.g., 100.00"
               disabled={isSubmitting}
-              style={inputStyle}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-                e.currentTarget.style.background = 'var(--input-bg-focus)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--input-border)';
-                e.currentTarget.style.background = 'var(--input-bg)';
-              }}
+              className="fp-input"
             />
           </div>
         </div>
@@ -660,7 +628,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
             value={formData.transaction_type_filter || ''}
             onChange={handleChange}
             disabled={isSubmitting}
-            style={{ ...inputStyle, cursor: 'pointer' }}
+            className="fp-input" style={{ cursor: 'pointer' }}
           >
             <option value="">All Types</option>
             <option value="expense">Expense Only</option>
@@ -681,7 +649,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               value={formData.auto_category_id || ''}
               onChange={handleChange}
               disabled={isSubmitting}
-              style={{ ...inputStyle, cursor: 'pointer' }}
+              className="fp-input" style={{ cursor: 'pointer' }}
             >
               <option value="">None</option>
               {categories.map(cat => (
@@ -697,7 +665,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               value={formData.auto_account_id || ''}
               onChange={handleChange}
               disabled={isSubmitting}
-              style={{ ...inputStyle, cursor: 'pointer' }}
+              className="fp-input" style={{ cursor: 'pointer' }}
             >
               <option value="">None</option>
               {accounts.map(acc => (
@@ -713,7 +681,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               value={formData.auto_transaction_type || ''}
               onChange={handleChange}
               disabled={isSubmitting}
-              style={{ ...inputStyle, cursor: 'pointer' }}
+              className="fp-input" style={{ cursor: 'pointer' }}
             >
               <option value="">None</option>
               <option value="expense">Expense</option>
@@ -730,7 +698,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
               value={formData.priority}
               onChange={handleChange}
               disabled={isSubmitting}
-              style={inputStyle}
+              className="fp-input"
             />
           </div>
 

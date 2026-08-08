@@ -66,17 +66,6 @@ const labelStyle: React.CSSProperties = {
   fontWeight: '500',
   marginBottom: '8px',
 };
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px',
-  background: 'var(--input-bg)',
-  border: '1px solid var(--input-border)',
-  borderRadius: '8px',
-  color: 'var(--text-primary)',
-  fontSize: '14px',
-};
-
 const codeBlockStyle: React.CSSProperties = {
   margin: 0,
   padding: '12px',
@@ -472,7 +461,7 @@ export const AgentAccess: React.FC = () => {
                 setError(null);
               }}
               placeholder="Claude Desktop"
-              style={inputStyle}
+              className="fp-input"
             />
           </div>
           <div style={{ flex: '1 1 150px', minWidth: 0 }}>
@@ -481,7 +470,7 @@ export const AgentAccess: React.FC = () => {
               id="agent-token-scope"
               value={newScope}
               onChange={(e) => setNewScope(e.target.value as TokenScope)}
-              style={inputStyle}
+              className="fp-input"
             >
               <option value="read">Read only</option>
               <option value="read_write">Read &amp; write</option>
@@ -499,7 +488,7 @@ export const AgentAccess: React.FC = () => {
                 setNewExpiry(e.target.value);
                 setError(null);
               }}
-              style={inputStyle}
+              className="fp-input"
             />
           </div>
           <button

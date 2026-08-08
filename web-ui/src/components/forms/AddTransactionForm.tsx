@@ -8,7 +8,7 @@ import { accountService, Account } from '../../services/accountService';
 import { teamService } from '../../services/teamService';
 import { TeamMember } from '../../types/team';
 import { useAuthStore } from '../../store/authStore';
-import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
+import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
 
@@ -210,22 +210,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       setApiError(apiErrorMessage(e, 'Failed to create transaction'));
     }
   };
-
-
-
-
-  const focusHandlers = {
-    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-      e.currentTarget.style.background = 'var(--input-bg-focus)';
-    },
-    onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      e.currentTarget.style.borderColor = 'var(--input-border)';
-      e.currentTarget.style.background = 'var(--input-bg)';
-    },
-  };
-
-  if (loadingData) {
+if (loadingData) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
         Loading form data...
@@ -300,8 +285,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           type="text"
           placeholder="e.g., Grocery shopping"
           disabled={isSubmitting}
-          style={inputStyle}
-          {...focusHandlers}
+          className="fp-input"
           {...register('name', { required: 'Transaction name is required' })}
         />
         {errors.name && (
@@ -324,8 +308,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           step="0.01"
           min="0"
           disabled={isSubmitting}
-          style={inputStyle}
-          {...focusHandlers}
+          className="fp-input"
           {...register('amount', {
             required: 'Amount is required',
             min: { value: 0.01, message: 'Amount must be greater than 0' },
@@ -348,8 +331,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
         <input
           type="date"
           disabled={isSubmitting}
-          style={inputStyle}
-          {...focusHandlers}
+          className="fp-input"
           {...register('date', { required: 'Date is required' })}
         />
         {errors.date && (
@@ -366,7 +348,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           <Tag size={16} style={iconInlineStyle} />
           Category
         </label>
-        <select disabled={isSubmitting} style={{ ...inputStyle, cursor: 'pointer' }} {...focusHandlers} {...register('category_id')}>
+        <select disabled={isSubmitting} className="fp-input" style={{ cursor: 'pointer' }} {...register('category_id')}>
           <option value="" style={bgPrimaryStyle}>Select a category (optional)</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id} style={bgPrimaryStyle}>
@@ -384,8 +366,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
         </label>
         <select
           disabled={isSubmitting}
-          style={{ ...inputStyle, cursor: 'pointer' }}
-          {...focusHandlers}
+          className="fp-input" style={{ cursor: 'pointer' }}
           {...register('account_id', { required: watchType === 'transfer' })}
         >
           <option value="" style={bgPrimaryStyle}>
@@ -414,9 +395,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           </label>
           <select
             disabled={isSubmitting}
-            style={{ ...inputStyle, cursor: 'pointer' }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)'; e.currentTarget.style.background = 'var(--input-bg-focus)'; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--input-border)'; e.currentTarget.style.background = 'var(--input-bg)'; }}
+            className="fp-input" style={{ cursor: 'pointer' }}
             {...register('destination_account_id', { required: watchType === 'transfer' })}
           >
             <option value="" style={bgPrimaryStyle}>Select destination account</option>
@@ -440,7 +419,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           <Users size={16} style={iconInlineStyle} />
           Group (Split Expense)
         </label>
-        <select disabled={isSubmitting} style={{ ...inputStyle, cursor: 'pointer' }} {...focusHandlers} {...register('group_id')}>
+        <select disabled={isSubmitting} className="fp-input" style={{ cursor: 'pointer' }} {...register('group_id')}>
           <option value="" style={bgPrimaryStyle}>No group (personal expense)</option>
           {groups.map((group) => (
             <option key={group.id} value={group.id} style={bgPrimaryStyle}>
@@ -454,7 +433,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       {watchGroupId && (
         <div>
           <label style={labelStyle}>Split Method</label>
-          <select disabled={isSubmitting} style={{ ...inputStyle, cursor: 'pointer' }} {...focusHandlers} {...register('split_method')}>
+          <select disabled={isSubmitting} className="fp-input" style={{ cursor: 'pointer' }} {...register('split_method')}>
             <option value="equal" style={bgPrimaryStyle}>Split Equally</option>
             <option value="percentage" style={bgPrimaryStyle}>By Percentage</option>
             <option value="custom" style={bgPrimaryStyle}>Custom Amounts</option>
@@ -479,8 +458,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                 min="0"
                 max={watchSplitMethod === 'percentage' ? '100' : undefined}
                 disabled={isSubmitting}
-                style={inputStyle}
-                {...focusHandlers}
+                className="fp-input"
                 {...register('split_value')}
               />
               <p style={hintTextStyle}>
@@ -500,8 +478,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                 step="0.01"
                 min="0"
                 disabled={isSubmitting}
-                style={inputStyle}
-                {...focusHandlers}
+                className="fp-input"
                 {...register('split_value')}
               />
               <p style={hintTextStyle}>
@@ -538,7 +515,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                       updated[index].category_id = e.target.value;
                       setCategorySplits(updated);
                     }}
-                    style={{ ...inputStyle, flex: 2 }}
+                    className="fp-input" style={{ flex: 2 }}
                   >
                     <option value="">Select category</option>
                     {categories.map((cat) => (
@@ -554,7 +531,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
                       updated[index].amount = e.target.value;
                       setCategorySplits(updated);
                     }}
-                    style={{ ...inputStyle, flex: 1 }}
+                    className="fp-input" style={{ flex: 1 }}
                     step="0.01"
                     min="0"
                   />
@@ -583,8 +560,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
           placeholder="Add any additional details..."
           rows={3}
           disabled={isSubmitting}
-          style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-          {...focusHandlers}
+          className="fp-input" style={{ resize: 'vertical', fontFamily: 'inherit' }}
           {...register('description')}
         />
       </div>

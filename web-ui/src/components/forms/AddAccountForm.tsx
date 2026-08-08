@@ -6,7 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { pointspalService, WalletCard } from '../../modules/pointspal/service';
 import { teamService } from '../../services/teamService';
 import { TeamMember } from '../../types/team';
-import { errorTextStyle, formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
+import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
 
@@ -144,22 +144,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       showToast(msg, 'error');
     }
   };
-
-
-
-
-  const focusHandlers = {
-    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-      e.currentTarget.style.background = 'var(--input-bg-focus)';
-    },
-    onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      e.currentTarget.style.borderColor = 'var(--input-border)';
-      e.currentTarget.style.background = 'var(--input-bg)';
-    },
-  };
-
-  return (
+return (
     <form onSubmit={handleSubmit(onSubmit)} style={flexColGap20}>
       {/* Success Message */}
       {success && (
@@ -213,8 +198,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           type="text"
           placeholder="e.g., Main Checking Account"
           disabled={isSubmitting}
-          style={inputStyle}
-          {...focusHandlers}
+          className="fp-input"
           {...register('name', { required: 'Account name is required' })}
         />
         {errors.name && (
@@ -230,8 +214,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
         <label style={labelStyle}>Account Type</label>
         <select
           disabled={isSubmitting}
-          style={{ ...inputStyle, cursor: 'pointer' }}
-          {...focusHandlers}
+          className="fp-input" style={{ cursor: 'pointer' }}
           {...register('type')}
         >
           <option value="checking" style={{ background: 'var(--bg-primary)' }}>Checking Account</option>
@@ -255,8 +238,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           placeholder="0.00"
           step="0.01"
           disabled={isSubmitting}
-          style={inputStyle}
-          {...focusHandlers}
+          className="fp-input"
           {...register('balance', {
             required: 'Balance is required',
             min: { value: 0, message: 'Balance must be 0 or greater' },
@@ -275,8 +257,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
         <label style={labelStyle}>Currency</label>
         <select
           disabled={isSubmitting}
-          style={{ ...inputStyle, cursor: 'pointer' }}
-          {...focusHandlers}
+          className="fp-input" style={{ cursor: 'pointer' }}
           {...register('currency')}
         >
           <option value="USD" style={{ background: 'var(--bg-primary)' }}>USD ($)</option>
@@ -301,8 +282,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           <select
             id="account-owner"
             disabled={isSubmitting}
-            style={{ ...inputStyle, cursor: 'pointer' }}
-            {...focusHandlers}
+            className="fp-input" style={{ cursor: 'pointer' }}
             {...register('ownerId')}
           >
             <option value="" style={{ background: 'var(--bg-primary)' }}>
@@ -335,7 +315,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
             value={selectedCardId}
             onChange={(e) => setSelectedCardId(e.target.value === '' ? '' : parseInt(e.target.value))}
             disabled={isSubmitting}
-            style={{ ...inputStyle, cursor: 'pointer' }}
+            className="fp-input" style={{ cursor: 'pointer' }}
           >
             <option value="">Don't link (set up later in pointsPal)</option>
             {walletCards.map((c) => (
@@ -404,8 +384,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
           placeholder="Add notes about this account..."
           rows={3}
           disabled={isSubmitting}
-          style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-          {...focusHandlers}
+          className="fp-input" style={{ resize: 'vertical', fontFamily: 'inherit' }}
           {...register('description')}
         />
       </div>
