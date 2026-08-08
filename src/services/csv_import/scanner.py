@@ -7,8 +7,13 @@ import io
 import logging
 from datetime import datetime
 
+from flask import current_app
+
 from src.extensions import db
 from src.models.import_source import ImportBatch
+from src.models.user import User
+from src.services.csv_import.review import batch_needs_review
+from src.services.email_service import email_service
 from src.services.csv_import.adapters.local_folder import LocalFolderAdapter
 from src.services.csv_import.fingerprint import find_profile, save_profile
 from src.services.csv_import.heuristics import detect
@@ -148,8 +153,47 @@ def _process(adapter, source, handle) -> ImportBatch | None:
     # Log identifiers only — never file contents.
     logger.info('Imported %s: %s rows from %s (hash %s)',
                 batch.id, outcome.imported, handle.name, file_hash[:12])
+    _notify_if_review_needed(batch)
     adapter.mark_done(handle)
     return batch
+
+
+def _notify_if_review_needed(batch):
+    """Email the owner ONLY when the batch wants a human — never on a clean import.
+
+    Owner decision 2026-08-07: one mail per batch is noise, so nothing is sent for
+    an import that went through cleanly. `batch_needs_review` is the same predicate
+    the dashboard banner now reads, so the email and the banner can never disagree
+    about what "needs review" means.
+
+    **Wrapped in a broad except on purpose, and this is the one place that is
+    right.** The import has already been committed by the time we get here. A dead
+    SMTP server, a missing template, a user row that vanished — none of those should
+    turn a successful import into a failed scan, and the scheduled scan that calls
+    this swallows exceptions at the top level anyway, so an escape here would abandon
+    the remaining files silently. Logged with `exception` so it is never invisible.
+    """
+    try:
+        if not batch_needs_review(batch):
+            return
+
+        user = db.session.get(User, batch.user_id)
+        if user is None or not user.notification_email:
+            return
+
+        guessed = bool(batch.profile and batch.profile.origin == 'heuristic')
+        base = (current_app.config.get('FRONTEND_URL') or '').rstrip('/')
+        email_service.send_import_review_email(
+            to_email=user.id,
+            user_name=user.name or 'there',
+            filename=batch.filename,
+            imported=batch.imported_count,
+            errors=batch.error_count,
+            guessed_mapping=guessed,
+            review_link=f'{base}/dashboard' if base else '/dashboard',
+        )
+    except Exception:
+        logger.exception('Import review email failed for batch %s', batch.id)
 
 
 def _fail(adapter, source, handle, file_hash, reason):

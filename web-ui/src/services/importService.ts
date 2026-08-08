@@ -29,6 +29,16 @@ export interface ImportBatch {
   mapping_used: Record<string, string> | null;
   /** 'heuristic' means the columns were guessed and want reviewing. */
   profile_origin: 'manual' | 'heuristic' | null;
+  /**
+   * Whether this batch wants a human's eyes — decided by the SERVER
+   * (`src/services/csv_import/review.py`), so the dashboard banner and the review
+   * email can never disagree about what "needs review" means.
+   *
+   * Optional because a payload cached from before this field existed has no such
+   * key, and the banner falls back to computing it locally rather than showing
+   * nothing.
+   */
+  needs_review?: boolean;
   created_at: string | null;
   reverted_at: string | null;
 }

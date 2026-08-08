@@ -48,11 +48,21 @@ const writeDismissed = (ids: number[]) => {
 /**
  * A mapping wants reviewing when it was guessed, or when the parse was shaky.
  *
- * Both halves are needed. profile_origin catches the heuristic path even when it
- * is fully confident — the heuristics legitimately return 1.0 for an unambiguous
- * header — and the confidence test catches a low-confidence import whatever its
- * origin. A reverted batch has already been dealt with, and anything older than
- * the review window is history the user has had ample chance to look at.
+ * *** THE RULE ITSELF NOW LIVES ON THE SERVER, AND THIS READS IT. *** It used to
+ * be computed here, in TypeScript. When the review EMAIL was added it needed the
+ * same rule in Python, and a second copy in a second language is the shape behind
+ * D-52, D-57, D-64 and the two Categories implementations — duplicated predicates
+ * drift, and the drift is invisible because both copies compile and both have
+ * tests. `src/services/csv_import/review.py` is the definition;
+ * `_serialize_batch` publishes it as `needs_review`.
+ *
+ * What stays here is genuinely presentational and belongs to the BANNER, not to
+ * the rule: a reverted batch has been dealt with, and anything past the review
+ * window is history the user has had ample chance to see. Neither applies to the
+ * email, which fires the moment a batch is created.
+ *
+ * `needs_review` is optional in the type so a cached or older payload without the
+ * field falls back to the local computation rather than silently showing nothing.
  */
 const needsReview = (batch: ImportBatch) => {
   if (batch.status === 'reverted') return false;
@@ -60,6 +70,7 @@ const needsReview = (batch: ImportBatch) => {
     const ageDays = (Date.now() - new Date(batch.created_at).getTime()) / 86_400_000;
     if (ageDays > REVIEW_WINDOW_DAYS) return false;
   }
+  if (typeof batch.needs_review === 'boolean') return batch.needs_review;
   return batch.profile_origin === 'heuristic' ||
     (batch.confidence !== null && batch.confidence < 1);
 };
