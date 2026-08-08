@@ -561,6 +561,67 @@ For security reasons, we never send your password via email.
 
         return self.send_email(to_email, subject, html_body, text_body)
 
+    def send_import_review_email(
+        self,
+        to_email: str,
+        user_name: str,
+        filename: str,
+        imported: int,
+        errors: int,
+        guessed_mapping: bool,
+        review_link: str,
+    ) -> bool:
+        """Tell the user an automatic import needs their eyes.
+
+        **Only sent when the batch actually needs review** — a guessed mapping or
+        failed rows. A clean auto-import sends nothing, deliberately: the owner's
+        decision was that one mail per batch is noise, and a notification that
+        arrives whether or not anything is wrong trains people to ignore it. The
+        caller decides via `batch_needs_review`; this method only renders.
+
+        The two reasons are named separately in the body because they need
+        different actions from the reader — a guessed mapping means "check the
+        columns landed in the right fields", while failed rows mean "some data did
+        not arrive at all".
+        """
+        reasons = []
+        if guessed_mapping:
+            reasons.append(
+                '<li><strong>The columns were guessed.</strong> finPal had not seen '
+                'this file layout before, so it worked out which column was the '
+                'date, the description and the amount. Worth a look to confirm it '
+                'guessed right.</li>')
+        if errors:
+            reasons.append(
+                f'<li><strong>{errors} row(s) could not be imported.</strong> '
+                'The rest went in; these did not.</li>')
+
+        subject = f"Check your import: {filename}"
+        html_body = f"""
+        <p>Hi {user_name},</p>
+        <p>finPal imported <strong>{filename}</strong> and brought in
+           <strong>{imported}</strong> transaction(s), but it would like you to
+           check something:</p>
+        <ul>{''.join(reasons)}</ul>
+        <p><a href="{review_link}">Review this import</a></p>
+        <p>If it looks wrong you can undo the whole batch from that screen, and
+           nothing else in your account is affected.</p>
+        <p style="color:#6b7280;font-size:13px">You are getting this because an
+           automatic import needed attention. finPal does not email you about
+           imports that go through cleanly.</p>
+        """
+        text_lines = [f"Hi {user_name},", "",
+                      f"finPal imported {filename} and brought in {imported} transaction(s), "
+                      "but it would like you to check something:", ""]
+        if guessed_mapping:
+            text_lines.append("- The columns were guessed. Confirm they landed in the right fields.")
+        if errors:
+            text_lines.append(f"- {errors} row(s) could not be imported.")
+        text_lines += ["", f"Review this import: {review_link}", "",
+                       "finPal does not email you about imports that go through cleanly."]
+
+        return self.send_email(to_email, subject, html_body, "\n".join(text_lines))
+
     def send_monthly_report_email(
         self,
         to_email: str,

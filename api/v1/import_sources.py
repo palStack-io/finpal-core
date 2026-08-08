@@ -15,6 +15,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 
 from src.extensions import db
+from src.services.csv_import.review import batch_needs_review
 from src.models.import_source import ImportBatch, ImportProfile, ImportSource
 from src.models.user import User
 from src.services.csv_import.batches import remap_batch, revert_batch
@@ -57,6 +58,12 @@ def _serialize_batch(b):
         # confidence cannot carry that: the heuristics return 1.0 for an
         # unambiguous header, so it looks identical to a learned mapping.
         'profile_origin': b.profile.origin if b.profile else None,
+        # The SERVER owns "does this want a human?" now. It used to be computed
+        # in TypeScript inside ImportReviewBanner, and the review email would
+        # have made that a second copy in a second language — the shape behind
+        # D-52, D-57, D-64 and the two Categories implementations. One
+        # definition, two consumers.
+        'needs_review': batch_needs_review(b),
         'created_at': b.created_at.isoformat() if b.created_at else None,
         'reverted_at': b.reverted_at.isoformat() if b.reverted_at else None,
     }
