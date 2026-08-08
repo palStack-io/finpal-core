@@ -98,7 +98,7 @@ const BestCard: React.FC = () => {
                 value={merchant}
                 onChange={(e) => setMerchant(e.target.value)}
                 placeholder="e.g. Whole Foods, Trader Joe's…"
-                style={inputStyle}
+                className="fp-input"
               />
             </div>
 
@@ -110,7 +110,7 @@ const BestCard: React.FC = () => {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  style={{ ...inputStyle, flex: 1 }}
+                  className="fp-input" style={{ flex: 1 }}
                 />
                 {/* handleFind silently returns on a non-positive amount, so without
                     this the button looks live and does nothing. */}
@@ -249,19 +249,4 @@ const fieldLabel: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
 };
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--rs)',
-  fontFamily: "'Bricolage Grotesque', sans-serif",
-  fontWeight: 600,
-  fontSize: 13,
-  color: 'var(--ink)',
-  background: 'var(--bg)',
-  outline: 'none',
-  boxSizing: 'border-box',
-};
-
 export default BestCard;

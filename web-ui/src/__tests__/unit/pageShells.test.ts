@@ -126,16 +126,23 @@ describe('the extracted typography roles carry their inline values', () => {
     for (const [prop, value] of decls) declares(selector, prop, value);
   });
 
-  it('.fp-input is RECONCILED to what ships, and the pin moved deliberately', () => {
+  it('.fp-input is UNIFIED at 12px 16px — the pin moved deliberately, twice', () => {
     // Was `10px 14px`, pinned at that value on purpose so the next slice had to
     // reconcile it consciously rather than discover it mid-adoption. This is that
     // slice, and this line changing is the record of the decision.
     //
-    // `12px` is what the app renders: the rule was used by ZERO components, and
-    // all 11 inputs matching its shape inline a flat `padding: 12px`. So adopting
-    // the old value would have re-padded every one of them — the trap .page-title
-    // set in #87, where the rule said 28px and seven pages rendered 32px.
-    declares('.fp-input', 'padding', '12px');
+    // Slice 3 set it to `12px`, reconciling with the 11 inputs that inlined that.
+    //
+    // *** SLICE 4 THEN FOUND A SECOND SHARED DEFINITION AND THIS BECAME A DESIGN
+    // DECISION RATHER THAN A RECONCILIATION. *** `inputStyle` in
+    // src/styles/formStyles.ts said `12px 16px` and was used by TEN FORM FILES.
+    // Two genuinely different populations, so there was no value that left
+    // everything unchanged — unifying moved pixels either way, which is the
+    // owner's call and not a refactor's. Owner picked `12px 16px` (2026-08-07).
+    //
+    // `inputStyle` is now DELETED, so this rule is the only definition and this
+    // line is the only place the value lives.
+    declares('.fp-input', 'padding', '12px 16px');
   });
 
   it('.fp-input keeps the other eight properties its adopters depend on', () => {

@@ -58,17 +58,6 @@ const labelStyle: React.CSSProperties = {
   fontWeight: '500',
   marginBottom: '8px',
 };
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px',
-  background: 'var(--input-bg)',
-  border: '1px solid var(--input-border)',
-  borderRadius: '8px',
-  color: 'var(--text-primary)',
-  fontSize: '14px',
-};
-
 /** Semantic status colours; deliberately not variablised — see CLAUDE.md. */
 const STATUS_COLOR: Record<ImportBatchStatus, string> = {
   success: '#22c55e',
@@ -273,7 +262,7 @@ export const ImportSources: React.FC = () => {
               setError(null);
             }}
             placeholder="/data/inbox"
-            style={inputStyle}
+            className="fp-input"
           />
           <button
             onClick={handleAdd}

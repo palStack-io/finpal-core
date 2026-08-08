@@ -39,23 +39,7 @@ export const Input: React.FC<InputProps> = ({
     pointerEvents: 'none',
     color: 'var(--text-muted)',
   };
-
-  const inputStyle: React.CSSProperties = {
-    display: 'block',
-    width: '100%',
-    padding: '10px 16px',
-    paddingLeft: leftIcon ? '40px' : '16px',
-    paddingRight: rightIcon ? '40px' : '16px',
-    background: 'var(--input-bg)',
-    border: `1px solid ${error ? '#ef4444' : 'var(--input-border)'}`,
-    borderRadius: '8px',
-    color: 'var(--text-primary)',
-    fontSize: '14px',
-    transition: 'border-color 0.2s ease',
-    boxSizing: 'border-box',
-  };
-
-  const messageStyle: React.CSSProperties = {
+const messageStyle: React.CSSProperties = {
     marginTop: '6px',
     fontSize: '14px',
   };
@@ -80,7 +64,7 @@ export const Input: React.FC<InputProps> = ({
         {leftIcon && <div style={{ ...iconStyle, left: 0, paddingLeft: '12px' }}>{leftIcon}</div>}
         <input
           id={inputId}
-          style={inputStyle}
+          className="fp-input"
           {...props}
         />
         {rightIcon && <div style={{ ...iconStyle, right: 0, paddingRight: '12px' }}>{rightIcon}</div>}

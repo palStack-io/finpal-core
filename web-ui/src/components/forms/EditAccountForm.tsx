@@ -4,7 +4,7 @@ import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
 import { teamService } from '../../services/teamService';
 import { TeamMember } from '../../types/team';
-import { formActionsStyle, iconInlineStyle, inputStyle, labelStyle } from '../../styles/formStyles';
+import { formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
 
@@ -178,15 +178,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           placeholder="e.g., Main Checking Account"
           required
           disabled={isSubmitting}
-          style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          className="fp-input"
         />
       </div>
 
@@ -198,17 +190,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           value={formData.type}
           onChange={handleChange}
           disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
+          className="fp-input" style={{ cursor: 'pointer'
           }}
         >
           <option value="checking" style={{ background: 'var(--bg-primary)' }}>Checking Account</option>
@@ -236,15 +218,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           step="0.01"
           required
           disabled={isSubmitting}
-          style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          className="fp-input"
         />
       </div>
 
@@ -258,15 +232,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           onChange={handleChange}
           placeholder="e.g., Chase Bank"
           disabled={isSubmitting}
-          style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          className="fp-input"
         />
       </div>
 
@@ -281,15 +247,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           placeholder="e.g., 1234"
           maxLength={4}
           disabled={isSubmitting}
-          style={inputStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
-          }}
+          className="fp-input"
         />
       </div>
 
@@ -301,17 +259,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           value={formData.currency}
           onChange={handleChange}
           disabled={isSubmitting}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-            e.currentTarget.style.background = 'var(--input-bg-focus)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--input-border)';
-            e.currentTarget.style.background = 'var(--input-bg)';
+          className="fp-input" style={{ cursor: 'pointer'
           }}
         >
           <option value="USD" style={{ background: 'var(--bg-primary)' }}>USD ($)</option>
@@ -337,15 +285,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
             value={formData.ownerId}
             onChange={handleChange}
             disabled={isSubmitting}
-            style={{ ...inputStyle, cursor: 'pointer' }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-              e.currentTarget.style.background = 'var(--input-bg-focus)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--input-border)';
-              e.currentTarget.style.background = 'var(--input-bg)';
-            }}
+            className="fp-input" style={{ cursor: 'pointer' }}
           >
             {members.map((member) => (
               <option key={member.id} value={member.id}

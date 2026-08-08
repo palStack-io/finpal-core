@@ -75,29 +75,6 @@ const labelStyle: React.CSSProperties = {
   fontWeight: '500',
   marginBottom: '8px',
 };
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 16px',
-  background: 'var(--input-bg)',
-  border: '1px solid var(--input-border)',
-  borderRadius: '12px',
-  color: 'var(--text-primary)',
-  fontSize: '14px',
-  outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.2s',
-};
-
-const focusHandlers = {
-  onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
-    e.currentTarget.style.borderColor = 'var(--brand-main-green)';
-  },
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
-    e.currentTarget.style.borderColor = 'var(--input-border)';
-  },
-};
-
 const badgeStyle = (background: string, color: string): React.CSSProperties => ({
   display: 'inline-flex',
   alignItems: 'center',
@@ -363,9 +340,8 @@ export const TeamManagement: React.FC = () => {
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
-              style={inputStyle}
+              className="fp-input"
               placeholder="colleague@example.com"
-              {...focusHandlers}
             />
           </div>
           <div style={{ flex: '1 1 140px', minWidth: 0 }}>
@@ -374,8 +350,7 @@ export const TeamManagement: React.FC = () => {
               id="team-invite-role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as TeamRole)}
-              style={inputStyle}
-              {...focusHandlers}
+              className="fp-input"
             >
               <option value="viewer">Viewer</option>
               <option value="member">Member</option>
@@ -606,13 +581,10 @@ export const TeamManagement: React.FC = () => {
                     <select
                       value={member.role}
                       onChange={(e) => handleUpdateRole(member.id, e.target.value as TeamRole)}
-                      style={{
-                        ...inputStyle,
-                        width: 'auto',
+                      className="fp-input" style={{ width: 'auto',
                         padding: '8px 12px',
                         borderRadius: '8px',
                       }}
-                      {...focusHandlers}
                     >
                       <option value="viewer">Viewer</option>
                       <option value="member">Member</option>
