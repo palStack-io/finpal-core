@@ -3,7 +3,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import { TrendingUp, TrendingDown, Wallet, CreditCard, PiggyBank, ChevronDown, ChevronUp, Loader2, ArrowRight } from 'lucide-react';
 import { analyticsService } from '../services/analyticsService';
 import { accountService } from '../services/accountService';
-import { transactionService } from '../services/transactionService';
+import { transactionsApi } from '../services/api/transactions';
 import { budgetService } from '../services/budgetService';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
@@ -118,7 +118,7 @@ export const Dashboard = () => {
         // whole page.
         analyticsService.getDashboardData(memberId),
         accountService.getAccounts(),
-        transactionService.getTransactions({ per_page: 5, member_id: memberId || undefined }),
+        transactionsApi.getAll({ per_page: 5, member_id: memberId || undefined }),
         budgetService.getBudgets()
       ]);
 

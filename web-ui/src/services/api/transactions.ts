@@ -152,8 +152,16 @@ export const transactionsApi = {
   },
 
   // Get single transaction
-  get: async (id: number): Promise<Transaction> => {
-    const response = await api.get<Transaction>(API_CONFIG.endpoints.transactions.get(id));
+  // *** THE ENVELOPE IS REAL AND THIS TYPE USED TO DENY IT. *** Declared
+  // `Promise<Transaction>` while the server answers `{success, transaction}` —
+  // verified against the DEPLOYED instance, not the mock: GET /transactions/1
+  // returns top-level keys ['success', 'transaction']. A caller trusting the old
+  // type would have read `.description` off the envelope and got undefined, with
+  // TypeScript agreeing it was fine. `create` was already correct here; `get` and
+  // `update` were left behind when it was fixed.
+  get: async (id: number): Promise<{ success: boolean; transaction: Transaction }> => {
+    const response = await api.get<{ success: boolean; transaction: Transaction }>(
+      API_CONFIG.endpoints.transactions.get(id));
     return response.data;
   },
 
@@ -173,7 +181,12 @@ export const transactionsApi = {
   },
 
   // Update transaction
-  update: async (id: number, data: Partial<Transaction>): Promise<{ message: string }> => {
+  // Same correction as `get`: the live PUT answers ['message', 'success',
+  // 'transaction'], so the updated row IS returned and the old type hid it.
+  update: async (
+    id: number,
+    data: Partial<Transaction>,
+  ): Promise<{ success: boolean; message: string; transaction: Transaction }> => {
     const response = await api.put(API_CONFIG.endpoints.transactions.update(id), data);
     return response.data;
   },

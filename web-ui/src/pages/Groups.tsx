@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Users, DollarSign, ArrowRight, X, Search, Mail } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
-import { groupService, type Group } from '../services/groupService';
+import { groupsApi, type Group } from '../services/api/groups';
 import { SlidePanel } from '../components/SlidePanel';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
@@ -94,7 +94,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
         }
       }
 
-      await groupService.createGroup({
+      await groupsApi.create({
         name: formData.name,
         description: formData.description || undefined,
         member_ids: validEmails.length > 0 ? validEmails.map(email => parseInt(email)) : undefined,
@@ -510,8 +510,11 @@ export const Groups: React.FC = () => {
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const data = await groupService.getGroups();
-      setGroups(data);
+      // `.groups`, not the response: the retired groupService unwrapped the
+      // envelope for callers and groupsApi does not. Converging is a shape change
+      // at every call site, not a rename.
+      const { groups } = await groupsApi.getAll();
+      setGroups(groups);
     } catch (error) {
       console.error('Failed to load groups:', error);
     } finally {

@@ -18,6 +18,28 @@ export interface Group {
   members: GroupMember[];
 }
 
+/**
+ * The fields the server actually accepts on create.
+ *
+ * Moved here from the retired `services/groupService.ts`, and it is the RICHER of
+ * the two: this signature used to be `Partial<Group> & { member_ids?: string[] }`,
+ * which omitted `default_split_values` entirely and typed `member_ids` as strings
+ * when callers send numbers. Converging on the newer module would have SILENTLY
+ * NARROWED the contract — the older file was the one that had it right.
+ *
+ * All three of the split fields are accepted by `api/v1/groups.py` and are sent by
+ * `Groups.tsx`; they were previously discarded with a 201, which is why the swagger
+ * model names them explicitly now.
+ */
+export interface CreateGroupData {
+  name: string;
+  description?: string;
+  member_ids?: number[];
+  default_split_method?: string;
+  auto_include_all?: boolean;
+  default_split_values?: Record<string, number>;
+}
+
 export interface GroupsResponse {
   groups: Group[];
 }
@@ -36,7 +58,7 @@ export const groupsApi = {
   },
 
   // Create group
-  create: async (data: Partial<Group> & { member_ids?: string[] }): Promise<{ message: string; group_id: number }> => {
+  create: async (data: CreateGroupData): Promise<{ message: string; group_id: number }> => {
     const response = await api.post('/api/v1/groups', data);
     return response.data;
   },
