@@ -16,6 +16,7 @@ from flask_restx import Namespace, Resource, fields
 
 from src.extensions import db
 from src.services.csv_import.review import batch_needs_review
+from src.utils.household import is_household_member, visible_user_ids
 from src.models.import_source import ImportBatch, ImportProfile, ImportSource
 from src.models.user import User
 from src.services.csv_import.batches import remap_batch, revert_batch
@@ -44,6 +45,10 @@ def _serialize_source(s):
         'id': s.id, 'kind': s.kind, 'path': (s.config or {}).get('path'),
         'enabled': s.enabled, 'scan_interval_minutes': s.scan_interval_minutes,
         'last_scanned_at': s.last_scanned_at.isoformat() if s.last_scanned_at else None,
+        # Whose transactions this folder's files become. Published because the
+        # list is household-wide now — a list of folders that does not say who
+        # each one imports for is the D-18 failure in miniature.
+        'owner_id': s.user_id,
     }
 
 
@@ -73,6 +78,14 @@ import_source_model = ns.model('ImportSourceCreate', {
     'path': fields.String(required=True, description='Directory to watch, inside the permitted import root'),
     'scan_interval_minutes': fields.Integer(
         required=False, description='How often to rescan; server default when omitted'),
+    # NOT required. #86's lesson: `required` is a claim about the SERVER, and
+    # over-claiming makes a generated client refuse a request the server accepts.
+    # Omitting owner_id is the common case and means "mine".
+    'owner_id': fields.String(
+        required=False,
+        description='Household member the imported transactions belong to. '
+                    'Defaults to the caller. A demo account or an unknown id is '
+                    'refused with 400 — never silently reassigned to the caller.'),
 })
 
 remap_mapping_model = batches_ns.model('RemapMapping', {
@@ -99,7 +112,14 @@ class ImportSourceList(Resource):
         user_id, err = _require_admin()
         if err:
             return err
-        sources = ImportSource.query.filter_by(user_id=user_id).all()
+        # HOUSEHOLD-WIDE, not `filter_by(user_id=caller)`. Once an admin can create
+        # a source owned by another member, filtering to their own would hide the
+        # thing they just made — a create that appears to do nothing. Only admins
+        # reach this endpoint at all, and watched folders are infrastructure the
+        # admin curates, so there is nothing here to keep from them.
+        sources = (ImportSource.query
+                   .filter(ImportSource.user_id.in_(visible_user_ids(user_id)))
+                   .all())
         return {'sources': [_serialize_source(s) for s in sources]}, 200
 
     @ns.expect(import_source_model)
@@ -118,8 +138,19 @@ class ImportSourceList(Resource):
         except PathOutsideRootError:
             return {'error': 'Path is outside the permitted import root'}, 400
 
+        # *** owner_id DECIDES WHOSE TRANSACTIONS THE IMPORTS BECOME. ***
+        # `scanner.py` attributes the profile, the batch AND every imported row to
+        # `source.user_id`, so this field is not bookkeeping — it is whose money
+        # the file turns into. Same shape as accounts in #72: absent means the
+        # caller, and an id outside the household is refused with 400 rather than
+        # silently falling back to the caller, which would put another member's
+        # statement in the admin's name.
+        owner_id = data.get('owner_id') or user_id
+        if owner_id != user_id and not is_household_member(owner_id):
+            return {'error': 'Owner must be a member of this household'}, 400
+
         source = ImportSource(
-            kind='local_folder', config={'path': path}, user_id=user_id,
+            kind='local_folder', config={'path': path}, user_id=owner_id,
             scan_interval_minutes=int(data.get('scan_interval_minutes', 5)),
         )
         db.session.add(source)
