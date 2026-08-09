@@ -337,7 +337,7 @@ const BudgetsMinimal = () => {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <Loader2 size={40} className="animate-spin" style={{ color: 'var(--brand-green-glow)' }} />
+          <Loader2 size={40} className="animate-spin" style={{ color: 'var(--status-ok)' }} />
           <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>Loading budgets...</p>
         </div>
       </div>
@@ -469,7 +469,11 @@ const BudgetsMinimal = () => {
           {/* Top Stats */}
           {(() => {
             const spentPct = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
-            const spentColor = spentPct >= 100 ? 'var(--accent-red)' : spentPct >= 80 ? 'var(--accent-yellow)' : 'var(--brand-green-glow)';
+            // Status tokens, not raw accents: measured on the card, #22c55e was
+            // 2.21:1 and #f59e0b 2.09:1 in light. `over` is the direction's clay,
+            // which piece 5 reserved for exactly this — "clay ONLY for a broken
+            // budget" — so the state finally wears the colour meant for it.
+            const spentColor = spentPct >= 100 ? 'var(--status-over)' : spentPct >= 80 ? 'var(--status-warn)' : 'var(--status-ok)';
             const onTrack = budgets.filter(b => b.percentage < 80).length;
             const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
             const over = budgets.filter(b => b.spent > b.amount).length;
@@ -504,23 +508,23 @@ const BudgetsMinimal = () => {
                   label="Remaining"
                   scope="household"
                   value={formatCurrency(Math.abs(totalRemaining))}
-                  accentColor={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
-                  icon={<TrendingUp size={24} color={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'} />}
-                  valueColor={totalRemaining >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
+                  accentColor={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
+                  icon={<TrendingUp size={24} color={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'} />}
+                  valueColor={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
                   subtitle={<span style={mutedSmallStyle}>{daysLeftInMonth()} days left this month</span>}
                 />
                 {/* Budget Health — custom layout, not a simple stat */}
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
                   <p className="fp-hint-block">Budget Health</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '10px' }}>
-                    <span style={{ color: 'var(--brand-green-glow)' }}>{onTrack} on track</span>
-                    <span style={{ color: 'var(--accent-yellow)' }}>{warning} at risk</span>
-                    <span style={{ color: 'var(--accent-red)' }}>{over} over</span>
+                    <span style={{ color: 'var(--status-ok)' }}>{onTrack} on track</span>
+                    <span style={{ color: 'var(--status-warn)' }}>{warning} at risk</span>
+                    <span style={{ color: 'var(--status-over)' }}>{over} over</span>
                   </div>
                   <div style={{ display: 'flex', gap: '2px', height: '20px', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{ flex: onTrack || 0.1, background: 'var(--brand-green-glow)' }} />
-                    <div style={{ flex: warning || 0.1, background: 'var(--accent-yellow)' }} />
-                    <div style={{ flex: over || 0.1, background: 'var(--accent-red)' }} />
+                    <div style={{ flex: onTrack || 0.1, background: 'var(--status-ok)' }} />
+                    <div style={{ flex: warning || 0.1, background: 'var(--status-warn)' }} />
+                    <div style={{ flex: over || 0.1, background: 'var(--status-over)' }} />
                   </div>
                 </div>
               </div>
@@ -589,11 +593,16 @@ const BudgetsMinimal = () => {
                             {isOver && (
                               <span style={{
                                 padding: '3px 10px',
-                                background: 'rgba(239, 68, 68, 0.2)',
-                                border: '1px solid rgba(239, 68, 68, 0.4)',
+                                /* The FILL is the wash and the CLAY is the border
+                                   and the text. A red tint under clay measured
+                                   3.87:1 for 11px bold — the badge that shouts
+                                   loudest on the page was the least legible thing
+                                   on it. Clay on the wash is 4.53. */
+                                background: 'var(--kt-wash)',
+                                border: '1px solid var(--status-over)',
                                 borderRadius: '6px',
                                 fontSize: '11px',
-                                color: 'var(--accent-red)',
+                                color: 'var(--status-over)',
                                 fontWeight: '700'
                               }}>
                                 OVER
@@ -643,10 +652,10 @@ const BudgetsMinimal = () => {
                                 width: `${Math.min(percentage, 100)}%`,
                                 height: '100%',
                                 background: isOver
-                                  ? 'var(--accent-red)'
+                                  ? 'var(--status-over)'
                                   : percentage >= 80
-                                    ? 'var(--accent-yellow)'
-                                    : budget.category_color || 'var(--brand-green-glow)',
+                                    ? 'var(--status-warn)'
+                                    : budget.category_color || 'var(--status-ok)',
                                 borderRadius: '4px',
                                 transition: 'width 0.5s ease'
                               }}></div>
@@ -662,7 +671,7 @@ const BudgetsMinimal = () => {
                               {' '}of {formatCurrency(budget.amount)}
                             </p>
                             <p style={{
-                              color: isOver ? 'var(--accent-red)' : 'var(--brand-green-glow)',
+                              color: isOver ? 'var(--status-over)' : 'var(--status-ok)',
                               fontSize: '14px',
                               fontWeight: '600',
                               margin: 0
@@ -841,7 +850,7 @@ const BudgetsMinimal = () => {
                             background: budgetFormData.period === period ? 'rgba(34, 197, 94, 0.2)' : 'var(--input-bg)',
                             border: `1px solid ${budgetFormData.period === period ? 'rgba(34, 197, 94, 0.4)' : 'var(--input-border)'}`,
                             borderRadius: '8px',
-                            color: budgetFormData.period === period ? 'var(--brand-green-glow)' : 'var(--text-primary)',
+                            color: budgetFormData.period === period ? 'var(--status-ok)' : 'var(--text-primary)',
                             fontSize: '14px',
                             cursor: 'pointer',
                             fontWeight: '500',
@@ -895,7 +904,7 @@ const BudgetsMinimal = () => {
                         width: '18px',
                         height: '18px',
                         cursor: 'pointer',
-                        accentColor: 'var(--brand-green-glow)'
+                        accentColor: 'var(--status-ok)'
                       }}
                     />
                     <label
@@ -923,7 +932,7 @@ const BudgetsMinimal = () => {
                         background: 'rgba(239, 68, 68, 0.2)',
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         borderRadius: '8px',
-                        color: 'var(--accent-red)',
+                        color: 'var(--status-over)',
                         fontSize: '15px',
                         fontWeight: '600',
                         cursor: 'pointer',

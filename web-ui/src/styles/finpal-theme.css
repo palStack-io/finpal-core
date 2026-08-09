@@ -99,6 +99,27 @@
      every surface it meets by construction. This adoption FIXES that rather than
      carrying it across. */
 
+  /* ── STATUS COLOURS, AND WHY THEY ARE TOKENS NOW ───────────────────────────
+     CLAUDE.md said the semantic accents "are NOT variablized — they work on both
+     themes". *** MEASURED, THAT IS FALSE. *** On the card, #22c55e is 2.21:1 and
+     #f59e0b is 2.09:1 in light — both far below AA for the status text they
+     carry, while being perfectly legible in dark. One value against two very
+     different backgrounds is the same bug --amount-income was created for, and
+     these are the rest of it.
+
+     Two of the three need no new colour at all, which is the useful part:
+       over  IS the direction's clay — "clay ONLY for a broken budget" is piece
+             5's own rule, so the over-budget state finally uses the colour that
+             was reserved for it;
+       ok    IS --amount-income, already theme-aware.
+     *** WARN'S LIGHT VALUE IS DERIVED AND SAYS SO. *** #8A6A2F is a darkened
+     --kt-seg-4; it appears in no approved artifact, exactly like dark's
+     --kt-axis-track, and is flagged here rather than passed off as approved.
+     Measured 4.88:1 on card, 4.39 on wash. */
+  --status-over: var(--kt-clay);
+  --status-ok: var(--amount-income);
+  --status-warn: #8A6A2F;
+
   /* finPal Brand Colors */
   --brand-main-green: #15803d;
   --brand-dark-green: #166534;
@@ -251,6 +272,9 @@
   /* See --amount-income in :root. The glow is legible here (6.42:1) and is
      the value income has always used; only LIGHT was failing. */
   --amount-income: var(--brand-green-glow);
+  /* Only WARN needs a dark value; over and ok resolve through already
+     theme-aware tokens. 8.86:1 on the dark card. */
+  --status-warn: var(--kt-seg-4);
 
   /* Dark Mode Colors */
   --bg-primary: var(--kt-wash);

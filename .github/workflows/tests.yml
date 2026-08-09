@@ -139,6 +139,14 @@ jobs:
         # would fail on day one and get switched off. Any pair NOT in
         # baseline.json fails; pairs that disappear are reported so the baseline
         # can be tightened.
+        # BOTH captures, then ONE walk over everything captured. The walk sweeps
+        # the directory rather than naming a file, so adding a page to
+        # `capture-pages.walk.tsx` is enough — nobody has to remember to add it
+        # here as well. It walked Transactions alone for its first day, which is
+        # exactly how Dashboard and Budgets shipped carrying five AA failures
+        # each while the gate reported green: "unmeasured" reading as "clean".
         run: |
           npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
+          WALK_CAPTURE=scripts/contrast-walk/capture-pages.walk.tsx \
+            npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
           node scripts/contrast-walk/run.mjs

@@ -414,7 +414,13 @@ export const Dashboard = () => {
             value={formatCurrency(netWorth)}
             accentColor="#22c55e"
             icon={<Wallet size={24} color="#22c55e" />}
-            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--brand-green-glow)', fontSize: '14px' }}>Accounts and investments</span></>}
+            /* "Accounts and investments" and "Spending this month" are DESCRIPTIONS of
+                what the figure is, not statuses. Colouring them was the same
+                over-claim O1 retired on the ledger — and measured, the green was
+                2.21:1 and the red 3.65:1 on the card, so they were illegible as
+                well as wrong. The ICONS keep their colour; they are decorative
+                and carry no text. */
+            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Accounts and investments</span></>}
           />
           <StatCard
             label="Monthly Income"
@@ -428,7 +434,7 @@ export const Dashboard = () => {
             value={formatCurrency(monthlyExpenses)}
             accentColor="#ef4444"
             icon={<TrendingDown size={24} color="#ef4444" />}
-            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--accent-red)', fontSize: '14px' }}>Spending this month</span></>}
+            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Spending this month</span></>}
           />
           {/* Still no congratulation. The subtitle used to read "Great job
               saving!" unconditionally — praise for a number that read 100% for a
@@ -580,7 +586,7 @@ export const Dashboard = () => {
                 }}
               >
                 <div style={flexRowGap12}>
-                  <div style={{ width: '40px', height: '40px', background: 'rgba(59,130,246,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '40px', height: '40px', background: 'var(--kt-line)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {account.type === 'savings' && <PiggyBank size={20} color="#22c55e" />}
                     {account.type === 'credit' && <CreditCard size={20} color="#ef4444" />}
                     {account.type !== 'savings' && account.type !== 'credit' && <Wallet size={20} color="#3b82f6" />}

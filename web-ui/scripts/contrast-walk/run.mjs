@@ -9,16 +9,28 @@
  *   npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
  */
 import { execFileSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB_UI = join(HERE, '..', '..');
 const capArg = process.argv.indexOf('--capture');
-const CAPTURED = capArg > -1
-  ? process.argv[capArg + 1]
-  : join(HERE, 'captured', 'transactions.html');
+/**
+ * *** EVERY CAPTURED PAGE, NOT JUST THE ONE SOMEBODY REMEMBERED. ***
+ *
+ * This walked `transactions.html` alone for its first day, which is how the
+ * Dashboard and Budgets pages reached production carrying five AA failures each
+ * while the gate reported green — "unmeasured" reading as "clean". Iterating the
+ * directory means adding a page to the capture is enough; nobody has to remember
+ * to add it here too. That is D-59's lesson: prefer a sweep to a list.
+ */
+const CAPTURES = capArg > -1
+  ? [process.argv[capArg + 1]]
+  : readdirSync(join(HERE, 'captured'))
+      .filter((f) => f.endsWith('.html'))
+      .sort()
+      .map((f) => join(HERE, 'captured', f));
 
 const CHROME_CANDIDATES = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -39,10 +51,12 @@ function chrome() {
   return found;
 }
 
-if (!existsSync(CAPTURED)) {
+if (!CAPTURES.length || CAPTURES.some((f) => !existsSync(f))) {
   console.error(
-    'No captured markup. Run:\n' +
-    '  npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts');
+    'No captured markup. Run BOTH captures:\n' +
+    '  npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts\n' +
+    '  WALK_CAPTURE=scripts/contrast-walk/capture-pages.walk.tsx \\\n' +
+    '    npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts');
   process.exit(2);
 }
 
@@ -50,12 +64,16 @@ const themes = process.argv.includes('--theme')
   ? [process.argv[process.argv.indexOf('--theme') + 1]]
   : ['light', 'dark'];
 
-const markup = readFileSync(CAPTURED, 'utf8');
+
 
 let failed = 0;
 const seenPairs = {};
 
-for (const theme of themes) {
+for (const CAPTURED of CAPTURES) {
+  const pageName = CAPTURED.split('/').pop().replace('.html', '');
+  const markup = readFileSync(CAPTURED, 'utf8');
+  for (const theme of themes) {
+  const key = `${pageName}:${theme}`;
   // The page is assembled with the app's REAL stylesheets rather than a copy of
   // the values. A copied palette is this project's named failure mode, and a
   // contrast check reading a stale copy would certify the wrong colours while
@@ -70,7 +88,7 @@ for (const theme of themes) {
   // an inlined walk puts its output marker in the DOM twice — once as the string
   // literal that builds it — and the parse reads the wrong one.
 
-  const file = join(HERE, `page.${theme}.html`);
+  const file = join(HERE, `page.${pageName}.${theme}.html`);
   writeFileSync(file, theme === 'dark'
     ? page.replace('<!doctype html>', '<!doctype html><html data-theme="dark">')
     : page);
@@ -88,9 +106,18 @@ for (const theme of themes) {
   }
   const out = JSON.parse(m[1]);
 
-  seenPairs[theme] = new Set();
-  console.log(`\n=== ${theme.toUpperCase()} — ${out.total} elements resolved against their actual background ===`);
-  if (out.total < 100) {
+  seenPairs[key] = new Set();
+  console.log(`\n=== ${pageName} / ${theme.toUpperCase()} — ${out.total} elements resolved against their actual background ===`);
+  // The guard exists to catch a SPINNER — a page captured before its data
+  // arrived serializes perfectly and walks to zero failures, which is a
+  // measurement that undercounts looking exactly like a measurement.
+  //
+  // *** THE FLOOR WAS 100 AND THAT WAS OVER-TUNED TO ONE PAGE. *** Transactions
+  // yields ~440 text-bearing elements because it has 50 rows; Dashboard yields
+  // ~46 because it is cards and a chart. A page-count floor calibrated on the
+  // biggest page reports every smaller page as a stub. 20 still catches a
+  // spinner, which has fewer than ten.
+  if (out.total < 20) {
     console.error(`[${theme}] only ${out.total} elements: the walk is inspecting a stub, not the page`);
     process.exit(2);
   }
@@ -103,11 +130,11 @@ for (const theme of themes) {
     // captures.
     const byPair = new Map();
     for (const f of out.failures) {
-      const key = `${f.fg}|${f.bg}|${f.floor}|${f.kind}`;
-      const seen = byPair.get(key);
+      const pairKey = `${f.fg}|${f.bg}|${f.floor}|${f.kind}`;
+      const seen = byPair.get(pairKey);
       if (seen) { seen.n += 1; continue; }
-      byPair.set(key, { ...f, n: 1 });
-      seenPairs[theme].add(key);
+      byPair.set(pairKey, { ...f, n: 1 });
+      seenPairs[key].add(pairKey);
     }
     failed += byPair.size;
     const sorted = [...byPair.values()].sort((a, b) => a.ratio - b.ratio);
@@ -119,6 +146,7 @@ for (const theme of themes) {
   console.log('  worst passing text:');
   for (const f of out.worstText.slice(0, 3)) {
     console.log(`    ${String(f.ratio).padStart(5)}:1  ${f.fg} on ${f.bg}  ${JSON.stringify(f.text)}`);
+  }
   }
 }
 
@@ -140,18 +168,18 @@ const baseline = existsSync(baselinePath)
 
 if (baseline) {
   let regressions = 0;
-  for (const [theme, pairs] of Object.entries(seenPairs)) {
-    const known = new Set(baseline[theme] ?? []);
+  for (const [scope, pairs] of Object.entries(seenPairs)) {
+    const known = new Set(baseline[scope] ?? []);
     const fresh = [...pairs].filter((p) => !known.has(p));
     const gone = [...known].filter((p) => !pairs.has(p));
 
     for (const p of fresh) {
-      console.error(`  REGRESSION [${theme}] new failing pair: ${p}`);
+      console.error(`  REGRESSION [${scope}] new failing pair: ${p}`);
       regressions += 1;
     }
     for (const p of gone) {
       // Not a failure — an invitation to tighten the baseline.
-      console.log(`  improved [${theme}] no longer failing: ${p} — remove it from baseline.json`);
+      console.log(`  improved [${scope}] no longer failing: ${p} — remove it from baseline.json`);
     }
   }
   if (regressions) {

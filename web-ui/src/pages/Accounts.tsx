@@ -214,7 +214,7 @@ export const Accounts = () => {
             value={showBalances ? formatCurrency(totalBalance) : '••••••'}
             accentColor="#22c55e"
             icon={<Wallet size={24} color="#22c55e" />}
-            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--brand-green-glow)', fontSize: '14px' }}>Assets − Liabilities</span></>}
+            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Assets − Liabilities</span></>}
           />
           <StatCard
             label="Total Assets"
