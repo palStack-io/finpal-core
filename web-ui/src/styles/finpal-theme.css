@@ -735,6 +735,133 @@ body {
   margin-bottom: 16px;
 }
 
+/* ── The ledger: one surface, rows as hairlines inside it ────────────────────
+   THE MOVE THE "KITCHEN TABLE" DIRECTION RESTS ON: THE RADIUS BELONGS TO THE
+   CONTAINER, NOT THE ROW.
+
+   The live page gave EVERY row its own card — a 1px border, an 8px radius, a
+   `surface-hover` background, a `translateX(4px)` hover and a 44px coloured icon
+   tile. `PER_PAGE` is 50 (`Transactions.tsx`), so that was 50 nested cards and
+   100 colour events on one screen. Here there is ONE container and the rows are
+   hairlines in it. Measured on a realistic 50-row page over 12 date groups:
+   4404px -> 3875px, 12.0% shorter, 529px less scroll. QUOTE THE PAGE FIGURE, NOT
+   THE PITCH — the pitch alone (80.00 -> 67.11px, 16.1%) times 50 claims 645px and
+   is wrong by a fifth, because this design's date-group header is taller and
+   gives ~116px back across those 12 groups.
+
+   *** THIS BLOCK IS STRUCTURE, AND IT DELIBERATELY USES THE APP'S EXISTING
+   COLOUR TOKENS RATHER THAN THE `--kt-*` PALETTE. *** Two reasons, and the second
+   is the one that decides it:
+
+     1. slice 3 is defined as structure only — the colour semantics question (does
+        an ordinary expense stop being red?) is O1, it is the owner's, and it has
+        NOT been answered. Nothing here changes what a colour means.
+     2. the `--kt-*` dark palette is a SECOND PALETTE, not a token swap. Dark's
+        `--kt-card` is green-black `#16241A` while the app's dark `--bg-card` is
+        slate `#1e293b`. Adopting kt surfaces on this one card would have put a
+        green-black list on a slate page in dark mode — visibly broken, and only
+        in the theme nobody screenshots first.
+
+   `--kt-radius` IS used, because a radius is a number with no light/dark
+   asymmetry, so it carries none of that risk. The rest of the palette adoption
+   belongs to the slice that moves the whole page at once. */
+.fp-ledger {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--kt-radius);
+  box-shadow: var(--card-shadow);
+  /* The hairlines run edge to edge, so the rows cannot carry the container's
+     padding. `overflow: hidden` is what keeps the first and last row from
+     squaring off the corners they sit in. */
+  overflow: hidden;
+}
+
+/* The date label. It carries the hairline that CLOSES THE PREVIOUS GROUP —
+   without it a date floats between two days belonging to neither, which was
+   visible only in a screenshot; the CSS read perfectly. */
+.fp-ledger-group {
+  margin: 0;
+  padding: 22px 24px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.fp-ledger-rows + .fp-ledger-group {
+  border-top: 1px solid var(--border-light);
+  margin-top: 4px;
+}
+
+.fp-ledger-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 24px;
+  border-top: 1px solid var(--border-light);
+  cursor: pointer;
+}
+/* The first row under a date label already has the label's own spacing above it;
+   a second line there would read as a doubled rule. */
+.fp-ledger-group + .fp-ledger-rows .fp-ledger-row:first-child {
+  border-top: 0;
+}
+
+/* THE HOVER CARRIES TWO CHANNELS ON PURPOSE, AND THAT WAS A JUDGEMENT CALL.
+   Removing the per-row border and the `translateX(4px)` left the background
+   shift as the only signal, and it measures 1.059:1 against the card in light
+   (1.097 in dark) — perceptible on a good monitor, easy to miss on a dim laptop.
+   The rows are CLICKABLE, so the affordance has to actually land. Hover is
+   exempt from WCAG, so this is taste rather than a failure, and the second
+   channel chosen is the cheapest one that survives the restructure: an inset
+   left edge in the brand green, drawn with box-shadow so it costs NO LAYOUT and
+   cannot reintroduce the horizontal shift the old translate caused. */
+.fp-ledger-row:hover {
+  background: var(--table-row-hover);
+  box-shadow: inset 3px 0 0 var(--brand-main-green);
+}
+
+/* The ledger column. 600 and tabular so the amounts line up down the page — the
+   figures are the reason anyone opens this screen. The COLOUR stays inline and
+   conditional, because it is the one thing this slice must not decide: what an
+   expense's colour means is O1 and it is the owner's. */
+.fp-ledger-amount {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Actions: revealed on hover, ALSO on :focus-within so a keyboard can reach
+   them, and ALWAYS VISIBLE where there is no hover at all. A hover-only control
+   does not exist on a tablet. `opacity` rather than `display:none` keeps the
+   buttons in the accessibility tree and their aria-labels reachable throughout. */
+.fp-ledger-acts {
+  display: flex;
+  gap: 6px;
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.fp-ledger-row:hover .fp-ledger-acts,
+.fp-ledger-row:focus-within .fp-ledger-acts {
+  opacity: 1;
+}
+@media (hover: none) {
+  .fp-ledger-acts {
+    opacity: 1;
+  }
+}
+.fp-ledger-acts button:focus-visible {
+  outline: 2px solid var(--brand-main-green);
+  outline-offset: 1px;
+}
+
 /* Full-width error banner above a form or list. */
 .fp-error-banner {
   display: flex;
