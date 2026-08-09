@@ -79,67 +79,85 @@ class Budget(db.Model):
         else:
             category_filter = (Expense.category_id == self.category_id)
         
+        # *** A BUDGET IS THE HOUSEHOLD'S — owner decision 2026-08-06, recorded in
+        # AUDIT D-20 ("budget, categories and rest is for household"). Categories
+        # were converged onto it then; this arithmetic never was, and the two
+        # halves of budgeting have disagreed ever since.
+        #
+        # WHAT THIS USED TO DO, AND WHY BOTH HALVES WERE WRONG:
+        #
+        #   Expense.user_id == self.user_id      -- only rows the budget's owner
+        #                                           TYPED IN, while the list
+        #                                           endpoint above it has always
+        #                                           been household-wide. Budgets
+        #                                           were PRESENTED as the
+        #                                           household's and COMPUTED as
+        #                                           one person's.
+        #
+        #   then a split_with apportionment       -- the payer's share, or this
+        #                                           user's slice of a split. That
+        #                                           is THE ATTRIBUTION MODEL D-18
+        #                                           RETIRED: "a row belongs to
+        #                                           whoever owns its account, full
+        #                                           stop; split_with settles up, it
+        #                                           does not decide attribution."
+        #
+        # So Bob buying groceries on Alice's card counted against BOB and was
+        # halved, while the transactions list, the dashboard and
+        # `group_by=owner` all called it Alice's in full. Three surfaces on the
+        # new model, one on the old.
+        #
+        # Household scope makes the apportionment meaningless as well as wrong:
+        # if every member's spending counts, splitting a row between members and
+        # then adding the pieces back up is the same number with extra steps —
+        # and a lossy one, because `calculate_splits` rounds. Summing the
+        # amounts once is both simpler and more exact.
+        #
+        # `household_user_ids()` and not `get_all_user_ids()`: the latter
+        # INCLUDES DEMO ACCOUNTS by its own docstring. D-42 is the row where
+        # that leaked, and it was fixed for categories only, deliberately, with
+        # the other callers deferred. This is one of them.
+        from src.utils.household import household_user_ids
+
+        household = household_user_ids()
+
         expenses = Expense.query.filter(
-            Expense.user_id == self.user_id,
+            Expense.user_id.in_(household),
             Expense.date >= start_date,
             Expense.date <= end_date,
             category_filter
         ).all()
-        
+
         # D-58: a `Decimal` accumulator, because every amount added to it is now
         # `Decimal` and `float += Decimal` raises rather than converting. Started
         # as `0.0` before, which is what made this the loudest site in the suite.
         from decimal import Decimal
         total_spent = Decimal('0')
-        
+
         for expense in expenses:
+            # A row whose amount is carried by CategorySplit rows is counted
+            # below instead, or it would be counted twice.
             if expense.has_category_splits:
                 continue
-                
-            splits = expense.calculate_splits()
-            
-            if expense.paid_by == self.user_id and (not expense.split_with or self.user_id not in expense.split_with.split(',')):
-                total_spent += splits['payer']['amount']
-            else:
-                for split in splits['splits']:
-                    if split['email'] == self.user_id:
-                        total_spent += split['amount']
-                        break
-        
+            total_spent += expense.amount
+
         if self.include_subcategories:
             category_ids = [self.category_id] + subcategory_ids
         else:
             category_ids = [self.category_id]
-        
+
         category_splits = CategorySplit.query.join(
             Expense, CategorySplit.expense_id == Expense.id
         ).filter(
-            Expense.user_id == self.user_id,
+            Expense.user_id.in_(household),
             Expense.date >= start_date,
             Expense.date <= end_date,
             CategorySplit.category_id.in_(category_ids)
         ).all()
-        
+
         for cat_split in category_splits:
-            # Use the already-loaded relationship instead of re-querying
-            expense = cat_split.expense
-            if not expense:
-                continue
+            total_spent += cat_split.amount
 
-            splits = expense.calculate_splits()
-
-            if expense.paid_by == self.user_id and (not expense.split_with or self.user_id not in expense.split_with.split(',')):
-                if expense.amount > 0:
-                    user_ratio = splits['payer']['amount'] / expense.amount
-                    total_spent += cat_split.amount * user_ratio
-            else:
-                for split in splits['splits']:
-                    if split['email'] == self.user_id:
-                        if expense.amount > 0:
-                            user_ratio = split['amount'] / expense.amount
-                            total_spent += cat_split.amount * user_ratio
-                        break
-        
         return total_spent
     
     def get_spent(self):
