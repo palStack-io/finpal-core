@@ -1,0 +1,16 @@
+{
+  "light": [
+    "#9ca3af|#f5f5f1|4.5|text",
+    "#9ca3af|#f9fdf6|4.5|text",
+    "#9ca3af|#fffffb|3|icon",
+    "#9ca3af|#fffffb|4.5|text",
+    "#3b82f6|#e7f0fa|4.5|text",
+    "#6b7280|#f5f5f1|4.5|text"
+  ],
+  "dark": [
+    "#64748b|#293445|4.5|text",
+    "#64748b|#1e293b|4.5|text",
+    "#3b82f6|#213451|4.5|text",
+    "#64748b|#0f172a|4.5|text"
+  ]
+}

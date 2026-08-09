@@ -53,6 +53,7 @@ const themes = process.argv.includes('--theme')
 const markup = readFileSync(CAPTURED, 'utf8');
 
 let failed = 0;
+const seenPairs = {};
 
 for (const theme of themes) {
   // The page is assembled with the app's REAL stylesheets rather than a copy of
@@ -87,6 +88,7 @@ for (const theme of themes) {
   }
   const out = JSON.parse(m[1]);
 
+  seenPairs[theme] = new Set();
   console.log(`\n=== ${theme.toUpperCase()} — ${out.total} elements resolved against their actual background ===`);
   if (out.total < 100) {
     console.error(`[${theme}] only ${out.total} elements: the walk is inspecting a stub, not the page`);
@@ -105,6 +107,7 @@ for (const theme of themes) {
       const seen = byPair.get(key);
       if (seen) { seen.n += 1; continue; }
       byPair.set(key, { ...f, n: 1 });
+      seenPairs[theme].add(key);
     }
     failed += byPair.size;
     const sorted = [...byPair.values()].sort((a, b) => a.ratio - b.ratio);
@@ -119,4 +122,43 @@ for (const theme of themes) {
   }
 }
 
-console.log(`\n${failed} AA failure(s) across ${themes.length} theme(s).`);
+// ── THE GATE: A RATCHET, NOT "ZERO FAILURES" ─────────────────────────────────
+//
+// This page still carries failures from the app's EXISTING palette
+// (`--text-muted` at 2.53:1, the blue household badge at 3.20:1), and the
+// implementation plan puts a live-app contrast sweep explicitly out of scope:
+// "Do not audit the shipped app's existing contrast pairs as part of this."
+//
+// Demanding zero would therefore fail on day one and be switched off, which is
+// how a gate becomes decoration. Demanding "no more than N" would pass a NEW
+// failure that replaced an old one. So the baseline records the PAIRS, and any
+// pair not in it fails. It can only ratchet tighter.
+const baselinePath = join(HERE, 'baseline.json');
+const baseline = existsSync(baselinePath)
+  ? JSON.parse(readFileSync(baselinePath, 'utf8'))
+  : null;
+
+if (baseline) {
+  let regressions = 0;
+  for (const [theme, pairs] of Object.entries(seenPairs)) {
+    const known = new Set(baseline[theme] ?? []);
+    const fresh = [...pairs].filter((p) => !known.has(p));
+    const gone = [...known].filter((p) => !pairs.has(p));
+
+    for (const p of fresh) {
+      console.error(`  REGRESSION [${theme}] new failing pair: ${p}`);
+      regressions += 1;
+    }
+    for (const p of gone) {
+      // Not a failure — an invitation to tighten the baseline.
+      console.log(`  improved [${theme}] no longer failing: ${p} — remove it from baseline.json`);
+    }
+  }
+  if (regressions) {
+    console.error(`\n${regressions} NEW failing contrast pair(s). The baseline is a ratchet: fix it, or record it deliberately.`);
+    process.exit(1);
+  }
+  console.log('\nno new failing pairs against the baseline.');
+} else {
+  console.log(`\n${failed} AA failure(s) across ${themes.length} theme(s). (no baseline.json — not gating)`);
+}
