@@ -11,6 +11,7 @@ import { SectionCard } from '../components/SectionCard';
 import { MemberFilter } from '../components/MemberFilter';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
+import { accountService, Account } from '../services/accountService';
 import { TeamMember } from '../types/team';
 import type { Scope } from '../utils/scope';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -65,6 +66,41 @@ export const Transactions: React.FC = () => {
   useEffect(() => {
     teamService.getMembers().then(setMembers).catch(() => setMembers([]));
   }, []);
+
+  /**
+   * The account axis of "show a dimension only when it varies".
+   *
+   * The person axis of that rule ALREADY SHIPPED — `MemberFilter` and
+   * `OwnerBadge` both return null at one member. The account axis did not: the
+   * row keyed the account name on the account *existing*
+   * (`transaction.account?.name &&`), never on how many accounts there are, so a
+   * one-account instance repeated the same name down all 50 rows. That is
+   * exactly the noise the rule exists to remove, and for a self-hosted finance
+   * app one account is a common shape rather than an edge case.
+   *
+   * `null` means "not answered yet" and is deliberately distinct from `[]`,
+   * which means "answered: none". Collapsing them would make the very first
+   * render look like a zero-account instance and flash the wrong subtitle.
+   */
+  const [accounts, setAccounts] = useState<Account[] | null>(null);
+
+  useEffect(() => {
+    accountService.getAccounts().then(setAccounts).catch(() => setAccounts([]));
+  }, []);
+
+  const accountCount = accounts?.length ?? 0;
+  /**
+   * At one account its name is the useful fact and the count is noise; at two or
+   * more the count is the useful fact and no single name is true. Anything else
+   * — still loading, or a genuinely empty instance — keeps the generic line,
+   * because naming and counting are both meaningless there and an empty subtitle
+   * is worse than a plain one.
+   */
+  const pageSubtitle = accounts === null || accountCount === 0
+    ? 'Track all your income and expenses'
+    : accountCount === 1
+      ? accounts[0].name
+      : `Across ${accountCount} accounts`;
 
   const selectedMember = members.find((m) => m.id === memberId) || null;
 
@@ -201,7 +237,7 @@ export const Transactions: React.FC = () => {
           <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 className="page-title">Transactions</h1>
-              <p className="fp-hint">Track all your income and expenses</p>
+              <p className="fp-hint">{pageSubtitle}</p>
             </div>
             <button
               onClick={() => setIsAddPanelOpen(true)}
@@ -392,7 +428,12 @@ export const Transactions: React.FC = () => {
                                   </p>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginTop: '2px' }}>
                                     <span style={metaTextStyle}>{transaction.category?.name || 'Uncategorized'}</span>
-                                    {transaction.account?.name && (
+                                    {/* Named only when there is more than one
+                                        account to tell apart. On a one-account
+                                        instance this repeated the same name down
+                                        all 50 rows — the account was never the
+                                        variable, so it was never information. */}
+                                    {accountCount > 1 && transaction.account?.name && (
                                       <>
                                         <span style={metaTextStyle}>·</span>
                                         <span style={metaTextStyle}>{transaction.account.name}</span>
