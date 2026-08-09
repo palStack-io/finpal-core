@@ -110,3 +110,35 @@ jobs:
         # a companion assertion reports whether it ran, and the web-side pin is
         # self-contained so nothing here silently inspects nothing.
         run: npx vitest run
+
+      - name: Contrast tree-walk (rendered page, real browser)
+        working-directory: web-ui
+        # *** THE HALF OF THE CONTRAST GATE THAT tokenContrast.test.ts CANNOT DO. ***
+        #
+        # That file validates the PALETTE — it proves the declared token pairs
+        # clear AA. It cannot see USAGE: `color: var(--kt-green)` on a wash-backed
+        # element is 4.39:1, a real AA failure, and it stays green because
+        # green-on-wash is classified an 'object' and 4.39 clears the 3.0 non-text
+        # floor.
+        #
+        # This walks a RENDERED page and resolves every element's own colour
+        # against its ACTUAL COMPUTED BACKGROUND, climbing ancestors for
+        # transparent ones — enumerated from the tree, never from a list of pairs
+        # somebody thought of, which is D-59 in another costume.
+        #
+        # IT NEEDS A REAL ENGINE. jsdom applies no external stylesheet, so
+        # getComputedStyle there resolves initial values and would pass on
+        # everything — which is why this is a separate step and not a vitest test.
+        # `run.mjs` EXITS 2 IF NO CHROME IS FOUND rather than skipping: a contrast
+        # gate that quietly does nothing looks exactly like one that passes, and
+        # that shape has already been shipped four times in this repo.
+        #
+        # It gates on a BASELINE RATCHET rather than on zero. The page still
+        # carries failures from the app's existing palette, and the plan puts a
+        # live-app contrast sweep explicitly out of scope — so demanding zero
+        # would fail on day one and get switched off. Any pair NOT in
+        # baseline.json fails; pairs that disappear are reported so the baseline
+        # can be tightened.
+        run: |
+          npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
+          node scripts/contrast-walk/run.mjs
