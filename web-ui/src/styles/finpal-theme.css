@@ -80,6 +80,25 @@
      fourth copy of a brand value. */
   --amount-income: var(--brand-main-green);
 
+
+  /* ── THE APP WEARS THE KITCHEN-TABLE PALETTE ────────────────────────────────
+     Slice 3 deliberately did NOT do this, and the reason it waited is the reason
+     it can happen now: dark's `--kt-card` is green-black `#16241A` while the
+     app's dark `--bg-card` was slate `#1e293b`, so adopting kt surfaces on ONE
+     card would have put a green-black list on a slate page — visibly broken, in
+     the theme nobody screenshots first.
+
+     *** THE FIX IS TO MOVE BOTH THEMES AT ONCE, WHICH IS WHAT "A SECOND PALETTE,
+     NOT A TOKEN SWAP" MEANT ALL ALONG. *** These are repointed at the `--kt-*`
+     tokens rather than restated as hexes, so piece 5's table stays the single
+     source and this introduces no fourth copy of a value.
+
+     `--text-muted` moving to `--kt-soft` is the one to notice: it was `#9CA3AF`
+     at 2.53:1 on the card, the largest single contrast failure in the app (151
+     elements on the transactions page alone), and `--kt-soft` is AA-clean on
+     every surface it meets by construction. This adoption FIXES that rather than
+     carrying it across. */
+
   /* finPal Brand Colors */
   --brand-main-green: #15803d;
   --brand-dark-green: #166534;
@@ -89,14 +108,14 @@
   --brand-gradient: linear-gradient(135deg, #15803d, #22c55e, #fbbf24);
 
   /* Light Mode Colors - Subtle Green-Gold Tint */
-  --bg-primary: #fdfdf9;
-  --bg-secondary: #fffffb;
-  --bg-card: #fffffb;
-  --border-light: #e9eee5;
-  --border-medium: #d8dfd0;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --text-muted: #9CA3AF;
+  --bg-primary: var(--kt-wash);
+  --bg-secondary: var(--kt-card);
+  --bg-card: var(--kt-card);
+  --border-light: var(--kt-line);
+  --border-medium: var(--kt-line);
+  --text-primary: var(--kt-ink);
+  --text-secondary: var(--kt-soft);
+  --text-muted: var(--kt-soft);
   --nav-hover: #f9fdf6;
   --card-hover-shadow: rgba(21, 128, 61, 0.08);
   --chart-bg: #f9fdf6;
@@ -109,12 +128,12 @@
 
   /* Overlay & Surface */
   --overlay-bg: rgba(0, 0, 0, 0.4);
-  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover: var(--kt-hover);
   --surface-active: rgba(0, 0, 0, 0.08);
 
   /* Inputs */
-  --input-bg: #f5f7f3;
-  --input-border: #d8dfd0;
+  --input-bg: var(--kt-wash);
+  --input-border: var(--kt-line);
   --input-bg-focus: #eef2ea;
 
   /* Card */
@@ -126,7 +145,7 @@
   --btn-secondary-text: #374151;
 
   /* Table */
-  --table-row-hover: rgba(0, 0, 0, 0.03);
+  --table-row-hover: var(--kt-hover);
   --table-border: #e9eee5;
 
   /* Progress */
@@ -234,26 +253,26 @@
   --amount-income: var(--brand-green-glow);
 
   /* Dark Mode Colors */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #1e293b;
-  --border-light: rgba(148, 163, 184, 0.1);
-  --border-medium: rgba(148, 163, 184, 0.2);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --bg-primary: var(--kt-wash);
+  --bg-secondary: var(--kt-card);
+  --bg-card: var(--kt-card);
+  --border-light: var(--kt-line);
+  --border-medium: var(--kt-line);
+  --text-primary: var(--kt-ink);
+  --text-secondary: var(--kt-soft);
+  --text-muted: var(--kt-soft);
   --nav-hover: rgba(148, 163, 184, 0.1);
   --card-hover-shadow: rgba(0, 0, 0, 0.3);
   --chart-bg: rgba(15, 23, 42, 0.6);
 
   /* Overlay & Surface */
   --overlay-bg: rgba(0, 0, 0, 0.6);
-  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-hover: var(--kt-hover);
   --surface-active: rgba(255, 255, 255, 0.1);
 
   /* Inputs */
-  --input-bg: rgba(15, 23, 42, 0.5);
-  --input-border: rgba(148, 163, 184, 0.2);
+  --input-bg: var(--kt-wash);
+  --input-border: var(--kt-line);
   --input-bg-focus: rgba(15, 23, 42, 0.8);
 
   /* Card */
@@ -265,7 +284,7 @@
   --btn-secondary-text: #94a3b8;
 
   /* Table */
-  --table-row-hover: rgba(255, 255, 255, 0.05);
+  --table-row-hover: var(--kt-hover);
   --table-border: rgba(148, 163, 184, 0.1);
 
   /* Progress */
