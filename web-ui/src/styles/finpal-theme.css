@@ -82,6 +82,79 @@
   --sh-sm: 0 2px 8px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
   --sh-md: 0 6px 20px rgba(0,0,0,.09);
   --r: 12px; --rs: 8px;
+
+  /* ═══ KITCHEN TABLE — the redesign palette, LIGHT ════════════════════════
+     Slice 2 of docs/superpowers/specs/2026-08-08-kitchen-table-implementation-plan.md.
+     Canonical source for every value: piece 5 of the IA + mobile-parity design
+     doc. This block is a TRANSCRIPTION of that table, not a re-derivation —
+     if a value here disagrees with piece 5, piece 5 wins.
+
+     ADDING THESE TOKENS CHANGES NO PIXEL. Nothing references them yet; slices
+     3-7 adopt them page by page. That is also the danger this project has
+     named — "a rule nothing references cannot be wrong, so nothing keeps it
+     right" — which is why tokenContrast.test.ts exists and enumerates every
+     (foreground, surface) pair from THIS BLOCK rather than from a list
+     somebody remembered.
+
+     THE `--kt-` PREFIX IS MANDATORY, NOT COSMETIC. `--ink` is already taken by
+     pointsPal (slate #0f172a); an unprefixed `--ink` here would silently
+     repaint that module. Keep the prefix permanently.
+
+     TWO VALUES DIFFER FROM THE OWNER-APPROVED MOCKUPS BECAUSE THEY FAIL WCAG
+     AA on the figures that matter most: clay #C2603F -> #AB5437 (was 4.05:1
+     on card) and soft #5F7266 -> #56685D (was 4.50:1 on the wash). soft was
+     corrected TWICE — the intermediate #5E7165 still failed at 3.98:1 on the
+     segmented-control track, a surface the first sweep had not listed. Both
+     final values are safe on all five surfaces below. */
+
+  /* Surfaces. The set is closed: every text and object token below must state
+     a verdict for EACH of these, and adding one here fails the gate until all
+     of them do. That completeness is the whole mechanism. */
+  --kt-wash: #EDF1EA;        /* the page. Replaces --bg-primary in this direction. */
+  --kt-card: #FBFCF9;        /* the one surface rows live inside (radius 22px). */
+  --kt-hover: #F3F6F0;       /* row hover. NOTE: 1.059:1 against the card — the
+                                plan's open nit. Slice 3 owns that decision on
+                                screen; this is the mockup value, not a verdict. */
+  --kt-line-track: #DCE3D7;  /* segmented-control pill track (Transactions).
+                                Same paint as --kt-line, different role. */
+  --kt-axis-track: #E8EDE3;  /* share-bar remainder + By person/By category pill
+                                track (Dashboard). A DIFFERENT value from
+                                --kt-line-track for the same pill-control role —
+                                that drift is in the approved mockups and slice 6
+                                has to settle it; both are declared so neither
+                                escapes the contrast gate meanwhile. */
+
+  /* Text. */
+  --kt-ink: #17301F;         /* deep green-black, not neutral. */
+  --kt-soft: #56685D;        /* meta, subtitles, control labels. */
+  --kt-green: #15803d;       /* UNCHANGED BRAND (= --brand-main-green). 4.39:1 on
+                                the wash, so GREEN TEXT ON CARD SURFACES ONLY; on
+                                the wash green is legal as a FILL (non-text, 3:1).
+                                That is a layout rule, not a colour bug — the
+                                brand is fixed by decision. */
+  --kt-clay: #AB5437;        /* second member / "this broke a budget" ONLY. */
+
+  /* Decorative hairline. 1.27:1 on card and DELIBERATELY not a text colour;
+     it carries no information (WCAG 1.4.11 covers objects required to
+     understand the content), so the gate records it as decorative rather than
+     checking it. */
+  --kt-line: #DCE3D7;
+
+  /* Share-bar segments and their 10px legend dots — the same colours, and the
+     dots are what identify each segment, so these are graphical objects
+     needing 3:1 against the card they sit on. Two of the approved five were
+     well under and effectively invisible as dots: amber #D9A05B (2.23) and
+     "other" #B3C0AB (1.85). Corrected below to 3.06 and 3.07. */
+  --kt-seg-1: #15803d;
+  --kt-seg-2: #3F7D5C;
+  --kt-seg-3: #AB5437;
+  --kt-seg-4: #B8884D;
+  --kt-seg-5: #8A9484;
+
+  /* Geometry. THE 22px RADIUS BELONGS TO THE CONTAINER, NOT THE ROW — that one
+     move is what lets the direction survive a 50-row page (4404px -> 3875px,
+     12.0% less scroll). Quote the page figure, never the row pitch. */
+  --kt-radius: 22px;
 }
 
 [data-theme="dark"] {
@@ -147,6 +220,45 @@
   --sh-xs: 0 1px 2px rgba(0,0,0,.25);
   --sh-sm: 0 2px 8px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
   --sh-md: 0 6px 20px rgba(0,0,0,.4);
+
+  /* ═══ KITCHEN TABLE — DARK, AND IT IS A SECOND PALETTE, NOT A SWAP ═══════
+     The app's dark is slate (--bg-primary: #0f172a); this direction is a
+     green-black. Reusing the slate throws away the warmth the whole direction
+     is built on, so every colour above is re-declared here with its own value —
+     which is also why the gate asserts both themes declare the SAME COLOUR SET.
+     A colour missing from this block does not fall back gracefully: it inherits
+     the LIGHT value, i.e. a near-white pill on a green-black page. (Geometry is
+     theme-independent and stays in :root.)
+
+     Dark is the safer of the two palettes (worst body text 6.50:1 against
+     light's 4.05), and every dark segment clears 3:1 (4.81-9.26). */
+  --kt-wash: #0E1711;
+  --kt-card: #16241A;
+  --kt-hover: #1B2C20;
+  /* NOT `--kt-line` the way light's track is — dark's segmented control track
+     in kitchen-table-transactions.html is its own literal. The gate pins that
+     asymmetry so slice 3 does not port the light identity across by assuming
+     the two palettes are symmetric. */
+  --kt-line-track: #1E3024;
+  /* DERIVED, NOT MOCKED — kitchen-table-states.html has no dark pane, so the
+     dashboard's axis track has no approved dark value. Set to the pill track
+     dark already uses rather than left to inherit light's #E8EDE3. Measured:
+     soft 6.25, ink 12.02, green 7.11, clay 5.62. Slice 6 may revisit it
+     together with the light-mode drift between the two tracks. */
+  --kt-axis-track: #1E3024;
+
+  --kt-ink: #E9F0E6;
+  --kt-soft: #9CB3A3;
+  --kt-green: #5FCE8B;
+  --kt-clay: #E39068;
+
+  --kt-line: #27382C;
+
+  --kt-seg-1: #4ADE80;
+  --kt-seg-2: #3F9D6E;
+  --kt-seg-3: #E39068;
+  --kt-seg-4: #E8B872;
+  --kt-seg-5: #7FB89A;
 }
 
 body {
