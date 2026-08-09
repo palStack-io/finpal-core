@@ -154,10 +154,48 @@ def test_an_unknown_group_by_is_refused(client, db, auth_headers):
     assert resp.status_code == 400
 
 
-def test_another_users_spending_never_appears(client, db, auth_headers):
+def test_a_housemates_spending_DOES_appear_now_that_the_scope_matches_the_list(
+        client, db, auth_headers):
+    """This test used to assert the opposite, and the opposite was the bug.
+
+    It was `test_another_users_spending_never_appears`, and it passed only
+    because this endpoint filtered `Expense.user_id == user_id` while the
+    TRANSACTIONS LIST has been household-scoped since D-18. The same money
+    answered two different totals depending on which screen asked. Its
+    "stranger" is a plain `UserFactory()`, and `household_user_ids()` is
+    everyone-on-the-instance-except-demo — so that stranger was never a
+    stranger. It was a housemate, and their spending belongs here.
+
+    Rewritten rather than deleted: the negative it protected is real and is kept
+    below, in the two tests that follow. Deleting a guard because the behaviour
+    it pins has changed is how a scope silently widens further next time.
+    """
     user, _, _ = _seed(db)
-    stranger = UserFactory()
-    db.session.add(_expense(stranger, 'Not yours', 500.0, datetime(2026, 3, 9)))
+    housemate = UserFactory()
+    db.session.add(_expense(housemate, 'Their groceries', 500.0,
+                            datetime(2026, 3, 9)))
+    db.session.commit()
+
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31',
+        'group_by': 'merchant'}, headers=auth_headers(user))
+
+    body = resp.get_json()
+    assert body['total'] == 600.0
+    assert 'Their groceries' in resp.get_data(as_text=True)
+
+
+def test_a_demo_accounts_spending_never_appears(client, db, auth_headers):
+    """The negative the rewritten test above used to carry, aimed correctly.
+
+    Demo accounts ship with a PUBLISHED PASSWORD, so a household-scoped read
+    would put the real household's money behind credentials that are in the
+    repository. That is D-42, and `read_scope` is where it is enforced — this
+    asserts the widening did not walk around it.
+    """
+    user, _, _ = _seed(db)
+    demo = UserFactory(is_demo_user=True)
+    db.session.add(_expense(demo, 'Demo groceries', 700.0, datetime(2026, 3, 9)))
     db.session.commit()
 
     resp = client.get(URL, query_string={
@@ -166,7 +204,42 @@ def test_another_users_spending_never_appears(client, db, auth_headers):
 
     body = resp.get_json()
     assert body['total'] == 100.0
-    assert 'Not yours' not in resp.get_data(as_text=True)
+    assert 'Demo groceries' not in resp.get_data(as_text=True)
+
+    # And symmetrically: the demo login does not see the household either.
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31',
+        'group_by': 'merchant'}, headers=auth_headers(demo))
+    assert resp.get_json()['total'] == 700.0
+
+
+def test_a_personal_access_token_still_reads_only_its_own_data(client, db):
+    """*** D-50, and the reason the helper is `read_scope` and not
+    `visible_user_ids`. ***
+
+    Both the implementation plan and the design doc said to widen this scope
+    with `visible_user_ids`, which has NO personal-access-token clause. This is
+    the endpoint an MCP client relies on, so that would have handed every token
+    the whole household's spending — silently, at 200 — against the promise
+    `AgentAccess.tsx:386` makes to the user in as many words: "A token reads
+    only your own data."
+
+    A session and a token must therefore answer DIFFERENT totals here, and that
+    asymmetry is the point rather than an inconsistency.
+    """
+    user, _, _ = _seed(db)
+    housemate = UserFactory()
+    db.session.add(_expense(housemate, 'Their groceries', 500.0,
+                            datetime(2026, 3, 9)))
+    db.session.commit()
+
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31'},
+        headers={'X-API-Key': _token(user)})
+
+    assert resp.status_code == 200
+    assert resp.get_json()['total'] == 100.0
+    assert 'Their groceries' not in resp.get_data(as_text=True)
 
 
 def test_a_read_token_can_call_it(client, db):
