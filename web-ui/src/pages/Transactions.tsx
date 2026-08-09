@@ -415,7 +415,7 @@ export const Transactions: React.FC = () => {
                           {txns.map((transaction) => (
                             <li
                               key={transaction.id}
-                              className="fp-ledger-row"
+                              className="fp-ledger-row fp-revealer"
                               onClick={() => handleRowClick(transaction)}
                             >
                               {/* THE 44px COLOURED ICON TILE IS GONE, and it took a
@@ -516,22 +516,17 @@ export const Transactions: React.FC = () => {
                                     coarse pointer (a tablet has no hover either).
                                     ARIA LABELS ARE UNCHANGED — opacity keeps these
                                     in the accessibility tree throughout. */}
-                                <div className="fp-ledger-acts">
+                                <div className="fp-row-acts">
                                   <button
                                     onClick={(e) => handleEditClick(e, transaction)}
                                     aria-label="Edit transaction"
-                                    style={{ width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border-medium)', borderRadius: '999px', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-secondary)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
                                   >
                                     <Edit size={14} />
                                   </button>
                                   <button
                                     onClick={(e) => handleDeleteClick(e, transaction.id)}
                                     aria-label="Delete transaction"
-                                    style={{ width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border-medium)', borderRadius: '999px', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent-red)'; e.currentTarget.style.borderColor = 'var(--accent-red)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
+                                    data-destructive=""
                                   >
                                     <Trash2 size={14} />
                                   </button>

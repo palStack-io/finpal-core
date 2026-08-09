@@ -857,29 +857,63 @@ body {
   white-space: nowrap;
 }
 
-/* Actions: revealed on hover, ALSO on :focus-within so a keyboard can reach
+/* Row actions: revealed on hover, ALSO on :focus-within so a keyboard can reach
    them, and ALWAYS VISIBLE where there is no hover at all. A hover-only control
    does not exist on a tablet. `opacity` rather than `display:none` keeps the
-   buttons in the accessibility tree and their aria-labels reachable throughout. */
-.fp-ledger-acts {
+   buttons in the accessibility tree and their aria-labels reachable throughout.
+
+   *** ONE DEFINITION, TWO PAGES. *** The transactions ledger and the accounts
+   list want identical behaviour, and this project's named failure mode is two
+   copies of one thing drifting. The reveal is keyed to a generic `.fp-revealer`
+   ancestor rather than to a row class, so a third list can adopt it without
+   editing this rule — which is what would eventually produce the second copy. */
+.fp-row-acts {
   display: flex;
   gap: 6px;
   flex: none;
   opacity: 0;
   transition: opacity 0.15s;
 }
-.fp-ledger-row:hover .fp-ledger-acts,
-.fp-ledger-row:focus-within .fp-ledger-acts {
+.fp-revealer:hover .fp-row-acts,
+.fp-revealer:focus-within .fp-row-acts {
   opacity: 1;
 }
 @media (hover: none) {
-  .fp-ledger-acts {
+  .fp-row-acts {
     opacity: 1;
   }
 }
-.fp-ledger-acts button:focus-visible {
+.fp-row-acts button:focus-visible {
   outline: 2px solid var(--brand-main-green);
   outline-offset: 1px;
+}
+
+/* A quiet action button. Destructive turns red ON HOVER, not at rest.
+   *** THIS IS O1 APPLIED CONSISTENTLY. *** Red now means "this is a problem",
+   and a delete button existing is not a problem — but the accounts list painted
+   one red on EVERY row, so twenty accounts put twenty alarm colours on screen
+   for nothing. The colour belongs on the moment of intent, not on the affordance. */
+.fp-row-acts button {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, border-color 0.2s;
+}
+.fp-row-acts button:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+.fp-row-acts button[data-destructive]:hover,
+.fp-row-acts button[data-destructive]:focus-visible {
+  color: var(--accent-red);
+  border-color: var(--accent-red);
 }
 
 /* ── The share bar — "what is this month made of?" ───────────────────────────
