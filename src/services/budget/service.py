@@ -90,10 +90,18 @@ class BudgetService:
         Add a new budget
         Returns (success, message, budget)
         """
-        # Validate category if provided
+        # Validate category if provided.
+        #
+        # HOUSEHOLD, NOT PER-USER. Categories became household property in D-20
+        # (owner decision 2026-08-06, same sentence that made budgets household),
+        # and this check never followed: a member could not budget against a
+        # category another member created, and got "Invalid category selected"
+        # for a perfectly valid household category. `CategoryService` already
+        # made exactly this move — this is the sibling that was missed.
         if category_id:
+            from src.utils.household import household_user_ids
             category = db.session.get(Category, category_id)
-            if not category or category.user_id != user_id:
+            if not category or category.user_id not in household_user_ids():
                 return False, 'Invalid category selected', None
 
         # Parse start date
@@ -106,13 +114,24 @@ class BudgetService:
         else:
             start_date = datetime.utcnow()
 
-        # Check for duplicate only when a category is assigned
+        # Check for duplicate only when a category is assigned.
+        #
+        # ACROSS THE HOUSEHOLD, which is what makes "one budget per category"
+        # true rather than "one each". Scoped to `user_id` this allowed Alice and
+        # Bob to hold separate active Groceries budgets; once spend is
+        # household-wide those two report the SAME number and the overview sums
+        # both, so the household reads as twice as funded as it is.
+        #
+        # PRE-EXISTING DUPLICATES ARE LEFT ALONE. This refuses new ones; it does
+        # not delete a budget somebody already made, which is not a decision to
+        # take on their behalf inside a scope change.
         if category_id:
-            existing_budget = Budget.query.filter_by(
-                user_id=user_id,
-                category_id=category_id,
-                period=period,
-                active=True
+            from src.utils.household import household_user_ids
+            existing_budget = Budget.query.filter(
+                Budget.user_id.in_(household_user_ids()),
+                Budget.category_id == category_id,
+                Budget.period == period,
+                Budget.active.is_(True),
             ).first()
             if existing_budget:
                 return False, f'An active {period} budget already exists for this category. Please edit or deactivate it first.', None

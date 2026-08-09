@@ -90,6 +90,27 @@ class BudgetList(Resource):
         return {'success': True, 'budget': result, 'message': 'Budget created successfully'}, 201
 
 
+def _household_budget(budget_id):
+    """A budget by id, if it belongs to this household.
+
+    *** THE LIST AND THE PERMISSIONS HAVE TO AGREE. *** The collection endpoint
+    has always been household-wide ("Get all budgets for household"), while
+    these four routes were `filter_by(user_id=current_user_id)` — so a member
+    saw every household budget and got a 404 opening, editing or deleting any
+    but their own. That is "a row you can see becomes a row you cannot edit",
+    which is the exact failure D-20 called out and fixed for categories; budgets
+    were the sibling nobody swept.
+
+    `household_user_ids()`, not `get_all_user_ids()` — the latter includes demo
+    accounts by its own docstring, and D-42 is the row where that leaked.
+    """
+    from src.utils.household import household_user_ids
+
+    return Budget.query.filter(
+        Budget.id == budget_id,
+        Budget.user_id.in_(household_user_ids()),
+    ).first()
+
 @ns.route('/<int:id>')
 @ns.param('id', 'Budget ID')
 class BudgetDetail(Resource):
@@ -99,7 +120,7 @@ class BudgetDetail(Resource):
         """Get a specific budget by ID"""
         current_user_id = get_jwt_identity()
 
-        budget = Budget.query.filter_by(id=id, user_id=current_user_id).first()
+        budget = _household_budget(id)
 
         if not budget:
             return {'success': False, 'error': 'Budget not found'}, 404
@@ -118,7 +139,7 @@ class BudgetDetail(Resource):
         """Update a budget"""
         current_user_id = get_jwt_identity()
 
-        budget = Budget.query.filter_by(id=id, user_id=current_user_id).first()
+        budget = _household_budget(id)
 
         if not budget:
             return {'success': False, 'error': 'Budget not found'}, 404
@@ -177,7 +198,7 @@ class BudgetDetail(Resource):
         """Delete a budget"""
         current_user_id = get_jwt_identity()
 
-        budget = Budget.query.filter_by(id=id, user_id=current_user_id).first()
+        budget = _household_budget(id)
 
         if not budget:
             return {'success': False, 'error': 'Budget not found'}, 404
@@ -256,7 +277,7 @@ class BudgetProgress(Resource):
         """Get budget progress and spending details"""
         current_user_id = get_jwt_identity()
 
-        budget = Budget.query.filter_by(id=id, user_id=current_user_id).first()
+        budget = _household_budget(id)
 
         if not budget:
             return {'success': False, 'error': 'Budget not found'}, 404
