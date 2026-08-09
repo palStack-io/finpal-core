@@ -234,7 +234,7 @@ if (loadingData) {
 
       {/* API Error */}
       {apiError && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
+        <div className="fp-error-banner">
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px' }}>
             <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           </div>

@@ -891,7 +891,7 @@ export const Groups: React.FC = () => {
           </div>
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px', borderTop: '1px solid var(--border-light)', marginTop: '40px' }}>
+          <div className="fp-page-footer">
             Part of {branding.parentBrand} ecosystem
           </div>
         </div>
