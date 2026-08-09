@@ -33,9 +33,16 @@ export const ScopeTag: React.FC<ScopeTagProps> = ({ scope }) => {
         padding: '2px 6px',
         borderRadius: '5px',
         whiteSpace: 'nowrap',
-        border: `1px solid ${isHousehold ? 'rgba(59,130,246,0.35)' : 'var(--border-medium)'}`,
-        background: isHousehold ? 'rgba(59,130,246,0.12)' : 'var(--surface-hover)',
-        color: isHousehold ? '#3b82f6' : 'var(--text-muted)',
+        /* *** NO BLUE. *** This was `#3b82f6` on a blue tint — the last AA
+           failure left on the page after the palette was adopted, at 3.12:1 for
+           10px bold text, and a colour the kitchen-table palette does not
+           contain at all. The two states are now told apart by WEIGHT of ink
+           rather than by hue: household carries the full ink on a hairline
+           fill, "yours" stays soft on the quiet fill. Both are palette tokens,
+           so neither can drift from the theme again. */
+        border: `1px solid ${isHousehold ? 'var(--kt-soft)' : 'var(--border-medium)'}`,
+        background: isHousehold ? 'var(--kt-line)' : 'var(--surface-hover)',
+        color: isHousehold ? 'var(--kt-ink)' : 'var(--text-muted)',
       }}
     >
       {SCOPE_TAG[scope]}
