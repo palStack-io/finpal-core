@@ -289,6 +289,30 @@ export const pointspalHandlers = [
    * A bare array, matching `api/v1/team.py:185`, which returns the list with no
    * envelope around it.
    */
+  // The dashboard's share bar reads this. Without a default handler every
+  // Dashboard test logs an unhandled-request error — which is noise that trains
+  // people to ignore MSW errors, and ignoring them is exactly how this suite
+  // came to be non-hermetic before (#96: unmatched requests escaped to the real
+  // network and passed only because something happened to listen on port 3000).
+  http.get(`${BASE}/api/v1/analytics/spending-summary`, ({ request }) => {
+    const groupBy = new URL(request.url).searchParams.get('group_by') ?? 'category';
+    const groups = groupBy === 'owner'
+      ? [{ key: 'u@test.com', label: 'Test', total: 120, count: 2 }]
+      : [
+          { key: 1, label: 'Food', total: 80, count: 1 },
+          { key: 2, label: 'Bills', total: 40, count: 1 },
+        ];
+    return HttpResponse.json({
+      groups,
+      total: groups.reduce((sum, g) => sum + g.total, 0),
+      count: groups.reduce((sum, g) => sum + g.count, 0),
+      start_date: '2026-08-01',
+      end_date: '2026-08-31',
+      group_by: groupBy,
+      success: true,
+    });
+  }),
+
   http.get(`${BASE}/api/v1/team/members`, () =>
     HttpResponse.json([
       { id: 'u@test.com', name: 'Test', email: 'u@test.com', role: 'owner',
