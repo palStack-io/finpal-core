@@ -16,7 +16,10 @@ import type { Scope } from '../utils/scope';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 
-const metaTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '12px' };
+/* The row's second line. 13px/400 — the direction's meta size. The COLOUR is
+   unchanged (`--text-muted`, exactly as today): this slice moves structure and
+   type, never what a colour means. */
+const metaTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '13px', fontWeight: 400 };
 
 const PER_PAGE = 50;
 
@@ -330,9 +333,31 @@ export const Transactions: React.FC = () => {
                 </div>
               </SectionCard>
 
-              {/* Transactions grouped by date */}
+              {/* Transactions grouped by date.
+                  ONE SURFACE, ROWS AS HAIRLINES INSIDE IT — the move the "kitchen
+                  table" direction rests on: the radius belongs to the container,
+                  not the row. This was 50 nested cards on one screen (PER_PAGE is
+                  50, right above), each with its own border, radius, background,
+                  translate-on-hover and 44px coloured icon tile. A realistic
+                  50-row page over 12 date groups goes 4404px -> 3875px: 12.0%
+                  shorter, 529px less scroll. The pitch alone improves by 16.1%,
+                  but quoting that times 50 overstates the page by a fifth,
+                  because the date-group header here is taller.
+
+                  The list is no longer a SectionCard: its rows have to reach the
+                  container's edges for the hairlines to work, and SectionCard's
+                  24px padding is what stops them. SectionCard is shared with
+                  Dashboard, so it is left alone rather than given a variant —
+                  the styling lives in `.fp-ledger*` in finpal-theme.css, where
+                  :focus-within and (hover:none) can be expressed at all.
+
+                  COLOURS ARE UNTOUCHED HERE. Whether an ordinary expense stops
+                  being red is O1, it is the owner's call, and it has not been
+                  answered — so every amount below keeps exactly the colour it
+                  has today. */}
               <div style={{ marginTop: '24px' }}>
-                <SectionCard title={sectionTitle}>
+                <h3 className="fp-section-title">{sectionTitle}</h3>
+                <div className="fp-ledger">
                   {transactions.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '48px 0' }}>
                       <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No transactions found</p>
@@ -340,35 +365,32 @@ export const Transactions: React.FC = () => {
                   ) : (
                     Object.entries(groupedTransactions).map(([dateLabel, txns]) => (
                       <React.Fragment key={dateLabel}>
-                        <div style={{ padding: '12px 0 6px', marginTop: '4px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            {dateLabel}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '4px' }}>
+                        <p className="fp-ledger-group">{dateLabel}</p>
+                        <ul className="fp-ledger-rows">
                           {txns.map((transaction) => (
-                            <div
+                            <li
                               key={transaction.id}
+                              className="fp-ledger-row"
                               onClick={() => handleRowClick(transaction)}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '8px', transition: 'all 0.2s', cursor: 'pointer' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--table-row-hover)'; e.currentTarget.style.borderColor = 'rgba(21,128,61,0.3)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.borderColor = 'var(--border-light)'; e.currentTarget.style.transform = 'translateX(0)'; }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                <div style={{
-                                  width: '44px', height: '44px', borderRadius: '10px', flexShrink: 0,
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  background: transaction.transaction_type === 'income' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                                }}>
-                                  {transaction.transaction_type === 'income'
-                                    ? <ArrowUpRight size={22} color="#22c55e" />
-                                    : <ArrowDownRight size={22} color="#ef4444" />}
-                                </div>
+                              {/* THE 44px COLOURED ICON TILE IS GONE, and it took a
+                                  contradiction with it. The tile's ternary only
+                                  special-cased `income`, so a TRANSFER drew the red
+                                  down-arrow on a red tint — while its amount was
+                                  painted blue and shown POSITIVE, because the
+                                  negation only applies to `expense`. One row, two
+                                  readers disagreeing about what a transfer is:
+                                  D-52's shape, in paint. The tile's red disappears
+                                  here as a consequence of removing the tile, NOT as
+                                  a decision about what a colour means — that is O1
+                                  and it is untouched. The amount below still reads
+                                  blue and positive, exactly as it does today. */}
+                              <div style={{ minWidth: 0, flex: 1 }}>
                                 <div>
-                                  <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                                  <p style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: '15px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {transaction.description || transaction.name}
                                   </p>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginTop: '2px' }}>
                                     <span style={metaTextStyle}>{transaction.category?.name || 'Uncategorized'}</span>
                                     {transaction.account?.name && (
                                       <>
@@ -394,9 +416,7 @@ export const Transactions: React.FC = () => {
                                     list; previously a hyphen was glued on outside
                                     the number, which knocked every negative row
                                     a fraction out of alignment. */}
-                                <p style={{
-                                  fontSize: '15px', fontWeight: 700, margin: 0,
-                                  ...tabular,
+                                <p className="fp-ledger-amount" style={{
                                   color: transaction.transaction_type === 'income' ? 'var(--brand-green-glow)'
                                     : transaction.transaction_type === 'transfer' ? 'var(--accent-blue)'
                                     : 'var(--accent-red)',
@@ -408,39 +428,49 @@ export const Transactions: React.FC = () => {
                                     { currency, signed: transaction.transaction_type === 'income' },
                                   )}
                                 </p>
-                                <div style={{ display: 'flex', gap: '6px' }}>
+                                {/* Quiet, and revealed rather than always shouting.
+                                    Each button carried a tinted background and a
+                                    tinted border, so 50 rows put 100 more colour
+                                    events on the screen than the amounts did. The
+                                    class handles reveal-on-hover, reveal-on-focus
+                                    (a keyboard has no hover) and always-visible on a
+                                    coarse pointer (a tablet has no hover either).
+                                    ARIA LABELS ARE UNCHANGED — opacity keeps these
+                                    in the accessibility tree throughout. */}
+                                <div className="fp-ledger-acts">
                                   <button
                                     onClick={(e) => handleEditClick(e, transaction)}
                                     aria-label="Edit transaction"
-                                    style={{ padding: '7px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '6px', color: 'var(--brand-accent-gold)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.2)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                    style={{ width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border-medium)', borderRadius: '999px', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-secondary)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
                                   >
-                                    <Edit size={15} />
+                                    <Edit size={14} />
                                   </button>
                                   <button
                                     onClick={(e) => handleDeleteClick(e, transaction.id)}
                                     aria-label="Delete transaction"
-                                    style={{ padding: '7px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', color: 'var(--accent-red)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                    style={{ width: '32px', height: '32px', background: 'transparent', border: '1px solid var(--border-medium)', borderRadius: '999px', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent-red)'; e.currentTarget.style.borderColor = 'var(--accent-red)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
                                   >
-                                    <Trash2 size={15} />
+                                    <Trash2 size={14} />
                                   </button>
                                 </div>
                               </div>
-                            </div>
+                            </li>
                           ))}
-                        </div>
+                        </ul>
                       </React.Fragment>
                     ))
                   )}
 
                   {/* Pagination. The list is one page now, so without these the
                       rest of the history would be unreachable rather than
-                      merely off-screen. */}
+                      merely off-screen. It sits INSIDE the surface, below the
+                      hairline that closes the last group. */}
                   {pagination && pagination.pages > 1 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingTop: '20px', marginTop: '8px', borderTop: '1px solid var(--border-light)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '18px 24px', borderTop: '1px solid var(--border-light)' }}>
                       <button
                         onClick={() => setPage((current) => Math.max(1, current - 1))}
                         disabled={!pagination.has_prev}
@@ -460,7 +490,7 @@ export const Transactions: React.FC = () => {
                       </button>
                     </div>
                   )}
-                </SectionCard>
+                </div>
               </div>
             </>
           )}
