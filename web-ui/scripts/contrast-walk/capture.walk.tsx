@@ -69,6 +69,20 @@ function seed() {
     // A BARE ARRAY — the shape the server actually sends. Wrapping it as
     // `{success, members}` makes teamService throw and the page render nothing,
     // which looks exactly like a component that has no rows.
+    // The accounts request is what the ACCOUNT VARY-AXIS reads. Without it the
+    // page correctly hides every account name — which is slice 4 working, but it
+    // means the walk inspects a page missing those elements and reports a
+    // smaller number than the real one. A capture that omits a request
+    // undercounts, and an undercount looks exactly like a measurement.
+    http.get(`${BASE}/api/v1/accounts`, () => HttpResponse.json({
+      success: true,
+      accounts: [
+        { id: 1, name: 'Everyday Current', account_type: 'checking', balance: 1104.55, currency_code: 'GBP', is_active: true },
+        { id: 2, name: 'Joint Current', account_type: 'checking', balance: 612.4, currency_code: 'GBP', is_active: true },
+        { id: 3, name: 'Savings Pot', account_type: 'savings', balance: 2000, currency_code: 'GBP', is_active: true },
+        { id: 4, name: 'Sam Credit', account_type: 'credit', balance: -300, currency_code: 'GBP', is_active: true },
+      ],
+    })),
     http.get(`${BASE}/api/v1/team/members`, () => HttpResponse.json([
       { id: ALICE.id, name: 'Alice', email: ALICE.id, role: 'owner', joinedAt: '2026-01-01' },
       { id: BOB.id, name: 'Bob', email: BOB.id, role: 'member', joinedAt: '2026-01-01' },
