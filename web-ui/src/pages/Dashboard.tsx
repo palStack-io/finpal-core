@@ -12,6 +12,12 @@ import { getBranding } from '../config/branding';
 import { useTheme } from '../contexts/ThemeContext';
 import { CHART_COLORS } from '../config/theme';
 import { StatCard } from '../components/StatCard';
+import { ShareBar } from '../components/dashboard/ShareBar';
+import {
+  spendingSummaryApi,
+  currentMonthRange,
+  type SpendingGroup,
+} from '../services/api/spendingSummary';
 import { SectionCard } from '../components/SectionCard';
 import { MemberFilter } from '../components/MemberFilter';
 import { OwnerBadge } from '../components/OwnerBadge';
@@ -97,6 +103,37 @@ export const Dashboard = () => {
   const [memberId, setMemberId] = useState<string | null>(null);
   const selectedMember = members.find((m) => m.id === memberId) || null;
   const [budgets, setBudgets] = useState<any[]>([]);
+
+  /**
+   * The share bar's two readings.
+   *
+   * `byPerson` is fetched ONLY when there is more than one member — not to save
+   * a request, but because on a one-user instance the person axis does not vary
+   * and the bar never offers it. Fetching it anyway would leave a payload lying
+   * around that nothing may render, which is how a dead control starts.
+   */
+  const [byCategory, setByCategory] = useState<SpendingGroup[]>([]);
+  const [byPerson, setByPerson] = useState<SpendingGroup[]>([]);
+
+  useEffect(() => {
+    const range = currentMonthRange();
+    spendingSummaryApi
+      .get({ ...range, group_by: 'category' })
+      .then((r) => setByCategory(r.groups))
+      .catch(() => setByCategory([]));
+  }, []);
+
+  useEffect(() => {
+    if (members.length <= 1) {
+      setByPerson([]);
+      return;
+    }
+    const range = currentMonthRange();
+    spendingSummaryApi
+      .get({ ...range, group_by: 'owner' })
+      .then((r) => setByPerson(r.groups))
+      .catch(() => setByPerson([]));
+  }, [members.length]);
   const [monthlyAggregation, setMonthlyAggregation] = useState<any[]>([]);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 
@@ -351,6 +388,17 @@ export const Dashboard = () => {
 
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
+
+        {/* The share bar — "what is this month made of?".
+            One user slices by category, two or more by person with a toggle,
+            and a month with no spending renders NOTHING rather than an empty
+            track. See ShareBar's own docstring for why that is not a detail. */}
+        <ShareBar
+          memberCount={members.length}
+          byCategory={byCategory}
+          byPerson={byPerson}
+          currency={user?.default_currency_code || 'USD'}
+        />
 
         {/* Stat Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>

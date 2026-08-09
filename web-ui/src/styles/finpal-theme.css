@@ -882,6 +882,100 @@ body {
   outline-offset: 1px;
 }
 
+/* ── The share bar — "what is this month made of?" ───────────────────────────
+   The signature of the kitchen-table direction: one continuous bar, sliced.
+
+   THE SEGMENTS CARRY A 1px SEPARATOR IN THE CARD COLOUR, and that is a fix for
+   a measured problem rather than decoration. The five approved hues are fine
+   against the CARD — every one clears the 3.0 non-text floor WCAG 1.4.11 asks
+   of a graphical object — but they are NOT distinguishable FROM EACH OTHER:
+   measured adjacent in light, 1.03, 1.06, 1.64 and, for segments 4 and 5,
+   **1.00** — identical luminance. The hues are owner-approved, so the answer is
+   a separator, not a repaint. */
+.fp-sharebar {
+  margin-bottom: 24px;
+}
+.fp-sharebar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.fp-sharebar-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.fp-sharebar-toggle {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--surface-hover);
+  border-radius: 999px;
+  padding: 3px;
+}
+.fp-sharebar-toggle button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.fp-sharebar-toggle button[aria-pressed='true'] {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.fp-sharebar-toggle button:focus-visible {
+  outline: 2px solid var(--brand-main-green);
+  outline-offset: 1px;
+}
+
+.fp-sharebar-track {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-hover);
+}
+.fp-sharebar-segment + .fp-sharebar-segment {
+  box-shadow: inset 1px 0 0 var(--bg-card);
+}
+
+.fp-sharebar-legend {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.fp-sharebar-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.fp-sharebar-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex: none;
+}
+.fp-sharebar-label {
+  color: var(--text-secondary);
+}
+.fp-sharebar-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Full-width error banner above a form or list. */
 .fp-error-banner {
   display: flex;
