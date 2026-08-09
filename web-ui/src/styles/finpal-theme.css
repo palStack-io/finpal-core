@@ -501,33 +501,9 @@ body {
   transition: border-color 0.3s ease;
 }
 
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px;
-  background: var(--nav-hover);
-  border-radius: 8px;
-  cursor: pointer;
-  margin-bottom: 12px;
-  transition: all 0.2s;
-  border: 1px solid var(--border-light);
-}
 
-.theme-toggle:hover {
-  background: var(--border-light);
-}
 
-.theme-icon {
-  color: var(--text-secondary);
-}
 
-.theme-text {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
 
 .logo-footer {
   display: flex;
@@ -539,18 +515,6 @@ body {
   transition: background 0.2s;
 }
 
-.logo-icon {
-  width: 28px;
-  height: 28px;
-  background: var(--brand-gradient);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 14px;
-}
 
 .logo-text {
   font-size: 16px;
@@ -562,15 +526,23 @@ body {
 }
 
 /* Button Styles */
+/* *** RECONCILED, NOT ADOPTED — AND IT WAS THE MOST DANGEROUS OF THE UNUSED
+   RULES. *** It read `background: var(--brand-gradient)`, which is a THREE-stop
+   green -> green -> GOLD gradient, with `color: #0f172a` (near-black) text. The
+   14 primary buttons that actually ship use a TWO-stop dark green and WHITE
+   text. Adopting this class would have turned every primary button in the app
+   gold with black text — the `.page-title` 28px-vs-32px failure again, except
+   visible. A rule nothing references cannot be wrong, so nothing kept it right.
+   Corrected to what ships so that adopting it later is safe. */
 .btn-brand {
-  background: var(--brand-gradient);
-  color: #0f172a;
-  border: none;
-  font-weight: 700;
-  padding: 10px 18px;
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  color: white;
+  border: 1px solid rgba(21, 128, 61, 0.5);
+  font-weight: 600;
+  padding: 12px 24px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .btn-brand:hover {
@@ -604,6 +576,11 @@ body {
   margin: 0 auto;
 }
 
+/* *** DELIBERATELY NOT ADOPTED, AND THE REASON IS A MEASUREMENT. *** The app's
+   cards render at TWO radii — 12px at four sites and 16px at four more — so
+   there is no single card shell to adopt, and picking either would resize half
+   of them. Left as-is with the finding recorded; converging the two is a design
+   decision, not a consolidation. */
 .fp-card {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
@@ -667,13 +644,20 @@ body {
   color: var(--text-muted);
 }
 
-.page-footer {
-  padding: 16px 24px;
+/* The footer at the bottom of a page — "Part of <brand> ecosystem".
+   *** THIS CLASS USED TO DESCRIBE SOMETHING ELSE ENTIRELY. *** It was
+   `padding: 16px 24px; display:flex; justify-content:flex-end; gap:12px` — a
+   DIALOG footer with right-aligned buttons — and NOTHING referenced it, so
+   nothing kept it honest. The three real page footers are centred text. Same
+   name, different component; adopting the old one would have right-aligned and
+   un-spaced all three. Reconciled to what ships, which is #87's precedent. */
+.fp-page-footer {
+  text-align: center;
+  padding: 24px;
+  margin-top: 40px;
   border-top: 1px solid var(--border-light);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  transition: border-color 0.3s ease;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 /* Select dropdown styling */
@@ -1019,5 +1003,8 @@ body {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 8px;
-  margin-bottom: 20px;
 }
+/* NO `margin-bottom` — it was 20px here and FOUR of the five inline twins carry
+   none at all (the fifth carries 24px). Spacing between this banner and what
+   follows it is the call site's business, not the banner's; baking one value in
+   is what made this class un-adoptable without moving four layouts. */

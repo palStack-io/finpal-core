@@ -206,7 +206,7 @@ export const TransactionRules: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="fp-error-banner" style={{ marginBottom: '24px' }}>
           <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           <p style={{ color: 'var(--accent-red)', margin: 0 }}>{error}</p>
         </div>
@@ -515,7 +515,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       )}
 
       {error && (
-        <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="fp-error-banner">
           <AlertCircle size={20} style={{ color: 'var(--accent-red)' }} />
           <p style={{ color: 'var(--accent-red)', margin: 0 }}>{error}</p>
         </div>
