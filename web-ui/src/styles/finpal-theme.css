@@ -1,3 +1,51 @@
+/* ── Outfit, bundled — the display face for the "kitchen table" direction ─────
+   SELF-HOSTED, AND THAT IS THE WHOLE POINT. These four files are served from the
+   app's own origin. No fonts.googleapis.com, no fonts.gstatic.com, anywhere in
+   the shipped artifact: people self-host finPal Core specifically to avoid
+   third-party calls, and an air-gapped install has no route to gstatic at all.
+   `noRemoteFontOrigin.test.ts` scans the BUILT output and fails on any remote
+   font origin — including one pasted into a component, since it is keyed to the
+   mechanism rather than to a filename.
+
+   Provenance, sha256s and the licence check are in
+   `src/assets/fonts/PROVENANCE.md`; the OFL-1.1 text is `src/assets/fonts/OFL.txt`,
+   and it was confirmed against the `name` table of the binaries actually pulled,
+   not taken from the plan.
+
+   `font-display: swap` renders in the fallback immediately and swaps when Outfit
+   arrives, so a slow or failed load costs a reflow rather than a blank page.
+
+   Weights 300/400/500/600 only. NOT 700 — no page in this direction uses it, and
+   an unused weight is dead payload on a self-hosted app. */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('../assets/fonts/outfit-v15-latin-300.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/outfit-v15-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/outfit-v15-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/outfit-v15-latin-600.woff2') format('woff2');
+}
+
 :root {
   /* Typography. Declared once, as a token: body font-family was previously set
      in BOTH index.css (system-ui) and here (SF Pro Display). This file loads
@@ -5,9 +53,16 @@
      another everywhere else — the kind of split that only shows up on someone
      else's machine.
      system-ui resolves to SF on Apple platforms anyway, and to the correct native
-     face on Windows and Linux, so it is strictly better than naming SF directly. */
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+     face on Windows and Linux, so it is strictly better than naming SF directly.
+
+     'Outfit' is now first, and THE REST OF THE STACK STAYS. That is not
+     defensive padding: it is the difference between a missing file and an
+     unreadable app. It also does real work every day — Outfit has no `₹` glyph
+     in any subset, including the full upstream font, and INR is a supported
+     currency here, so the fallback carries that symbol for every INR user. See
+     `src/assets/fonts/PROVENANCE.md`. */
+  --font-sans: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   /* finPal Brand Colors */
   --brand-main-green: #15803d;
