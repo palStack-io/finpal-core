@@ -495,7 +495,7 @@ class SpendingSummary(Resource):
     # an MCP client relies on so a model never has to page raw rows.
     @api_auth_required(scope=SCOPE_READ)
     def get(self):
-        """Spending totals grouped by category, merchant or month over a range."""
+        """Spending totals grouped by category, merchant, month or owner over a range."""
         user_id = get_jwt_identity()
         try:
             start = parse_date(request.args.get('start_date'), 'start_date')

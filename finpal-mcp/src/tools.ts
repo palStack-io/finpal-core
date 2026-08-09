@@ -73,12 +73,15 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: 'get_spending_summary',
     description:
-      'Total spending over a date range, grouped by category, merchant or ' +
-      'month. Use this for any "how much did I spend" question rather than ' +
-      'adding up transactions yourself — the totals are computed by the ' +
-      'server and will be correct. Note "merchant" groups on the transaction ' +
-      'description, since finPal has no separate merchant field. Income and ' +
-      'transfers are excluded.',
+      'Total spending over a date range, grouped by category, merchant, ' +
+      'month or owner. Use this for any "how much did I spend" question ' +
+      'rather than adding up transactions yourself — the totals are computed ' +
+      'by the server and will be correct. Note "merchant" groups on the ' +
+      'transaction description, since finPal has no separate merchant field. ' +
+      'Income and transfers are excluded. "owner" groups by which household ' +
+      'member owns the ACCOUNT a row was spent from, which is finPal\'s ' +
+      'definition of whose money it is — but note a token only ever sees its ' +
+      'own data, so through this server "owner" returns a single group.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -86,8 +89,16 @@ export const TOOLS: ToolDefinition[] = [
         end_date: str('End of the range, inclusive, ISO format'),
         group_by: {
           type: 'string',
-          enum: ['category', 'merchant', 'month'],
-          description: 'How to group the totals. Defaults to category.',
+          // KEEP THIS IN STEP WITH `VALID_GROUPINGS` in
+          // src/services/analytics/spending_summary.py. An enum here is a claim
+          // about the server, and over-claiming is the harmless direction —
+          // UNDER-claiming makes this client REFUSE A REQUEST THE SERVER
+          // ACCEPTS, with no server-side test able to see it, because the
+          // server is not the thing being broken (the #86 lesson).
+          enum: ['category', 'merchant', 'month', 'owner'],
+          description:
+            'How to group the totals. Defaults to category. "owner" groups by ' +
+            'the household member who owns the account a row was spent from.',
         },
       },
       required: ['start_date', 'end_date'],
