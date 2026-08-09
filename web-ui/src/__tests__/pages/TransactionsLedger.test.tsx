@@ -195,27 +195,73 @@ describe('the parts of the restructure that only the stylesheet can state', () =
   });
 });
 
-describe('O1 IS NOT SHIPPED — an ordinary expense is still red', () => {
+describe('O1 IS ANSWERED — an ordinary expense is NOT red', () => {
   /**
-   * This block exists so the stop condition is a mechanism rather than a memory.
-   * The owner asked to see both colour schemes on screen before deciding; that
-   * is not approval, and slices 3 and 4 are structure only. If a later slice
-   * flips the semantics before the owner answers, these fail.
+   * *** OWNER DECISION, 2026-08-09. *** This block used to assert the OPPOSITE,
+   * and that was its job: while the question was open it was the stop condition
+   * that kept six slices from drifting into the flip. It caught this very change
+   * when the colours moved, which is the only reason to write a stop condition
+   * as a test rather than as a note. It now pins the answer instead.
+   *
+   * The answer was settled by looking at Monarch rather than by argument: every
+   * expense there renders in plain dark text, income is green with a leading
+   * `+`, and red appears only on figures that are over or negative — an
+   * over-budget category, a negative "left to budget". Actual spend of $10,947
+   * is black. Red means "problem", not "expense".
    */
-  it('paints expense red, income green and a transfer blue, exactly as today', async () => {
+  it('paints an expense in plain text, income green and a transfer soft', async () => {
     seed(['expense', 'income', 'transfer']);
     const { container } = await renderPage();
 
-    const colourOf = (label: string) => {
+    const amountOf = (label: string) => {
       const row = screen.getByText(label).closest('.fp-ledger-row')!;
       const amount = row.querySelector('.fp-ledger-amount') as HTMLElement;
       expect(amount, `no amount found on the row for ${label}`).not.toBeNull();
-      return amount.style.color;
+      return amount;
     };
 
-    expect(colourOf('Item 1')).toContain('--accent-red');
-    expect(colourOf('Item 2')).toContain('--brand-green-glow');
-    expect(colourOf('Item 3')).toContain('--accent-blue');
+    expect(amountOf('Item 1').style.color).toContain('--text-primary');
+    // --brand-main-green (#15803d, 4.87:1 on card), NOT --brand-green-glow
+    // (#22c55e, 2.27:1) — the old income colour was a WCAG AA failure on the
+    // figure that matters most, and this change is the moment to stop shipping it.
+    expect(amountOf('Item 2').style.color).toContain('--amount-income');
+    expect(amountOf('Item 3').style.color).toContain('--text-secondary');
     expect(container.querySelectorAll('.fp-ledger-row')).toHaveLength(50);
+  });
+
+  it('KEYED TO THE MECHANISM: no alarm colour appears on any row amount', async () => {
+    // Pinning the three new tokens would pass forever while saying nothing about
+    // a fourth transaction type someone adds next month. This says the thing the
+    // decision actually means — an amount is never painted as an alarm — and it
+    // is what fails if red comes back under any spelling.
+    seed(['expense', 'income', 'transfer']);
+    const { container } = await renderPage();
+
+    const offenders = Array.from(container.querySelectorAll('.fp-ledger-amount'))
+      .map((el) => (el as HTMLElement).style.color)
+      .filter((c) => /accent-red|#ef4444|rgb\(239/i.test(c));
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('the three kinds stay distinguishable WITHOUT colour, by their sign', async () => {
+    /**
+     * The risk this change introduces, and the reason it needs its own
+     * assertion. Colour used to carry direction; now the sign does, alone. An
+     * expense reads `−`, income reads `+`, and a transfer carries neither
+     * because it is not money leaving. Drop the minus in some future tidy-up and
+     * an expense becomes indistinguishable from a transfer — with nothing left
+     * to tell them apart, which is D-52's shape waiting to happen again.
+     */
+    seed(['expense', 'income', 'transfer']);
+    await renderPage();
+
+    const textOf = (label: string) =>
+      screen.getByText(label).closest('.fp-ledger-row')!
+        .querySelector('.fp-ledger-amount')!.textContent ?? '';
+
+    expect(textOf('Item 1')).toMatch(/^\u2212/);   // expense: a real minus sign
+    expect(textOf('Item 2')).toMatch(/^\+/);        // income
+    expect(textOf('Item 3')).not.toMatch(/^[\u2212+-]/); // transfer: unsigned
   });
 });

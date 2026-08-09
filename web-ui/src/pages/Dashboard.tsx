@@ -587,8 +587,14 @@ export const Dashboard = () => {
                     </div>
                   </div>
                 </div>
+                {/* Same rule as the Transactions ledger — O1, owner decision
+                    2026-08-09. A transaction's amount is not painted by whether
+                    it is an expense; red is kept for figures that are over or
+                    negative, which on this page is the budget bar above. Both
+                    surfaces have to agree or the colour means one thing on the
+                    dashboard and another one screen over. */}
                 <span style={{
-                  color: txn.transaction_type === 'income' ? 'var(--brand-green-glow)' : 'var(--accent-red)',
+                  color: txn.transaction_type === 'income' ? 'var(--amount-income)' : 'var(--text-primary)',
                   fontWeight: '600',
                   fontSize: '14px',
                   flexShrink: 0,

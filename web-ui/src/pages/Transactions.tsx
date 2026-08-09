@@ -296,7 +296,11 @@ export const Transactions: React.FC = () => {
                   subtitle={scopeSubtitle}
                   accentColor="#22c55e"
                   icon={<ArrowUpRight size={24} color="#22c55e" />}
-                  valueColor="#22c55e"
+                  /* The FIGURE takes the legible green; the accent and the icon
+                     keep the brighter brand one, because those are decorative and
+                     graphical rather than text. #22c55e on this card measured
+                     2.27:1 — below even the 3.0 non-text floor, at 28px. */
+                  valueColor="var(--amount-income)"
                 />
                 <StatCard
                   label="Total Expenses"
@@ -314,7 +318,12 @@ export const Transactions: React.FC = () => {
                   subtitle={scopeSubtitle}
                   accentColor="#fbbf24"
                   icon={<Calendar size={24} color="#fbbf24" />}
-                  valueColor={netBalance >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)'}
+                  /* Net balance KEEPS its red, and that is the point of O1 rather
+                     than an exception to it: a negative net is a figure whose sign
+                     means something, which is exactly where Monarch keeps red too
+                     (its "Remaining" column, its "left to budget"). Only the green
+                     half changes, and only for legibility. */
+                  valueColor={netBalance >= 0 ? 'var(--amount-income)' : 'var(--accent-red)'}
                 />
               </div>
 
@@ -457,10 +466,39 @@ export const Transactions: React.FC = () => {
                                     list; previously a hyphen was glued on outside
                                     the number, which knocked every negative row
                                     a fraction out of alignment. */}
+                                {/* *** O1, ANSWERED BY THE OWNER 2026-08-09: AN
+                                    ORDINARY EXPENSE IS NOT RED. ***
+
+                                    Red used to mean "this is an expense", which
+                                    spent the alarm colour on the ordinary case
+                                    and left nothing for the real one. It now
+                                    means "this is a problem", and problems live
+                                    where they are actionable — an over-budget
+                                    CATEGORY, a negative net — not on a purchase
+                                    you cannot un-make.
+
+                                    Settled by looking at Monarch rather than by
+                                    argument: every expense there renders in
+                                    plain dark text, income is green with a
+                                    leading +, and red appears only on figures
+                                    that are over or negative. Actual spend of
+                                    $10,947 is black.
+
+                                    THE DIRECTION IS UNCHANGED WITHOUT COLOUR:
+                                    formatMoney already gives an expense a real
+                                    minus, a transfer no sign, and income a +, so
+                                    all three stay distinguishable — the sign now
+                                    carries what the colour used to.
+
+                                    Income moves to --brand-main-green rather
+                                    than keeping --brand-green-glow: #22c55e was
+                                    2.27:1 on the card, a WCAG AA failure on the
+                                    figure that matters most. #15803d is 4.87:1.
+                                    Same brand, legible version of it. */}
                                 <p className="fp-ledger-amount" style={{
-                                  color: transaction.transaction_type === 'income' ? 'var(--brand-green-glow)'
-                                    : transaction.transaction_type === 'transfer' ? 'var(--accent-blue)'
-                                    : 'var(--accent-red)',
+                                  color: transaction.transaction_type === 'income' ? 'var(--amount-income)'
+                                    : transaction.transaction_type === 'transfer' ? 'var(--text-secondary)'
+                                    : 'var(--text-primary)',
                                 }}>
                                   {formatMoney(
                                     transaction.transaction_type === 'expense'
