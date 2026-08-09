@@ -34,6 +34,22 @@
  * something: each must carry its reason inline, and the totals are pinned below.
  * Silencing this gate is possible, but only as a visible diff.
  *
+ * ── WHAT THIS FILE CANNOT SEE, AND IT IS HALF THE JOB ───────────────────────
+ *
+ * PAINT below is a CONTRACT about which paints occur on which surfaces. Nothing
+ * here checks that the contract is TRUE, and nothing can while no component
+ * references a token. Concretely: a slice-3 element that sets
+ * `color: var(--kt-green)` on a wash-backed surface is 4.39:1 — a real AA
+ * failure, the exact thing this slice exists to prevent — and this file stays
+ * GREEN, because green-on-wash is classified 'object' and 4.39 clears the 3.0
+ * non-text floor. The same hole covers every 'absent' verdict.
+ *
+ * Closing it needs the other half the plan describes: resolve each element's own
+ * colour against its ACTUAL COMPUTED BACKGROUND in a rendered page, walking up
+ * the tree for transparent backgrounds. THAT IS AN OPEN OBLIGATION ON SLICE 3,
+ * where there is finally a rendered page to walk. Until then, "the contrast gate
+ * shipped" means the palette is sound, NOT that its use is.
+ *
  * Watched failing before being believed — see the checkpoint in ROADMAP.md for
  * the three sabotages and their output.
  */
