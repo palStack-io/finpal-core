@@ -16,6 +16,6 @@ export default defineConfig({
     environment: 'jsdom',
     root: new URL('../..', import.meta.url).pathname,
     setupFiles: ['./src/__tests__/setup.ts'],
-    include: ['scripts/contrast-walk/capture.walk.tsx'],
+    include: [process.env.WALK_CAPTURE ?? 'scripts/contrast-walk/capture.walk.tsx'],
   },
 });

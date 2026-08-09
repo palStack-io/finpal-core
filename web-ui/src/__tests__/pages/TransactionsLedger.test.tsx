@@ -117,7 +117,7 @@ describe('the transaction list is one surface, not fifty cards', () => {
         const style = (el as HTMLElement).style;
         // The action buttons are pills by design — they are controls, not cards,
         // and a control that looks like a control is the point of them.
-        if ((el as HTMLElement).closest('.fp-ledger-acts')) continue;
+        if ((el as HTMLElement).closest('.fp-row-acts')) continue;
         if (style.borderRadius) offenders.push(`${el.tagName}: radius ${style.borderRadius}`);
         if (style.border) offenders.push(`${el.tagName}: border ${style.border}`);
         if (style.background && style.background !== 'transparent') {
@@ -135,7 +135,7 @@ describe('the transaction list is one surface, not fifty cards', () => {
     // than to the literal `44px`, so a 40px tile does not slip through.
     const svgsInRows = container.querySelectorAll('.fp-ledger-row svg');
     for (const svg of svgsInRows) {
-      expect(svg.closest('.fp-ledger-acts')).not.toBeNull();
+      expect(svg.closest('.fp-row-acts')).not.toBeNull();
     }
   });
 
@@ -178,8 +178,11 @@ describe('the parts of the restructure that only the stylesheet can state', () =
     // A hover-only control does not exist on a tablet, and a keyboard has no
     // hover at all. Both escapes are asserted because each covers a different
     // user and losing either is silent.
-    expect(THEME).toMatch(/\.fp-ledger-row:focus-within \.fp-ledger-acts/);
-    const coarse = THEME.match(/@media \(hover: none\) \{[^@]*?\.fp-ledger-acts \{[^}]*\}/s)?.[0] ?? '';
+    // The rule is keyed to a generic `.fp-revealer` ancestor rather than to the
+    // ledger row, so the accounts list shares ONE definition instead of growing a
+    // second copy that drifts — this project's named failure mode.
+    expect(THEME).toMatch(/\.fp-revealer:focus-within \.fp-row-acts/);
+    const coarse = THEME.match(/@media \(hover: none\) \{[^@]*?\.fp-row-acts \{[^}]*\}/s)?.[0] ?? '';
     expect(coarse).toMatch(/opacity:\s*1/);
   });
 

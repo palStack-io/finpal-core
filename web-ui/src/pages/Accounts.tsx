@@ -251,6 +251,10 @@ export const Accounts = () => {
                     cursor: 'pointer',
                     transition: 'all 0.3s'
                   }}
+                  /* Reveals its actions on hover and on :focus-within, and keeps
+                     them visible where there is no hover — the same rule the
+                     transactions ledger uses, from the same definition. */
+                  className="fp-revealer"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--border-light)';
                     e.currentTarget.style.borderColor = account.color;
@@ -331,8 +335,14 @@ export const Accounts = () => {
                         </p>
                       </div>
 
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      {/* Actions. Quiet at rest; the delete turns red on hover
+                          rather than at rest. *** O1 APPLIED CONSISTENTLY: ***
+                          red now means "this is a problem", and a delete button
+                          existing is not one — but this list painted one red on
+                          EVERY row, so twenty accounts put twenty alarm colours
+                          on screen for nothing. The colour belongs on the moment
+                          of intent, not on the affordance. */}
+                      <div className="fp-row-acts">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -340,46 +350,13 @@ export const Accounts = () => {
                             setShowEditModal(true);
                           }}
                           aria-label="Edit account"
-                          style={{
-                            padding: '8px',
-                            background: 'var(--border-light)',
-                            border: 'none',
-                            borderRadius: '6px',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.3s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border-medium)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--border-light)'}
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
                           onClick={(e) => handleDeleteAccount(account.id, e)}
                           aria-label="Delete account"
-                          style={{
-                            padding: '8px',
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            borderRadius: '6px',
-                            color: 'var(--accent-red)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.3s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                          }}
+                          data-destructive=""
                         >
                           <Trash2 size={16} />
                         </button>
