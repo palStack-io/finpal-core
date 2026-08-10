@@ -39,12 +39,17 @@ class BudgetList(Resource):
     @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get all budgets for household"""
-        from src.utils.household import get_all_user_ids
+        # `visible_user_ids(caller)`, NOT `get_all_user_ids()` — the latter includes
+        # demo accounts by its own docstring, and pairing it with a detail route built
+        # from a narrower helper is D-43/D-66: a row on screen its viewer cannot open.
+        from src.utils.household import visible_user_ids
         current_user_id = get_jwt_identity()
 
         try:
-            # Get all budgets for the household
-            budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids())).all()
+            # Every budget this caller may see — the household for a member, itself
+            # alone for a demo account.
+            budgets = Budget.query.filter(
+                Budget.user_id.in_(visible_user_ids(current_user_id))).all()
 
             # Serialize
             result = budgets_schema.dump(budgets)
@@ -101,14 +106,23 @@ def _household_budget(budget_id):
     which is the exact failure D-20 called out and fixed for categories; budgets
     were the sibling nobody swept.
 
-    `household_user_ids()`, not `get_all_user_ids()` — the latter includes demo
-    accounts by its own docstring, and D-42 is the row where that leaked.
+    *** AND IT MUST BE THE CALLER'S SCOPE, NOT "THE HOUSEHOLD'S". *** This read
+    `household_user_ids()` — right about demo accounts, wrong about *whose* view it
+    is answering. That helper EXCLUDES demo accounts, so a demo caller 404'd on its
+    own budget while the collection (built from `get_all_user_ids()`) cheerfully
+    listed the whole instance's. Both halves of D-66: the list was too wide and the
+    detail too narrow, and they failed past each other.
+
+    `visible_user_ids(caller)` is the one helper that answers both — the household
+    for a member, the caller alone for a demo account — and the module docstring in
+    `src/utils/household.py` prescribes it for exactly this pairing.
     """
-    from src.utils.household import household_user_ids
+    from flask_jwt_extended import get_jwt_identity
+    from src.utils.household import visible_user_ids
 
     return Budget.query.filter(
         Budget.id == budget_id,
-        Budget.user_id.in_(household_user_ids()),
+        Budget.user_id.in_(visible_user_ids(get_jwt_identity())),
     ).first()
 
 @ns.route('/<int:id>')
@@ -226,11 +240,15 @@ class BudgetOverview(Resource):
     @jwt_required()
     def get(self):
         """Get budget overview with total budget, spent, and remaining"""
-        from src.utils.household import get_all_user_ids
+        # Same rule as the collection above: the overview must total exactly the
+        # budgets the caller is shown, or the summary disagrees with the list.
+        from src.utils.household import visible_user_ids
         current_user_id = get_jwt_identity()
 
         try:
-            budgets = Budget.query.filter(Budget.user_id.in_(get_all_user_ids()), Budget.active == True).all()
+            budgets = Budget.query.filter(
+                Budget.user_id.in_(visible_user_ids(current_user_id)),
+                Budget.active == True).all()
 
             total_budget = 0
             total_spent = 0

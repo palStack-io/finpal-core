@@ -494,3 +494,63 @@ def test_demo_a_demo_account_still_manages_its_own_categories(
                          headers=auth_headers(demo))
     assert resp.status_code == 200, resp.get_data(as_text=True)[:200]
     assert Category.query.get(category_id) is None
+
+
+# ── D-66's sibling, found 2026-08-10 ─────────────────────────────────────────
+#
+# `api/v1/categories.py:63` listed `get_all_user_ids()` (demo INCLUDED) while
+# `CategoryService.can_manage` gates on `household_user_ids()` (demo EXCLUDED).
+# That is the same pairing D-43/D-66 are about, and `src/utils/household.py`'s
+# module docstring forbids it by name: "Use `visible_user_ids` for both the list
+# and the detail of a resource, or they disagree."
+#
+# Measured before this was written: a real user on a demo-mode instance was
+# listed 588 categories, and using a demo-owned one was refused with
+# "Invalid category selected".
+
+def test_a_demo_account_can_manage_every_category_it_is_shown(client, db, auth_headers):
+    """The list and the permission must agree for a demo account too."""
+    from tests.factories import UserFactory
+    from src.extensions import db as _db
+    from src.models.category import Category
+
+    alice = UserFactory()
+    demo = UserFactory(is_demo_user=True)
+    _db.session.add(Category(name='HouseholdFood', user_id=alice.id))
+    _db.session.add(Category(name='DemoFood', user_id=demo.id))
+    _db.session.commit()
+
+    headers = auth_headers(demo)
+    body = client.get('/api/v1/categories/', headers=headers).get_json()
+    rows = body['categories'] if isinstance(body, dict) else body
+    assert rows, 'a demo account was shown no categories at all'
+
+    for row in rows:
+        # A listed row must be reachable. Renaming it to its own name is a no-op
+        # that still exercises the permission.
+        resp = client.put(f"/api/v1/categories/{row['id']}",
+                          json={'name': row['name']}, headers=headers)
+        assert resp.status_code in (200, 204), (
+            f"category {row['id']} ({row['name']}) is listed to a demo account "
+            f"but answers {resp.status_code} when managed"
+        )
+
+
+def test_a_demo_account_is_not_shown_the_households_categories(client, db, auth_headers):
+    """The demo password is published; the sandbox runs both ways (D-42)."""
+    from tests.factories import UserFactory
+    from src.extensions import db as _db
+    from src.models.category import Category
+
+    alice = UserFactory()
+    demo = UserFactory(is_demo_user=True)
+    hh = Category(name='HouseholdFood', user_id=alice.id)
+    _db.session.add(hh)
+    _db.session.add(Category(name='DemoFood', user_id=demo.id))
+    _db.session.commit()
+
+    body = client.get('/api/v1/categories/', headers=auth_headers(demo)).get_json()
+    rows = body['categories'] if isinstance(body, dict) else body
+    assert all(r['id'] != hh.id for r in rows), (
+        "a demo account was shown the real household's category"
+    )

@@ -25,7 +25,8 @@ export interface CreateBudgetData {
   name: string;
   amount: number;
   period: 'weekly' | 'monthly' | 'yearly';
-  category_id?: number;
+  /** Required: the column is NOT NULL and the API now rejects a create without it (D-74). */
+  category_id: number;
   start_date?: string;
   end_date?: string;
   is_active?: boolean;

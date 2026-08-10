@@ -129,11 +129,17 @@ describe('budgetService contract', () => {
     expect(b).toHaveProperty('is_active');
   });
 
+  // Re-keyed 2026-08-10 (D-74), not deleted: this asserted the OLD contract, in
+  // which `category_id` was optional. The database column is `nullable=False`, so
+  // that shape could only ever have produced an opaque 400 — the call this test
+  // certified was one the server could not honour. Owner decision: the API follows
+  // the database, so a category is now required here and in `CreateBudgetData`.
   it('createBudget returns the created budget', async () => {
     const b = await budgetService.createBudget({
       name: 'New Budget',
       amount: 200,
       period: 'monthly',
+      category_id: 1,
     });
     expect(b).toHaveProperty('id');
     expect(b).toHaveProperty('name');

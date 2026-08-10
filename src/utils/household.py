@@ -83,6 +83,33 @@ def visible_user_ids(caller_id):
     return household_user_ids()
 
 
+def current_viewer_ids():
+    """`visible_user_ids` for whoever is making THIS request.
+
+    Exists because the budget **arithmetic** needs the caller's scope and cannot be
+    handed it: `spent` is produced inside `BudgetSchema.get_spent`, which marshmallow
+    calls with the model instance and nothing else. The obvious alternative — stashing
+    the caller on the schema's `context` — is not available, because `budgets_schema`
+    is a module-level singleton shared across requests.
+
+    **This is what D-66 got wrong.** `calculate_spent_amount` called
+    `household_user_ids()` regardless of whose budget it was, so on an instance with
+    demo accounts *and* one real user, every budget — including a demo's own —
+    reported the REAL household's spending, and on an all-demo instance the set was
+    empty and every budget read $0.00 and "on track" forever.
+
+    Falls back to `household_user_ids()` outside a request (schedulers, shell), which
+    is the pre-existing behaviour for those callers and is correct: no caller means no
+    sandbox to respect.
+    """
+    try:
+        from flask_jwt_extended import get_jwt_identity
+        caller = get_jwt_identity()
+    except Exception:
+        caller = None
+    return visible_user_ids(caller) if caller else household_user_ids()
+
+
 def is_admin(user_id):
     """Whether this id is a household admin.
 

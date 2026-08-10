@@ -56,11 +56,18 @@ class CategoryList(Resource):
     @api_auth_required(scope=SCOPE_READ)
     def get(self):
         """Get all categories for household"""
-        from src.utils.household import get_all_user_ids
+        # `visible_user_ids(caller)`, NOT `get_all_user_ids()`. This list was paired
+        # with a `can_manage` gated on `household_user_ids()`, so a demo account was
+        # shown the whole instance's categories and could manage none of them, and a
+        # real user was shown demo-owned rows that "Invalid category selected"
+        # refused. Same shape as D-43/D-66, one table over.
+        from src.utils.household import visible_user_ids
         current_user_id = get_jwt_identity()
 
-        # Get all categories for the household
-        categories = Category.query.filter(Category.user_id.in_(get_all_user_ids())).all()
+        # Every category this caller may see — the household for a member, itself
+        # alone for a demo account.
+        categories = Category.query.filter(
+            Category.user_id.in_(visible_user_ids(current_user_id))).all()
 
         # Serialize
         result = categories_schema.dump(categories)

@@ -117,9 +117,13 @@ class Budget(db.Model):
         # INCLUDES DEMO ACCOUNTS by its own docstring. D-42 is the row where
         # that leaked, and it was fixed for categories only, deliberately, with
         # the other callers deferred. This is one of them.
-        from src.utils.household import household_user_ids
+        # `current_viewer_ids()` and not `household_user_ids()`: the latter ignores
+        # WHO IS ASKING, which is D-66's second half. A demo account's own budget
+        # reported the real household's spending, and on an all-demo instance the
+        # set was empty so every budget read $0.00 and "on track" forever.
+        from src.utils.household import current_viewer_ids
 
-        household = household_user_ids()
+        household = current_viewer_ids()
 
         expenses = Expense.query.filter(
             Expense.user_id.in_(household),

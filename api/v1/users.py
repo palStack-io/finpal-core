@@ -483,8 +483,13 @@ class Export(Resource):
             ],
         }
 
-        # Create JSON file in memory
-        json_data = json.dumps(data, indent=2)
+        # Create JSON file in memory.
+        # `cls=` is not optional (D-73): this called the standard library's `dumps`
+        # with no encoder, so it bypassed the app's entirely and raised on the first
+        # `datetime` — and, once money became `numeric` (D-58), on the first
+        # `Decimal` too. Every other response route already goes through this class.
+        from src import _DecimalJSONEncoder
+        json_data = json.dumps(data, indent=2, cls=_DecimalJSONEncoder)
         buffer = io.BytesIO(json_data.encode('utf-8'))
         buffer.seek(0)
 

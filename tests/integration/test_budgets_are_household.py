@@ -224,3 +224,87 @@ def test_the_list_and_the_permissions_agree(client, db, auth_headers):
     assert client.put(f'{URL}{budget.id}', json={'amount': 750},
                       headers=bob_headers).status_code == 200
     assert client.delete(f'{URL}{budget.id}', headers=bob_headers).status_code == 200
+
+
+# ── D-66 REOPENED, 2026-08-10 ────────────────────────────────────────────────
+#
+# The four tests above shipped with #108 and are correct. They could not see the
+# half of D-66 that was left undone, and the reason is the trap THIS FILE'S OWN
+# docstring names, one level deeper.
+#
+# `test_the_list_and_the_permissions_agree` uses Alice and Bob — two REAL users.
+# For them `get_all_user_ids()` and `household_user_ids()` return the SAME set,
+# so a list built from one beside a detail built from the other agrees perfectly.
+# The asymmetry only appears when a DEMO account is on the instance, and no
+# fixture here had one on the *reading* side: `test_a_demo_accounts_spending_
+# never_counts` puts a demo in the data and then asks ALICE what she sees.
+#
+# Measured on a copy of the seeded database before these were written: a demo
+# account is listed 11 budgets and gets 404 on all 11, and on an instance that
+# also has a real user, the demo's OWN budget reports the REAL user's spending.
+
+def test_a_demo_account_can_open_every_budget_it_is_shown(client, db, auth_headers):
+    """The list and the detail must agree **for a demo account too**.
+
+    The list was `get_all_user_ids()` (demo INCLUDED) while the detail routes
+    were `household_user_ids()` (demo EXCLUDED), so a demo visitor saw the whole
+    household's budgets and got 404 opening every one of them. Asserts the row
+    OPENS, not that the list answers 200 — a 200 with an unopenable row is the
+    defect.
+    """
+    alice = UserFactory()
+    demo = UserFactory(is_demo_user=True)
+    _budget(alice, _category(alice, 'Groceries'))
+    _budget(demo, _category(demo, 'DemoFood'))
+
+    headers = auth_headers(demo)
+    body = client.get(URL, headers=headers).get_json()
+    rows = body['budgets'] if isinstance(body, dict) else body
+
+    assert rows, 'a demo account was shown no budgets at all'
+    for row in rows:
+        assert client.get(f"{URL}{row['id']}", headers=headers).status_code == 200, (
+            f"budget {row['id']} is listed to a demo account but 404s when opened"
+        )
+
+
+def test_a_demo_account_is_not_shown_the_households_budgets(client, db, auth_headers):
+    """The sandbox runs both ways (D-42, D-47).
+
+    A demo password is PUBLISHED, so anything the demo persona can see is public.
+    """
+    alice = UserFactory()
+    demo = UserFactory(is_demo_user=True)
+    alice_budget = _budget(alice, _category(alice, 'Groceries'))
+    _budget(demo, _category(demo, 'DemoFood'))
+
+    body = client.get(URL, headers=auth_headers(demo)).get_json()
+    rows = body['budgets'] if isinstance(body, dict) else body
+    assert all(r['id'] != alice_budget.id for r in rows), (
+        "a demo account was shown the real household's budget"
+    )
+
+
+def test_a_demo_budget_reports_the_demos_own_spending_not_the_households(
+        client, db, auth_headers):
+    """The spend figure itself leaked, which is worse than the 404.
+
+    `calculate_spent_amount` summed `household_user_ids()` REGARDLESS of whose
+    budget it was, so on an instance with one real user every budget — including
+    the demo's own — reported the REAL household's spending. Measured: demo1's
+    own budget read $123.45, the real user's private figure, while the demo's
+    actual $21.25 counted nowhere.
+    """
+    alice = UserFactory()
+    demo = UserFactory(is_demo_user=True)
+    demo_food = _category(demo, 'DemoFood')
+    demo_budget = _budget(demo, demo_food)
+
+    # The real household spends in a category of the SAME NAME...
+    alice_food = _category(alice, 'DemoFood')
+    _db.session.add(_expense(alice, 123.45, alice_food))
+    # ...and the demo spends its own, smaller amount.
+    _db.session.add(_expense(demo, 21.25, demo_food))
+    _db.session.commit()
+
+    assert _spent(client, auth_headers(demo), demo_budget.id) == 21.25

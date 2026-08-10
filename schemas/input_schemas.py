@@ -89,7 +89,11 @@ class BudgetInput(Schema):
     name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     amount = fields.Float(required=True, validate=validate.Range(min=0))
     period = fields.Str(required=True, validate=validate.OneOf(BUDGET_PERIODS))
-    category_id = fields.Int(allow_none=True)
+    # D-74: `Budget.category_id` is `nullable=False` with no default, so declaring
+    # this optional produced an IntegrityError surfaced as an opaque
+    # 400 "Error adding budget". Owner decision 2026-08-10: the API follows the
+    # database. Every client already requires a category.
+    category_id = fields.Int(required=True)
     start_date = fields.Str()
     is_active = fields.Bool()
     rollover = fields.Bool()

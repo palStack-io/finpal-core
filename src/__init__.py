@@ -9,6 +9,7 @@ import logging
 from contextlib import contextmanager
 
 import pytz
+from datetime import date, datetime
 from decimal import Decimal
 
 from flask import Flask, jsonify, request
@@ -83,6 +84,12 @@ class _DecimalJSONEncoder(json.JSONEncoder):
         if isinstance(o, Decimal):
             # `float` rather than `str`: the wire has always carried numbers here.
             return float(o)
+        if isinstance(o, (datetime, date)):
+            # D-73: this class taught `Decimal` and never dates, so the two handlers
+            # that return a RAW dict — `/users/export` and `/recurring/detect` — both
+            # answered 500. Every other endpoint escaped it only because marshmallow
+            # stringifies dates before the encoder ever sees them.
+            return o.isoformat()
         return super().default(o)
 
 
