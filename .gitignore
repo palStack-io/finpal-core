@@ -112,3 +112,19 @@ _archive/
 # Dockerfile-generated files
 ssl_fix.py
 temp_app.py
+
+# node — web-ui's dependencies, at any depth. NOT previously listed, which meant
+# `git add -A` in this repo would have committed the whole tree to a PUBLIC
+# repository. Nothing was ever tracked from it; this closes the door.
+node_modules/
+
+# Design scratch that must never reach the published repo. Both directories were
+# DELETED on 2026-08-09 by owner instruction; the rules stay so that re-creating
+# either one cannot reach a commit.
+#
+# *** THESE WERE PROTECTED ONLY BY A SENTENCE IN CLAUDE.md *** — "screenshots/ is
+# untracked and must stay that way; `git add -A` picks it up, stage explicitly."
+# That is a discipline problem doing a .gitignore's job, and screenshots/ alone is
+# 20 MB. A rule you can forget twice belongs here instead. Added 2026-08-09.
+screenshots/
+monarch/
