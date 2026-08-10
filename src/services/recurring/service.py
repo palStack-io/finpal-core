@@ -34,9 +34,45 @@ class RecurringService:
             return None
         return recurring
 
+    @staticmethod
+    def _coerce_start_date(value):
+        """A date the model can store, or None if the string is not a date.
+
+        D-80: `create-from-pattern` hands this the DETECTOR's output, and the detector
+        serialises its dates -- `GET /recurring/detect` returns
+        `start_date: '2026-06-26T00:00:00'`. That string went straight into a `DateTime`
+        column and raised `TypeError: SQLite DateTime type only accepts Python datetime
+        and date objects`, which the bare `except Exception` below then reported as
+        "Could not save the recurring expense". So the whole recurring feature was
+        unreachable from the web UI, whose only create path is detection.
+
+        Parsed HERE rather than in the handler because every caller passes through
+        `add_recurring`; fixing the one handler would leave the next caller free to make
+        the same mistake.
+        """
+        if value is None or isinstance(value, datetime):
+            return value
+        if not isinstance(value, str):
+            return None
+        # `fromisoformat` covers both shapes in play: the detector's full ISO timestamp
+        # and the plain `YYYY-MM-DD` an ordinary POST body carries. A trailing `Z` is not
+        # accepted before 3.11, so it is normalised rather than assumed.
+        try:
+            return datetime.fromisoformat(value.strip().replace('Z', '+00:00'))
+        except ValueError:
+            return None
+
     def add_recurring(self, user_id, description, amount, frequency, category_id=None,
                      start_date=None, account_id=None, currency_code=None):
         """Add a new recurring expense"""
+        # Before the try/except, so an unparseable date is a NAMED refusal rather than the
+        # generic message that hid this for as long as it existed. The exception's own text
+        # still must not reach the caller -- that is D-41.
+        if start_date is not None:
+            coerced = self._coerce_start_date(start_date)
+            if coerced is None:
+                return False, 'Start date is not a valid date', None
+            start_date = coerced
         try:
             recurring = RecurringExpense(
                 user_id=user_id,

@@ -204,11 +204,25 @@ class AccountDetail(Resource):
                 account.color = data['color']
             if 'external_id' in data:
                 account.external_id = data['external_id']
-            if 'owner_id' in data:
-                # Reassignment. Refused for a non-member so that a demo account or a
-                # stranger's id cannot be handed household property, and refused
-                # before the commit so a rejected reassignment leaves nothing behind.
-                if not is_household_member(data['owner_id']):
+            if 'owner_id' in data and data['owner_id'] != account.user_id:
+                # A REASSIGNMENT, which this now checks for FIRST. D-81: the membership
+                # test used to run whenever `owner_id` was merely present, and
+                # `EditAccountForm.tsx` always sends it -- prefilled from the account's
+                # own owner (`Accounts.tsx:65`) -- so on a `DEMO_MODE=true` instance every
+                # ordinary balance edit answered 400 "Owner must be a member of this
+                # household" and no account could be edited at all. A no-op assignment
+                # grants nothing, so membership is the wrong question for it. Both sibling
+                # sites already got this right: `AccountService.create_account` guards
+                # with `if owner_id and owner_id != user_id`, the SimpleFin import with
+                # `if owner != user_id`, and `can_manage_owned` returns True outright when
+                # `owner_id == caller_id`.
+                #
+                # BOTH SIDES ARE CHECKED, and the caller half is a second live defect this
+                # found: a demo account could reassign its OWN account TO a real member,
+                # pushing sandbox rows into the household's totals. The sandbox is
+                # symmetric (D-42) -- household property must not reach a demo persona,
+                # and demo rows must not reach the household.
+                if not is_household_member(data['owner_id']) or                         not is_household_member(current_user_id):
                     db.session.rollback()
                     return {
                         'success': False,

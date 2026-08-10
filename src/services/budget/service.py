@@ -98,10 +98,17 @@ class BudgetService:
         # category another member created, and got "Invalid category selected"
         # for a perfectly valid household category. `CategoryService` already
         # made exactly this move — this is the sibling that was missed.
+        #
+        # D-79: `visible_user_ids(caller)`, NOT `household_user_ids()`. The latter is
+        # "everyone except demo accounts" by its own docstring, so a demo caller's set
+        # never contained their own id and EVERY category they owned was refused --
+        # while a real member's category was ACCEPTED, letting a published demo password
+        # budget against household property. Both directions were wrong and one helper
+        # answers both: the caller alone for a demo account, the household for a member.
         if category_id:
-            from src.utils.household import household_user_ids
+            from src.utils.household import visible_user_ids
             category = db.session.get(Category, category_id)
-            if not category or category.user_id not in household_user_ids():
+            if not category or category.user_id not in visible_user_ids(user_id):
                 return False, 'Invalid category selected', None
 
         # Parse start date
@@ -125,10 +132,15 @@ class BudgetService:
         # PRE-EXISTING DUPLICATES ARE LEFT ALONE. This refuses new ones; it does
         # not delete a budget somebody already made, which is not a decision to
         # take on their behalf inside a scope change.
+        #
+        # D-79, the inverse half that no symptom reported: this read
+        # `household_user_ids()` too, which EXCLUDES a demo account -- so a demo caller's
+        # own active budget was invisible here and they could stack two budgets on one
+        # category. Same helper, same reason.
         if category_id:
-            from src.utils.household import household_user_ids
+            from src.utils.household import visible_user_ids
             existing_budget = Budget.query.filter(
-                Budget.user_id.in_(household_user_ids()),
+                Budget.user_id.in_(visible_user_ids(user_id)),
                 Budget.category_id == category_id,
                 Budget.period == period,
                 Budget.active.is_(True),

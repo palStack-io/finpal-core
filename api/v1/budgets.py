@@ -80,7 +80,11 @@ class BudgetList(Resource):
             category_id=validated.get('category_id'),
             amount=validated['amount'],
             period=validated['period'],
-            name=validated['name'],
+            # D-78: `.get`, because `name` is now optional -- the web form has no name
+            # input and omitting the key entirely is a valid body. Indexing it raised
+            # KeyError, which this handler's `except` would have reported as another
+            # opaque 400.
+            name=validated.get('name'),
             start_date=validated.get('start_date'),
             include_subcategories=validated.get('include_subcategories', True),
             rollover=validated.get('rollover', False),

@@ -86,7 +86,13 @@ class AccountInput(Schema):
 
 
 class BudgetInput(Schema):
-    name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
+    # D-78: OPTIONAL, and the ceiling only. `Budget.name` is `VARCHAR(100)` NULLABLE, and
+    # the web form has no name input at all -- `BudgetsMinimal.tsx:260` posts `name: ''`,
+    # which a `min=1` rejected, so NO user could create a budget from the browser. Same
+    # principle as `category_id` below and the opposite conclusion, because the columns
+    # differ: the API follows the database. Do not restore a minimum length; do not
+    # generate a name from the category either, which invents data the user never typed.
+    name = fields.Str(required=False, allow_none=True, validate=validate.Length(max=100))
     amount = fields.Float(required=True, validate=validate.Range(min=0))
     period = fields.Str(required=True, validate=validate.OneOf(BUDGET_PERIODS))
     # D-74: `Budget.category_id` is `nullable=False` with no default, so declaring
