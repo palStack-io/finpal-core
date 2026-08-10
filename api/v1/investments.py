@@ -322,6 +322,31 @@ class InvestmentList(Resource):
         if not portfolio:
             return {'success': False, 'error': 'Portfolio not found'}, 404
 
+        # D-85: PARSE THE DATE BEFORE THE INSERT. Both clients send `purchase_date` as a
+        # `YYYY-MM-DD` string (mobile's HoldingForm always includes it; web's
+        # AddHoldingModal.tsx does too) and `Investment.purchase_date` is a `DateTime`, so
+        # the string reached the column and raised `TypeError: SQLite DateTime type only
+        # accepts Python datetime and date objects`. The bare `except` below then reported
+        # it as "Internal server error", which is why adding a holding failed from every
+        # UI while looking like a server fault. This is D-80's bug in a second handler.
+        #
+        # Parsed HERE, before the try, so an unparseable date is a NAMED refusal rather
+        # than the opaque message. NOTE: `src/services/transaction/creation.py` and
+        # `RecurringService._coerce_start_date` each carry their own version of this; their
+        # fallback contracts differ, so unifying the three is a separate change and is
+        # recorded rather than done here.
+        purchase_date = data.get('purchase_date')
+        if purchase_date is not None and not isinstance(purchase_date, datetime):
+            try:
+                purchase_date = datetime.fromisoformat(str(purchase_date).strip().replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                return {
+                    'success': False,
+                    'error': 'Purchase date is not a valid date',
+                }, 400
+        if purchase_date is None:
+            purchase_date = datetime.utcnow()
+
         try:
             symbol = data.get('symbol').upper()
 
@@ -340,7 +365,7 @@ class InvestmentList(Resource):
                 shares=data.get('shares'),
                 purchase_price=data.get('purchase_price'),
                 current_price=stock_data.get('price', data.get('purchase_price')),
-                purchase_date=data.get('purchase_date', datetime.utcnow()),
+                purchase_date=purchase_date,
                 notes=data.get('notes', ''),
                 sector=stock_data.get('sector', ''),
                 industry=stock_data.get('industry', ''),
@@ -371,8 +396,13 @@ class InvestmentList(Resource):
                 'message': 'Holding added successfully'
             }, 201
 
-        except Exception as e:
+        except Exception:
             db.session.rollback()
+            # `logger.exception`, not a bare swallow: this handler hid a plain TypeError
+            # for as long as it existed, and the server knew exactly what was wrong. The
+            # message stays sanitised (D-41) -- the diagnosis goes to the log, not the
+            # client.
+            logger.exception('Error adding holding')
             return {
                 'success': False,
                 'error': 'Internal server error'
