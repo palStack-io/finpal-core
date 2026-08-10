@@ -294,9 +294,16 @@ class DemoService:
             db.session.add(expense)
 
     @staticmethod
-    def _get_transactions_for_persona(persona):
-        """Get transaction list based on persona"""
-        today = datetime.utcnow()
+    def _get_transactions_for_persona(persona, today=None):
+        """Get transaction list based on persona.
+
+        `today` is injectable so the seed can be checked on **every day of the
+        month**. It is not decoration: the rent rows below used to mix a relative
+        offset with a date pinned to the 1st, so whether the demo's recurring
+        detection worked at all depended on the day it happened to be seeded, and a
+        fixture that seeds once cannot see that.
+        """
+        today = today or datetime.utcnow()
 
         if persona == 'Personal budgeter':
             return [
@@ -330,12 +337,35 @@ class DemoService:
                 {'description': 'Internet - Comcast', 'amount': 79.99, 'type': 'expense', 'date': (today - timedelta(days=16)).strftime('%Y-%m-%d'), 'category_hint': 'utilities'},
                 {'description': 'Water Bill', 'amount': 45.00, 'type': 'expense', 'date': (today - timedelta(days=17)).strftime('%Y-%m-%d'), 'category_hint': 'utilities'},
                 # Housing
-                {'description': 'Rent Payment', 'amount': 1800.00, 'type': 'expense', 'date': (today - timedelta(days=30)).strftime('%Y-%m-%d'), 'category_hint': 'housing'},
-                {'description': 'Rent Payment', 'amount': 1800.00, 'type': 'expense', 'date': (today.replace(day=1)).strftime('%Y-%m-%d'), 'category_hint': 'housing'},
+                # Rent is the demo's showcase for recurring DETECTION, so its spacing
+                # has to be a real monthly cadence on every seed date. The second row
+                # used to be `today.replace(day=1)` -- pinned to the 1st while the
+                # first row slid with `today` -- so the gap was `today.day - 1` days
+                # off a month. Seeded on the 10th that is 21 days, which falls between
+                # determine_frequency()'s biweekly (13-16) and monthly (25-35) bands
+                # and returns None, so rent was never detected. Three fixed 30-day
+                # offsets: a real cadence, and three occurrences read as higher
+                # confidence than two.
+                #
+                # *** THE OFFSETS MUST ALSO FIT THE DETECTOR'S WINDOW. *** It runs with
+                # `lookback_days=60` and `min_occurrences=2`, so a cadence that is
+                # perfectly monthly still goes undetected unless at least TWO rows land
+                # inside the last 60 days. A first attempt at -90/-60/-30 was a real
+                # monthly series and was still invisible, because only one row cleared
+                # the boundary. -63/-33/-3 puts two comfortably inside.
+                {'description': 'Rent Payment', 'amount': 1800.00, 'type': 'expense', 'date': (today - timedelta(days=63)).strftime('%Y-%m-%d'), 'category_hint': 'housing'},
+                {'description': 'Rent Payment', 'amount': 1800.00, 'type': 'expense', 'date': (today - timedelta(days=33)).strftime('%Y-%m-%d'), 'category_hint': 'housing'},
+                {'description': 'Rent Payment', 'amount': 1800.00, 'type': 'expense', 'date': (today - timedelta(days=3)).strftime('%Y-%m-%d'), 'category_hint': 'housing'},
                 # Healthcare
                 {'description': 'CVS Pharmacy', 'amount': 23.45, 'type': 'expense', 'date': (today - timedelta(days=9)).strftime('%Y-%m-%d'), 'category_hint': 'healthcare'},
                 {'description': 'Doctor Visit Copay', 'amount': 30.00, 'type': 'expense', 'date': (today - timedelta(days=40)).strftime('%Y-%m-%d'), 'category_hint': 'healthcare'},
                 # Fitness
+                # A subscription is the other thing recurring detection is FOR, and a
+                # single row cannot demonstrate it -- with only one occurrence there is
+                # no interval to measure. Three monthly charges give the demo a second
+                # detected pattern beside rent.
+                {'description': 'Gym Membership', 'amount': 49.99, 'type': 'expense', 'date': (today - timedelta(days=65)).strftime('%Y-%m-%d'), 'category_hint': 'fitness'},
+                {'description': 'Gym Membership', 'amount': 49.99, 'type': 'expense', 'date': (today - timedelta(days=35)).strftime('%Y-%m-%d'), 'category_hint': 'fitness'},
                 {'description': 'Gym Membership', 'amount': 49.99, 'type': 'expense', 'date': (today - timedelta(days=5)).strftime('%Y-%m-%d'), 'category_hint': 'fitness'},
             ]
 
