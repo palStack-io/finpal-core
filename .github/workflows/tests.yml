@@ -83,7 +83,13 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22, not 20, and NOT merely because 20 is deprecated. The responsive walk
+          # drives CDP over a global WebSocket, which landed in Node 21/22 — on Node 20
+          # it dies with a bare `ReferenceError: WebSocket is not defined`. That is how
+          # this pinned version came to matter: the gate was verified on Node 22 locally
+          # and the runner was pinned to 20, so "no new dependency" was true on one
+          # machine and false on the other.
+          node-version: '22'
           cache: npm
           cache-dependency-path: web-ui/package-lock.json
 

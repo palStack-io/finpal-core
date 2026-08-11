@@ -26,7 +26,9 @@
  *
  *    So this drives CDP `Emulation.setDeviceMetricsOverride` instead, which gives a
  *    true CSS viewport at any width AND evaluates media queries against it. Zero
- *    new dependencies: Node 22 has a global `WebSocket`.
+ *    new dependencies — but it NEEDS NODE >= 22, because the global `WebSocket` it
+ *    leans on landed in 21/22. CI was pinned to Node 20, so "no new dependency" was
+ *    true on this machine and false on the runner. There is an explicit guard below.
  *
  * 2. The document-level check is not sufficient — see the header of `measure.js`.
  *
@@ -120,6 +122,22 @@ const harness = (markup, theme) => `<!doctype html>
 // ── CDP, over Node 22's global WebSocket. No puppeteer, no ws. ────────────────
 const PORT = 9411 + (process.pid % 100);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * *** THIS NEEDS NODE >= 22, AND SAYING SO IS THE POINT. ***
+ *
+ * The driver uses a GLOBAL WebSocket so that CDP costs no dependency. That global
+ * landed in Node 21/22: on Node 20 this file dies with a bare
+ * `ReferenceError: WebSocket is not defined` from deep inside the run, which reads
+ * as "the gate is broken" rather than "the runtime is too old". CI was pinned to
+ * Node 20 while this was verified on 22, so the zero-dependency claim was true on
+ * one machine and false on the other — checked here rather than discovered again.
+ */
+if (typeof WebSocket === 'undefined') {
+  console.error(`This gate drives CDP over a global WebSocket, which requires Node >= 22.
+You are on ${process.version}. Upgrade the runtime — do not skip the gate.`);
+  process.exit(2);
+}
 
 const chrome = spawn(chromePath(), [
   '--headless=new', '--disable-gpu', '--hide-scrollbars',
