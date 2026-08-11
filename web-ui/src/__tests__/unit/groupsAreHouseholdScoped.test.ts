@@ -19,12 +19,34 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
-const PAGES = join(__dirname, '..', '..', 'pages');
+const WEB_SRC = join(__dirname, '..', '..');
+const PAGES = join(WEB_SRC, 'pages');
 const groups = readFileSync(join(PAGES, 'Groups.tsx'), 'utf-8');
 const groupDetail = readFileSync(join(PAGES, 'GroupDetail.tsx'), 'utf-8');
+
+/**
+ * Every source file, because the claim is not confined to the Groups pages.
+ *
+ * *** CHECKING ONLY `Groups.tsx` AND `GroupDetail.tsx` LEFT TWO SITES LIVE *** — `Settings.tsx`
+ * and `Landing.tsx` each described the feature as splitting *"with friends"*, and the built
+ * bundle still carried the phrase twice after the "fix". Found by grepping the **artifact**, not
+ * the source, which is why that habit exists. A guard scoped to the file you happened to edit
+ * goes blind to every other reader of the same claim — `project_guards_keyed_to_a_spelling_go_blind`
+ * one directory wider.
+ */
+function sourceFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    if (entry === '__tests__' || entry === 'node_modules') continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...sourceFiles(full));
+    else if (/\.tsx?$/.test(entry)) out.push(full);
+  }
+  return out;
+}
 
 /** Only the user-visible strings: a word inside a prop name or identifier is not copy. */
 function visibleText(src: string): string {
@@ -36,17 +58,20 @@ function visibleText(src: string): string {
 }
 
 describe('the Groups surfaces describe the household model', () => {
-  it('no longer advertises splitting with friends', () => {
+  it('no longer advertises splitting with friends, anywhere in web-ui', () => {
     // "friends" and "friends and family" are the pre-household framing. A group between friends
     // is not what this feature is for any more, and the words are the only thing that told the
-    // user which model they were in.
+    // user which model they were in. Swept across every file, not just the Groups pages: the
+    // first pass at this missed Settings.tsx and Landing.tsx entirely.
     const offences: string[] = [];
-    for (const [name, src] of [['Groups.tsx', groups], ['GroupDetail.tsx', groupDetail]] as const) {
-      for (const line of visibleText(src).split('\n')) {
-        if (/\bfriends?\b/i.test(line)) offences.push(`${name}: ${line.trim()}`);
+    for (const file of sourceFiles(WEB_SRC)) {
+      for (const line of visibleText(readFileSync(file, 'utf-8')).split('\n')) {
+        if (/\bfriends?\b/i.test(line)) {
+          offences.push(`${file.slice(WEB_SRC.length + 1)}: ${line.trim()}`);
+        }
       }
     }
-    expect(offences, `copy still frames groups around friends:\n${offences.join('\n')}`).toEqual([]);
+    expect(offences, `copy still frames splitting around friends:\n${offences.join('\n')}`).toEqual([]);
   });
 
   it('names the household on the Groups page itself', () => {

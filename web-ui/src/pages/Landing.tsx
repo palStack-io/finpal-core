@@ -22,7 +22,7 @@ export const Landing = () => {
     {
       icon: <Users size={32} />,
       title: 'Flexible Expense Splitting',
-      description: 'Split bills with friends, family, or roommates with powerful collaborative expense management.'
+      description: 'Split shared costs with the people in your household — partners and housemates — with powerful collaborative expense management.'
     },
     {
       icon: <CreditCard size={32} />,

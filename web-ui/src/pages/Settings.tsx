@@ -1011,7 +1011,7 @@ export const Settings: React.FC = () => {
                     </div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
                       A modern, privacy-first personal finance management application. Track expenses, manage budgets,
-                      split bills with friends, and gain insights into your spending habits.
+                      split shared costs with your household, and gain insights into your spending habits.
                     </p>
                   </div>
 
