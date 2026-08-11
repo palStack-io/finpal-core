@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { DollarSign, Calendar, Tag, FileText, AlertCircle, Check, Wallet, Users } from 'lucide-react';
 import { transactionsApi, Transaction } from '../../services/api/transactions';
@@ -8,6 +8,7 @@ import { accountService, Account } from '../../services/accountService';
 import { teamService } from '../../services/teamService';
 import { TeamMember } from '../../types/team';
 import { useAuthStore } from '../../store/authStore';
+import { splitRemainder, rowForRemainder } from '../../utils/splitRemainder';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
@@ -54,6 +55,16 @@ const hintTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSiz
 
 export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transaction, onSuccess, onCancel }) => {
   const userCurrency = useAuthStore((s) => s.user?.default_currency_code ?? 'USD');
+  /**
+   * `Intl.NumberFormat` rather than a symbol table: this is a browser, so it is available and
+   * correct for every code, and the line it replaces hardcoded `$` regardless of the user's
+   * currency. `useMemo` because a formatter per keystroke is wasteful on a form that re-renders
+   * on every character.
+   */
+  const money = useMemo(
+    () => new Intl.NumberFormat(undefined, { style: 'currency', currency: userCurrency }),
+    [userCurrency]
+  );
 
   const {
     register,
@@ -91,13 +102,18 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
    * from this form. `TransactionSchema` serves `{category_id: amount}` now, in
    * exactly the shape the payload below sends.
    */
-  const [categorySplits, setCategorySplits] = useState<Array<{ category_id: string; amount: string; percentage: string }>>(
+  /*
+   * `percentage` used to be a third field here. It was declared, initialised in two places and
+   * NEVER read, rendered or sent — the payload builds from `split.amount` alone — so it was dead
+   * state that made every reader wonder whether a percentage mode existed. Removed 2026-08-10.
+   * (Not to be confused with the GROUP `split_method === 'percentage'` below, which is live.)
+   */
+  const [categorySplits, setCategorySplits] = useState<Array<{ category_id: string; amount: string }>>(
     () => Object.entries(transaction?.category_splits ?? {}).map(([category_id, amount]) => ({
       category_id,
       // Not reformatted: re-serialising a number the user never touched is how an
       // untouched edit starts changing values.
       amount: String(amount),
-      percentage: '',
     }))
   );
   const [categories, setCategories] = useState<Category[]>([]);
@@ -496,7 +512,7 @@ if (loadingData) {
             <label style={labelStyle}>Split Across Categories</label>
             <button
               type="button"
-              onClick={() => setCategorySplits([...categorySplits, { category_id: '', amount: '', percentage: '' }])}
+              onClick={() => setCategorySplits([...categorySplits, { category_id: '', amount: '' }])}
               disabled={isSubmitting}
               style={{ padding: '6px 12px', background: 'rgba(21, 128, 61, 0.2)', border: '1px solid rgba(21, 128, 61, 0.5)', borderRadius: '6px', color: 'var(--brand-light-green)', fontSize: '12px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
             >
@@ -544,10 +560,54 @@ if (loadingData) {
                   </button>
                 </div>
               ))}
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                Total split: ${categorySplits.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toFixed(2)}
-                {watchAmount && ` / $${parseFloat(watchAmount).toFixed(2)}`}
-              </p>
+              {/* *** THE REMAINDER, NOT "TOTAL SPLIT X / Y". *** Owner request: the question at
+                  this moment is "how much is left", and this line used to leave the subtraction
+                  to the reader — and hardcoded `$` whatever the user's currency was. Clickable
+                  while something is left AND a row is empty to take it; `splitTarget` is -1 when
+                  every row already holds a number, which stops it overwriting a typed value. */}
+              {(() => {
+                const split = splitRemainder(watchAmount, categorySplits);
+                const splitTarget = rowForRemainder(categorySplits);
+                if (!split.shouldShow) return null;
+                const canAssign = splitTarget >= 0 && !split.isBalanced && !split.isOver;
+                const colour = split.isOver
+                  ? 'var(--accent-red)'
+                  : split.isBalanced
+                    ? 'var(--brand-light-green)'
+                    : 'var(--text-muted)';
+                const text = split.isOver
+                  ? `${money.format(Math.abs(split.remainder))} over`
+                  : split.isBalanced
+                    ? 'Fully split'
+                    : `${money.format(split.remainder)} left to split${canAssign ? ' — click to assign' : ''}`;
+                return canAssign ? (
+                  <button
+                    type="button"
+                    data-testid="category-split-remainder"
+                    onClick={() => {
+                      const updated = [...categorySplits];
+                      updated[splitTarget].amount = split.remainder.toFixed(2);
+                      setCategorySplits(updated);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      font: 'inherit',
+                      fontSize: '12px',
+                      color: colour,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {text}
+                  </button>
+                ) : (
+                  <p data-testid="category-split-remainder" style={{ color: colour, fontSize: '12px' }}>
+                    {text}
+                  </p>
+                );
+              })()}
             </div>
           )}
         </div>
