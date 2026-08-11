@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette, CreditCard, Users } from 'lucide-react';
 import { accountService } from '../../services/accountService';
@@ -56,6 +56,12 @@ const getDefaultColorForType = (type: string): string => {
 };
 
 export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCancel }) => {
+  // Cleared on unmount -- see the deferral below.
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (successTimer.current) clearTimeout(successTimer.current);
+  }, []);
+
   const { showToast } = useToast();
   const {
     register,
@@ -132,7 +138,11 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
 
       setSuccess(true);
       showToast('Account created successfully', 'success');
-      setTimeout(() => { onSuccess(); }, 1000);
+      // Held in a ref and cleared on unmount. Without that, a user who navigates away
+      // inside this one-second window gets `onSuccess` -- and therefore a setState --
+      // on a tree that no longer exists. It also turned CI red on a run where every
+      // test passed: the timer fired into a torn-down jsdom and React touched `window`.
+      successTimer.current = setTimeout(() => { onSuccess(); }, 1000);
     } catch (err) {
       // The server's reason first. Assigning an account to someone who is not a
       // household member is a reachable 400 now, and axios always populates

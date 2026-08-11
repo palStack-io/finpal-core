@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { DollarSign, Calendar, Tag, FileText, AlertCircle, Check, Wallet, Users } from 'lucide-react';
 import { transactionsApi, Transaction } from '../../services/api/transactions';
@@ -54,6 +54,12 @@ const bgPrimaryStyle: React.CSSProperties = { background: 'var(--bg-primary)' };
 const hintTextStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' };
 
 export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transaction, onSuccess, onCancel }) => {
+  // Cleared on unmount -- see the deferral below.
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (successTimer.current) clearTimeout(successTimer.current);
+  }, []);
+
   const userCurrency = useAuthStore((s) => s.user?.default_currency_code ?? 'USD');
   /**
    * `Intl.NumberFormat` rather than a symbol table: this is a browser, so it is available and
@@ -220,7 +226,11 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       }
 
       setSuccess(true);
-      setTimeout(() => { onSuccess(); }, 1000);
+      // Held in a ref and cleared on unmount. Without that, a user who navigates away
+      // inside this one-second window gets `onSuccess` -- and therefore a setState --
+      // on a tree that no longer exists. It also turned CI red on a run where every
+      // test passed: the timer fired into a torn-down jsdom and React touched `window`.
+      successTimer.current = setTimeout(() => { onSuccess(); }, 1000);
     } catch (err) {
       const e = err as { message?: string; response?: { data?: { error?: string } } };
       setApiError(apiErrorMessage(e, 'Failed to create transaction'));
