@@ -512,7 +512,7 @@ export const Onboarding: React.FC = () => {
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(40px, 1fr))',
+                  gridTemplateColumns: 'repeat(8, 1fr)',
                   gap: '0.75rem'
                 }}>
                   {profileEmojis.map((emoji) => {

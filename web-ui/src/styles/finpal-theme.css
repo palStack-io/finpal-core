@@ -465,6 +465,16 @@ body {
     /* Nothing is reserving the sidebar's space any more — it is out of flow and
        translated away, so the margin would be 240px of blank left gutter. */
     margin-left: 0;
+
+    /* And something has to reserve space for the trigger, which is position: fixed
+       at top 12 left 12 and 40x40, so it is out of flow in both directions.
+       MEASURED, not assumed: at 390px every page put its <h1> at (24, 24) —
+       "Accounts", "Budgets", "Dashboard", "pointsPal" — squarely underneath a
+       button painted at z-index 95. Occlusion is invisible to an overflow gate BY
+       CONSTRUCTION: nothing overflows, the page is simply covered. That is the same
+       class as the tablet rail pushing Settings off its own bottom edge, which also
+       passed every test and only showed up when something rendered it. */
+    padding-top: 56px;
   }
 
   .sidebar {

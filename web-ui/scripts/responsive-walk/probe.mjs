@@ -78,7 +78,8 @@ const res = await send('Runtime.evaluate', {
     if (!els.length) return JSON.stringify({ error: 'selector matched nothing' });
     return JSON.stringify(els.map((el) => {
       const cs = getComputedStyle(el);
-      const o = { width: Math.round(el.getBoundingClientRect().width) };
+      const r = el.getBoundingClientRect();
+      const o = { width: Math.round(r.width), x: Math.round(r.left), y: Math.round(r.top) };
       for (const p of ${JSON.stringify(PROPS)}) o[p] = cs.getPropertyValue(p);
       o.text = (el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 40);
       return o;

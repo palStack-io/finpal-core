@@ -59,7 +59,30 @@ const FIXED_BY_DESIGN: Record<string, string> = {
   'pages/Login.tsx|repeat(12, 1fr)': 'decorative 96-glyph wallpaper, opacity 0.03, pointer-events none',
   'pages/Register.tsx|repeat(12, 1fr)': 'decorative 96-glyph wallpaper, opacity 0.03, pointer-events none',
   'pages/Landing.tsx|repeat(10, 1fr)': 'decorative 100-glyph wallpaper, opacity 0.05, pointer-events none',
-  'pages/Onboarding.tsx|repeat(8, 1fr)': 'decorative 64-glyph wallpaper, opacity 0.05, pointer-events none',
+  // Onboarding has TWO grids with this template: the wallpaper, and the 24-emoji
+  // profile picker below it. Both are exempt, for the two different reasons here.
+  'pages/Onboarding.tsx|repeat(8, 1fr)': 'decorative 64-glyph wallpaper; AND the 24-emoji profile picker — see the fr-track note below',
+
+  // ── repeat(N, 1fr) on a grid of small, uniform cells.
+  //
+  // *** THESE FOUR WERE CONVERTED TO auto-fit AND THE CONVERSION WAS REVERTED, ***
+  // *** WHICH IS THE MORE USEFUL RECORD. ***
+  //
+  // An fr track cannot overflow: fr tracks DIVIDE the available space, so
+  // repeat(8, 1fr) fits its container by construction. The only overflow risk is a
+  // cell whose CONTENT has a min-content width, and these cells hold one emoji or
+  // one colour swatch — at 390px that is roughly 44px and 90px, both usable. There
+  // was nothing here for a responsive pass to fix.
+  //
+  // What the conversion did do is change DESKTOP. auto-fit resolves the track
+  // COUNT from the floor, so 24 emoji into minmax(40px, 1fr) and 8 colours into
+  // minmax(64px, 1fr) both re-rowed into a different number of columns at 1440 —
+  // a visible change to a layout the spec calls "unchanged" at desktop. Neither
+  // the overflow gate nor the suite can see it, because nothing overflows either
+  // way: the gate measures overflow, and a reflow that fits is not overflow.
+  'pages/Settings.tsx|repeat(8, 1fr)': '24 emoji swatches; fr tracks cannot overflow, and 8-across is ~44px at 390',
+  'components/forms/EditAccountForm.tsx|repeat(4, 1fr)': '8 colour swatches; fr tracks cannot overflow, and 4-across is ~90px at 390',
+  'components/forms/AddAccountForm.tsx|repeat(4, 1fr)': '8 colour swatches; fr tracks cannot overflow, and 4-across is ~90px at 390',
   'components/layout/Layout.tsx|repeat(12, minmax(0, 1fr))':
     'decorative 144-glyph wallpaper — and the file is DEAD, imported by nothing; App.tsx is the real shell',
 

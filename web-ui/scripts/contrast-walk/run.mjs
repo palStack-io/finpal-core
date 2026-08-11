@@ -166,9 +166,64 @@ const baseline = existsSync(baselinePath)
   ? JSON.parse(readFileSync(baselinePath, 'utf8'))
   : null;
 
+/**
+ * *** PAGES MEASURED AND REPORTED, BUT NOT YET GATED — AUDIT D-103. ***
+ *
+ * The 2026-08-11 responsive pass added investments and the five pointsPal pages to
+ * `captured/`, because the overflow gate's Tier 2 and Tier 3 subjects live there and
+ * it would otherwise have swept four pages containing none of them. This walk sweeps
+ * the same directory by design — that is D-59's lesson and it stays — so those six
+ * pages arrived here too, carrying **72 pre-existing failing pairs** between them.
+ * Zero new pairs appeared on the four pages already covered, so nothing regressed;
+ * these are shipped palette failures on pages nobody had ever rendered.
+ *
+ * Three ways to handle that, and only one of them is honest:
+ *   - adopt the 72 into baseline.json. NO. It is `{}` — a deliberate ZERO bar since
+ *     #114 took Dashboard, Budgets and Accounts to zero — and adopting would convert
+ *     "zero failures" into "72 accepted failures" in a file nobody reads.
+ *   - stop sweeping the directory. NO. That is D-59 in reverse, and re-creates the
+ *     "unmeasured reads as clean" hole these pages were sitting in.
+ *   - measure them, PRINT them every single run, and gate them separately until the
+ *     palette pass that owns them happens. That is this.
+ *
+ * Fixing them is a palette pass, not a layout one. Delete a page from this list when
+ * its pairs are fixed — the staleness check below fails if a listed page has none,
+ * so the list cannot quietly outlive the problem.
+ */
+const PENDING_AUDIT = {
+  investments: 'D-103 — never contrast-audited; added to captured/ by the responsive pass',
+  'pointspal-overview': 'D-103 — never contrast-audited',
+  'pointspal-caps': 'D-103 — never contrast-audited',
+  'pointspal-bestcard': 'D-103 — never contrast-audited',
+  'pointspal-mycards': 'D-103 — never contrast-audited',
+  'pointspal-redeem': 'D-103 — never contrast-audited',
+};
+
+{
+  let pending = 0;
+  const clean = [];
+  for (const [page, why] of Object.entries(PENDING_AUDIT)) {
+    const n = themes.reduce((sum, t) => sum + (seenPairs[`${page}:${t}`]?.size ?? 0), 0);
+    if (!Object.keys(seenPairs).some((k) => k.startsWith(`${page}:`))) continue;
+    if (n === 0) clean.push(page);
+    else { pending += n; console.log(`  PENDING [${page}] ${n} failing pair(s) — ${why}`); }
+  }
+  if (pending) {
+    console.log(`\n${pending} failing pair(s) on pages awaiting their first contrast audit (AUDIT D-103).`);
+    console.log('Reported, not gated. They are NOT in baseline.json and must not be put there.');
+  }
+  if (clean.length) {
+    console.error(`\nPENDING_AUDIT is stale: ${clean.join(', ')} now has zero failing pairs.`);
+    console.error('Remove it from PENDING_AUDIT so the page joins the real gate.');
+    process.exit(1);
+  }
+}
+
 if (baseline) {
   let regressions = 0;
   for (const [scope, pairs] of Object.entries(seenPairs)) {
+    // Pending pages are reported above and gated by D-103, not by the ratchet.
+    if (PENDING_AUDIT[scope.split(':')[0]]) continue;
     const known = new Set(baseline[scope] ?? []);
     const fresh = [...pairs].filter((p) => !known.has(p));
     const gone = [...known].filter((p) => !pairs.has(p));

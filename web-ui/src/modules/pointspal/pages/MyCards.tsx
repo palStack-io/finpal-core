@@ -676,7 +676,7 @@ const MyCards: React.FC = () => {
                 )}
 
                 {/* Meta grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 0, borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 0, borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                   {[
                     { label: 'Est. Value',   value: `$${card.est_value_usd.toLocaleString()}`,                       color: 'var(--g700)' },
                     { label: 'Annual Fee',   value: card.annual_fee === 0 ? '$0' : `$${card.annual_fee}/yr`,         color: card.annual_fee > 0 ? 'var(--au600)' : 'var(--g700)' },
