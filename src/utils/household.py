@@ -70,6 +70,32 @@ def is_household_member(user_id):
     return not bool(row[0])
 
 
+def on_the_same_side(user_a, user_b):
+    """Whether two ids sit on the same side of the demo boundary (D-94).
+
+    For membership of a *shared* thing — a group — where the household and the sandbox each
+    need to work internally but must never mix. True for two household members, true for two
+    demo accounts, **False for one of each**, and False if either id is not on the instance.
+
+    *** THIS IS NOT `is_household_member` ON BOTH SIDES, AND THE DIFFERENCE IS DELIBERATE. ***
+    `is_household_member(a) and is_household_member(b)` is the right rule for *ownership* of
+    household property, which is why `accounts.py` uses it (D-81): a demo account may not own
+    household rows at all. Applied to group membership it would forbid **demo-to-demo** adds
+    and break the public demo, whose seeded groups are multi-member. What the sandbox actually
+    requires is symmetry (D-42): household property must not reach a demo persona, and demo
+    rows must not reach the household. That is this predicate, not that one.
+    """
+    if not user_a or not user_b:
+        return False
+    rows = {u.id: bool(u.is_demo_user) for u in
+            User.query.with_entities(User.id, User.is_demo_user)
+            .filter(User.id.in_([user_a, user_b])).all()}
+    # An id that is not on the instance has no side, so it can never match one.
+    if user_a not in rows or user_b not in rows:
+        return False
+    return rows[user_a] == rows[user_b]
+
+
 def visible_user_ids(caller_id):
     """The user IDs whose data `caller_id` may see.
 

@@ -104,20 +104,18 @@ describe('the Groups surfaces describe the household model', () => {
     expect(visibleText(groupDetail)).toMatch(/account/i);
   });
 
-  it('does not claim a household restriction the backend does not enforce', () => {
-    // The inverse assertion, and the one that matters most: `add_member` has no household
-    // check, so absolute words here would be a promise the server breaks.
-    const offences: string[] = [];
-    for (const [name, src] of [['Groups.tsx', groups], ['GroupDetail.tsx', groupDetail]] as const) {
-      for (const line of visibleText(src).split('\n')) {
-        if (/\bonly\b[^.]*\bhousehold\b|\bhousehold\b[^.]*\bonly\b/i.test(line)) {
-          offences.push(`${name}: ${line.trim()}`);
-        }
-      }
-    }
-    expect(
-      offences,
-      `copy promises an "only household" rule that add_member does not enforce:\n${offences.join('\n')}`,
-    ).toEqual([]);
+  it('states the restriction, which the backend now actually enforces', () => {
+    // *** THIS ASSERTION USED TO BE ITS OWN INVERSE. *** It originally forbade the words "only
+    // household", because `add_member` had no check and an absolute claim would have been a
+    // promise the server breaks — D-91's shape. Then the owner asked how someone gets added,
+    // which surfaced D-94: the boundary leaked both ways, and it is now enforced in
+    // `add_member` AND `create_group` (see
+    // `tests/integration/test_group_membership_stays_in_the_household.py`, 7 tests).
+    //
+    // So the copy is now *required* to say it, and this test flipped rather than being deleted.
+    // Kept as a live assertion because vague wording is how the guarantee would quietly rot:
+    // if enforcement is ever removed, the backend tests fail loudly and this one keeps the UI
+    // honest in the meantime.
+    expect(visibleText(groupDetail)).toMatch(/only add|only.*household|household.*only/i);
   });
 });

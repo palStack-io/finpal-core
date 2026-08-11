@@ -592,7 +592,7 @@ export const GroupDetail: React.FC = () => {
                   Add Member
                 </h2>
                 <p style={secondaryBodyStyle}>
-                  Groups are for splitting costs with your household. Enter the email address of
+                  Groups are for splitting costs with your household, so you can only add
                   someone who already has an account on this instance.
                 </p>
                 <input

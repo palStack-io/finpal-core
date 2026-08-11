@@ -11,6 +11,7 @@ from src.models.user import User
 from src.models.transaction import Expense
 from src.models.associations import group_users
 from src.utils.helpers import calculate_balances
+from src.utils.household import on_the_same_side
 
 
 class GroupService:
@@ -73,6 +74,13 @@ class GroupService:
             for member_id in member_ids:
                 user = User.query.filter_by(id=member_id).first()
                 if user and user.id != user_id:
+                    # D-94, the second door: fixing only `add_member` would leave creation open.
+                    # Refused rather than skipped -- a group created without the person you named,
+                    # answering success, is the silent-data-loss shape (D-82's family). An id that
+                    # does not exist at all is still skipped, which is pre-existing behaviour.
+                    if not on_the_same_side(user_id, user.id):
+                        db.session.rollback()
+                        return False, 'That person is not a member of this household', None
                     group.members.append(user)
 
             # Handle custom split values
@@ -113,6 +121,13 @@ class GroupService:
         new_member = User.query.filter_by(id=new_member_id).first()
         if not new_member:
             return False, 'User not found'
+
+        # D-94. Groups are a household feature, and the sandbox is symmetric: a real group must
+        # not admit a demo account, and a demo session must not pull a real member into its own.
+        # `on_the_same_side` rather than `is_household_member` on both, because demo-to-demo adds
+        # have to keep working -- the public demo's groups are demo-owned and multi-member.
+        if not on_the_same_side(user_id, new_member.id):
+            return False, 'That person is not a member of this household'
 
         # Check if already a member
         if new_member in group.members:
