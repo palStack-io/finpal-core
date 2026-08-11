@@ -350,7 +350,7 @@ const BudgetsMinimal = () => {
         <div className="page-container">
 
           {/* Simple Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 style={{
                 fontSize: '32px',
@@ -839,7 +839,7 @@ const BudgetsMinimal = () => {
                     <label style={fieldLabelStyle}>
                       Period *
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '12px' }}>
                       {['weekly', 'monthly', 'yearly'].map((period) => (
                         <button
                           key={period}

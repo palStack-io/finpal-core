@@ -181,7 +181,7 @@ export const Investments: React.FC = () => {
         <div className="page-container">
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h1 className="page-title">
                   Investments

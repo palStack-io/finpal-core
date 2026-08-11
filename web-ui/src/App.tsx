@@ -3,8 +3,9 @@
  * Main application component with routing
  */
 
-import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastContainer } from './components/common/Toast';
@@ -53,10 +54,82 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     api.post('/api/v1/auth/sync').catch(() => {}); // fire-and-forget
   }, [isAuthenticated, isDemoUser]);
 
+  /**
+   * The drawer state lives HERE and not in `Sidebar`, which is the whole point.
+   * `Sidebar` reading its own state is exactly why #74’s props were ignored and
+   * D-46 deleted them: the trigger, the scrim and the rail all have to agree, and
+   * three components cannot agree about state that only one of them owns.
+   *
+   * Only mounted below --bp-phone in effect — `.sidebar-trigger` and
+   * `.sidebar-scrim` are `display: none` above it — so at tablet and desktop
+   * widths this is inert and the sidebar is simply persistent.
+   */
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
+
+  // Close on route change. Without this the drawer stays open over the page you
+  // just navigated to, which reads as the link having failed.
+  useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setDrawerOpen(false); return; }
+      if (e.key !== 'Tab') return;
+      // Focus trap. A drawer that covers the page while Tab walks the page behind
+      // it is a screen-reader trap in the other direction — the focus ring goes
+      // somewhere the user cannot see.
+      const rail = document.getElementById('app-sidebar');
+      if (!rail) return;
+      const focusable = rail.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    document.getElementById('app-sidebar')?.querySelector<HTMLElement>('a[href], button')?.focus();
+    return () => document.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    // Restored to the control that opened it, not left on a node that just left
+    // the accessibility tree.
+    triggerRef.current?.focus();
+  };
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-      <main className="main-content">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="sidebar-trigger"
+        aria-label="Open navigation"
+        aria-expanded={drawerOpen}
+        aria-controls="app-sidebar"
+        onClick={() => setDrawerOpen((v) => !v)}
+      >
+        <Menu size={20} />
+      </button>
+
+      {drawerOpen && (
+        <button
+          type="button"
+          className="sidebar-scrim"
+          aria-label="Close navigation"
+          onClick={closeDrawer}
+        />
+      )}
+
+      <Sidebar isOpen={drawerOpen} onClose={closeDrawer} />
+      {/* Hidden from assistive tech while the drawer covers it, so a screen
+          reader does not read the page underneath the open navigation. */}
+      <main className="main-content" aria-hidden={drawerOpen || undefined}>
         {children}
       </main>
     </div>

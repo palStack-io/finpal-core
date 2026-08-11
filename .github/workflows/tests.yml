@@ -83,7 +83,13 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22, not 20, and NOT merely because 20 is deprecated. The responsive walk
+          # drives CDP over a global WebSocket, which landed in Node 21/22 — on Node 20
+          # it dies with a bare `ReferenceError: WebSocket is not defined`. That is how
+          # this pinned version came to matter: the gate was verified on Node 22 locally
+          # and the runner was pinned to 20, so "no new dependency" was true on one
+          # machine and false on the other.
+          node-version: '22'
           cache: npm
           cache-dependency-path: web-ui/package-lock.json
 
@@ -150,3 +156,12 @@ jobs:
           WALK_CAPTURE=scripts/contrast-walk/capture-pages.walk.tsx \
             npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
           node scripts/contrast-walk/run.mjs
+          # The SAME captures, walked again for horizontal overflow at 1440/1024/768/390
+          # in both themes. Also needs a real engine, and for a second reason: it drives
+          # CDP Emulation.setDeviceMetricsOverride because `--window-size` CANNOT render
+          # a phone — Chrome clamps its window to 500px SILENTLY, so a width sweep built
+          # the naive way reports "390: pass" having never rendered under 500. Exits 2 if
+          # no Chrome is found, and asserts the emulated width actually took.
+          #
+          # It has NO baseline.json, and that means the bar is ZERO, not that it is off.
+          node scripts/responsive-walk/run.mjs

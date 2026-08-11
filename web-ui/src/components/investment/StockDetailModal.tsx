@@ -466,7 +466,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
               <Activity size={20} style={{ color: 'var(--brand-accent-gold)' }} />
               Position Summary
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
               <div>
                 <div style={fieldLabelStyle}>Cost Basis</div>
                 <div style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600' }}>

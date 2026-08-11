@@ -168,14 +168,14 @@ export const Accounts = () => {
         <div className="page-container">
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h1 className="page-title">
                 Accounts
               </h1>
               <p style={bodyTextStyle}>Manage all your financial accounts in one place</p>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setShowCSVImport(true)}
                 style={actionBtnStyle}
@@ -268,8 +268,12 @@ export const Accounts = () => {
                     setShowEditModal(true);
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    {/* minWidth: 0 lets this shrink below its content's intrinsic width.
+                        A flex item defaults to min-width: auto and simply refuses, which
+                        is what pushed the account name and its balance past the viewport
+                        on a phone — the same fix, and the same reason, as .main-content. */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: 0 }}>
                       <div style={{ width: '56px', height: '56px', background: `${account.color}20`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: account.color }}>
                         {getAccountIcon(account.type)}
                       </div>

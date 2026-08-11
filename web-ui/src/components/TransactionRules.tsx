@@ -591,7 +591,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
         <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', marginBottom: '16px' }}>Advanced Matching</h3>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
           <div>
             <label style={labelStyle}>Minimum Amount</label>
             <input

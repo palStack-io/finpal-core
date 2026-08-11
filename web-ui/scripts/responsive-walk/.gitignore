@@ -1,0 +1,6 @@
+# Per-run scratch: the assembled harness pages and Chrome's profile directory.
+# The profile is per-pid because a live Chrome LOCKS it, and a second run that
+# cannot open its debugging port reads as "Chrome is broken" rather than "that
+# directory is in use".
+.pages/
+.chrome-profile*/
