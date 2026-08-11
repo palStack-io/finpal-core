@@ -556,6 +556,13 @@ def _wallet_card_dict(card) -> dict:
         'stale_status': stale_status,
         'expiry_alert': None,
         'earn_caps': earn_caps,
+        # Whether a community contribution LINK has been generated — NOT whether an issue was
+        # filed; GitHub cannot call back. Both clients render it as "opened", never
+        # "contributed". It was absent here while `/wallet/cards` carried it, so web's card
+        # list refreshed itself "so submitted_to_community updates" against a payload that
+        # never contained the field, and no UI could show the state. D-92.
+        'submitted_to_community': bool(card.submitted_to_community),
+        'community_pr_url': card.community_pr_url,
     }
 
 

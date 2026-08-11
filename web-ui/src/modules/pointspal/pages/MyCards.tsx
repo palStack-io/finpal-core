@@ -545,15 +545,27 @@ const MyCards: React.FC = () => {
     }
   };
 
+  /**
+   * Open the pre-filled community issue for a card.
+   *
+   * *** THE CATCH USED TO BE `// silently fail`. *** A failed request returned the button to
+   * its label and told the user nothing, so a network error was indistinguishable from a
+   * successful contribution — this codebase's signature defect class. It reports now.
+   *
+   * `submitted_to_community` means "a link was generated", NOT "an issue was filed": GitHub
+   * cannot call back, so someone who closes the tab is still recorded. The label below says
+   * "opened", never "contributed", for that reason. The refresh matters now that the state is
+   * actually rendered — before this it updated a flag nothing read.
+   */
   const handleSubmitPr = async (card: WalletCard) => {
     setSubmittingPrId(card.id);
+    setError(null);
     try {
       const url = await pointspalService.generatePrUrl(card.id);
       window.open(url, '_blank', 'noopener,noreferrer');
-      // Refresh so submitted_to_community flag updates
       fetchCards();
     } catch {
-      // silently fail
+      setError('Could not open the community contribution. Please try again.');
     } finally {
       setSubmittingPrId(null);
     }
@@ -733,7 +745,11 @@ const MyCards: React.FC = () => {
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
                   >
                     <ExternalLink size={11} />
-                    {submittingPrId === card.id ? 'Opening…' : 'Submit earn rates to community database'}
+                    {submittingPrId === card.id
+                      ? 'Opening…'
+                      : card.submitted_to_community
+                        ? 'Opened on GitHub — open again'
+                        : 'Add earn rates to community database'}
                   </button>
                 </div>
 

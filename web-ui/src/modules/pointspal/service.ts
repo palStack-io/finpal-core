@@ -69,6 +69,18 @@ export interface WalletCard {
   stale_status: string;
   expiry_alert: string | null;
   earn_caps: EarnCap[];
+  /**
+   * Whether a community contribution LINK has been generated for this card — not whether an
+   * issue was actually filed. GitHub cannot call back, so someone who opens the pre-filled
+   * issue and closes the tab is still recorded here. Render it as "opened", never
+   * "contributed".
+   *
+   * The endpoint has always sent this; the interface simply never declared it, so the code
+   * that refreshed the cards "so submitted_to_community updates" was reading a field
+   * TypeScript did not believe existed. An interface is a claim about a server, not a check
+   * of one.
+   */
+  submitted_to_community?: boolean;
 }
 
 export interface RecommendCard {

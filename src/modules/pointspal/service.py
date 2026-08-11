@@ -781,11 +781,17 @@ def generate_pr_url(card_id: int, user_id: str) -> tuple:
                 'notes': ec.notes,
             })
 
+    # *** NO `last_four`. D-91. *** This body goes into a PUBLIC issue on
+    # palStack-io/pointsPal, and web-ui's own UI promises the user "No personal data is
+    # shared." It carried the card's last four twice — here and in the prose below — which
+    # made that promise false. The community database wants the PROGRAMME's rates, not which
+    # card instance the contributor holds, so the field was removed rather than the promise
+    # reworded (owner decision, 2026-08-10). Do not reintroduce it: once it is in an issue it
+    # is in the repo's history whether or not the issue is later edited.
     payload = {
         'program_id': card.program_id or f'user-card-{card_id}',
         'program_name': program_name,
         'issuer': issuer,
-        'last_four': card.last_four,
         'earn_categories': earn_categories_preview,
         'contributor_note': 'Submitted via finPal pointsPal wallet',
     }
@@ -794,8 +800,7 @@ def generate_pr_url(card_id: int, user_id: str) -> tuple:
     body = (
         '## Card Contribution\n\n'
         f'**Card:** {program_name}\n'
-        f'**Issuer:** {issuer}\n'
-        f'**Last four:** {card.last_four or "N/A"}\n\n'
+        f'**Issuer:** {issuer}\n\n'
         '### Earn Rate Data\n\n'
         '```json\n'
         + json.dumps(payload, indent=2) +
