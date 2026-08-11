@@ -453,34 +453,34 @@ if (loadingData) {
             <option value="equal" style={bgPrimaryStyle}>Split Equally</option>
             <option value="percentage" style={bgPrimaryStyle}>By Percentage</option>
             <option value="custom" style={bgPrimaryStyle}>Custom Amounts</option>
-            <option value="shares" style={bgPrimaryStyle}>By Shares</option>
           </select>
+          {/* The hints say "you pay" rather than "specify for each member" on purpose: both
+              methods collect ONE number — your own share — and divide the remainder equally.
+              The old wording promised a per-member breakdown this form has never offered, which
+              is what made "Custom Amounts" look broken when it was not (AUDIT D-90, withdrawn).
+              "By Shares" is gone entirely: the backend has no shares branch, so it split to
+              nobody (D-93). */}
           <p style={hintTextStyle}>
-            {watchSplitMethod === 'equal' && 'Expense will be split equally among all group members'}
-            {watchSplitMethod === 'percentage' && 'Specify percentage for each member'}
-            {watchSplitMethod === 'custom' && 'Specify exact amount for each member'}
-            {watchSplitMethod === 'shares' && 'Specify shares for each member (e.g., 1:2:3)'}
+            {watchSplitMethod === 'equal' && 'Split equally among everyone in the group'}
+            {watchSplitMethod === 'percentage' && 'You pay a percentage — the other members split the rest'}
+            {watchSplitMethod === 'custom' && 'You pay a set amount — the other members split the rest'}
           </p>
 
-          {(watchSplitMethod === 'percentage' || watchSplitMethod === 'shares') && (
+          {watchSplitMethod === 'percentage' && (
             <div style={{ marginTop: '16px' }}>
-              <label style={labelStyle}>
-                {watchSplitMethod === 'percentage' ? 'Your Percentage (%)' : 'Your Shares'}
-              </label>
+              <label style={labelStyle}>Your Percentage (%)</label>
               <input
                 type="number"
-                placeholder={watchSplitMethod === 'percentage' ? '50' : '1'}
-                step={watchSplitMethod === 'percentage' ? '0.01' : '1'}
+                placeholder="50"
+                step="0.01"
                 min="0"
-                max={watchSplitMethod === 'percentage' ? '100' : undefined}
+                max="100"
                 disabled={isSubmitting}
                 className="fp-input"
                 {...register('split_value')}
               />
               <p style={hintTextStyle}>
-                {watchSplitMethod === 'percentage'
-                  ? 'Enter the percentage you want to pay (other members split the rest)'
-                  : 'Enter number of shares (e.g., if you enter 2 and others have 1, you pay double)'}
+                Enter the percentage you want to pay (other members split the rest)
               </p>
             </div>
           )}

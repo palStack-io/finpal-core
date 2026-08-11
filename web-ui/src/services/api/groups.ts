@@ -12,7 +12,7 @@ export interface Group {
   name: string;
   description: string;
   created_by: string;
-  default_split_method: 'equal' | 'percentage' | 'custom' | 'shares';
+  default_split_method: 'equal' | 'percentage' | 'custom';
   default_payer?: string;
   auto_include_all: boolean;
   members: GroupMember[];

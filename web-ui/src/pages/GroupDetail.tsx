@@ -592,7 +592,8 @@ export const GroupDetail: React.FC = () => {
                   Add Member
                 </h2>
                 <p style={secondaryBodyStyle}>
-                  Enter the email address of the user you want to add to this group.
+                  Groups are for splitting costs with your household. Enter the email address of
+                  someone who already has an account on this instance.
                 </p>
                 <input
                   type="email"
@@ -795,42 +796,6 @@ export const GroupDetail: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Shares Split Values */}
-                  {defaultSplitMethod === 'shares' && group?.members && (
-                    <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.2)', borderRadius: '8px' }}>
-                      <p style={{ color: '#fde047', fontSize: '13px', marginBottom: '12px', fontWeight: '500' }}>
-                        Specify default shares for each member
-                      </p>
-                      {group.members.map((member) => (
-                        <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                          <span style={truncatedTextStyle}>
-                            {member.name || member.email}
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <input
-                              type="number"
-                              placeholder="1"
-                              step="1"
-                              min="0"
-                              value={customSplitValues[member.email] || ''}
-                              onChange={(e) => setCustomSplitValues(prev => ({ ...prev, [member.email]: e.target.value }))}
-                              style={{
-                                width: '80px',
-                                padding: '8px 12px',
-                                background: 'var(--input-bg)',
-                                border: '1px solid var(--input-border)',
-                                borderRadius: '6px',
-                                color: 'var(--text-primary)',
-                                fontSize: '13px',
-                                outline: 'none'
-                              }}
-                            />
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>shares</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 <div style={formActionsStyle}>
                   <button

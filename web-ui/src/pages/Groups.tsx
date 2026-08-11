@@ -18,7 +18,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
     name: '',
     description: '',
     memberEmails: [''],
-    default_split_method: 'equal' as 'equal' | 'percentage' | 'custom' | 'shares',
+    default_split_method: 'equal' as 'equal' | 'percentage' | 'custom',
     auto_include_all: true
   });
   const [customSplitValues, setCustomSplitValues] = useState<{ [email: string]: string }>({});
@@ -220,7 +220,6 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           <option value="equal" style={secondaryBgStyle}>Equal - Split evenly among all members</option>
           <option value="percentage" style={secondaryBgStyle}>Percentage - Split by percentage</option>
           <option value="custom" style={secondaryBgStyle}>Custom - Specify amounts per person</option>
-          <option value="shares" style={secondaryBgStyle}>Shares - Split by shares/units</option>
         </select>
 
         {/* Custom Split Values */}
@@ -305,47 +304,6 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Shares Split Values */}
-        {formData.default_split_method === 'shares' && (
-          <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.2)', borderRadius: '8px' }}>
-            <p style={{ color: '#fde047', fontSize: '13px', marginBottom: '12px', fontWeight: '500' }}>
-              💡 Specify default shares for each member (optional)
-            </p>
-            {formData.memberEmails.filter(email => email.trim()).map((email, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <span style={truncatedTextStyle}>
-                  {email || `Member ${index + 1}`}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <input
-                    type="number"
-                    placeholder="1"
-                    step="1"
-                    min="0"
-                    value={customSplitValues[email] || ''}
-                    onChange={(e) => setCustomSplitValues(prev => ({ ...prev, [email]: e.target.value }))}
-                    style={{
-                      width: '80px',
-                      padding: '8px 12px',
-                      background: 'var(--input-bg)',
-                      border: '1px solid var(--border-light)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '13px',
-                      outline: 'none'
-                    }}
-                  />
-                  <span style={smallMetaStyle}>shares</span>
-                </div>
-              </div>
-            ))}
-            {formData.memberEmails.filter(email => email.trim()).length === 0 && (
-              <p style={italicMutedStyle}>
-                Add members above to specify share amounts
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       <div style={{ marginBottom: '24px' }}>
@@ -583,7 +541,7 @@ export const Groups: React.FC = () => {
                 <h1 className="page-title">
                   Groups
                 </h1>
-                <p style={bodyTextStyle}>Split expenses and track shared costs with friends</p>
+                <p style={bodyTextStyle}>Split shared costs with the people in your household</p>
               </div>
               <button
                 onClick={handleCreateGroup}
@@ -695,7 +653,7 @@ export const Groups: React.FC = () => {
               {!searchTerm && (
                 <>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
-                    Create a group to start splitting expenses with friends and family
+                    Create a group to split what you share with your household — rent, groceries, a holiday
                   </p>
                   <button
                     onClick={handleCreateGroup}
@@ -836,7 +794,7 @@ export const Groups: React.FC = () => {
                 </div>
                 <h3 style={sectionSubtitleStyle}>Create a Group</h3>
                 <p style={bodyLineStyle}>
-                  Add friends, roommates, or travel companions to your group
+                  Add the people in your household who share these costs
                 </p>
               </div>
 
