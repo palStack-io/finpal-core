@@ -283,11 +283,37 @@ it.each(cases)('captures %s', async (name, Page, drive) => {
     <MemoryRouter><ThemeProvider><ToastProvider><Page /></ToastProvider></ThemeProvider></MemoryRouter>
   );
   // Wait for the loading spinner to go, or we capture a spinner and report zero.
+  /**
+   * *** WAIT FOR THE PAGE TO EXIST, NOT FOR A SPINNER TO STOP EXISTING. ***
+   *
+   * This used to be `expect(container.querySelector('.animate-spin')).toBeNull()`,
+   * and that check is VACUOUS on any page whose loading state is not that spinner.
+   * `Investments.tsx:170` renders a plain "Loading investment data..." div — two
+   * elements, no `.animate-spin` — so the wait resolved on its FIRST tick and the
+   * capture raced the fetch. It won that race on this machine nine times out of
+   * nine and lost it on a CI runner, which is the worst possible distribution: the
+   * page serialized as a two-element stub, and a stub overflows nowhere and has no
+   * contrast pairs, so BOTH walks would have reported it clean.
+   *
+   * A check for the absence of something is satisfied by that something never
+   * having existed. The condition below is positive and page-agnostic — it waits
+   * for the property the captures actually need — and it makes the `painted < 50`
+   * guard underneath an assertion rather than a coin toss.
+   */
+  // Enough of a shell to interact with. A driven page is deliberately BELOW the
+  // final bar here — BestCard's empty state is a form and no results — so the full
+  // threshold cannot be applied until after the drive.
   await waitFor(() => {
+    expect(container.querySelectorAll('*').length).toBeGreaterThanOrEqual(20);
     expect(container.querySelector('.animate-spin')).toBeNull();
   }, { timeout: 6000 });
 
   if (drive) await drive(container);
+
+  // The real readiness gate, applied to every page once it is in its final state.
+  await waitFor(() => {
+    expect(container.querySelectorAll('*').length).toBeGreaterThanOrEqual(50);
+  }, { timeout: 6000 });
 
   const painted = container.querySelectorAll('*').length;
   if (painted < 50) throw new Error(`${name}: only ${painted} elements — captured a stub`);
