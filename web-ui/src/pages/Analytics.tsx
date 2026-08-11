@@ -735,7 +735,7 @@ export const Analytics: React.FC = () => {
           <div>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
               gap: '24px',
               marginBottom: '32px'
             }}>

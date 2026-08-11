@@ -176,7 +176,27 @@ const ModuleNavSection: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) 
 // Sidebar
 // ---------------------------------------------------------------------------
 
-export const Sidebar: React.FC = () => {
+/**
+ * `isOpen` / `onClose` are back, and this time they are READ.
+ *
+ * AUDIT D-46 deleted them because #74 passed them to a component that ignored
+ * them, leaving a hamburger that swapped its own icon and moved nothing. The
+ * lesson recorded there is not "never add these props" — it is that a control
+ * whose target does not consume it is worse than no control. Both are consumed
+ * below: `isOpen` drives the `is-open` class the phone-width transform reads,
+ * and `onClose` fires on navigation so the drawer does not stay open over the
+ * page you just moved to.
+ *
+ * They are optional because above --bp-phone there is no drawer at all — the
+ * sidebar is simply a sidebar, and the CSS that translates it away is inside a
+ * `max-width: 767px` query.
+ */
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout, features } = useAuthStore();
   const navigate = useNavigate();
@@ -216,7 +236,16 @@ export const Sidebar: React.FC = () => {
     });
 
   return (
-    <aside className="sidebar">
+    <aside
+      id="app-sidebar"
+      className={isOpen ? 'sidebar is-open' : 'sidebar'}
+      /* Closing on any activation inside the rail covers NavLinks, the profile
+         header and the module links in one place, rather than threading onClose
+         through five call sites and missing one. */
+      onClick={onClose ? (e) => {
+          if ((e.target as HTMLElement).closest('a,button')) onClose();
+        } : undefined}
+    >
       {/* User Profile Header */}
       <div className="sidebar-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

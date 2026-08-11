@@ -47,6 +47,7 @@
   };
 
   const offenders = [];
+  const scrollers = [];
   let total = 0;
   let scrollable = 0;
 
@@ -75,7 +76,21 @@
     const scrolls = cs.overflowX === 'auto' || cs.overflowX === 'scroll';
     const selfOverflow = el.scrollWidth - el.clientWidth;
     if (scrolls) {
-      if (selfOverflow > TOL) scrollable += 1;
+      if (selfOverflow > TOL) {
+        scrollable += 1;
+        /**
+         * Recorded, not just counted. Tier 3's success condition is the INVERSE of
+         * Tier 1's — the container is supposed to overflow, and to be reachable —
+         * so absence of a complaint cannot prove the wrapper landed. A wrapper that
+         * silently did not apply reads exactly like a fix that worked.
+         */
+        scrollers.push({
+          path: pathOf(el),
+          content: Math.round(el.scrollWidth),
+          box: Math.round(el.clientWidth),
+          text: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28),
+        });
+      }
       continue;
     }
 
@@ -142,5 +157,6 @@
     main: { content: main.scrollWidth, box: main.clientWidth, left: Math.round(main.getBoundingClientRect().left) },
     docOverflows: de.scrollWidth > de.clientWidth + TOL,
     offenders,
+    scrollers,
   };
 })();

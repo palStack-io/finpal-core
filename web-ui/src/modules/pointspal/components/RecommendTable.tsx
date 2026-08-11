@@ -42,6 +42,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
         </div>
       )}
 
+<div className="fp-table-scroll">
       <table style={tableStyle}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -165,6 +166,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
           })}
         </tbody>
       </table>
+      </div>
 
       {/* "Why" explanation box — shown when a displaced winner exists */}
       {displacedWinner && (

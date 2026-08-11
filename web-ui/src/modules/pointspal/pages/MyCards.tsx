@@ -376,7 +376,19 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                 Earn Rates &amp; Caps&nbsp;
                 <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(leave blank to skip)</span>
               </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* TIER 3: a data table, not a grid — 414px of fixed track plus gaps,
+                  and stacking its columns would destroy the column-to-header
+                  relationship that makes it readable. So it scrolls horizontally and
+                  keeps its columns intact.
+
+                  It LOOKED fine before this, and that is the trap: the modal above it
+                  computes overflow-x to 'auto' as a side effect of its own overflow-y,
+                  so the row was reachable by accident rather than by design — scrolling
+                  the whole modal instead of the table. minWidth: 'max-content' is the
+                  half that makes the scroll real; without it the rows shrink back to the
+                  container and the columns stop lining up with their own headers. */}
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 'max-content' }}>
                 {/* Column headers */}
                 <div style={{ display: 'grid', gridTemplateColumns: '130px 52px 90px 90px 52px', gap: 6, alignItems: 'center', padding: '0 2px' }}>
                   <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Category</span>
@@ -440,6 +452,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                     </div>
                   );
                 })}
+                </div>
               </div>
               <p style={{ fontSize: 11, margin: '8px 0 0', padding: '6px 10px', background: 'var(--au50)', border: '1px solid var(--au100)', borderRadius: 6, color: 'var(--au600)' }}>
                 Cap $ is the spend limit before the rate drops to the fallback. Period sets whether it resets monthly, quarterly, or annually.
@@ -663,7 +676,7 @@ const MyCards: React.FC = () => {
                 )}
 
                 {/* Meta grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 0, borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                   {[
                     { label: 'Est. Value',   value: `$${card.est_value_usd.toLocaleString()}`,                       color: 'var(--g700)' },
                     { label: 'Annual Fee',   value: card.annual_fee === 0 ? '$0' : `$${card.annual_fee}/yr`,         color: card.annual_fee > 0 ? 'var(--au600)' : 'var(--g700)' },

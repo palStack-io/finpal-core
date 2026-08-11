@@ -79,7 +79,7 @@ const PointsPalOverview: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: 12,
           marginBottom: 20,
         }}
@@ -154,7 +154,7 @@ const PointsPalOverview: React.FC = () => {
       </div>
 
       {/* Main grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
+      <div className="fp-two-pane">
 
         {/* Left: Your Cards */}
         <div style={cardStyle}>

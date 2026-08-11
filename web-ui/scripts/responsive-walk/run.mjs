@@ -172,6 +172,28 @@ mkdirSync(TMP, { recursive: true });
 const seen = {};      // scope -> Set of offender keys
 let hardErrors = 0;
 
+/**
+ * *** TIER 3'S SUCCESS CONDITION IS THE INVERSE OF TIER 1'S, SO SILENCE CANNOT
+ * PROVE IT. ***
+ *
+ * A data table is not made responsive by reflowing it — stacking its columns
+ * destroys the column-to-header relationship that makes it a table. It is made
+ * responsive by scrolling horizontally with its columns intact. So for these pages
+ * the gate asserts a container that DOES overflow and IS reachable, at the width
+ * where it matters. Checking only for the absence of a complaint would pass a
+ * wrapper that never applied, and it nearly did: MyCards' 438px earn-rate grid sat
+ * silently inside a 318px box for the whole of this pass, reachable only because
+ * the modal above it computes `overflow-x: auto` as a side effect of its own
+ * `overflow-y` — by accident, at the wrong scroll container.
+ */
+const MUST_SCROLL_AT_390 = {
+  'pointspal-mycards': 'the manual earn-rates table (130px 52px 90px 90px 52px)',
+  investments: 'the holdings <table>',
+  'pointspal-bestcard': 'RecommendTable',
+  'pointspal-redeem': 'the redemption options <table>',
+};
+const scrollProof = {};
+
 for (const page of PAGES) {
   const name = page.replace('.html', '');
   const markup = readFileSync(join(CAPTURED, page), 'utf8');
@@ -212,6 +234,9 @@ for (const page of PAGES) {
 
       const scope = `${name}:${theme}:${width}`;
       seen[scope] = new Set();
+      if (width === 390 && MUST_SCROLL_AT_390[name]) {
+        scrollProof[`${name}:${theme}`] = out.scrollers;
+      }
 
       const head = `${scope.padEnd(38)} main ${String(out.main.content).padStart(5)}/${String(out.main.box).padStart(4)}  doc ${out.doc.content}/${out.doc.box}`;
       if (!out.offenders.length && !out.docOverflows) {
@@ -246,6 +271,29 @@ if (hardErrors) {
   process.exit(2);
 }
 
+// ── Tier 3, asserted positively ──────────────────────────────────────────────
+if (WIDTHS.includes(390)) {
+  let missing = 0;
+  console.log('\nTier 3 — containers that must scroll horizontally at 390px:');
+  for (const [page, what] of Object.entries(MUST_SCROLL_AT_390)) {
+    for (const theme of THEMES) {
+      const found = scrollProof[`${page}:${theme}`];
+      if (found === undefined) continue; // page not in the capture set for this run
+      if (!found.length) {
+        console.error(`  MISSING [${page}/${theme}] nothing scrolls horizontally — ${what} is not reachable`);
+        missing += 1;
+      } else {
+        const w = found.sort((a, b) => (b.content - b.box) - (a.content - a.box))[0];
+        console.log(`  ok      [${page}/${theme}] ${w.content}/${w.box} reachable  ${JSON.stringify(w.text)}`);
+      }
+    }
+  }
+  if (missing) {
+    console.error(`\n${missing} table(s) with no horizontal scroll at 390px — the data is unreachable, not merely ugly.`);
+    process.exit(1);
+  }
+}
+
 // ── THE GATE: a ratchet, exactly like the contrast walk's ─────────────────────
 //
 // Not "zero offenders". The app is desktop-only today (D-46) and the seed run
@@ -266,10 +314,27 @@ if (WRITE_BASELINE) {
   process.exit(0);
 }
 
+/**
+ * *** NO baseline.json MEANS ZERO IS THE BAR, NOT THAT THE GATE IS OFF. ***
+ *
+ * It was a ratchet against a seeded 1238 while the pass was in flight, which was
+ * the right shape then: demanding zero on day one produces a gate that fails
+ * immediately and gets switched off. The pass reached zero, so the file was
+ * deleted and the bar is now zero — leaving a green gate sitting on a baseline of
+ * 1238 accepted offenders is how a gate becomes decoration, and this repo has
+ * shipped that four times.
+ *
+ * `--write-baseline` still exists, for recording an offender DELIBERATELY. If you
+ * use it, the reason belongs in the commit, not in the file.
+ */
 if (!existsSync(baselinePath)) {
   const n = Object.values(serialised).reduce((a, b) => a + b.length, 0);
-  console.log(`\n${n} offender(s) across ${Object.keys(serialised).length} scope(s). (no baseline.json — not gating)`);
-  console.log('Seed it with --write-baseline once you have read the list above.');
+  if (n) {
+    console.error(`\n${n} overflowing element(s) across ${Object.keys(serialised).length} scope(s), and no baseline.json to excuse them.`);
+    console.error('Fix them, or record them deliberately with --write-baseline and say why in the commit.');
+    process.exit(1);
+  }
+  console.log('\nno horizontal overflow at any width, in either theme.');
   process.exit(0);
 }
 

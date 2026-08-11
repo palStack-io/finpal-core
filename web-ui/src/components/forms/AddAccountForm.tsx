@@ -348,7 +348,7 @@ return (
           <Palette size={16} style={iconInlineStyle} />
           Account Color
         </label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(64px, 1fr))', gap: '12px' }}>
           {ACCOUNT_COLORS.map((color) => (
             <button
               key={color.value}

@@ -82,6 +82,8 @@ const Redeem: React.FC = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 16,
           marginBottom: 20,
           boxShadow: 'var(--sh-md)',
         }}
@@ -97,7 +99,7 @@ const Redeem: React.FC = () => {
             from {data.total_points.toLocaleString()} total points across {data.card_count} cards
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 32, textAlign: 'right' }}>
+        <div style={{ display: 'flex', gap: 32, textAlign: 'right', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff' }}>
               ${data.total_value_usd.toLocaleString()}
@@ -114,7 +116,7 @@ const Redeem: React.FC = () => {
       </div>
 
       {/* 2-column grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
         {/* Left column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {left.map((program) => (
@@ -180,6 +182,7 @@ const ProgramCard: React.FC<{ program: RedemptionOverview['programs'][0] }> = ({
       </div>
     </div>
 
+<div className="fp-table-scroll">
     <table style={tableStyle}>
       <thead>
         <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -238,6 +241,7 @@ const ProgramCard: React.FC<{ program: RedemptionOverview['programs'][0] }> = ({
         ))}
       </tbody>
     </table>
+      </div>
   </div>
 );
 

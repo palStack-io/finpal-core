@@ -466,7 +466,7 @@ export const Settings: React.FC = () => {
                       </div>
                       <span style={bodyTextStyle}>Current emoji</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(40px, 1fr))', gap: '8px' }}>
                       {profileEmojis.map((emoji) => (
                         <button
                           key={emoji}

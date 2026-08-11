@@ -178,6 +178,19 @@
 
   --sidebar-width: 240px;
 
+  /* ── Breakpoint contract ────────────────────────────────────────────────
+     Documentation only. Custom properties are NOT valid in a @media condition,
+     so the numbers below are repeated as literals in the queries. That
+     duplication is a real language limitation, not an oversight — "fixing" it
+     to var(--bp-phone) produces a query that silently never matches, which is
+     indistinguishable from a query that is always false.
+
+     --bp-phone   below this a 240px persistent sidebar cannot coexist with
+                  content: 390 - 240 = 150px, and nothing works in 150px.
+     --bp-tablet  below this two-pane layouts stack. */
+  --bp-phone: 768px;
+  --bp-tablet: 1024px;
+
   /* pointsPal module tokens */
   --g900: #14532d; --g800: #166534; --g700: #15803d; --g600: #16a34a;
   --g500: #22c55e; --g400: #4ade80; --g200: #bbf7d0; --g100: #dcfce7; --g50: #f0fdf4;
@@ -434,6 +447,78 @@ body {
   flex-direction: column;
   z-index: 100;
   transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ── Below --bp-phone: the sidebar goes off-canvas ──────────────────────────
+   Owner instruction 2026-08-11: the sidebar stays a REGULAR persistent sidebar
+   with everything to the right of it — at every width down to 768px. iPad
+   landscape (784px of content) and iPad portrait (528px) are both usable, so
+   tablets need no shell work at all. Only the phone does, where 240px of a
+   390px viewport leaves 150px.
+
+   This reopens AUDIT D-46, which closed by DELETING a hamburger that moved
+   nothing. The lesson recorded there is that the control existed and the drawer
+   did not; so the CSS below is inert until `Sidebar` really lifts `is-open`, and
+   the trigger is only rendered where this query applies. */
+@media (max-width: 767px) {
+  .main-content {
+    /* Nothing is reserving the sidebar's space any more — it is out of flow and
+       translated away, so the margin would be 240px of blank left gutter. */
+    margin-left: 0;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease, background-color 0.3s ease, border-color 0.3s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    /* Under the sidebar's z-index: 100, above everything else. */
+    z-index: 90;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+}
+
+/* The drawer trigger has no business existing at widths where the sidebar is
+   permanently visible — a button that toggles a class nothing reads is how D-46
+   happened. Hidden by default, revealed only inside the phone query. */
+.sidebar-trigger {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .sidebar-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 95;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--rs, 8px);
+    border: 1px solid var(--border-light);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
 }
 
 :root:not([data-theme="dark"]) .sidebar {
@@ -1051,3 +1136,96 @@ body {
    none at all (the fifth carries 24px). Spacing between this banner and what
    follows it is the call site's business, not the banner's; baking one value in
    is what made this class un-adoptable without moving four layouts. */
+
+/* ── Two-pane layouts ───────────────────────────────────────────────────────
+   A fluid main column beside a fixed-width rail. Three pointsPal pages and the
+   Dashboard's charts row do this, and at tablet widths the rail stops being
+   affordable: at 784px of content a 340px rail is 43% of the row, and below
+   ~700px the main column stops being usable at all. So they stack below
+   --bp-tablet.
+
+   These are CLASSES and not inline styles for one reason: an inline style cannot
+   carry a media query, and it also OUT-SPECIFIES one, so the template has to
+   leave the call site entirely or the stacking silently never applies.
+
+   *** DIFFED AGAINST THE INLINE STYLES THEY REPLACE, AT 1440, BEFORE ADOPTION. ***
+   Measured computed values, which is how the one real difference was caught:
+
+     Overview  1fr 340px  gap 20  align-items: NORMAL
+     CapTracker 1fr 320px gap 20  align-items: start
+     BestCard  300px 1fr  gap 20  align-items: start
+     Dashboard 2fr 1fr    gap 24  align-items: normal, margin-bottom 24
+
+   Overview is the odd one out, so `align-items` is deliberately NOT in these
+   rules — it stays inline at the two call sites that actually set it. Folding it
+   in would have stopped Overview's panes stretching, which is exactly the drift
+   `.page-title` (28px vs a rendered 32px) and `.fp-input` (10px 14px vs a
+   rendered 12px) already are. Same for Dashboard's margin-bottom: spacing below
+   the row is the call site's business. */
+.fp-two-pane {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+}
+
+.fp-two-pane--rail-narrow {
+  grid-template-columns: 1fr 320px;
+}
+
+/* Rail first, i.e. on the left — BestCard puts its inputs beside the results. */
+.fp-two-pane--rail-first {
+  grid-template-columns: 300px 1fr;
+}
+
+.fp-main-aside {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+/* Every variant listed explicitly rather than relying on source order: a modifier
+   and the base have identical specificity, so which one wins would otherwise
+   depend on which is written last — a rule that works until someone tidies the
+   file. */
+@media (max-width: 1023px) {
+  .fp-two-pane,
+  .fp-two-pane--rail-narrow,
+  .fp-two-pane--rail-first,
+  .fp-main-aside {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Tier 3: a data table scrolls, it does not reflow ───────────────────────
+   Stacking a table's columns destroys the column-to-header relationship that is
+   the entire reason it is a table. So below the width where its columns fit, it
+   scrolls horizontally and keeps them intact.
+
+   *** .main-content IS `overflow-x: hidden`, SO THE INNER CONTAINER IS NOT
+   OPTIONAL. *** Without one the table is clipped with no scrollbar to reveal it,
+   which turns a scrollbar into silently unreachable data — the exact failure
+   .main-content's own comment records happening to the fourth stat card on
+   Dashboard and Budgets. */
+.fp-table-scroll {
+  overflow-x: auto;
+}
+
+/* The floor is the half that makes the scroll real. `tableStyle` is `width: 100%`,
+   so without a minimum the table simply squeezes its columns down to whatever it
+   is given and the scroll never engages — "responsive" by rendering every cell one
+   character wide. 420px clears both users: RecommendTable's five columns and
+   Redeem's four. */
+.fp-table-scroll > table {
+  min-width: 420px;
+}
+
+/* A grid item defaults to `min-width: auto`, which refuses to shrink below its
+   content's intrinsic width — so the moment a pane contains something with a
+   minimum (a scrollable table's 420px floor), the whole track stops shrinking and
+   pushes the layout wider than its container instead. That is the same fix, for
+   the same reason, that `.main-content` above carries and explains; here it is
+   what lets `.fp-table-scroll` actually engage rather than widening its column. */
+.fp-two-pane > *,
+.fp-main-aside > * {
+  min-width: 0;
+}

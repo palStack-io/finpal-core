@@ -56,7 +56,7 @@ const BestCard: React.FC = () => {
       </div>
 
       {/* 2-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 20, alignItems: 'start' }}>
+      <div className="fp-two-pane fp-two-pane--rail-first" style={{ alignItems: 'start' }}>
 
         {/* Left: inputs + recent lookups */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

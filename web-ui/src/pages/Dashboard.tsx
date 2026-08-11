@@ -452,7 +452,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Charts Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
+        <div className="fp-main-aside" style={{ marginBottom: '24px' }}>
           <SectionCard
             title="Cash Flow"
             action={
@@ -539,7 +539,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Budget + Accounts Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '24px' }}>
           <SectionCard title="Budget Progress" action={<ViewAllBtn href="/budgets" />}>
             {budgets.length > 0 ? budgets.map((budget, idx) => (
               <div
