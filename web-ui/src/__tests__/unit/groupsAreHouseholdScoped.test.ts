@@ -57,6 +57,24 @@ function visibleText(src: string): string {
   return chunks.join('\n');
 }
 
+describe('the copy extractor itself', () => {
+  it('actually finds copy, so the assertions below cannot pass vacuously', () => {
+    // `visibleText` is a heuristic — JSX text between tags, plus single-quoted sentences. If a
+    // refactor ever made it return nothing, three of the four checks below would pass on an
+    // empty string and this gate would be silently dead. Same guard-on-the-guard as the
+    // split-method test's "the derivation is not silently empty".
+    const text = visibleText(groups);
+    expect(text.length).toBeGreaterThan(200);
+    expect(text).toMatch(/household/i);
+
+    // And it must see BOTH shapes it claims to handle, since the two sites fixed here were one
+    // of each: JSX text (Settings.tsx) and a quoted string in an array (Landing.tsx).
+    expect(visibleText('<p>Split shared costs with your household</p>')).toMatch(/Split shared costs/);
+    expect(visibleText("description: 'Split shared costs with the people in your household',"))
+      .toMatch(/Split shared costs/);
+  });
+});
+
 describe('the Groups surfaces describe the household model', () => {
   it('no longer advertises splitting with friends, anywhere in web-ui', () => {
     // "friends" and "friends and family" are the pre-household framing. A group between friends
