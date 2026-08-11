@@ -7,7 +7,13 @@ serialization schemas in __init__.py.
 from marshmallow import Schema, fields, validate
 
 TRANSACTION_TYPES = ['expense', 'income', 'transfer']
-SPLIT_METHODS = ['equal', 'custom', 'percentage', 'shares']
+# Only what `Expense.calculate_splits` actually computes. `shares` was here until D-99 and had
+# no branch in the arithmetic, so an expense created with it split to **nobody** — payer 0, others
+# empty, total 0.00 — and vanished from every settle-up. D-93 removed it from web-ui and called
+# itself web-only; this list is why that was wrong, since the API kept accepting it from scripts,
+# tokens and any future mobile build. A method the server cannot honour must be refused here, not
+# merely hidden in a dropdown.
+SPLIT_METHODS = ['equal', 'custom', 'percentage']
 BUDGET_PERIODS = ['monthly', 'weekly', 'yearly']
 RECURRING_FREQUENCIES = ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly']
 ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'investment', 'cash', 'other']
