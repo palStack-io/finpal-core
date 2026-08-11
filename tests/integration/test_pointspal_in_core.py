@@ -4,7 +4,7 @@ pointsPal ships as part of core, not as something to switch on.
 It was written on both sides and shipped on neither. The backend module, its seven
 tables, thirty routes and the whole web-ui half — `web-ui/src/modules/pointspal/`,
 a sidebar entry, a Settings tab, its own vitest suites — were all complete, while
-the deployed instance served **none** of it: `swagger.json` on ubuntuloco:8094 had
+the deployed instance served **none** of it: `swagger.json` on the deployed host had
 94 paths and not one of them pointsPal's.
 
 The reason it was invisible is the reason this file checks two different readers.

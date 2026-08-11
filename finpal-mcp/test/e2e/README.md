@@ -34,7 +34,7 @@ question.
    "fails". Exempt ISO dates.
 5. Confirm the token cannot write, then revoke it and confirm the server says so.
 
-## Run: 2026-08-04, against ubuntuloco:8094
+## Run: 2026-08-04, against a self-hosted instance on port 8094
 
 Observed, not expected:
 

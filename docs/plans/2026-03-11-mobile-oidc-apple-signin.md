@@ -271,7 +271,7 @@ git commit -m "feat: add POST /api/v1/auth/apple for Apple Sign In JWT verificat
 **Step 1: Install**
 
 ```bash
-cd /Users/basestation/Documents/Palstacks/finPal/mobile
+cd <monorepo>/mobile
 npx expo install expo-web-browser expo-apple-authentication
 ```
 
@@ -356,7 +356,7 @@ Add these methods inside the `authService` object:
 **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/basestation/Documents/Palstacks/finPal/mobile
+cd <monorepo>/mobile
 npx tsc --noEmit 2>&1 | head -20
 ```
 Expected: no errors.
@@ -380,7 +380,7 @@ This screen handles the case where the OS opens the app via the `finpal://oidc/c
 **Step 1: Create directory and file**
 
 ```bash
-mkdir -p /Users/basestation/Documents/Palstacks/finPal/mobile/app/oidc
+mkdir -p <monorepo>/mobile/app/oidc
 ```
 
 ```tsx
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
 **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/basestation/Documents/Palstacks/finPal/mobile
+cd <monorepo>/mobile
 npx tsc --noEmit 2>&1 | head -20
 ```
 
@@ -575,7 +575,7 @@ const handleAppleSignIn = async () => {
 **Step 6: Verify TypeScript compiles**
 
 ```bash
-cd /Users/basestation/Documents/Palstacks/finPal/mobile
+cd <monorepo>/mobile
 npx tsc --noEmit 2>&1 | head -30
 ```
 Expected: no errors.
@@ -594,7 +594,7 @@ git commit -m "feat: add OIDC and Apple Sign In buttons to mobile login screen"
 **Step 1: Rebuild only the backend container**
 
 ```bash
-cd /Users/basestation/Documents/Palstacks/finPal/finpal_core
+cd <repo>
 docker compose -f docker-compose.dev.yml build backend
 docker compose -f docker-compose.dev.yml up -d backend
 ```
@@ -631,7 +631,7 @@ Expected: `{"error": "Apple Sign In is not enabled"}` with 403.
 **Step 1: Verify the scheme is set**
 
 ```bash
-grep -A3 '"scheme"' /Users/basestation/Documents/Palstacks/finPal/mobile/app.json
+grep -A3 '"scheme"' <monorepo>/mobile/app.json
 ```
 Expected: `"scheme": "finpal"` already present (confirmed from exploration).
 
@@ -640,7 +640,7 @@ Expected: `"scheme": "finpal"` already present (confirmed from exploration).
 **Step 3: Final verification commit**
 
 ```bash
-cd /Users/basestation/Documents/Palstacks/finPal/mobile
+cd <monorepo>/mobile
 git add -A
 git commit -m "feat: mobile OIDC + Apple Sign In complete"
 ```

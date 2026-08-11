@@ -58,7 +58,7 @@ git commit -m "fix: require JWT auth on group DELETE endpoint (CRIT-4)"
 **Step 1: Check if `cryptography` is already installed**
 
 ```bash
-grep -i cryptography /Users/basestation/Documents/Palstacks/finPal/finpal_core/requirements.txt
+grep -i cryptography <repo>/requirements.txt
 ```
 
 If not present, add `cryptography>=42.0.0` to `requirements.txt`.
@@ -194,7 +194,7 @@ def downgrade():
 **Step 2: Apply the migration**
 
 ```bash
-cd /Users/basestation/Documents/Palstacks/finPal/finpal_core
+cd <repo>
 flask db upgrade
 ```
 

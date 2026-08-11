@@ -5,6 +5,18 @@ REST API plus a React/TypeScript web UI, packaged with Docker.
 
 ## Getting set up
 
+Two ways. Docker is the quicker one and matches how finPal actually runs:
+
+```bash
+./scripts/setup-env.sh                                   # .env with generated secrets
+docker compose -f docker-compose.dev.yml up -d --build    # builds from source, serves :8085
+```
+
+`docker-compose.dev.yml` builds from this checkout; plain `docker-compose.yml` pulls prebuilt
+images and is what self-hosters use — so use the dev file when you want your changes to run.
+
+Or natively, if you'd rather have the reloaders and a debugger:
+
 ```bash
 # Backend
 python -m venv venv && source venv/bin/activate
@@ -17,6 +29,12 @@ flask run
 cd web-ui
 npm install
 npm run dev
+```
+
+**After pulling changes that touch a model**, bring your schema forward:
+
+```bash
+flask db upgrade        # `flask db migrate` first, if you added the model change yourself
 ```
 
 ## Running the tests

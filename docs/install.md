@@ -20,20 +20,35 @@
 ### 1. Docker Deployment (Recommended)
 
 #### Quick Start
+
+Three commands. Nothing to build — `docker-compose.yml` pulls prebuilt images.
+
 ```bash
-# Clone the repository
-git clone https://github.com/palStack-io/finpal-core.git
-cd finpal-core
-
-# Copy environment template
-cp .env.template .env
-
-# Edit .env file with your configurations
-nano .env
-
-# Build and run the application
-docker compose -f docker-compose.local.yml up --build
+git clone https://github.com/palStack-io/finpal-core.git && cd finpal-core
+./scripts/setup-env.sh        # writes .env with generated secrets
+docker compose up -d
 ```
+
+Then open **http://localhost**. The first account to sign up becomes the admin.
+
+`docker-compose.yml` is the default filename, so no `-f` flag is needed. Port 80 is the
+default; set `HTTP_PORT=8085` in `.env` to serve elsewhere.
+
+`setup-env.sh` generates `SECRET_KEY`, `JWT_SECRET_KEY` and `DB_PASSWORD` for you, and
+refuses to overwrite an existing `.env`. If you would rather do it by hand, copy
+`.env.example` to `.env` and replace every `change_me_*` value — **the app refuses to start
+on the placeholders**, because they are published in this repo and anyone could forge
+sessions and tokens signed with them. Everything else in `.env.example` is optional; see
+[ENV_REFERENCE.md](ENV_REFERENCE.md).
+
+#### Which compose file?
+
+| File | Use it when |
+|---|---|
+| `docker-compose.yml` | **Normal self-hosting.** Prebuilt images, Postgres, nginx, backups. This is the one you want. |
+| `docker-compose.dev.yml` | You are changing the code and want it built from source (`--build`), on port 8085. |
+| `docker-compose.portainer.yml` | You deploy through Portainer's web editor and cannot use an `.env` file. |
+| `docker-compose.backup.yml` | You already have finPal running and want to add the backup service on its own. |
 
 #### Detailed Configuration
 
@@ -44,7 +59,7 @@ docker compose -f docker-compose.local.yml up --build
    - Configure email settings if needed
 
 2. **Access the Application**
-   - Open http://localhost:8085 in your web browser
+   - Open http://localhost in your web browser (or `HTTP_PORT` if you changed it)
    - First registered user becomes the admin
 
 ### 2. Local Development Setup
@@ -91,8 +106,8 @@ flask run
 docker compose logs backend
 
 # Restart services
-docker compose -f docker-compose.local.yml down
-docker compose -f docker-compose.local.yml up --build
+docker compose down
+docker compose up -d
 ```
 
 ## Backup and Restore
@@ -115,13 +130,13 @@ docker compose exec -T db psql -U finpal finpal < backup.sql
 
 ```bash
 git pull origin main
-docker compose -f docker-compose.local.yml down
-docker compose -f docker-compose.local.yml up --build
+docker compose down
+docker compose up -d
 ```
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
 ## License
 

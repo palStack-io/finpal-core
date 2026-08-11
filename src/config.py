@@ -88,12 +88,73 @@ class Config:
         if o.strip()
     ]
 
+# Secret-shaped variables whose placeholder values `.env.example` publishes. Anything the
+# example ships as a placeholder is a value the whole world can read, so the app must refuse it.
+_SECRET_VARS = ('SECRET_KEY', 'JWT_SECRET_KEY')
+
+_HOW_TO_GENERATE = (
+    "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\" "
+    "(or: openssl rand -hex 32)"
+)
+
+
+def placeholder_secret_values():
+    """The placeholder secrets published in `.env.example`.
+
+    *** READ FROM THE FILE RATHER THAN LISTED IN CODE, so the two cannot drift. *** A hardcoded
+    list would go blind the moment someone reworded the example, which is the failure mode
+    AUDIT records for spelling-keyed guards. Returns an empty set if the file is absent — it is
+    not shipped inside the container image, and a missing example must not stop the app booting.
+    """
+    example = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.example')
+    values = set()
+    try:
+        with open(example, 'r', encoding='utf-8') as handle:
+            for line in handle:
+                name, _, value = line.strip().partition('=')
+                if name in _SECRET_VARS and value.strip():
+                    values.add(value.strip())
+    except OSError:
+        return values
+    return values
+
+
 def get_config():
-    """Get the appropriate configuration"""
+    """Get the appropriate configuration.
+
+    Refuses to build a config that would run with a publicly known secret. Both checks are
+    boot-time on purpose: a warning in a log nobody reads is how an instance ends up signing
+    tokens with a value published on GitHub.
+    """
     config = Config()
-    if not config.SECRET_KEY:
+
+    # *** READ THE LIVE ENVIRONMENT, NOT THE CLASS ATTRIBUTE. *** `Config`'s fields are
+    # class-level, so they are evaluated once when this module is first imported. Anything that
+    # changes the environment afterwards -- a test, or an import that happens before `.env` is
+    # loaded -- leaves the class holding a stale value while the operator believes their setting
+    # took effect. That is the same shape as the bug where config set after `create_app()` gated
+    # nothing (AUDIT D-61 / #88), and validating the stale copy would let a placeholder through.
+    # The resolved value is written back onto the instance so the config the app receives and the
+    # value validated here are the same thing.
+    published = placeholder_secret_values()
+    for name in _SECRET_VARS:
+        value = os.getenv(name)
+        if value is not None:
+            setattr(config, name, value)
+        else:
+            value = getattr(config, name, None)
+
+        # Exact match, never a substring: a generated hex secret may legitimately begin with
+        # "change", and a boot failure nobody can explain is worse than the leak this prevents.
+        if value and value in published:
+            raise ValueError(
+                f"{name} is still set to the placeholder value published in .env.example. "
+                f"Anyone can read it, so sessions and tokens signed with it are forgeable. "
+                f"{_HOW_TO_GENERATE}"
+            )
+
+    if not getattr(config, 'SECRET_KEY', None):
         raise ValueError(
-            "SECRET_KEY environment variable must be set. "
-            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            f"SECRET_KEY environment variable must be set. {_HOW_TO_GENERATE}"
         )
     return config

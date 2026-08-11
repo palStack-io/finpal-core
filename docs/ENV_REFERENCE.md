@@ -15,7 +15,14 @@
 | `SECRET_KEY` | Flask session encryption key (random string) | `a4f8e2...long-random-string` |
 | `JWT_SECRET_KEY` | JWT token signing key (random string) | `b7c9d1...long-random-string` |
 
-> Generate secrets with: `openssl rand -hex 32`
+| `SQLALCHEMY_DATABASE_URI` | Full PostgreSQL connection string. Set this *or* the `DB_*` variables above | `postgresql://finpal:pass@db:5432/finpal` |
+| `ENCRYPTION_KEY` | Fernet key encrypting stored API keys and tokens. Derived from `SECRET_KEY` if unset, which is weaker — set a dedicated key in production | generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+
+> Generate secrets with: `openssl rand -hex 32`, or run `./scripts/setup-env.sh` to write a
+> complete `.env` with generated values.
+>
+> **The app refuses to start on the `change_me_*` placeholders from `.env.example`** — they are
+> published in this repository, so anyone could forge sessions and tokens signed with them.
 
 ---
 
@@ -58,6 +65,8 @@ Leave blank to disable email features. Only needed if you want password reset em
 | `SIMPLEFIN_ENABLED` | `true` (prod compose) / `false` (local) | Enable SimpleFin bank account sync |
 | `INVESTMENT_TRACKING_ENABLED` | `true` | Enable investment portfolio tracking |
 | `FMP_API_KEY` | _(none)_ | Financial Modeling Prep API key (for stock data) |
+| `POINTSPAL_ENABLED` | `false` | Enable the pointsPal card-rewards module |
+| `POINTSPAL_SYNC_INTERVAL_HOURS` | `1` | How often to auto-sync the pointsPal card database |
 
 ---
 
@@ -79,6 +88,7 @@ Only set these if you use an identity provider (Authelia, Keycloak, etc.).
 |----------|---------|-------------|
 | `OIDC_ENABLED` | `false` | Master switch for OIDC |
 | `OIDC_CLIENT_ID` | _(none)_ | OAuth2 client ID |
+| `GOOGLE_CLIENT_ID` | _(none)_ | Google OAuth client ID. Enables native Google sign-in via `POST /api/v1/auth/oidc` and makes the button appear in the mobile app |
 | `OIDC_CLIENT_SECRET` | _(none)_ | OAuth2 client secret |
 | `OIDC_ISSUER` | _(none)_ | Issuer URL (e.g. `https://auth.example.com`) |
 | `OIDC_DISCOVERY_URL` | Auto from issuer | `.well-known/openid-configuration` URL |
@@ -101,6 +111,41 @@ Only needed if you want Apple Sign In on the iOS app. Requires an Apple Develope
 | `APPLE_CLIENT_ID` | _(none)_ | Apple bundle ID — must match `app.json` (e.g. `io.palstack.finpal`) |
 
 > **Note:** `APPLE_CLIENT_ID` is used as the JWT `audience` when verifying Apple identity tokens. It must exactly match the bundle identifier in `mobile/app.json`.
+
+---
+
+## Backups
+
+The backup service runs nightly and keeps dumps locally unless a remote bucket is configured.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `BACKUP_SCHEDULE` | Cron expression for backup runs | `0 3 * * *` (nightly, 3 AM) |
+| `BACKUP_RETENTION_DAYS` | Days of local dumps to keep | `14` |
+| `BACKUP_REMOTE_BUCKET` | Remote bucket name — leave blank for local-only | `finpal-backups` |
+| `RCLONE_CONFIG_REMOTE_TYPE` | `b2` (Backblaze B2) or `s3` (R2 / S3-compatible) | `b2` |
+| `BACKUP_HEALTHCHECK_URL` | Pinged after each successful backup (healthchecks.io etc.) | `https://hc-ping.com/<uuid>` |
+
+---
+
+## CSV folder import
+
+finPal can watch a folder and import statements dropped into it. See the
+[CSV import guide](csv-import.md) for the whole flow.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CSV_IMPORT_ROOT` | Root that watched folders must sit inside — anything outside is **rejected**. This is a confinement boundary, not a convenience | `/data/inbox` |
+| `CSV_IMPORT_MAX_BYTES` | Largest CSV accepted; bigger files are quarantined, not imported | `10485760` (10 MB) |
+| `RUN_SCHEDULER` | Must be `true` in **exactly one** process, or folder scanning does not run at all | `true` |
+
+---
+
+## Rate limiting
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `RATELIMIT_STORAGE_URI` | Where login/register rate-limit counters live. **The default is per-worker**, so with `--workers=3` a "10 per minute" limit is really ~30/min. Set a shared store to enforce it exactly (needs the `redis` package) | `redis://redis:6379/0` |
 
 ---
 
