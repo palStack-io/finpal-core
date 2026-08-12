@@ -163,6 +163,16 @@ export const Investments: React.FC = () => {
     }).format(amount);
   };
 
+  /**
+   * Gain/loss colours come from the theme's MONEY-ROLE tokens, not from the brand
+   * palette (D-103). This page used `--brand-green-glow` — the DARK value — in both
+   * themes, which measures 2.21:1 on the light card: a WCAG AA failure on the
+   * figure the page exists to show. `--amount-income` is the token written for
+   * exactly this (#15803d light / #22c55e dark) and its own comment records that
+   * one green against two backgrounds was the original bug. `--re-ink` is its
+   * counterpart for a loss (#b91c1c / #f87171); plain `--accent-red` measured
+   * 3.65:1 light and 4.29:1 dark, failing in BOTH.
+   */
   const formatPercent = (percent: number) => {
     return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
   };
@@ -279,23 +289,23 @@ export const Investments: React.FC = () => {
                   borderRadius: '8px'
                 }}>
                   {stats.totalGain >= 0 ? (
-                    <TrendingUp size={20} style={{ color: 'var(--brand-green-glow)' }} />
+                    <TrendingUp size={20} style={{ color: 'var(--amount-income)' }} />
                   ) : (
-                    <TrendingDown size={20} style={{ color: 'var(--accent-red)' }} />
+                    <TrendingDown size={20} style={{ color: 'var(--re-ink)' }} />
                   )}
                 </div>
                 <span style={bodyTextStyle}>Total Gain/Loss</span>
                 <ScopeTag scope="household" />
               </div>
               <div style={{
-                color: stats.totalGain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)',
+                color: stats.totalGain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)',
                 fontSize: '28px',
                 fontWeight: '700'
               }}>
                 {formatCurrency(stats.totalGain)}
               </div>
               <div style={{
-                color: stats.totalGain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)',
+                color: stats.totalGain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)',
                 fontSize: '14px',
                 marginTop: '4px'
               }}>
@@ -418,10 +428,10 @@ export const Investments: React.FC = () => {
                             {formatCurrency(marketValue)}
                           </td>
                           <td style={{ padding: '16px', textAlign: 'right' }}>
-                            <div style={{ color: gain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '14px', fontWeight: '600' }}>
+                            <div style={{ color: gain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)', fontSize: '14px', fontWeight: '600' }}>
                               {formatCurrency(gain)}
                             </div>
-                            <div style={{ color: gain >= 0 ? 'var(--brand-green-glow)' : 'var(--accent-red)', fontSize: '12px', marginTop: '2px' }}>
+                            <div style={{ color: gain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)', fontSize: '12px', marginTop: '2px' }}>
                               {formatPercent(gainPercent)}
                             </div>
                           </td>
