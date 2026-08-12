@@ -221,16 +221,30 @@ beforeEach(() => {
     })),
     http.get('*/api/v1/investments/holdings', () => HttpResponse.json({
       success: true,
+      /**
+       * *** THESE KEYS ARE COPIED FROM THE DEPLOYED PAYLOAD, NOT INVENTED. ***
+       * The previous fixture sent `average_cost`, `market_value` and
+       * `gain_loss_percent` — three names this API has never sent. The page reads
+       * `purchase_price`, so `costBasis` was `undefined * shares` = **NaN**, and
+       * this capture rendered **`$NaN` eight times**. `NaN >= 0` is false, so every
+       * figure also took the RED branch and printed a red "+0.00%".
+       *
+       * Both gates called that page fine: NaN text still has a contrast ratio and a
+       * NaN does not overflow. So investments' contrast numbers — and the responsive
+       * pass's overflow numbers — were measured against a page in an error state.
+       * Verified against the real endpoint with a token: `purchase_price`,
+       * `current_price`, `current_value`, `gain_loss`, `gain_loss_percentage`.
+       */
       holdings: [
         { id: 1, symbol: 'VWRP', name: 'Vanguard FTSE All-World Acc', shares: 210,
-          average_cost: 98.4, current_price: 121.2, market_value: 25452,
-          gain_loss: 4788, gain_loss_percent: 23.2, portfolio_id: 1 },
-        { id: 2, symbol: 'AAPL', name: 'Apple Inc.', shares: 60, average_cost: 168.2,
-          current_price: 224.9, market_value: 13494, gain_loss: 3402,
-          gain_loss_percent: 33.7, portfolio_id: 1 },
+          purchase_price: 98.4, current_price: 121.2, current_value: 25452,
+          gain_loss: 4788, gain_loss_percentage: 23.2, portfolio_id: 1 },
+        { id: 2, symbol: 'AAPL', name: 'Apple Inc.', shares: 60, purchase_price: 168.2,
+          current_price: 224.9, current_value: 13494, gain_loss: 3402,
+          gain_loss_percentage: 33.7, portfolio_id: 1 },
         { id: 3, symbol: 'MSFT', name: 'Microsoft Corporation', shares: 22,
-          average_cost: 331.0, current_price: 421.6, market_value: 9275.2,
-          gain_loss: 1993.2, gain_loss_percent: 27.4, portfolio_id: 1 },
+          purchase_price: 331.0, current_price: 421.6, current_value: 9275.2,
+          gain_loss: 1993.2, gain_loss_percentage: 27.4, portfolio_id: 1 },
       ],
     })),
   );
