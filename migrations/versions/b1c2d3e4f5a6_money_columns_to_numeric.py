@@ -31,7 +31,27 @@ hand, and verify with ``\\d+ accounts`` that the column type actually moved.
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a1b2c3d4e5f6'
+# *** THIS REVISION ID WAS A DUPLICATE, AND THE DUPLICATE IS WHAT CREATED D-105's
+# CYCLE. *** `a1b2c3d4e5f6` was ALSO declared by
+# `a1b2c3d4e5f6_add_user_module_access_table.py`, so Alembic collapsed two unrelated
+# nodes into one and `flask db upgrade` could not run AT ALL — it reported
+# "Cycle is detected in revisions (16f9694227d8, 200f76059b3b, 679da3d5b2cc,
+# f5fc4f9672a2)".
+#
+# There was no cycle in anyone's intent. Collapsing the two nodes is what closed the
+# loop: this migration depends on `f5fc4f9672a2`, and `f5fc4f9672a2` reaches
+# `200f76059b3b`, whose `down_revision` is the OTHER `a1b2c3d4e5f6`.
+#
+# `200f76059b3b` cannot have meant *this* file — that would be a cycle on its own,
+# with no duplicate needed — so it means `add_user_module_access_table`, which keeps
+# its id. This file takes a new one, and it is a leaf, so nothing points at it.
+#
+# *** IF A DATABASE HAS `a1b2c3d4e5f6` IN ITS `alembic_version` TABLE, IT IS
+# AMBIGUOUS AND MUST BE CORRECTED BY HAND *** — set it to `a1b2c3d4e5f6` for
+# user_module_access (unchanged) or to this id, whichever actually ran. In practice
+# no instance can have advanced THROUGH this graph, because it has never been
+# walkable; deployed schema comes from `create_all()`.
+revision = 'b1c2d3e4f5a6'
 down_revision = ('6987639505a7', '8b2c3d4e5f6a', 'f5fc4f9672a2')
 branch_labels = None
 depends_on = None
