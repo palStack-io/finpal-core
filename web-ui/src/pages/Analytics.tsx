@@ -84,6 +84,15 @@ export const Analytics: React.FC = () => {
     emergencyFundMonths: 0,
     liquidityRatio: 0,
     investmentReturn: null as number | null,
+    // *** THE INPUTS THESE RATIOS WERE ACTUALLY COMPUTED FROM, AND THEY ARE HERE
+    // BECAUSE THE PAGE USED TO GUARD ON THE WRONG ONES (D-108). *** The cards were
+    // gated on `totals.income`/`totals.expenses`, which follow the range selector,
+    // while the ratios beside them do not — so picking a range with no income hid a
+    // ratio the server had computed from a whole year of it, and told the user to
+    // "add income transactions" they already had. Measured on the demo: the server
+    // returned debtToIncome 0.05 from totalIncome 9000, and the card said Unknown.
+    totalIncome: 0,
+    totalExpenses: 0,
   });
 
   // Totals for the selected range, and for the equal-length range before it.
@@ -196,6 +205,8 @@ export const Analytics: React.FC = () => {
         emergencyFundMonths: healthData.emergencyFundMonths,
         liquidityRatio: healthData.liquidityRatio,
         investmentReturn: healthData.investmentReturn,
+        totalIncome: healthData.totalIncome,
+        totalExpenses: healthData.totalExpenses,
       });
 
       setTotals(summarise(sumAmounts(currentIncome), sumAmounts(currentExpenses)));
@@ -901,10 +912,18 @@ export const Analytics: React.FC = () => {
               {/* Each card reports "unknown" rather than a colour when its input
                   is missing. Previously a ratio that collapsed to 0 for lack of
                   income rendered as a green "good" — an account with debt and no
-                  recorded income was congratulated on its debt-to-income. */}
+                  recorded income was congratulated on its debt-to-income.
+
+                  *** AND EACH GUARD MUST READ THE INPUT ITS OWN METRIC WAS COMPUTED
+                  FROM — D-108, D-19's shape. *** These read `health.totalIncome` and
+                  `health.totalExpenses`, which arrive in the same payload as the
+                  ratios. They used to read `totals.*`, which follow the range
+                  selector while these ratios deliberately do not (see the comment on
+                  the `health` state), so the default "This month" range hid a real
+                  ratio behind "Add income transactions to calculate this". */}
               <HealthMetricCard
                 title="Debt-to-Income Ratio"
-                value={totals.income > 0
+                value={health.totalIncome > 0
                   ? `${(health.debtToIncome * 100).toFixed(1)}%`
                   : null}
                 status={health.debtToIncome < 0.36 ? 'good' : health.debtToIncome < 0.5 ? 'warning' : 'danger'}
@@ -913,7 +932,7 @@ export const Analytics: React.FC = () => {
               />
               <HealthMetricCard
                 title="Emergency Fund"
-                value={totals.expenses > 0
+                value={health.totalExpenses > 0
                   ? `${health.emergencyFundMonths} months`
                   : null}
                 status={health.emergencyFundMonths >= 6 ? 'good' : health.emergencyFundMonths >= 3 ? 'warning' : 'danger'}
