@@ -240,7 +240,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
                 style={{
                   fontFamily: "'Bricolage Grotesque', sans-serif",
                   fontWeight: 700,
-                  color: 'var(--g700)',
+                  color: 'var(--g-ink)',
                   background: 'var(--g50)',
                   border: '1px solid var(--g100)',
                   borderRadius: 20,

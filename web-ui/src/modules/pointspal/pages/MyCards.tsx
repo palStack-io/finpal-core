@@ -253,7 +253,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
         <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
           {error && (
-            <div style={{ background: 'var(--re50)', border: '1px solid var(--re100)', color: 'var(--re600)', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
+            <div style={{ background: 'var(--re50)', border: '1px solid var(--re100)', color: 'var(--re-ink)', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
               {error}
             </div>
           )}
@@ -303,7 +303,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{p.issuer}{p.network ? ` · ${p.network}` : ''}</div>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        {p.tpg_cpp != null && <div style={{ fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--g700)' }}>{p.tpg_cpp}¢/pt</div>}
+                        {p.tpg_cpp != null && <div style={{ fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--g-ink)' }}>{p.tpg_cpp}¢/pt</div>}
                         {p.annual_fee != null && <div style={microTextStyle}>${p.annual_fee}/yr</div>}
                       </div>
                     </button>
@@ -323,13 +323,13 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
 
             {/* Selected program pill */}
             {selectedProgram && (
-              <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--g50)', border: '1px solid var(--g200)', borderRadius: 8, fontSize: 12, color: 'var(--g700)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--g50)', border: '1px solid var(--g200)', borderRadius: 8, fontSize: 12, color: 'var(--g-ink)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>
                   <strong>{selectedProgram.program_name}</strong>
                   {selectedProgram.tpg_cpp != null ? ` · ${selectedProgram.tpg_cpp}¢/pt` : ''}
                   {selectedProgram.annual_fee != null ? ` · $${selectedProgram.annual_fee}/yr` : ''}
                 </span>
-                <button onClick={handleClearProgram} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--g700)', padding: 2, display: 'flex', alignItems: 'center' }}>
+                <button onClick={handleClearProgram} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--g-ink)', padding: 2, display: 'flex', alignItems: 'center' }}>
                   <X size={13} />
                 </button>
               </div>
@@ -454,7 +454,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                 })}
                 </div>
               </div>
-              <p style={{ fontSize: 11, margin: '8px 0 0', padding: '6px 10px', background: 'var(--au50)', border: '1px solid var(--au100)', borderRadius: 6, color: 'var(--au600)' }}>
+              <p style={{ fontSize: 11, margin: '8px 0 0', padding: '6px 10px', background: 'var(--au50)', border: '1px solid var(--au100)', borderRadius: 6, color: 'var(--au-ink)' }}>
                 Cap $ is the spend limit before the rate drops to the fallback. Period sets whether it resets monthly, quarterly, or annually.
                 Data you enter can be submitted to the community database so others benefit too.
               </p>
@@ -611,7 +611,7 @@ const MyCards: React.FC = () => {
   if (error) {
     return (
       <div style={{ padding: 32, textAlign: 'center' }}>
-        <div style={{ color: 'var(--re600)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>{error}</div>
+        <div style={{ color: 'var(--re-ink)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>{error}</div>
         <button onClick={fetchCards} style={btnStyle}>Retry</button>
       </div>
     );
@@ -660,17 +660,17 @@ const MyCards: React.FC = () => {
                 />
 
                 {card.expiry_alert && (
-                  <div style={{ background: 'var(--au50)', color: 'var(--au600)', fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, padding: '6px 14px' }}>
+                  <div style={{ background: 'var(--au50)', color: 'var(--au-ink)', fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, padding: '6px 14px' }}>
                     ⚠️ {card.expiry_alert}
                   </div>
                 )}
 
                 {isStale ? (
-                  <div style={{ background: 'var(--au50)', color: 'var(--au600)', fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, padding: '6px 14px' }}>
+                  <div style={{ background: 'var(--au50)', color: 'var(--au-ink)', fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, padding: '6px 14px' }}>
                     🔍 Issuer updated program — verify rates
                   </div>
                 ) : (
-                  <div style={{ fontSize: 11, color: 'var(--g700)', padding: '6px 14px', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600 }}>
+                  <div style={{ fontSize: 11, color: 'var(--g-ink)', padding: '6px 14px', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600 }}>
                     ✅ Rates verified {card.verified_at ? new Date(card.verified_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'never'}
                   </div>
                 )}
@@ -678,9 +678,9 @@ const MyCards: React.FC = () => {
                 {/* Meta grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 0, borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                   {[
-                    { label: 'Est. Value',   value: `$${card.est_value_usd.toLocaleString()}`,                       color: 'var(--g700)' },
+                    { label: 'Est. Value',   value: `$${card.est_value_usd.toLocaleString()}`,                       color: 'var(--g-ink)' },
                     { label: 'Annual Fee',   value: card.annual_fee === 0 ? '$0' : `$${card.annual_fee}/yr`,         color: card.annual_fee > 0 ? 'var(--au600)' : 'var(--g700)' },
-                    { label: 'Avg Rate YTD', value: `${card.avg_rate_ytd}×`,                                          color: 'var(--g700)' },
+                    { label: 'Avg Rate YTD', value: `${card.avg_rate_ytd}×`,                                          color: 'var(--g-ink)' },
                     { label: 'Program',      value: card.program || '—',                                               color: 'var(--ink3)' },
                   ].map(({ label, value, color }, i) => (
                     <div key={label} style={{ padding: '8px 14px', borderRight: i % 2 === 0 ? '1px solid var(--border)' : 'none', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
@@ -694,7 +694,7 @@ const MyCards: React.FC = () => {
                 <div style={{ padding: '10px 14px' }}>
                   <div style={{ fontSize: 10, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                     Earn Rates & Caps{isStale ? ' (unverified)' : ''}
-                    {isStale && <span style={{ color: 'var(--au600)', marginLeft: 4 }}>⚠</span>}
+                    {isStale && <span style={{ color: 'var(--au-ink)', marginLeft: 4 }}>⚠</span>}
                   </div>
                   {card.earn_caps.length === 0 ? (
                     <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>No earn rate data — edit card to link a program or enter manually.</div>
@@ -726,7 +726,7 @@ const MyCards: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => setEditingCard(card)}
-                      style={{ flex: 1, padding: '8px', borderRadius: 'var(--rs)', background: 'var(--g50)', color: 'var(--g700)', border: '1px solid var(--g200)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+                      style={{ flex: 1, padding: '8px', borderRadius: 'var(--rs)', background: 'var(--g50)', color: 'var(--g-ink)', border: '1px solid var(--g200)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                     >
                       <Pencil size={12} /> Edit
                     </button>
@@ -734,7 +734,7 @@ const MyCards: React.FC = () => {
                   <button
                     onClick={() => handleDelete(card.id)}
                     disabled={deletingId === card.id}
-                    style={{ padding: '8px 10px', borderRadius: 'var(--rs)', background: 'var(--re50)', color: 'var(--re600)', border: '1px solid var(--re100)', cursor: 'pointer' }}
+                    style={{ padding: '8px 10px', borderRadius: 'var(--rs)', background: 'var(--re50)', color: 'var(--re-ink)', border: '1px solid var(--re100)', cursor: 'pointer' }}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -754,7 +754,7 @@ const MyCards: React.FC = () => {
                       cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                       transition: 'all 0.15s',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--g400)'; e.currentTarget.style.color = 'var(--g700)'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--g400)'; e.currentTarget.style.color = 'var(--g-ink)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
                   >
                     <ExternalLink size={11} />
@@ -770,7 +770,7 @@ const MyCards: React.FC = () => {
                 <div style={{ borderTop: '1px solid var(--border)', padding: '0 14px' }}>
                   <button
                     onClick={() => toggleTxPanel(card.id)}
-                    style={{ width: '100%', padding: '10px 0', background: 'none', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--g700)' }}
+                    style={{ width: '100%', padding: '10px 0', background: 'none', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--g-ink)' }}
                   >
                     <span>Recent Transactions</span>
                     <span style={{ fontSize: 14 }}>{expandedTxCard === card.id ? '▲' : '▼'}</span>
@@ -792,7 +792,7 @@ const MyCards: React.FC = () => {
                               <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{txn.category || 'Uncategorized'} · {txn.date} · {txn.rate}×</div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
-                              <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--g700)' }}>+{txn.pts_earned.toLocaleString()} pts</div>
+                              <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--g-ink)' }}>+{txn.pts_earned.toLocaleString()} pts</div>
                               <div style={microTextStyle}>${txn.amount.toFixed(2)}</div>
                             </div>
                           </div>

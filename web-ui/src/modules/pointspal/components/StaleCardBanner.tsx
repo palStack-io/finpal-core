@@ -59,7 +59,7 @@ const StaleCardBanner: React.FC<StaleCardBannerProps> = ({
             fontFamily: "'Bricolage Grotesque', sans-serif",
             fontWeight: 700,
             fontSize: 12,
-            color: 'var(--au600)',
+            color: 'var(--au-ink)',
             marginBottom: 2,
           }}
         >

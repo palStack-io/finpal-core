@@ -65,7 +65,7 @@ const CapTracker: React.FC = () => {
   if (error) {
     return (
       <div style={{ padding: 32, textAlign: 'center' }}>
-        <div style={{ color: 'var(--re600)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>
+        <div style={{ color: 'var(--re-ink)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>
           {error}
         </div>
         <button onClick={fetchData} style={btnStyle}>Retry</button>
@@ -156,11 +156,11 @@ const CapTracker: React.FC = () => {
                 </div>
               </div>
               {[
-                { label: 'Points at full rate',   value: summary.pts_at_normal.toLocaleString(),  color: 'var(--g700)' },
-                { label: 'Points at fallback',    value: summary.pts_at_fallback.toLocaleString(), color: 'var(--re600)' },
-                { label: 'Points missed (caps)',  value: summary.pts_missed.toLocaleString(),      color: 'var(--re600)' },
-                { label: 'Value missed',          value: `≈ $${summary.value_missed_usd.toFixed(0)}`, color: 'var(--re600)' },
-                { label: 'Active cap alerts',     value: `${summary.active_alerts} alerts`,        color: 'var(--au600)' },
+                { label: 'Points at full rate',   value: summary.pts_at_normal.toLocaleString(),  color: 'var(--g-ink)' },
+                { label: 'Points at fallback',    value: summary.pts_at_fallback.toLocaleString(), color: 'var(--re-ink)' },
+                { label: 'Points missed (caps)',  value: summary.pts_missed.toLocaleString(),      color: 'var(--re-ink)' },
+                { label: 'Value missed',          value: `≈ $${summary.value_missed_usd.toFixed(0)}`, color: 'var(--re-ink)' },
+                { label: 'Active cap alerts',     value: `${summary.active_alerts} alerts`,        color: 'var(--au-ink)' },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
                   <span style={{ color: 'var(--ink3)' }}>{label}</span>
@@ -179,16 +179,16 @@ const CapTracker: React.FC = () => {
                   <div style={cardTitle}>If You Switch Today</div>
                   <p style={{ fontSize: 12, color: 'var(--ink3)', lineHeight: 1.7, marginBottom: 12 }}>
                     Moving {capped.category.toLowerCase()} to{' '}
-                    <strong style={{ color: 'var(--g700)' }}>{sw.card_name} ({sw.rate}×)</strong>{' '}
+                    <strong style={{ color: 'var(--g-ink)' }}>{sw.card_name} ({sw.rate}×)</strong>{' '}
                     for the rest of the period could recover an estimated{' '}
-                    <strong style={{ color: 'var(--g700)' }}>+{estPts.toLocaleString()} pts</strong>.
+                    <strong style={{ color: 'var(--g-ink)' }}>+{estPts.toLocaleString()} pts</strong>.
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                     <span style={{ color: 'var(--muted)' }}>Switch</span>
                     <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--ink)' }}>
                       {capped.category} → {sw.card_name}
                     </span>
-                    <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--g700)', background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 20, padding: '1px 10px', fontSize: 11 }}>
+                    <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--g-ink)', background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 20, padding: '1px 10px', fontSize: 11 }}>
                       +{estPts.toLocaleString()} pts
                     </span>
                   </div>

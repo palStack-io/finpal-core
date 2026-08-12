@@ -10,10 +10,10 @@ interface RecommendTableProps {
 }
 
 const tagStyles: Record<string, React.CSSProperties> = {
-  best:   { background: 'var(--g100)',  color: 'var(--g700)',  border: '1px solid var(--g200)' },
-  good:   { background: 'var(--au100)', color: 'var(--au600)', border: '1px solid var(--au300)' },
+  best:   { background: 'var(--g100)',  color: 'var(--g-ink)',  border: '1px solid var(--g200)' },
+  good:   { background: 'var(--au100)', color: 'var(--au-ink)', border: '1px solid var(--au300)' },
   ok:     { background: '#f1f5f9',      color: 'var(--muted)', border: '1px solid var(--border)' },
-  capped: { background: 'var(--re100)', color: 'var(--re600)', border: '1px solid var(--re100)' },
+  capped: { background: 'var(--re100)', color: 'var(--re-ink)', border: '1px solid var(--re100)' },
 };
 
 const tagLabel: Record<string, string> = {
@@ -97,7 +97,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
                   <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>
                     {card.program}
                     {isCapped && (
-                      <span style={{ color: 'var(--re600)', fontWeight: 700 }}> · CAP HIT</span>
+                      <span style={{ color: 'var(--re-ink)', fontWeight: 700 }}> · CAP HIT</span>
                     )}
                   </div>
                 </td>

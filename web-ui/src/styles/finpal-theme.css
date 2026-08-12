@@ -197,6 +197,19 @@
   --au600: #d97706; --au500: #f59e0b; --au400: #fbbf24; --au300: #fcd34d;
   --au100: #fef3c7; --au50: #fffbeb;
   --re600: #dc2626; --re100: #fee2e2; --re50: #fef2f2;
+
+  /* ── ACCENT INK: the colour an accent is allowed to be as TEXT (D-103).
+     Separate from --g700/--au600/--re600 because those are dual-purpose — they
+     also paint button and badge SURFACES, where white sits on them and passes.
+     A single token cannot move for the text case without breaking the surface
+     case; the dark block records the run where exactly that happened.
+
+     In LIGHT these are DARKER than the surface tokens, not equal to them:
+     --au600 (#d97706) as text measures 3.19:1 on white and 2.86:1 on --au100,
+     and --re600 (#dc2626) measures 3.95:1 on --re100. One step down each fixes
+     both without touching the hue or any surface. --g-ink keeps the brand green,
+     which already passes as text at 4.87:1 on the card. */
+  --g-ink: #15803d; --au-ink: #b45309; --re-ink: #b91c1c;
   --ink: #0f172a; --ink2: #1e293b; --ink3: #334155;
   --muted: #64748b; --light: #94a3b8; --border: #e2e8f0;
   --bg: #f8fafc; --white: #ffffff;
@@ -348,6 +361,33 @@
   --au300: rgba(252, 211, 77, 0.4);
   --re50: rgba(220, 38, 38, 0.15);
   --re100: rgba(220, 38, 38, 0.25);
+
+  /* ── THE ACCENT *INK* TOKENS, WHICH THIS BLOCK USED TO LEAVE BEHIND (D-103).
+     The eight tints above are overridden so a badge's BACKGROUND goes dark. The
+     colours drawn ON them were not, so `--g700`, `--au600` and `--re600` kept
+     their light-theme values — mid-dark hues, now sitting as TEXT on a dark tint
+     of the same hue. That is one root cause under ~30 of D-103's failing
+     elements: 2.04:1 for "Best", 2.55:1 for "4×", 3.03:1 for "⚠ cap hit".
+
+     Overriding the tint and not the ink is a *shape* of bug, not a typo: the
+     kitchen-table palette four blocks down already got this right — `--kt-green`
+     is #15803d in light and #5FCE8B in dark — and Transactions, which uses those
+     tokens, reports no AA failures. pointsPal uses this numeric scale instead and
+     never had the dark half written.
+
+     *** THE FIRST ATTEMPT LIGHTENED --g700 ITSELF AND THE WALK CAUGHT IT. ***
+     These three tokens are DUAL-PURPOSE — `color: var(--g700)` for badge text AND
+     `background: var(--g700)` for primary buttons — so lightening the token fixed
+     the text and broke every white-on-green button in dark mode: `#ffffff on
+     #5fce8b`, 1.96:1, seven elements that had been fine. A token cannot be both
+     the ink and the surface and change for only one of them.
+
+     So the ink is its own token (`--g-ink` / `--au-ink` / `--re-ink`, declared in
+     both themes above and below) and these three keep the brand values, unchanged,
+     for the surfaces they paint. */
+  --g-ink: #5fce8b;
+  --au-ink: #fbbf24;
+  --re-ink: #f87171;
   --sh-xs: 0 1px 2px rgba(0,0,0,.25);
   --sh-sm: 0 2px 8px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
   --sh-md: 0 6px 20px rgba(0,0,0,.4);
