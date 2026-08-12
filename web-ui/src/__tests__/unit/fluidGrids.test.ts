@@ -54,8 +54,11 @@ const FIXED_BY_DESIGN: Record<string, string> = {
   // no content — there is nothing in it to cut off.
   //
   // *** THE DESIGN DOC NAMED ONLY ONE OF THESE, AND IT WAS THE DEAD ONE. *** It
-  // exempted `components/layout/Layout.tsx:45` — a file NOTHING IMPORTS — while
-  // the four that actually render went unlisted.
+  // exempted `components/layout/Layout.tsx:45` — a file NOTHING IMPORTED — while
+  // the four that actually render went unlisted. **That file is now DELETED
+  // (D-104), so its entry is gone from this map**; the sentence stays because the
+  // failure it records is about reading a spec written from a dead file, which is
+  // the reason these four were missing in the first place.
   'pages/Login.tsx|repeat(12, 1fr)': 'decorative 96-glyph wallpaper, opacity 0.03, pointer-events none',
   'pages/Register.tsx|repeat(12, 1fr)': 'decorative 96-glyph wallpaper, opacity 0.03, pointer-events none',
   'pages/Landing.tsx|repeat(10, 1fr)': 'decorative 100-glyph wallpaper, opacity 0.05, pointer-events none',
@@ -83,8 +86,6 @@ const FIXED_BY_DESIGN: Record<string, string> = {
   'pages/Settings.tsx|repeat(8, 1fr)': '24 emoji swatches; fr tracks cannot overflow, and 8-across is ~44px at 390',
   'components/forms/EditAccountForm.tsx|repeat(4, 1fr)': '8 colour swatches; fr tracks cannot overflow, and 4-across is ~90px at 390',
   'components/forms/AddAccountForm.tsx|repeat(4, 1fr)': '8 colour swatches; fr tracks cannot overflow, and 4-across is ~90px at 390',
-  'components/layout/Layout.tsx|repeat(12, minmax(0, 1fr))':
-    'decorative 144-glyph wallpaper — and the file is DEAD, imported by nothing; App.tsx is the real shell',
 
   // ── Tier 3: a data table, kept fixed and made scrollable instead. Reflowing it
   // destroys the column-to-header relationship that makes it readable.
