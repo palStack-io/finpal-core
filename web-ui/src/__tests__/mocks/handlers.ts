@@ -167,6 +167,14 @@ export const transactionHandlers = [
 
 // ── Accounts ──────────────────────────────────────────────────────────────────
 export const accountHandlers = [
+  // The Accounts page asks for this on mount, for the bank-sync callout. First in the
+  // list deliberately: MSW matches in declaration order and `simplefin` is a perfectly
+  // good `:id`, so a future GET `/accounts/:id` handler placed above this would swallow
+  // it and the callout would read someone's account row as a connection status.
+  http.get(`${BASE}/api/v1/accounts/simplefin/status`, () =>
+    HttpResponse.json({ connected: false, accountCount: 0, lastSync: null })
+  ),
+
   http.get(`${BASE}/api/v1/accounts`, () =>
     HttpResponse.json({
       success: true,

@@ -389,11 +389,64 @@ class SimpleFinService:
         # methods used here, so the constructor was simply never written.
         self.repo = AccountRepository()
 
-    def save_simplefin_token(self, user_id, access_url):
+    def connect_simplefin(self, user_id, credential):
         """
-        Save SimpleFin access token
-        Returns (success, message)
+        Connect SimpleFin from whatever the user pasted.
+
+        SimpleFin Bridge gives a *user* one artifact: a base64 **setup token**, good for
+        a single claim. The application decodes it to a claim URL, POSTs that once, and
+        receives the **access URL** — the long-lived credential everything else here
+        uses. Both steps already existed in the client and nothing called them: this
+        method used to write the pasted string straight into `access_url` and report
+        success, so the only thing a user could obtain was stored as though it were the
+        thing it is exchanged for, and the UI said "connected" over a link that could
+        never sync.
+
+        An access URL is still accepted, because self-hosters who already hold one have
+        no token to spend, and a claim is not repeatable.
+
+        Nothing is written until the credential has answered a real request. Shape
+        checks alone would rebuild the same defect one level down — a URL with the wrong
+        password parses perfectly and syncs nothing.
+
+        Returns (success, message).
         """
+        from integrations.simplefin.client import SimpleFin as SimpleFinClient
+
+        credential = (credential or '').strip()
+        if not credential:
+            return False, 'Paste your SimpleFin setup token to connect'
+
+        sf_client = SimpleFinClient(current_app)
+
+        if credential.lower().startswith(('http://', 'https://')):
+            access_url = credential
+        else:
+            claim_url = sf_client.decode_setup_token(credential)
+            # `decode_setup_token` hands back its own input when the base64 does not
+            # decode, so "did it decode" is not a question its return value answers.
+            # Whether the result is a URL is.
+            if not claim_url or not claim_url.lower().startswith(('http://', 'https://')):
+                return False, (
+                    'That does not look like a SimpleFin setup token. Copy the whole '
+                    'token from SimpleFin Bridge — it is a long string of letters and '
+                    'numbers, not a web address.'
+                )
+
+            access_url = sf_client.claim_access_url(claim_url)
+            if not access_url:
+                return False, (
+                    'SimpleFin would not accept that setup token. A token can only be '
+                    'used once, so if you have connected before, generate a new one on '
+                    'SimpleFin Bridge and paste that.'
+                )
+
+        if not sf_client.test_access_url(access_url):
+            return False, (
+                'SimpleFin refused those credentials. Generate a new setup token on '
+                'SimpleFin Bridge and try again.'
+            )
+
         try:
             existing = SimpleFin.query.filter_by(user_id=user_id).first()
 
