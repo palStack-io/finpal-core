@@ -306,7 +306,12 @@ def test_login_returns_the_full_user_shape(client, db, user, slash):
     })
     assert resp.status_code == 200, resp.get_data(as_text=True)[:300]
     body = resp.get_json()
-    assert set(body) == {'access_token', 'refresh_token', 'user'}
+    # `features` joined this payload with D-112: `_get_server_features()` was defined
+    # and called from nowhere, so every client feature gate ran on its own "everything
+    # is enabled" fallback. It rides on login *and* on /auth/config deliberately —
+    # D-63 was the same shape one field over.
+    assert set(body) == {'access_token', 'refresh_token', 'user', 'features'}
+    assert body['features'] == {'simplefin': True, 'investments': True}
     _jwt_shape(body['access_token'], 'access_token')
     _jwt_shape(body['refresh_token'], 'refresh_token')
     assert body['user'] == {
@@ -686,7 +691,10 @@ def test_config_reports_the_login_options_this_server_offers(client, db, slash):
     # Mobile's login screen branches on every one of these keys.
     assert set(body) == {'oidc_enabled', 'oidc_provider_name',
                          'apple_signin_enabled', 'google_client_id',
-                         'google_signin_enabled'}
+                         'google_signin_enabled', 'features'}
+    # Unauthenticated on purpose: mobile's Accounts callout must know whether the
+    # operator has SimpleFin switched off before anybody has logged in.
+    assert body['features'] == {'simplefin': True, 'investments': True}
     assert body['oidc_enabled'] is False
     assert body['oidc_provider_name'] == 'SSO'
     assert body['apple_signin_enabled'] is False
