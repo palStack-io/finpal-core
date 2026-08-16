@@ -119,6 +119,82 @@ def placeholder_secret_values():
     return values
 
 
+# MailHog's default port. `email_service.py` falls back to `localhost:1025` when SMTP_* is
+# unset, which is a sensible development default and a silent outage in production.
+_MAILHOG_PORT = 1025
+_LOOPBACK_HOSTS = ('localhost', '127.0.0.1', '::1', '0.0.0.0')
+
+
+def email_config_error(env=None):
+    """Return a message if email is switched on but demonstrably cannot send, else None.
+
+    *** THIS IS AUDIT D-118, AND IT SHIPPED AS A SILENT OUTAGE FOR THE WHOLE LIFE OF THE
+    DEPLOYED STACK. *** `finpal.yml` configured the `MAIL_*` namespace that `flask_mail`
+    reads, while `src/services/email_service.py` — which sends the user-facing
+    **verification and password-reset** mail — reads `SMTP_*`. With `SMTP_*` unset it used
+    its own defaults, `localhost:1025`, and every send failed with "Connection refused"
+    while `EMAIL_ENABLED` said `"true"`. The only trace was a log line, and the person
+    waiting for a password reset cannot tell that from a slow mail server.
+
+    Checked at boot rather than at send time, deliberately: the send path already returns
+    `False` and logs, and that is exactly what nobody read for months. This is D-97's
+    placeholder-secret refusal one namespace over.
+
+    **Returns a message instead of raising** so the caller decides the severity, and so the
+    tests can assert on the wording without catching exceptions.
+
+    Silent when `EMAIL_ENABLED` is off: a self-hoster who does not want email must be able
+    to boot with nothing configured. The guard only fires when the operator has *claimed*
+    email works.
+    """
+    env = os.environ if env is None else env
+
+    if (env.get('EMAIL_ENABLED', 'false') or '').strip().lower() != 'true':
+        return None
+
+    host = (env.get('SMTP_HOST') or 'localhost').strip()
+    raw_port = (env.get('SMTP_PORT') or str(_MAILHOG_PORT)).strip()
+    try:
+        port = int(raw_port)
+    except ValueError:
+        return f'SMTP_PORT is not a number: {raw_port!r}'
+
+    # The defaulted dev catcher. Matched on the PORT as well as the host, so that a real
+    # MTA on loopback:25 — a legitimate self-hosted setup — still boots. Refusing all of
+    # loopback would block a working install in order to prevent a broken one.
+    if host.lower() in _LOOPBACK_HOSTS and port == _MAILHOG_PORT:
+        return (
+            f'EMAIL_ENABLED is "true" but SMTP_HOST resolves to {host}:{port}, which is '
+            f"MailHog's development default — nothing listens there in production, so every "
+            f'verification and password-reset message would fail silently. Set SMTP_HOST, '
+            f'SMTP_PORT, SMTP_USER and SMTP_PASSWORD, or set EMAIL_ENABLED=false. '
+            f'Note these are SMTP_*, not the MAIL_* variables flask_mail reads.'
+        )
+
+    # `email_service.send_email` only ever builds `smtplib.SMTP` (plain, or STARTTLS when
+    # SMTP_USE_TLS is set) and never `smtplib.SMTP_SSL`, so it cannot speak implicit TLS.
+    # 465 is the port a reader copies from the MAIL_* block above it, and it fails as a
+    # hang rather than an error, which reads as a network fault instead of a config one.
+    if port == 465:
+        return (
+            'SMTP_PORT is 465 (implicit TLS), which this application cannot use: it '
+            'connects with smtplib.SMTP and never smtplib.SMTP_SSL, so the handshake '
+            'never completes and sends hang. Use 587 with SMTP_USE_TLS=true. '
+            '(MAIL_PORT may stay 465 — flask_mail does support implicit TLS.)'
+        )
+
+    # A username with no password cannot authenticate. Both empty is fine: an internal
+    # relay keyed on IP takes no credentials at all.
+    if (env.get('SMTP_USER') or '').strip() and not (env.get('SMTP_PASSWORD') or '').strip():
+        return (
+            'SMTP_USER is set but SMTP_PASSWORD is empty, so authentication will be '
+            'refused and every message dropped. This is how the MAIL_* half of D-118 '
+            'was broken — the variables existed and their values were empty strings.'
+        )
+
+    return None
+
+
 def get_config():
     """Get the appropriate configuration.
 
@@ -157,4 +233,11 @@ def get_config():
         raise ValueError(
             f"SECRET_KEY environment variable must be set. {_HOW_TO_GENERATE}"
         )
+
+    # D-118. Raised, not logged: the send path already returns False and logs, and that is
+    # precisely what nobody read while every password reset was being dropped.
+    mail_error = email_config_error()
+    if mail_error:
+        raise ValueError(mail_error)
+
     return config
