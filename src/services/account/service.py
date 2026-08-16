@@ -19,6 +19,45 @@ from src.utils.household import visible_user_ids, can_manage_owned
 from src.repositories.account import AccountRepository
 
 
+def categorize_imported_transaction(description, user_id, amount=None,
+                                    transaction_type=None):
+    """
+    Pick a category for a transaction arriving from an import (CSV or SimpleFin).
+
+    *** THE USER'S TRANSACTION RULES COME FIRST, AND THAT IS THE FIX. ***
+    finPal has two categorisers. `apply_transaction_rules` reads `transaction_rules`,
+    which is what the Rules screen writes and what the demo seed fills with 52 rules
+    per user; it ran from exactly one place, normal transaction creation. Both import
+    paths instead called `auto_categorize_transaction`, which reads `category_mappings`
+    — a table holding **zero rows for every user on both deployed stacks**, legacy and
+    unreachable, since `CategoryMapping` survives in the API only in *delete* paths and
+    neither client mentions it. So imports could not be categorised by anyone, ever:
+    0 of 6 CSV-imported expenses on the demo stack carried a category against 79 of 93
+    seeded ones. A user built rules, saw them work on transactions they typed, then
+    connected a bank and got nothing — backwards, since imports are the case rules
+    exist for.
+
+    The legacy categoriser stays as a fallback rather than being deleted: it is inert
+    while its table is empty, and still correct for any install that has rows in it.
+    """
+    from src.utils.rule_engine import apply_transaction_rules
+
+    payload = {'description': description or ''}
+    if amount is not None:
+        payload['amount'] = amount
+    if transaction_type:
+        payload['transaction_type'] = transaction_type
+
+    try:
+        matched = apply_transaction_rules(payload, user_id) or {}
+    except Exception:
+        # A bad user-authored pattern must not abort an import mid-file.
+        current_app.logger.exception('Rule engine failed while importing; falling back')
+        matched = {}
+
+    return matched.get('category_id') or auto_categorize_transaction(description, user_id)
+
+
 class AccountService:
     """Service class for account operations"""
 
@@ -327,9 +366,13 @@ class AccountService:
             if category:
                 category_id = category.id
 
-        # Auto-categorize if no category and not a transfer
+        # Auto-categorize if no category and not a transfer. A category named in the
+        # CSV still wins — this only fills a blank, exactly as transaction creation
+        # applies rules only when `category_id` is absent.
         if not category_id and transaction_type != 'transfer':
-            category_id = auto_categorize_transaction(description, user_id)
+            category_id = categorize_imported_transaction(
+                description, user_id, amount=amount,
+                transaction_type=transaction_type)
 
         # Get currency
         user = db.session.get(User, user_id)
@@ -694,9 +737,11 @@ class SimpleFinService:
                 ).first():
                     continue
 
-                # Auto-categorize using user's category mapping rules
-                category_id = auto_categorize_transaction(
-                    trans.get('description', ''), user_id
+                # The user's transaction rules first, then the legacy categoriser.
+                category_id = categorize_imported_transaction(
+                    trans.get('description', ''), user_id,
+                    amount=trans.get('amount'),
+                    transaction_type=trans.get('transaction_type', 'expense'),
                 )
 
                 expense = Expense(
