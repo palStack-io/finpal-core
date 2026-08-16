@@ -675,9 +675,20 @@ class SimpleFinService:
                 if not external_id:
                     continue
 
-                # Skip duplicates
+                # Skip duplicates — scoped to THIS account, not to the whole user.
+                #
+                # A SimpleFin transaction id is unique within an account; nothing in the
+                # protocol makes it unique across them. Without `account_id` here, two
+                # accounts that happen to share ids collapse into one: the first to sync
+                # wins and the second silently imports nothing. Bridge's own demo data
+                # does exactly this — its Savings and Checking accounts share all 58
+                # transaction ids for transactions with different amounts — and on the
+                # live deploy that produced "Synced 57 total transaction(s)" with
+                # Checking contributing zero, which reads as a healthy sync unless you
+                # look at the per-account breakdown.
                 if Expense.query.filter_by(
                     user_id=user_id,
+                    account_id=account_id,
                     external_id=external_id,
                     import_source='simplefin'
                 ).first():

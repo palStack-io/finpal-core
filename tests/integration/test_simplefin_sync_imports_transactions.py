@@ -254,6 +254,64 @@ def _sync_an_expense_so_the_account_has_history(user, account):
     _db.session.commit()
 
 
+def test_two_accounts_sharing_a_transaction_id_both_sync(db):
+    """
+    Dedupe must be scoped to the account, not just to the user.
+
+    *** FOUND ON THE LIVE DEPLOY, AFTER D-113 AND D-114 WERE BOTH FIXED AND GREEN. ***
+    A full journey against the deployed API reported `Synced 57 total transaction(s)`
+    and looked like success -- but the per-account breakdown read:
+
+        SimpleFIN Savings  -> Synced 57 new transaction(s)
+        SimpleFIN Checking -> Synced 0 new transaction(s)
+
+    Checking was offering 58 transactions. Bridge's two demo accounts use **the same
+    transaction ids** (measured: 58 of 58 overlap) for transactions with **different
+    amounts** -- "Fishing bait" is 90.00 on Savings and 117.78 on Checking. The dedupe
+    query filtered on `user_id`, `external_id` and `import_source` and **not on
+    `account_id`**, so every one of Checking's transactions matched a Savings row that
+    already existed and was skipped.
+
+    A transaction id is unique within an account; nothing in SimpleFin's protocol makes
+    it unique across them. So this silently drops an entire account's history whenever
+    two accounts collide -- and it presents as a healthy sync, because the total is
+    non-zero and only the per-account breakdown gives it away.
+    """
+    from src.extensions import db as _db
+
+    user = UserFactory()
+    savings = _connected_account(user)
+    checking = Account(
+        name='SimpleFIN Checking', type='checking', institution='SimpleFIN Demo',
+        balance=0, currency_code='USD', import_source='simplefin',
+        external_id='Demo Checking', user_id=user.id,
+    )
+    _db.session.add(checking)
+    _db.session.commit()
+
+    # The same ids under a different account, with different amounts -- Bridge's demo
+    # data verbatim in shape.
+    other = {'accounts': [dict(RAW['accounts'][0],
+                               id='Demo Checking', name='SimpleFIN Checking',
+                               transactions=[dict(t, amount=str(float(t['amount']) + 27.78))
+                                             for t in RAW['accounts'][0]['transactions']])]}
+
+    def _by_account(self, access_url, days_back=30):
+        return {'accounts': RAW['accounts'] + other['accounts']}
+
+    with patch('integrations.simplefin.client.SimpleFin.get_accounts_with_transactions',
+               _by_account):
+        SimpleFinService().sync_account(savings.id, user.id)
+        SimpleFinService().sync_account(checking.id, user.id)
+
+    on_savings = Expense.query.filter_by(account_id=savings.id).count()
+    on_checking = Expense.query.filter_by(account_id=checking.id).count()
+    assert on_savings == 2, f'savings got {on_savings}'
+    assert on_checking == 2, (
+        f'checking got {on_checking} of 2 -- its transactions were deduped against '
+        f'another account that happens to share their ids')
+
+
 def test_sync_all_reports_failure_when_every_account_failed(db):
     """
     `sync_all_accounts` returned `True` unconditionally, so a total failure and a
