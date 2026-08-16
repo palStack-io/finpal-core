@@ -10,6 +10,7 @@ import { AddAccountForm } from '../components/forms/AddAccountForm';
 import { EditAccountForm } from '../components/forms/EditAccountForm';
 import { CSVImportModal } from '../components/import/CSVImportModal';
 import { StatCard } from '../components/StatCard';
+import { BankSyncCallout } from '../components/accounts/BankSyncCallout';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
@@ -233,6 +234,14 @@ export const Accounts = () => {
             subtitle={<span style={bodyTextStyle}>{accounts.filter(a => a.balance < 0).length} credit/loan accounts</span>}
           />
         </div>
+
+        {/*
+          The pointer to bank sync. Sits above the list rather than inside the empty
+          state because someone with three hand-entered accounts is exactly who has not
+          found the feature. It hides itself when the server has SimpleFin off or the
+          user is already connected.
+        */}
+        <BankSyncCallout />
 
         {/* Accounts List */}
         <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>

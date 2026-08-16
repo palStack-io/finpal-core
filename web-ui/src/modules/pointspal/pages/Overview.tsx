@@ -43,7 +43,7 @@ const PointsPalOverview: React.FC = () => {
   if (error) {
     return (
       <div style={{ padding: 32, textAlign: 'center' }}>
-        <div style={{ color: 'var(--re600)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>{error}</div>
+        <div style={{ color: 'var(--re-ink)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>{error}</div>
         <button onClick={fetchData} style={btnStyle}>Retry</button>
       </div>
     );
@@ -201,7 +201,7 @@ const PointsPalOverview: React.FC = () => {
                       <span>Fee: <b>${card.annual_fee}/yr</b></span>
                     </div>
                     {card.expiry_alert && (
-                      <div style={{ fontSize: 10, color: 'var(--au600)', marginTop: 4, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600 }}>
+                      <div style={{ fontSize: 10, color: 'var(--au-ink)', marginTop: 4, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600 }}>
                         ⚠️ {card.expiry_alert}
                       </div>
                     )}
@@ -265,11 +265,11 @@ const PointsPalOverview: React.FC = () => {
                     <div style={microTextStyle}>{act.card_name} · {act.subtitle}</div>
                   </div>
                   <div style={rightAlignStyle}>
-                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, color: 'var(--g700)' }}>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, color: 'var(--g-ink)' }}>
                       +{act.pts_earned.toLocaleString()} pts
                     </div>
                     {act.pts_missed > 0 && (
-                      <div style={{ fontSize: 10, color: 'var(--re600)' }}>
+                      <div style={{ fontSize: 10, color: 'var(--re-ink)' }}>
                         (−{act.pts_missed.toLocaleString()} missed)
                       </div>
                     )}
@@ -315,6 +315,6 @@ const btnStyle: React.CSSProperties = {
 const microTextStyle: React.CSSProperties = { fontSize: 10, color: 'var(--muted)' };
 const flexMinZeroStyle: React.CSSProperties = { flex: 1, minWidth: 0 };
 const rightAlignStyle: React.CSSProperties = { textAlign: 'right', flexShrink: 0 };
-const textBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: 'var(--g700)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer' };
+const textBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: 'var(--g-ink)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer' };
 
 export default PointsPalOverview;

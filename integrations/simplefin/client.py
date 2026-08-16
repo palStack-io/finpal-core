@@ -16,7 +16,14 @@ class SimpleFin:
     def __init__(self, app):
         self.app = app
         # No API URL needed for direct bridge URL approach
-        self.setup_token_url = app.config.get('SIMPLEFIN_SETUP_TOKEN_URL', 'https://beta-bridge.simplefin.org/setup-token')
+        # The old default, `beta-bridge.simplefin.org/setup-token`, is a 404 — the same
+        # dead link the Settings panel shipped, from the same guess at Bridge's URL
+        # scheme. This is the address SimpleFin's developer guide tells integrators to
+        # send users to. Nothing reads this today (`get_setup_token_instructions()` has
+        # no callers; the clients carry their own copy of the link), but a default that
+        # is wrong is worse than no default: it is what a self-hoster would trust.
+        self.setup_token_url = app.config.get(
+            'SIMPLEFIN_SETUP_TOKEN_URL', 'https://bridge.simplefin.org/simplefin/create')
 
     @staticmethod
     def get_default_color_for_type(account_type):

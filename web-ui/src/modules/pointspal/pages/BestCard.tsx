@@ -155,7 +155,7 @@ const BestCard: React.FC = () => {
           )}
 
           {error && !loading && (
-            <div style={{ ...cardStyle, color: 'var(--re600)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 13 }}>
+            <div style={{ ...cardStyle, color: 'var(--re-ink)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 13 }}>
               {error}
             </div>
           )}

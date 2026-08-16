@@ -487,6 +487,11 @@ class Login(Resource):
             return {
                 'access_token': access_token,
                 'refresh_token': refresh_token,
+                # web-ui has read this key since the day it was written and never
+                # received it: `_get_server_features()` existed and nothing called it,
+                # so the client's fallback ("everything is on") was the only value it
+                # ever used and every gate keyed to it was inert.
+                'features': _get_server_features(),
                 'user': {
                     'id': user.id,
                     'name': user.name,
@@ -817,6 +822,13 @@ class AuthConfig(Resource):
             'oidc_enabled': bool(oidc_enabled),
             'oidc_provider_name': oidc_provider_name,
             'apple_signin_enabled': apple_signin_enabled,
+            # Optional features live here as well as on the login response, so a client
+            # can re-read them without a session and without having been present at
+            # sign-in. That is D-63's lesson applied one field over: `modules` was sent
+            # by login and omitted by `/auth/me`, and any client that refreshed from the
+            # wrong endpoint silently lost it. Which features a server runs is not
+            # sensitive — the docs describe these flags as controlling UI visibility.
+            'features': _get_server_features(),
         }
         # Native sign-in config for mobile. Client IDs are public by design —
         # they identify the app to the provider and are embedded in every

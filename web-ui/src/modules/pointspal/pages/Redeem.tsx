@@ -5,16 +5,16 @@ import { ScopeTag } from '../../../components/ScopeTag';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, tableStyle } from '../../../styles/layoutStyles';
 
 const cppStyle = (cpp: number): React.CSSProperties => {
-  if (cpp >= 2.0) return { color: 'var(--g700)', fontWeight: 800 };
-  if (cpp >= 1.0) return { color: 'var(--au600)', fontWeight: 700 };
+  if (cpp >= 2.0) return { color: 'var(--g-ink)', fontWeight: 800 };
+  if (cpp >= 1.0) return { color: 'var(--au-ink)', fontWeight: 700 };
   return { color: 'var(--muted)', fontWeight: 600 };
 };
 
 const tagStyles: Record<string, React.CSSProperties> = {
-  Best:  { background: 'var(--g100)',  color: 'var(--g700)',  border: '1px solid var(--g200)' },
-  Good:  { background: 'var(--au100)', color: 'var(--au600)', border: '1px solid var(--au300)' },
+  Best:  { background: 'var(--g100)',  color: 'var(--g-ink)',  border: '1px solid var(--g200)' },
+  Good:  { background: 'var(--au100)', color: 'var(--au-ink)', border: '1px solid var(--au300)' },
   OK:    { background: 'var(--border)', color: 'var(--muted)', border: '1px solid var(--border)' },
-  Avoid: { background: 'var(--re100)', color: 'var(--re600)', border: '1px solid var(--re100)' },
+  Avoid: { background: 'var(--re100)', color: 'var(--re-ink)', border: '1px solid var(--re100)' },
 };
 
 const Redeem: React.FC = () => {
@@ -48,7 +48,7 @@ const Redeem: React.FC = () => {
   if (error) {
     return (
       <div style={{ padding: 32, textAlign: 'center' }}>
-        <div style={{ color: 'var(--re600)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>{error}</div>
+        <div style={{ color: 'var(--re-ink)', marginBottom: 12, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }}>{error}</div>
         <button onClick={fetchData} style={btnStyle}>Retry</button>
       </div>
     );

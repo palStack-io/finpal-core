@@ -41,7 +41,14 @@ ns = Namespace('accounts', description='Account operations')
 # `tests/integration/test_accounts_documented_fields.py` asserts that, by
 # POSTing every documented field and reading the row back out of the database.
 simplefin_connect_model = ns.model('SimplefinConnect', {
-    'access_url': fields.String(required=True, description='SimpleFin access URL'),
+    'setup_token': fields.String(
+        required=False,
+        description='Base64 setup token from SimpleFin Bridge. Single use — the server '
+                    'exchanges it for an access URL. Send this or access_url.'),
+    'access_url': fields.String(
+        required=False,
+        description='An existing SimpleFin access URL, for callers that already hold '
+                    'one. Send this or setup_token.'),
 })
 
 simplefin_import_model = ns.model('SimplefinImport', {
@@ -342,12 +349,15 @@ class SimpleFinConnect(Resource):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        access_url = data.get('access_url')
-        if not access_url:
-            return {'success': False, 'error': 'Access URL is required'}, 400
+        # `setup_token` is what a user can actually obtain from SimpleFin Bridge and is
+        # what both clients now send; `access_url` stays accepted because scripts and
+        # older builds send that, and the service tells the two apart itself.
+        credential = data.get('setup_token') or data.get('access_url')
+        if not credential:
+            return {'success': False, 'error': 'A SimpleFin setup token is required'}, 400
 
         simplefin_service = SimpleFinService()
-        success, message = simplefin_service.save_simplefin_token(current_user_id, access_url)
+        success, message = simplefin_service.connect_simplefin(current_user_id, credential)
 
         if success:
             # Get updated status

@@ -4,10 +4,15 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Check, AlertCircle, Link2, Power, Settings } from 'lucide-react';
+import { Check, AlertCircle, Link2, Power, Settings, ExternalLink } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { userService } from '../../services/userService';
 import { apiErrorMessage } from '../../utils/apiError';
+import {
+  SIMPLEFIN_BRIDGE_URL,
+  SIMPLEFIN_DOCS_URL,
+  SIMPLEFIN_STEPS,
+} from '../../constants/simplefin';
 
 export const SimpleFinSettings: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -15,7 +20,7 @@ export const SimpleFinSettings: React.FC = () => {
   const [globallyEnabled, setGloballyEnabled] = useState(true);
   const [accountCount, setAccountCount] = useState(0);
   const [lastSync, setLastSync] = useState<string | null>(null);
-  const [accessUrl, setAccessUrl] = useState('');
+  const [setupToken, setSetupToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,8 +54,8 @@ export const SimpleFinSettings: React.FC = () => {
   };
 
   const handleConnect = async () => {
-    if (!accessUrl.trim()) {
-      setError('Please enter your SimpleFin access URL');
+    if (!setupToken.trim()) {
+      setError('Paste the setup token you copied from SimpleFin Bridge');
       return;
     }
 
@@ -59,10 +64,10 @@ export const SimpleFinSettings: React.FC = () => {
     setSuccess(null);
 
     try {
-      await accountService.connectSimpleFin(accessUrl);
+      await accountService.connectSimpleFin(setupToken.trim());
       setSuccess('SimpleFin connected successfully!');
       setShowConnectForm(false);
-      setAccessUrl('');
+      setSetupToken('');
 
       // Reload status
       await loadSimpleFinStatus();
@@ -307,48 +312,90 @@ export const SimpleFinSettings: React.FC = () => {
             Connect SimpleFin
           </h4>
 
+          {/*
+            The steps, spelled out. This used to be one line pointing at
+            `beta-bridge.simplefin.org/simplefin/claim` — a 404, and the wrong kind of
+            address besides: that path is what an application POSTs to, not a page a
+            person can open. A user who got past it then met a field asking for an
+            "access URL", which no one can obtain from Bridge at all.
+          */}
+          <ol style={{
+            margin: '0 0 16px',
+            paddingLeft: '20px',
+            color: 'var(--text-secondary)',
+            fontSize: '13px',
+            lineHeight: '1.6'
+          }}>
+            {SIMPLEFIN_STEPS.map((step, i) => (
+              <li key={i} style={{ marginBottom: '6px' }}>{step}</li>
+            ))}
+          </ol>
+
           <div style={{
-            padding: '12px',
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: '8px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            alignItems: 'center',
             marginBottom: '16px'
           }}>
-            <p style={{ color: '#60a5fa', fontSize: '13px', lineHeight: '1.5' }}>
-              Get your SimpleFin access URL from{' '}
-              <a
-                href="https://beta-bridge.simplefin.org/simplefin/claim"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}
-              >
-                SimpleFin's setup page
-              </a>
-            </p>
+            <a
+              href={SIMPLEFIN_BRIDGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 14px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                color: 'var(--accent-blue)',
+                fontSize: '13px',
+                fontWeight: 600,
+                textDecoration: 'none'
+              }}
+            >
+              <ExternalLink size={14} />
+              Open SimpleFin Bridge
+            </a>
+            <a
+              href={SIMPLEFIN_DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--text-muted)', fontSize: '13px', textDecoration: 'underline' }}
+            >
+              Full setup guide
+            </a>
           </div>
 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-              SimpleFin Access URL
+              SimpleFin Setup Token
             </label>
-            <input
-              type="text"
-              value={accessUrl}
+            <textarea
+              value={setupToken}
               onChange={(e) => {
-                setAccessUrl(e.target.value);
+                setSetupToken(e.target.value);
                 setError(null);
               }}
-              placeholder="https://..."
+              placeholder="Paste the token from SimpleFin Bridge"
               disabled={isLoading}
+              rows={3}
               className="fp-input"
+              style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '12px' }}
             />
+            <p className="fp-hint" style={{ marginTop: '6px' }}>
+              finPal exchanges this token with SimpleFin once and stores only the access
+              credential it gets back. Your bank login never reaches finPal.
+            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={() => {
                 setShowConnectForm(false);
-                setAccessUrl('');
+                setSetupToken('');
                 setError(null);
               }}
               disabled={isLoading}
@@ -369,18 +416,18 @@ export const SimpleFinSettings: React.FC = () => {
             </button>
             <button
               onClick={handleConnect}
-              disabled={isLoading || !accessUrl.trim()}
+              disabled={isLoading || !setupToken.trim()}
               style={{
                 flex: 1,
                 padding: '12px',
-                background: (isLoading || !accessUrl.trim()) ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
+                background: (isLoading || !setupToken.trim()) ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
                 border: 'none',
                 borderRadius: '8px',
                 color: 'var(--text-primary)',
                 fontSize: '14px',
                 fontWeight: '600',
-                cursor: (isLoading || !accessUrl.trim()) ? 'not-allowed' : 'pointer',
-                opacity: (isLoading || !accessUrl.trim()) ? 0.7 : 1
+                cursor: (isLoading || !setupToken.trim()) ? 'not-allowed' : 'pointer',
+                opacity: (isLoading || !setupToken.trim()) ? 0.7 : 1
               }}
             >
               {isLoading ? 'Connecting...' : 'Connect'}

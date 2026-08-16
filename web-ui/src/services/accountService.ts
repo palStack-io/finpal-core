@@ -162,12 +162,17 @@ export const accountService = {
   // SimpleFin Integration Methods
 
   /**
-   * Connect SimpleFin with access token
+   * Connect SimpleFin with the setup token the user copies from SimpleFin Bridge.
+   *
+   * The token is all a user can obtain; the server base64-decodes it, claims it once,
+   * and stores the access URL it gets back. This used to send `access_url` and the
+   * server stored whatever arrived without checking it, so pasting the token — the only
+   * thing anyone has — reported a healthy connection that could never sync.
    */
-  async connectSimpleFin(accessUrl: string): Promise<SimpleFinStatus> {
+  async connectSimpleFin(setupToken: string): Promise<SimpleFinStatus> {
     const response = await api.post<SimpleFinStatus>(
       '/api/v1/accounts/simplefin/connect',
-      { access_url: accessUrl }
+      { setup_token: setupToken }
     );
     return response.data;
   },
