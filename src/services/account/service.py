@@ -555,7 +555,7 @@ class SimpleFinService:
 
                 if existing:
                     existing.balance = acc['balance']
-                    existing.last_sync = datetime.utcnow()
+                    # `last_sync` deliberately NOT touched — see the Account() below.
                     results.append({
                         'id': existing.id,
                         'name': existing.name,
@@ -572,7 +572,16 @@ class SimpleFinService:
                         import_source='simplefin',
                         external_id=acc['id'],
                         user_id=owner,
-                        last_sync=datetime.utcnow(),
+                        # *** NOT `last_sync=utcnow()`. *** `last_sync` means
+                        # "transactions are synced up to here", and this method fetches
+                        # with `days_back=1` precisely because it wants balances and no
+                        # transactions. Stamping it made `sync_account` compute a
+                        # three-day lookback for an account whose history had never
+                        # been fetched at all, so the first sync a new user ran covered
+                        # a window nothing had been imported from: 18 transactions
+                        # instead of 57 on Bridge's demo account, and zero on a real
+                        # bank account with a quiet three days. Leaving it NULL is what
+                        # makes `sync_account` take its 30-day first-sync branch.
                     )
                     db.session.add(account)
                     db.session.flush()
@@ -644,9 +653,19 @@ class SimpleFinService:
             if not account_raw:
                 return False, 'Account not found in SimpleFin response', 0
 
-            processed_list = sf_client.process_raw_accounts([account_raw])
+            # `process_raw_accounts` takes the whole SimpleFin response and reads
+            # `raw_data['accounts']`. This passed a bare `[account_raw]`, and its guard
+            # — `'accounts' not in raw_data` — then asked whether the *string*
+            # `'accounts'` was an *element* of that list, which it never is. So it
+            # returned `[]` for every account on every sync since 2026-04-12, and the
+            # branch below called that success. Wrap the account back up the way the
+            # method is documented to receive it.
+            processed_list = sf_client.process_raw_accounts({'accounts': [account_raw]})
             if not processed_list:
-                return True, 'No data returned', 0
+                # Not success. The account was found in the response immediately above,
+                # so an empty result here means the response could not be read — and
+                # reporting that as `True` is what hid this for four months.
+                return False, 'Could not read the SimpleFin data for this account', 0
 
             account_data = processed_list[0]
             imported_count = 0
@@ -727,6 +746,15 @@ class SimpleFinService:
                 'message': message,
                 'imported': count,
             })
+
+        # This returned `True` unconditionally, so "synced everything" and "every
+        # account failed" were the same answer to any caller that did not walk
+        # `results` — and neither the Sync button nor the nightly cron does. That is
+        # how a sync importing nothing at all stayed invisible for four months.
+        # A partial failure still reports success; only a total one does not.
+        any_ok = any(r['success'] for r in results)
+        if not any_ok:
+            return False, 'None of your SimpleFin accounts could be synced', results
 
         return True, f'Synced {total_imported} total transaction(s)', results
 
