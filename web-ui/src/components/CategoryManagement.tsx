@@ -6,6 +6,14 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
 
+/**
+ * Where the "Hide these" choice for the suggested-categories panel lives (#125). A per-user
+ * UI preference with no meaning to the API, so it stays in the browser rather than becoming
+ * a `users` column — which on a default deploy `create_all()` would not add to an existing
+ * install anyway (D-121).
+ */
+const SUGGESTIONS_DISMISSED_KEY = 'finpal.categorySuggestions.dismissed';
+
 // Category icons mapping
 const categoryIcons: Record<string, string> = {
   'Food & Dining': '🍔',
@@ -394,6 +402,31 @@ export const CategoryManagement: React.FC = () => {
   const getSubcategories = (parentId: number) =>
     filteredCategories.filter((cat) => cat.parent_id === parentId);
 
+  /**
+   * Suggested categories the user has not created yet — #125.
+   *
+   * Derived from `categories`, NOT from `filteredCategories`: the latter is narrowed by the
+   * search box, so typing in it would make already-created categories look uncreated and
+   * the panel would start re-suggesting them. Matched on a trimmed, lowercased name
+   * because the user types the name themselves and "groceries" is the same category as
+   * "Groceries".
+   */
+  const existingNames = new Set(
+    categories.map((cat) => (cat.name || '').trim().toLowerCase()),
+  );
+  const unusedSuggestions = Object.entries(categoryIcons).filter(
+    ([name]) => !existingNames.has(name.trim().toLowerCase()),
+  );
+
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState<boolean>(
+    () => localStorage.getItem(SUGGESTIONS_DISMISSED_KEY) === 'true',
+  );
+
+  const dismissSuggestions = () => {
+    localStorage.setItem(SUGGESTIONS_DISMISSED_KEY, 'true');
+    setSuggestionsDismissed(true);
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -774,8 +807,20 @@ export const CategoryManagement: React.FC = () => {
         )}
       </div>
 
-      {/* Suggested Categories */}
-      {parentCategories.length === 0 && (
+      {/* Suggested Categories
+
+          #125: this was `parentCategories.length === 0`, so creating a single category
+          removed the whole panel — the reporter's words were "every categories suggestion
+          disappear when creating your first, imho they should remain. Or can be disabled
+          with a flag." Both, then: the ones already created drop out of the list (offering
+          "Groceries" to somebody who just made Groceries is the only thing the old gate
+          got right), the panel goes when nothing is left to suggest, and there is an
+          explicit dismiss for someone who would rather organise their own way.
+
+          The dismissal is localStorage rather than a user column: it is a per-person UI
+          preference with no meaning to the API, and `create_all()` would not add the
+          column to an existing install anyway (D-121). */}
+      {!suggestionsDismissed && unusedSuggestions.length > 0 && (
         <div style={{
           marginTop: '24px',
           padding: '24px',
@@ -784,11 +829,28 @@ export const CategoryManagement: React.FC = () => {
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '12px'
         }}>
-          <h3 className="fp-section-title">
-            Suggested Categories
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <h3 className="fp-section-title" style={{ marginBottom: 0 }}>
+              Suggested Categories
+            </h3>
+            <button
+              type="button"
+              onClick={dismissSuggestions}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '13px',
+                padding: '4px 8px',
+              }}
+              title="Stop showing suggested categories"
+            >
+              Hide these
+            </button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
-            {Object.entries(categoryIcons).map(([name, icon]) => (
+            {unusedSuggestions.map(([name, icon]) => (
               <div
                 key={name}
                 onClick={() => {
