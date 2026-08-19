@@ -9,7 +9,11 @@ class Category(db.Model):
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    icon = db.Column(db.String(50), default="fa-tag")  # FontAwesome icon name
+    icon = db.Column(db.String(50), default="🏷️")  # An EMOJI, not a FontAwesome name.
+    # web-ui renders this value as text (CategoryManagement.tsx), so "fa-tag" printed
+    # the literal string "fa-tag" where the icon belongs. FontAwesome has never been a
+    # dependency here; src/data/convert_icons_to_emoji.py was written for this and its
+    # __main__ only printed a message, so it was never applied.
     color = db.Column(db.String(20), default="#6c757d")
     parent_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)

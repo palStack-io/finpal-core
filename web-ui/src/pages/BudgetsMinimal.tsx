@@ -11,6 +11,7 @@ import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { StatCard } from '../components/StatCard';
 import { apiErrorMessage } from '../utils/apiError';
+import { categoryIcon } from '../utils/categoryIcon';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -804,7 +805,7 @@ const BudgetsMinimal = () => {
                       <option value="" style={secondaryBgStyle}>Select a category</option>
                       {categories.filter(cat => !cat.parent_id).map(cat => (
                         <option key={cat.id} value={cat.id} style={secondaryBgStyle}>
-                          {cat.icon} {cat.name}
+                          {categoryIcon(cat.icon)} {cat.name}
                         </option>
                       ))}
                     </select>

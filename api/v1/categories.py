@@ -92,7 +92,7 @@ class CategoryList(Resource):
         try:
             new_category = Category(
                 name=validated['name'],
-                icon=validated.get('icon', 'fa-tag'),
+                icon=validated.get('icon', '🏷️'),  # emoji, not a FontAwesome name — web-ui renders it as text
                 # `color` was validated by `category_input` and then dropped on
                 # the floor — a client could send it, get a 201, and find no
                 # colour stored. The retired blueprint's `create_category` did

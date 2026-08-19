@@ -4,6 +4,7 @@ import { categoriesApi, type Category } from '../services/api/categories';
 import { Modal } from './Modal';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { categoryIcon } from '../utils/categoryIcon';
 
 // Category icons mapping
 const categoryIcons: Record<string, string> = {
@@ -173,7 +174,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
             <option value="" style={secondaryBgStyle}>None - This is a main category</option>
             {parentCategories.map(cat => (
               <option key={cat.id} value={cat.id} style={secondaryBgStyle}>
-                {cat.icon} {cat.name}
+                {categoryIcon(cat.icon)} {cat.name}
               </option>
             ))}
           </select>
@@ -620,14 +621,14 @@ export const CategoryManagement: React.FC = () => {
                       background: `${category.color}20`,
                       borderRadius: '12px'
                     }}>
-                      {category.icon}
+                      {categoryIcon(category.icon)}
                     </div>
                     <div>
                       <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
                         {category.name}
                       </h3>
                       <p style={bodyTextStyle}>
-                        {subcategories.length} subcategory{subcategories.length !== 1 ? 'ies' : ''}
+                        {subcategories.length} subcategor{subcategories.length === 1 ? 'y' : 'ies'}
                       </p>
                     </div>
                   </div>
@@ -702,7 +703,7 @@ export const CategoryManagement: React.FC = () => {
                             background: `${sub.color}20`,
                             borderRadius: '8px'
                           }}>
-                            {sub.icon}
+                            {categoryIcon(sub.icon)}
                           </div>
                           <span style={{ color: 'var(--text-primary)', fontSize: '15px' }}>{sub.name}</span>
                         </div>

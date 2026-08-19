@@ -49,7 +49,7 @@ class CategoryService:
         ).count()
         return match_count >= 4
 
-    def add_category(self, user_id, name, icon='fa-tag', color='#6c757d', parent_id=None):
+    def add_category(self, user_id, name, icon='🏷️', color='#6c757d', parent_id=None):
         """Add a new category - Returns (success, message, category)"""
         if not name:
             return False, 'Category name is required', None
