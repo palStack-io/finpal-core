@@ -655,6 +655,50 @@ body {
   flex: 1;
   padding: 16px 12px;
   overflow-y: auto;
+
+  /* THE SCROLLBAR IS THE AFFORDANCE, AND ON macOS IT IS INVISIBLE BY DEFAULT.
+
+     This rail holds 11 entries plus three group headings. It has always scrolled
+     correctly — `overflow-y: auto` makes it a scroll container, so `min-height: auto`
+     resolves to 0 and it shrinks rather than pushing the footer out — but macOS uses
+     overlay scrollbars that only appear while you are actively scrolling. Measured on
+     the deployed app with CDP:
+
+         viewport 900px -> nav clips  14px, everything reachable
+         viewport 760px -> nav clips 154px, and Groups, pointsPal and Settings are
+                           below the fold with NOTHING on screen to say so
+
+     So the report was "pointsPal is missing from the sidebar", and the honest reading is
+     that it was: present in the DOM, invisible to the user, with no indication that the
+     list continued. `scrollbar-width`/`::-webkit-scrollbar` opt out of overlay behaviour
+     and keep a persistent track, so a clipped rail now looks clipped.
+
+     Not solved by making it fit: 672px of content cannot fit 518px of rail, and shrinking
+     the items enough to try would cost touch-target height. Pinned by
+     sidebarNavIsScrollable.test.ts. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 4px;
+  /* Inset so the thumb reads as part of the rail rather than sitting on the edge. */
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  background-clip: content-box;
 }
 
 .nav-item {

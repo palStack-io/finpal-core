@@ -5,6 +5,7 @@ import { Modal } from './Modal';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
+import { StatCard } from './StatCard';
 
 /**
  * Where the "Hide these" choice for the suggested-categories panel lives (#125). A per-user
@@ -473,81 +474,34 @@ export const CategoryManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Stats
+
+          `StatCard`, not three hand-rolled copies. Dashboard, Transactions, Budgets and
+          Accounts already used the shared component; this page and Rules each kept their
+          own, and the two had drifted — measured on the deployed app, this row rendered
+          **132px** here and **113px** on Rules, because Categories wrapped its icon in a
+          40x40 tinted box and Rules used a bare 20px glyph. Same role, same declared
+          padding, 19px apart, which is what "the spacing looks weird between these pages"
+          turned out to mean. A shell nothing shares is a shell nothing keeps in step. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div style={{
-          padding: '20px',
-          background: 'var(--bg-card)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'rgba(59, 130, 246, 0.2)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Folder size={20} color="#3b82f6" />
-            </div>
-            <span style={bodyTextStyle}>Main Categories</span>
-          </div>
-          <p style={bigStatStyle}>{parentCategories.length}</p>
-        </div>
-
-        <div style={{
-          padding: '20px',
-          background: 'var(--bg-card)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'rgba(168, 85, 247, 0.2)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Tag size={20} color="#a855f7" />
-            </div>
-            <span style={bodyTextStyle}>Subcategories</span>
-          </div>
-          <p style={bigStatStyle}>
-            {categories.filter(c => c.parent_id).length}
-          </p>
-        </div>
-
-        <div style={{
-          padding: '20px',
-          background: 'var(--bg-card)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'rgba(34, 197, 94, 0.2)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Search size={20} color="#22c55e" />
-            </div>
-            <span style={bodyTextStyle}>Total Items</span>
-          </div>
-          <p style={bigStatStyle}>{categories.length}</p>
-        </div>
+        <StatCard
+          label="Main Categories"
+          value={String(parentCategories.length)}
+          accentColor="var(--accent-blue)"
+          icon={<Folder size={24} style={{ color: 'var(--accent-blue)' }} />}
+        />
+        <StatCard
+          label="Subcategories"
+          value={String(categories.filter(c => c.parent_id).length)}
+          accentColor="#a855f7"
+          icon={<Tag size={24} style={{ color: '#a855f7' }} />}
+        />
+        <StatCard
+          label="Total Items"
+          value={String(categories.length)}
+          accentColor="var(--brand-green-glow)"
+          icon={<Search size={24} style={{ color: 'var(--brand-green-glow)' }} />}
+        />
       </div>
 
       {/* Search */}

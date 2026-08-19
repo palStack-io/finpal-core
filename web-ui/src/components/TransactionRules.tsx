@@ -7,6 +7,7 @@ import { Modal } from './Modal';
 import { formActionsStyle, labelStyle } from '../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { StatCard } from './StatCard';
 
 const accentTextStyle: React.CSSProperties = { fontSize: '14px', color: 'var(--text-secondary)', margin: 0 };
 const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 };
@@ -212,30 +213,30 @@ export const TransactionRules: React.FC = () => {
         </div>
       )}
 
-      {/* Stats Dashboard */}
+      {/* Stats Dashboard — the shared `StatCard`, matching Dashboard, Transactions,
+          Budgets, Accounts and now Categories. This page kept its own copy with a bare
+          20px icon where Categories boxed its icon at 40x40, so the same row measured
+          113px here and 132px there on the deployed app. */}
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(134, 239, 172, 0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <BarChart3 size={20} style={{ color: 'var(--brand-light-green)' }} />
-              <h3 style={accentTextStyle}>Total Rules</h3>
-            </div>
-            <p style={bigStatStyle}>{stats.total_rules}</p>
-          </div>
-          <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <Zap size={20} style={{ color: 'var(--brand-accent-gold)' }} />
-              <h3 style={accentTextStyle}>Active Rules</h3>
-            </div>
-            <p style={bigStatStyle}>{stats.active_rules}</p>
-          </div>
-          <div style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <Check size={20} style={{ color: 'var(--accent-blue)' }} />
-              <h3 style={accentTextStyle}>Total Matches</h3>
-            </div>
-            <p style={bigStatStyle}>{stats.total_matches}</p>
-          </div>
+          <StatCard
+            label="Total Rules"
+            value={String(stats.total_rules)}
+            accentColor="var(--brand-light-green)"
+            icon={<BarChart3 size={24} style={{ color: 'var(--brand-light-green)' }} />}
+          />
+          <StatCard
+            label="Active Rules"
+            value={String(stats.active_rules)}
+            accentColor="var(--brand-accent-gold)"
+            icon={<Zap size={24} style={{ color: 'var(--brand-accent-gold)' }} />}
+          />
+          <StatCard
+            label="Total Matches"
+            value={String(stats.total_matches)}
+            accentColor="var(--accent-blue)"
+            icon={<Check size={24} style={{ color: 'var(--accent-blue)' }} />}
+          />
         </div>
       )}
 
