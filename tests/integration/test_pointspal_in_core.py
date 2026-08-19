@@ -216,12 +216,33 @@ def _probe_readers(tmp_path, raw):
     return json.loads(proc.stdout.strip().splitlines()[-1])
 
 
-def test_the_temp_dir_really_has_no_dotenv(tmp_path):
-    """The probe below is only meaningful if load_dotenv() finds nothing."""
-    assert not list(tmp_path.glob('.env'))
-    assert (REPO_ROOT / '.env').exists(), (
-        'this repo has a .env — that is the thing the probe must escape, and if it '
-        'is gone this test no longer proves anything'
+def test_the_probe_cannot_pick_up_a_dotenv(tmp_path):
+    """
+    The probe below is only meaningful if `load_dotenv()` finds nothing from the child's
+    cwd. It searches from cwd UPWARD, so this walks the whole parent chain.
+
+    *** AN EARLIER VERSION OF THIS TEST ASSERTED `(REPO_ROOT / '.env').exists()`, AND IT
+    FAILED ON CI ON BOTH PYTHON VERSIONS WHILE PASSING ON EVERY DEVELOPER MACHINE. ***
+    The reasoning was that this repo's `.env` is the thing the probe must escape, so its
+    absence would make the probe vacuous. But `.env` is gitignored, so a fresh checkout has
+    none, and the assertion was really "this is a machine where somebody has run the app".
+
+    That is the same class of mistake as the defect this whole file exists to catch: a
+    check keyed to one environment, quietly asserting something about the machine rather
+    than about the code. It is worth the paragraph because it happened while fixing an
+    identical shape, in the same file, in the same afternoon.
+
+    What actually has to be true is asserted now, and it holds everywhere: nothing on the
+    child's search path can supply the variable. Whether the repo happens to have a `.env`
+    is not this test's business, because the repo directory is not on that path either way.
+    """
+    for directory in [tmp_path, *tmp_path.parents]:
+        assert not (directory / '.env').exists(), (
+            f"{directory}/.env is on the probe's search path and would defeat it"
+        )
+
+    assert REPO_ROOT not in tmp_path.parents and tmp_path != REPO_ROOT, (
+        'the probe runs inside the repo, so it could read the repo .env'
     )
 
 
