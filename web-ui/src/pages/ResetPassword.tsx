@@ -1,3 +1,44 @@
+/*
+ * PRE-AUTH BRAND PALETTE. Four things about the colours in this file:
+ *
+ * 1. They are HARDCODED HEX, and that is deliberate. Every pre-auth page — Landing, Login,
+ *    Register, ForgotPassword, ResetPassword — is dark in BOTH themes and uses zero CSS
+ *    variables. `ThemeProvider` does wrap these routes, so a `var(--…)` would resolve
+ *    here; it would also resolve to LIGHT values in light mode and put near-white text on
+ *    a dark gradient. Making these pages theme-aware is a design decision, not a colour
+ *    fix, and it is not this change.
+ *
+ * 2. The green was NOT a finPal green. It was #10b981 / #059669 — emerald-500/600, which
+ *    is not a brand value and not a token. finPal's is #15803d, with #166534 dark and
+ *    #22c55e glow.
+ *
+ * 3. The page was slate. #0f172a → #1e293b is the same leftover navy that made dark mode
+ *    read as two designs stacked (see darkSurfacesAreNotBlue.test.ts); the gradient is now
+ *    --kt-wash → --kt-card, the palette the rest of dark mode resolves through.
+ *
+ * 4. THE OLD GREEN ALSO FAILED WCAG AA, WHICH IS WHY THE ROLES ARE SPLIT. White on
+ *    #10b981 is 2.54:1 — and that was the primary call to action on this page. The brand
+ *    green fixes it: white on #15803d is 5.02:1 and on #166534 is 7.13:1. But #15803d is
+ *    only 3.64:1 against the new page background, so it is wrong for TEXT. Hence two
+ *    values doing two jobs, not one green used everywhere:
+ *
+ *      button background   #15803d, hover #166534   (white on it: 5.02 / 7.13)
+ *      accent text/icon/border  #22c55e             (on the page: 8.02:1)
+ *
+ *    Measured, not eyeballed. Pinned by authPagesUseBrandColours.test.ts.
+ *
+ * 5. THE TEXT COLOURS ARE HEX FOR A MEASURED REASON, NOT A STYLISTIC ONE. This file mixed
+ *    a hardcoded DARK page with THEME-AWARE text — `color: 'var(--text-muted)'`. In dark
+ *    mode that resolves to #9CB3A3 and reads at 8.17:1. In LIGHT mode it resolves to
+ *    #56685D, and on this page's dark gradient that is **3.00:1 — below AA**. So every
+ *    light-mode user read the password-reset instructions at 3:1, and no gate saw it
+ *    because the token is legible against the surface the theme THINKS it is on. Nobody
+ *    reported it; it was found by resolving the token by hand while fixing the brand green.
+ *    The dark-mode values are inlined, so the page's surface and its text can no longer
+ *    disagree. `--accent-red` becomes #f87171 (the theme's own dark red ink, 6.61:1)
+ *    rather than #EF4444, which is 4.29:1 on the card and would have been a fix that
+ *    still failed.
+ */
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -105,7 +146,7 @@ export const ResetPassword: React.FC = () => {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -127,13 +168,13 @@ export const ResetPassword: React.FC = () => {
             height: '80px',
             borderRadius: '50%',
             background: 'rgba(16, 185, 129, 0.2)',
-            border: '3px solid #10b981',
+            border: '3px solid #22c55e',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1.5rem'
           }}>
-            <CheckCircle size={48} style={{ color: '#10b981' }} />
+            <CheckCircle size={48} style={{ color: '#22c55e' }} />
           </div>
           <h2 style={{
             fontSize: '1.875rem',
@@ -145,7 +186,7 @@ export const ResetPassword: React.FC = () => {
           </h2>
           <p style={{
             fontSize: '1rem',
-            color: 'var(--text-muted)',
+            color: '#9CB3A3',
             lineHeight: '1.75',
             marginBottom: '2rem'
           }}>
@@ -158,14 +199,14 @@ export const ResetPassword: React.FC = () => {
               fontSize: '1rem',
               fontWeight: '600',
               color: '#ffffff',
-              background: '#10b981',
+              background: '#15803d',
               border: 'none',
               borderRadius: '12px',
               cursor: 'pointer',
               transition: 'all 0.2s',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}>
+            onMouseEnter={(e) => e.currentTarget.style.background = '#166534'}
+            onMouseLeave={(e) => e.currentTarget.style.background = '#15803d'}>
               Continue to Login
             </button>
           </Link>
@@ -177,7 +218,7 @@ export const ResetPassword: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -201,7 +242,7 @@ export const ResetPassword: React.FC = () => {
             borderRadius: '16px',
             marginBottom: '1rem'
           }}>
-            <Lock size={32} style={{ color: '#10b981' }} />
+            <Lock size={32} style={{ color: '#22c55e' }} />
           </div>
           <h2 style={{
             fontSize: '1.875rem',
@@ -213,7 +254,7 @@ export const ResetPassword: React.FC = () => {
           </h2>
           <p style={{
             fontSize: '1rem',
-            color: 'var(--text-muted)',
+            color: '#9CB3A3',
             lineHeight: '1.75'
           }}>
             Enter a new password for your account
@@ -227,7 +268,7 @@ export const ResetPassword: React.FC = () => {
               borderRadius: '8px',
               display: 'inline-block'
             }}>
-              <span style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: '600' }}>{email}</span>
+              <span style={{ color: '#22c55e', fontSize: '0.875rem', fontWeight: '600' }}>{email}</span>
             </div>
           )}
         </div>
@@ -262,7 +303,7 @@ export const ResetPassword: React.FC = () => {
                   transition: 'all 0.2s',
                   boxSizing: 'border-box'
                 }}
-                onFocus={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : '#10b981'}
+                onFocus={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : '#22c55e'}
                 onBlur={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}
               />
               <button
@@ -277,17 +318,17 @@ export const ResetPassword: React.FC = () => {
                   border: 'none',
                   cursor: 'pointer',
                   padding: '0.25rem',
-                  color: 'var(--text-muted)'
+                  color: '#9CB3A3'
                 }}>
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {errors.password && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--accent-red)' }}>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#f87171' }}>
                 {errors.password}
               </p>
             )}
-            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#9CB3A3' }}>
               Must be at least 8 characters with uppercase, lowercase, and number
             </p>
           </div>
@@ -321,7 +362,7 @@ export const ResetPassword: React.FC = () => {
                   transition: 'all 0.2s',
                   boxSizing: 'border-box'
                 }}
-                onFocus={(e) => e.target.style.borderColor = errors.confirmPassword ? '#ef4444' : '#10b981'}
+                onFocus={(e) => e.target.style.borderColor = errors.confirmPassword ? '#ef4444' : '#22c55e'}
                 onBlur={(e) => e.target.style.borderColor = errors.confirmPassword ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}
               />
               <button
@@ -336,13 +377,13 @@ export const ResetPassword: React.FC = () => {
                   border: 'none',
                   cursor: 'pointer',
                   padding: '0.25rem',
-                  color: 'var(--text-muted)'
+                  color: '#9CB3A3'
                 }}>
                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {errors.confirmPassword && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--accent-red)' }}>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#f87171' }}>
                 {errors.confirmPassword}
               </p>
             )}
@@ -357,15 +398,15 @@ export const ResetPassword: React.FC = () => {
               fontSize: '1rem',
               fontWeight: '600',
               color: '#ffffff',
-              background: isLoading ? '#6b7280' : '#10b981',
+              background: isLoading ? '#6b7280' : '#15803d',
               border: 'none',
               borderRadius: '12px',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s',
               marginTop: '0.5rem'
             }}
-            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#059669')}
-            onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#10b981')}>
+            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#166534')}
+            onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#15803d')}>
             {isLoading ? 'Resetting Password...' : 'Reset Password'}
           </button>
 
@@ -373,7 +414,7 @@ export const ResetPassword: React.FC = () => {
             <button type="button" style={{
               fontSize: '1rem',
               fontWeight: '600',
-              color: 'var(--text-muted)',
+              color: '#9CB3A3',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
