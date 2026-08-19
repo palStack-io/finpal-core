@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { DollarSign, Calendar, Tag, FileText, AlertCircle, Check, Wallet, Users } from 'lucide-react';
+import { Calendar, Tag, FileText, AlertCircle, Check, Wallet, Users } from 'lucide-react';
 import { transactionsApi, Transaction } from '../../services/api/transactions';
 import { categoriesApi, Category } from '../../services/api/categories';
 import { groupsApi, Group } from '../../services/api/groups';
@@ -12,6 +12,7 @@ import { splitRemainder, rowForRemainder } from '../../utils/splitRemainder';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
+import { getBranding } from '../../config/branding';
 
 interface AddTransactionFormProps {
   transaction?: Transaction;
@@ -61,6 +62,11 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
   }, []);
 
   const userCurrency = useAuthStore((s) => s.user?.default_currency_code ?? 'USD');
+  /**
+   * The symbol for the currency this form is actually working in — the selected account's
+   * if one is chosen, otherwise the profile default. #126: the label was a hardcoded `$`.
+   */
+  const currencySymbol = getBranding(userCurrency).currencySymbol;
   /**
    * `Intl.NumberFormat` rather than a symbol table: this is a browser, so it is available and
    * correct for every code, and the line it replaces hardcoded `$` regardless of the user's
@@ -325,7 +331,13 @@ if (loadingData) {
       {/* Amount */}
       <div>
         <label style={labelStyle}>
-          <DollarSign size={16} style={iconInlineStyle} />
+          {/* The user's currency symbol, not a dollar glyph. `DollarSign` (a lucide
+              icon of a literal $) sat here regardless of the account currency, which is
+              the "the icon is still $" half of #126 — the form already knows the currency
+              two lines up, it just was not using it for the label. */}
+          <span style={{ ...iconInlineStyle, fontWeight: 600 }} aria-hidden="true">
+            {currencySymbol}
+          </span>
           Amount *
         </label>
         <input
@@ -497,7 +509,7 @@ if (loadingData) {
 
           {watchSplitMethod === 'custom' && (
             <div style={{ marginTop: '16px' }}>
-              <label style={labelStyle}>Your Amount ($)</label>
+              <label style={labelStyle}>Your Amount ({currencySymbol})</label>
               <input
                 type="number"
                 placeholder="0.00"

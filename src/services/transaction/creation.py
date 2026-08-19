@@ -15,6 +15,7 @@ from datetime import datetime
 from schemas.input_schemas import transaction_input
 from src.extensions import db
 from src.models.transaction import CategorySplit, Expense
+from src.utils.household import default_currency_for
 from src.utils.money import CENTS, money_or_zero
 from src.utils.validation import validate_request
 
@@ -291,7 +292,11 @@ def build_transaction(payload, user_id):
         description=payload.get('description'),
         amount=payload.get('amount'),
         date=_coerce_date(payload.get('date')),
-        currency_code=payload.get('currency_code', 'USD'),
+        # #126: was `payload.get('currency_code', 'USD')`, so a client that omitted the
+        # field got dollars even when the user's profile said something else. The profile
+        # is the fallback now; 'USD' only survives inside the helper, for a user row with
+        # no preference recorded at all.
+        currency_code=payload.get('currency_code') or default_currency_for(user_id),
         card_used=payload.get('card_used', 'Cash'),
         # Cleared when the transaction is split across categories, which is the
         # other half of not double-counting: `budget.py:92` skips a flagged expense

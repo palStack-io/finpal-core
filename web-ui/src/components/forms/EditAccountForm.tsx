@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette } from 'lucide-react';
+import { Wallet, FileText, AlertCircle, Check, Palette } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
 import { teamService } from '../../services/teamService';
@@ -8,6 +8,7 @@ import { formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/form
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
 import { ACCOUNT_COLORS, getDefaultColorForType } from '../../constants/accountColors';
+import { getBranding, type Currency } from '../../config/branding';
 
 interface EditAccountFormProps {
   account: any;
@@ -186,7 +187,10 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       {/* Balance */}
       <div>
         <label style={labelStyle}>
-          <DollarSign size={16} style={iconInlineStyle} />
+          {/* The account's own currency symbol rather than a literal $ — see #126. */}
+          <span style={{ ...iconInlineStyle, fontWeight: 600 }} aria-hidden="true">
+            {getBranding((formData.currency as Currency) || 'USD').currencySymbol}
+          </span>
           Balance *
         </label>
         <input

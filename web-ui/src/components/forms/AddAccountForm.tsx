@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette, CreditCard, Users } from 'lucide-react';
+import { Wallet, FileText, AlertCircle, Check, Palette, CreditCard, Users } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
 import { pointspalService, WalletCard } from '../../modules/pointspal/service';
@@ -10,6 +10,8 @@ import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '.
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
 import { ACCOUNT_COLORS, getDefaultColorForType } from '../../constants/accountColors';
+import { getBranding } from '../../config/branding';
+import { useAuthStore } from '../../store/authStore';
 
 interface AddAccountFormProps {
   onSuccess: () => void;
@@ -36,6 +38,12 @@ interface AccountFormValues {
 
 
 export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCancel }) => {
+  /**
+   * #126: the form's currency defaulted to the string 'USD', so a user whose profile said
+   * EUR had to change it on every single account. The profile is the default now; the
+   * picker still lets them override it per account.
+   */
+  const userCurrency = useAuthStore((s) => s.user?.default_currency_code ?? 'USD');
   // Cleared on unmount -- see the deferral below.
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -54,7 +62,9 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       name: '',
       type: 'checking',
       balance: '',
-      currency: 'USD',
+      // #126: this hardcoded 'USD', so the form opened on dollars however the profile
+      // was set and the user had to change it on every account they created.
+      currency: userCurrency,
       description: '',
       color: getDefaultColorForType('checking'),
       ownerId: '',
@@ -220,7 +230,10 @@ return (
       {/* Initial Balance */}
       <div>
         <label style={labelStyle}>
-          <DollarSign size={16} style={iconInlineStyle} />
+          {/* The profile's currency symbol rather than a literal $ — see #126. */}
+          <span style={{ ...iconInlineStyle, fontWeight: 600 }} aria-hidden="true">
+            {getBranding(userCurrency).currencySymbol}
+          </span>
           Initial Balance *
         </label>
         <input
