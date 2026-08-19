@@ -31,7 +31,11 @@ class RegisterInput(Schema):
 
 
 class TransactionInput(Schema):
-    description = fields.Str(required=True, validate=validate.Length(min=1, max=500))
+    # 200, not 500: `Expense.description` is `db.String(200)`. A validator looser than
+    # its column refuses nothing — it just turns marshmallow's clean 400 into
+    # Postgres's StringDataRightTruncation 500. See
+    # tests/unit/test_validators_fit_their_columns.py and #123.
+    description = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     amount = fields.Float(required=True, validate=validate.Range(min=0))
     date = fields.Str(required=True, validate=validate.Length(min=1))
     transaction_type = fields.Str(validate=validate.OneOf(TRANSACTION_TYPES))
@@ -42,7 +46,14 @@ class TransactionInput(Schema):
     card_used = fields.Str(validate=validate.Length(max=100))
     split_method = fields.Str(validate=validate.OneOf(SPLIT_METHODS))
     split_with = fields.Str(validate=validate.Length(max=500))
-    paid_by = fields.Str(validate=validate.Length(max=255))
+    # 120 = `User.id`, which is what this holds — `validate_paid_by` refuses anything
+    # that is not a real user. The OTHER side was the wrong one here: `Expense.paid_by`
+    # was `db.String(50)`, too narrow for an email, so a user whose address exceeded 50
+    # characters could not be recorded as the payer at all. Widened to 120 with a
+    # migration rather than tightened to 50, because tightening would have refused a
+    # legitimate payer with a length error on a field the user never typed — the exact
+    # confusion `validate_paid_by`'s own comment records.
+    paid_by = fields.Str(validate=validate.Length(max=120))
     # `Expense.group_id` is a real, nullable FK to groups.id, but this schema
     # omitted it and `validate_request` loads with `unknown=EXCLUDE`, so a create
     # carrying group_id got a 201 with the group silently stripped. web-ui posts
@@ -81,7 +92,14 @@ class AccountInput(Schema):
     balance = fields.Float()
     currency_code = fields.Str(validate=validate.Length(equal=3))
     institution = fields.Str(validate=validate.Length(max=100))
-    color = fields.Str(validate=validate.Length(max=20))
+    # 7, matching `Account.color` = `db.String(7)` ("Hex color code"). This said 20,
+    # and the web-ui was posting CSS variable references into it — `var(--accent-blue)`
+    # is 18 characters, `var(--brand-green-glow)` is 23. So savings and the Green swatch
+    # were refused here with a length error (a 400 with nothing in the backend log,
+    # because marshmallow rejects before the handler), while checking, credit and cash
+    # passed this ceiling and then overran the 7-char column. Only `investment`, whose
+    # default was already a hex literal, could be created at all. #123.
+    color = fields.Str(validate=validate.Length(max=7))
     status = fields.Str(validate=validate.OneOf(['active', 'inactive', 'closed']))
     # The household member this account is assigned to. Optional, and it must stay
     # optional: omitting it assigns the account to the caller, and the documentation
@@ -114,7 +132,9 @@ class BudgetInput(Schema):
 
 
 class CategoryInput(Schema):
-    name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
+    # 50, matching `Category.name` = `db.String(50)`. A 51–100 character category name
+    # passed this validator and then failed at the column. #123's shape again.
+    name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     icon = fields.Str(validate=validate.Length(max=50))
     color = fields.Str(validate=validate.Length(max=20))
     parent_id = fields.Int(allow_none=True)

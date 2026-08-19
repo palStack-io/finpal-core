@@ -9,6 +9,7 @@ import { TeamMember } from '../../types/team';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
+import { ACCOUNT_COLORS, getDefaultColorForType } from '../../constants/accountColors';
 
 interface AddAccountFormProps {
   onSuccess: () => void;
@@ -33,27 +34,6 @@ interface AccountFormValues {
   ownerId: string;
 }
 
-const ACCOUNT_COLORS = [
-  { value: 'var(--accent-blue)', label: 'Blue' },
-  { value: 'var(--brand-green-glow)', label: 'Green' },
-  { value: 'var(--accent-red)', label: 'Red' },
-  { value: '#8b5cf6', label: 'Purple' },
-  { value: 'var(--accent-yellow)', label: 'Orange' },
-  { value: '#ec4899', label: 'Pink' },
-  { value: '#06b6d4', label: 'Cyan' },
-  { value: '#eab308', label: 'Yellow' },
-];
-
-const getDefaultColorForType = (type: string): string => {
-  switch (type) {
-    case 'checking': return 'var(--accent-blue)';
-    case 'savings': return 'var(--brand-green-glow)';
-    case 'credit': return 'var(--accent-red)';
-    case 'investment': return '#8b5cf6';
-    case 'cash': return 'var(--accent-yellow)';
-    default: return 'var(--accent-blue)';
-  }
-};
 
 export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCancel }) => {
   // Cleared on unmount -- see the deferral below.
@@ -76,7 +56,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       balance: '',
       currency: 'USD',
       description: '',
-      color: 'var(--accent-blue)',
+      color: getDefaultColorForType('checking'),
       ownerId: '',
     },
   });
