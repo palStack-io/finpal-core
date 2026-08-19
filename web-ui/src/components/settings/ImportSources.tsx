@@ -198,11 +198,17 @@ export const ImportSources: React.FC = () => {
 
       {/* Watched folders */}
       <div style={panelStyle}>
+        {/* Named "Folder Watch" because that is what it is called everywhere except
+            here. The feature was already built and already on this tab, and the owner
+            still asked for it to be added — which is a naming problem, not a missing
+            feature. "Watched Folders" stays in the sentence so the old term is still
+            findable. */}
         <h3 className="fp-item-title">
-          Watched Folders
+          Folder Watch
         </h3>
         <p className="fp-hint-block">
-          Drop a CSV into a watched folder and it is imported automatically.
+          Automatic CSV import. Drop a CSV into a watched folder and finPal imports it
+          for you — no upload step.
         </p>
 
         {sources.length === 0 ? (

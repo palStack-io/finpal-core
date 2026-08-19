@@ -369,8 +369,12 @@ export const AgentAccess: React.FC = () => {
 
       {/* Tokens */}
       <div style={panelStyle}>
+        {/* "MCP" is in the heading deliberately. This panel has generated a
+            Claude Desktop MCP config from a minted token for some time, but nothing
+            above the fold said the letters M-C-P, so somebody looking for MCP support
+            could read this whole tab and conclude finPal had none. */}
         <h3 className="fp-item-title">
-          Access Tokens
+          Access Tokens — API &amp; MCP
         </h3>
         <p className="fp-hint-block">
           A token reads only your own data. <strong>Read</strong> cannot change anything;

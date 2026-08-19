@@ -739,6 +739,14 @@ export const Settings: React.FC = () => {
                   <h2 style={sectionTitleStyle}>
                     Integrations
                   </h2>
+                  {/* A one-line contents list. Everything below was already here and was
+                      still asked for as a new feature, because the panel names did not
+                      use the words people search for. */}
+                  <p className="fp-hint-block" style={{ marginBottom: '24px' }}>
+                    Bank sync, investment prices, <strong>folder watch</strong> for
+                    automatic CSV import, and access tokens for the API and{' '}
+                    <strong>MCP</strong> clients.
+                  </p>
 
                   {/* SimpleFin */}
                   {features?.simplefin !== false ? (
