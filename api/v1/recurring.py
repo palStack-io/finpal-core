@@ -97,6 +97,10 @@ class RecurringList(Resource):
             }, 201
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('RecurringList.post failed')
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -157,6 +161,10 @@ class RecurringDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('RecurringDetail.put failed')
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -183,6 +191,10 @@ class RecurringDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('RecurringDetail.delete failed')
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -214,6 +226,10 @@ class RecurringToggle(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('RecurringToggle.post failed')
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -237,6 +253,10 @@ class RecurringDetect(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('RecurringDetect.get failed')
             return {
                 'success': False,
                 'error': 'Internal server error',
@@ -291,6 +311,10 @@ class RecurringIgnore(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('RecurringIgnore.post failed')
             return {
                 'success': False,
                 'error': 'Internal server error'
@@ -350,6 +374,10 @@ class RecurringFromPattern(Resource):
             }, 201
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('RecurringFromPattern.post failed')
             return {
                 'success': False,
                 'error': 'Internal server error'

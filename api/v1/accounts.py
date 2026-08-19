@@ -248,6 +248,10 @@ class AccountDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('AccountDetail.put failed')
             db.session.rollback()
             return {
                 'success': False,

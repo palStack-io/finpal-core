@@ -129,6 +129,10 @@ class PortfolioList(Resource):
             }, 201
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('PortfolioList.post failed')
             db.session.rollback()
             return {
                 'success': False,
@@ -207,6 +211,10 @@ class PortfolioDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('PortfolioDetail.put failed')
             db.session.rollback()
             return {
                 'success': False,
@@ -248,6 +256,10 @@ class PortfolioDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('PortfolioDetail.delete failed')
             db.session.rollback()
             return {
                 'success': False,
@@ -478,6 +490,10 @@ class InvestmentDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('InvestmentDetail.put failed')
             db.session.rollback()
             return {
                 'success': False,
@@ -511,6 +527,10 @@ class InvestmentDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('InvestmentDetail.delete failed')
             db.session.rollback()
             return {
                 'success': False,
@@ -604,6 +624,10 @@ class TransactionList(Resource):
             }, 201
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('TransactionList.post failed')
             db.session.rollback()
             return {
                 'success': False,
