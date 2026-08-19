@@ -82,8 +82,20 @@ def _get_user_modules(user_id: str) -> list:
             if m.is_enabled() and m.is_user_enabled(user_id)
         ]
     except Exception:
-        import os
-        return ['pointspal'] if os.getenv('POINTSPAL_ENABLED', 'false').lower() == 'true' else []
+        # The per-user check reads user_module_access, so a database problem lands
+        # here. Fall back to deployment-level enablement only — never to a re-read of
+        # a module's env var. This branch used to answer
+        # `os.getenv('POINTSPAL_ENABLED', 'false')`, whose default is the opposite of
+        # `ModuleBase.is_enabled()`'s (pointsPal is `default_enabled`), and it named
+        # one module by hand so a second module would have been invisible here
+        # forever. Same defect as the one in src/models/__init__.py — see #122.
+        logger.warning('Per-user module check failed; falling back to deployment flags',
+                       exc_info=True)
+        try:
+            from src.modules.registry import module_registry
+            return [m.name for m in module_registry.modules if m.is_enabled()]
+        except Exception:
+            return []
 
 
 def _get_server_features() -> dict:

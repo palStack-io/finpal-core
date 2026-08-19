@@ -22,10 +22,26 @@ from src.models.agent_action import AgentAction  # noqa: F401
 # Module access control (always imported — table exists regardless of feature flags)
 from src.modules.access import UserModuleAccess  # noqa: F401
 
-# pointsPal models — only imported when feature is enabled so Alembic autogenerate
-# only picks them up in pointsPal-enabled environments.
-import os as _os
-if _os.getenv('POINTSPAL_ENABLED', 'false').lower() == 'true':
+# pointsPal models — imported when the module is enabled, so that Alembic
+# autogenerate and db.create_all() both see them in exactly the environments that
+# serve pointsPal's routes.
+#
+# ASK THE MODULE, DO NOT RE-DERIVE THE FLAG. This line read
+# `_os.getenv('POINTSPAL_ENABLED', 'false')` and that default was the opposite of
+# `ModuleBase.is_enabled()`'s, which falls back to `default_enabled = True` because
+# pointsPal ships as part of core. On any instance that simply never set the
+# variable — the documented default for a self-hoster — the two readers disagreed:
+# the routes were registered and none of the eight tables were created, so
+# /api/v1/optimizer/alerts answered 500 `relation "optimizer_alerts" does not
+# exist` on the dashboard at login. Reported as palStack-io/finpal-core#122.
+#
+# It survived because `src/config.py` calls `load_dotenv()` and this repo's own
+# `.env` sets POINTSPAL_ENABLED=true, so the suite — including the test that
+# exists to prove create_all() builds these tables — never ran the default it
+# claimed to cover. `test_pointspal_in_core.py` now pins both readers to one
+# source of truth instead.
+from src.modules.pointspal.manifest import PointsPalModule as _PointsPalModule
+if _PointsPalModule().is_enabled():
     from src.modules.pointspal.models import (
         PointsProgram, PointsEarnCategory, PointsTransferPartner,
         PointspalSyncLog, UserCard, SimpleFinCardLink,

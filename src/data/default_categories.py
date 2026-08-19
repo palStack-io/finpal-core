@@ -6,281 +6,281 @@ Comprehensive category structure loaded on fresh install
 DEFAULT_CATEGORIES = {
     # Income Categories
     'Income': {
-        'icon': 'fa-money-bill-wave',
+        'icon': '💵',
         'color': '#10b981',  # Green
         'subcategories': [
-            {'name': 'Salary', 'icon': 'fa-briefcase', 'color': '#059669'},
-            {'name': 'Freelance', 'icon': 'fa-laptop-code', 'color': '#34d399'},
-            {'name': 'Business', 'icon': 'fa-store', 'color': '#6ee7b7'},
-            {'name': 'Investments', 'icon': 'fa-chart-line', 'color': '#a7f3d0'},
-            {'name': 'Dividends', 'icon': 'fa-coins', 'color': '#d1fae5'},
-            {'name': 'Interest', 'icon': 'fa-percent', 'color': '#10b981'},
-            {'name': 'Rental Income', 'icon': 'fa-home', 'color': '#059669'},
-            {'name': 'Gifts Received', 'icon': 'fa-gift', 'color': '#34d399'},
-            {'name': 'Refunds', 'icon': 'fa-undo', 'color': '#6ee7b7'},
-            {'name': 'Cashback', 'icon': 'fa-cash-register', 'color': '#a7f3d0'},
-            {'name': 'Other Income', 'icon': 'fa-plus-circle', 'color': '#d1fae5'},
+            {'name': 'Salary', 'icon': '💼', 'color': '#059669'},
+            {'name': 'Freelance', 'icon': '💻', 'color': '#34d399'},
+            {'name': 'Business', 'icon': '🏪', 'color': '#6ee7b7'},
+            {'name': 'Investments', 'icon': '📈', 'color': '#a7f3d0'},
+            {'name': 'Dividends', 'icon': '🪙', 'color': '#d1fae5'},
+            {'name': 'Interest', 'icon': '💹', 'color': '#10b981'},
+            {'name': 'Rental Income', 'icon': '🏠', 'color': '#059669'},
+            {'name': 'Gifts Received', 'icon': '🎁', 'color': '#34d399'},
+            {'name': 'Refunds', 'icon': '↩️', 'color': '#6ee7b7'},
+            {'name': 'Cashback', 'icon': '💰', 'color': '#a7f3d0'},
+            {'name': 'Other Income', 'icon': '➕', 'color': '#d1fae5'},
         ]
     },
 
     # Housing & Utilities
     'Housing': {
-        'icon': 'fa-home',
+        'icon': '🏠',
         'color': '#3b82f6',  # Blue
         'subcategories': [
-            {'name': 'Rent', 'icon': 'fa-building', 'color': '#2563eb'},
-            {'name': 'Mortgage', 'icon': 'fa-home', 'color': '#60a5fa'},
-            {'name': 'Property Tax', 'icon': 'fa-file-invoice-dollar', 'color': '#93c5fd'},
-            {'name': 'Home Insurance', 'icon': 'fa-shield-alt', 'color': '#dbeafe'},
-            {'name': 'HOA Fees', 'icon': 'fa-users', 'color': '#3b82f6'},
-            {'name': 'Electricity', 'icon': 'fa-bolt', 'color': '#2563eb'},
-            {'name': 'Water', 'icon': 'fa-tint', 'color': '#60a5fa'},
-            {'name': 'Gas', 'icon': 'fa-fire', 'color': '#93c5fd'},
-            {'name': 'Internet', 'icon': 'fa-wifi', 'color': '#dbeafe'},
-            {'name': 'Phone', 'icon': 'fa-phone', 'color': '#3b82f6'},
-            {'name': 'Cable/Streaming', 'icon': 'fa-tv', 'color': '#2563eb'},
-            {'name': 'Home Maintenance', 'icon': 'fa-tools', 'color': '#60a5fa'},
-            {'name': 'Furniture', 'icon': 'fa-couch', 'color': '#93c5fd'},
-            {'name': 'Home Decor', 'icon': 'fa-paint-brush', 'color': '#dbeafe'},
+            {'name': 'Rent', 'icon': '🏢', 'color': '#2563eb'},
+            {'name': 'Mortgage', 'icon': '🏠', 'color': '#60a5fa'},
+            {'name': 'Property Tax', 'icon': '🧾', 'color': '#93c5fd'},
+            {'name': 'Home Insurance', 'icon': '🛡️', 'color': '#dbeafe'},
+            {'name': 'HOA Fees', 'icon': '👥', 'color': '#3b82f6'},
+            {'name': 'Electricity', 'icon': '⚡', 'color': '#2563eb'},
+            {'name': 'Water', 'icon': '💧', 'color': '#60a5fa'},
+            {'name': 'Gas', 'icon': '🔥', 'color': '#93c5fd'},
+            {'name': 'Internet', 'icon': '📡', 'color': '#dbeafe'},
+            {'name': 'Phone', 'icon': '📞', 'color': '#3b82f6'},
+            {'name': 'Cable/Streaming', 'icon': '📺', 'color': '#2563eb'},
+            {'name': 'Home Maintenance', 'icon': '🔧', 'color': '#60a5fa'},
+            {'name': 'Furniture', 'icon': '🛋️', 'color': '#93c5fd'},
+            {'name': 'Home Decor', 'icon': '🎨', 'color': '#dbeafe'},
         ]
     },
 
     # Transportation
     'Transportation': {
-        'icon': 'fa-car',
+        'icon': '🚗',
         'color': '#f59e0b',  # Orange
         'subcategories': [
-            {'name': 'Gas/Fuel', 'icon': 'fa-gas-pump', 'color': '#d97706'},
-            {'name': 'Car Payment', 'icon': 'fa-car', 'color': '#fbbf24'},
-            {'name': 'Car Insurance', 'icon': 'fa-shield-alt', 'color': '#fcd34d'},
-            {'name': 'Car Maintenance', 'icon': 'fa-wrench', 'color': '#fde68a'},
-            {'name': 'Parking', 'icon': 'fa-parking', 'color': '#f59e0b'},
-            {'name': 'Public Transit', 'icon': 'fa-bus', 'color': '#d97706'},
-            {'name': 'Ride Share', 'icon': 'fa-taxi', 'color': '#fbbf24'},
-            {'name': 'Tolls', 'icon': 'fa-road', 'color': '#fcd34d'},
-            {'name': 'Vehicle Registration', 'icon': 'fa-id-card', 'color': '#fde68a'},
+            {'name': 'Gas/Fuel', 'icon': '⛽', 'color': '#d97706'},
+            {'name': 'Car Payment', 'icon': '🚗', 'color': '#fbbf24'},
+            {'name': 'Car Insurance', 'icon': '🛡️', 'color': '#fcd34d'},
+            {'name': 'Car Maintenance', 'icon': '🔧', 'color': '#fde68a'},
+            {'name': 'Parking', 'icon': '🅿️', 'color': '#f59e0b'},
+            {'name': 'Public Transit', 'icon': '🚌', 'color': '#d97706'},
+            {'name': 'Ride Share', 'icon': '🚕', 'color': '#fbbf24'},
+            {'name': 'Tolls', 'icon': '🛣️', 'color': '#fcd34d'},
+            {'name': 'Vehicle Registration', 'icon': '🪪', 'color': '#fde68a'},
         ]
     },
 
     # Food & Dining
     'Food & Dining': {
-        'icon': 'fa-utensils',
+        'icon': '🍽️',
         'color': '#ef4444',  # Red
         'subcategories': [
-            {'name': 'Groceries', 'icon': 'fa-shopping-cart', 'color': '#dc2626'},
-            {'name': 'Restaurants', 'icon': 'fa-utensils', 'color': '#f87171'},
-            {'name': 'Fast Food', 'icon': 'fa-hamburger', 'color': '#fca5a5'},
-            {'name': 'Coffee Shops', 'icon': 'fa-coffee', 'color': '#fecaca'},
-            {'name': 'Bars & Alcohol', 'icon': 'fa-wine-glass', 'color': '#ef4444'},
-            {'name': 'Food Delivery', 'icon': 'fa-motorcycle', 'color': '#dc2626'},
-            {'name': 'Meal Kits', 'icon': 'fa-box', 'color': '#f87171'},
+            {'name': 'Groceries', 'icon': '🛒', 'color': '#dc2626'},
+            {'name': 'Restaurants', 'icon': '🍽️', 'color': '#f87171'},
+            {'name': 'Fast Food', 'icon': '🍔', 'color': '#fca5a5'},
+            {'name': 'Coffee Shops', 'icon': '☕', 'color': '#fecaca'},
+            {'name': 'Bars & Alcohol', 'icon': '🍷', 'color': '#ef4444'},
+            {'name': 'Food Delivery', 'icon': '🏍️', 'color': '#dc2626'},
+            {'name': 'Meal Kits', 'icon': '📦', 'color': '#f87171'},
         ]
     },
 
     # Shopping
     'Shopping': {
-        'icon': 'fa-shopping-bag',
+        'icon': '🛍️',
         'color': '#ec4899',  # Pink
         'subcategories': [
-            {'name': 'Clothing', 'icon': 'fa-tshirt', 'color': '#db2777'},
-            {'name': 'Shoes', 'icon': 'fa-shoe-prints', 'color': '#f472b6'},
-            {'name': 'Accessories', 'icon': 'fa-watch', 'color': '#f9a8d4'},
-            {'name': 'Electronics', 'icon': 'fa-laptop', 'color': '#fbcfe8'},
-            {'name': 'Books', 'icon': 'fa-book', 'color': '#ec4899'},
-            {'name': 'Hobbies', 'icon': 'fa-palette', 'color': '#db2777'},
-            {'name': 'Gifts', 'icon': 'fa-gift', 'color': '#f472b6'},
-            {'name': 'Online Shopping', 'icon': 'fa-globe', 'color': '#f9a8d4'},
-            {'name': 'Office Supplies', 'icon': 'fa-pen', 'color': '#fbcfe8'},
+            {'name': 'Clothing', 'icon': '👕', 'color': '#db2777'},
+            {'name': 'Shoes', 'icon': '👟', 'color': '#f472b6'},
+            {'name': 'Accessories', 'icon': '⌚', 'color': '#f9a8d4'},
+            {'name': 'Electronics', 'icon': '💻', 'color': '#fbcfe8'},
+            {'name': 'Books', 'icon': '📚', 'color': '#ec4899'},
+            {'name': 'Hobbies', 'icon': '🎨', 'color': '#db2777'},
+            {'name': 'Gifts', 'icon': '🎁', 'color': '#f472b6'},
+            {'name': 'Online Shopping', 'icon': '🌍', 'color': '#f9a8d4'},
+            {'name': 'Office Supplies', 'icon': '🖊️', 'color': '#fbcfe8'},
         ]
     },
 
     # Health & Fitness
     'Health & Fitness': {
-        'icon': 'fa-heartbeat',
+        'icon': '💓',
         'color': '#06b6d4',  # Cyan
         'subcategories': [
-            {'name': 'Doctor Visits', 'icon': 'fa-user-md', 'color': '#0891b2'},
-            {'name': 'Dentist', 'icon': 'fa-tooth', 'color': '#22d3ee'},
-            {'name': 'Pharmacy', 'icon': 'fa-pills', 'color': '#67e8f9'},
-            {'name': 'Health Insurance', 'icon': 'fa-shield-alt', 'color': '#a5f3fc'},
-            {'name': 'Gym Membership', 'icon': 'fa-dumbbell', 'color': '#06b6d4'},
-            {'name': 'Fitness Classes', 'icon': 'fa-running', 'color': '#0891b2'},
-            {'name': 'Sports Equipment', 'icon': 'fa-basketball-ball', 'color': '#22d3ee'},
-            {'name': 'Wellness', 'icon': 'fa-spa', 'color': '#67e8f9'},
-            {'name': 'Vision Care', 'icon': 'fa-eye', 'color': '#a5f3fc'},
+            {'name': 'Doctor Visits', 'icon': '👨‍⚕️', 'color': '#0891b2'},
+            {'name': 'Dentist', 'icon': '🦷', 'color': '#22d3ee'},
+            {'name': 'Pharmacy', 'icon': '💊', 'color': '#67e8f9'},
+            {'name': 'Health Insurance', 'icon': '🛡️', 'color': '#a5f3fc'},
+            {'name': 'Gym Membership', 'icon': '🏋️', 'color': '#06b6d4'},
+            {'name': 'Fitness Classes', 'icon': '🏃', 'color': '#0891b2'},
+            {'name': 'Sports Equipment', 'icon': '🏀', 'color': '#22d3ee'},
+            {'name': 'Wellness', 'icon': '💆', 'color': '#67e8f9'},
+            {'name': 'Vision Care', 'icon': '👁️', 'color': '#a5f3fc'},
         ]
     },
 
     # Entertainment
     'Entertainment': {
-        'icon': 'fa-gamepad',
+        'icon': '🎮',
         'color': '#8b5cf6',  # Purple
         'subcategories': [
-            {'name': 'Movies', 'icon': 'fa-film', 'color': '#7c3aed'},
-            {'name': 'Concerts', 'icon': 'fa-music', 'color': '#a78bfa'},
-            {'name': 'Sports Events', 'icon': 'fa-ticket-alt', 'color': '#c4b5fd'},
-            {'name': 'Streaming Services', 'icon': 'fa-tv', 'color': '#ede9fe'},
-            {'name': 'Gaming', 'icon': 'fa-gamepad', 'color': '#8b5cf6'},
-            {'name': 'Hobbies', 'icon': 'fa-chess', 'color': '#7c3aed'},
-            {'name': 'Subscriptions', 'icon': 'fa-sync', 'color': '#a78bfa'},
-            {'name': 'Events', 'icon': 'fa-calendar-day', 'color': '#c4b5fd'},
+            {'name': 'Movies', 'icon': '🎬', 'color': '#7c3aed'},
+            {'name': 'Concerts', 'icon': '🎵', 'color': '#a78bfa'},
+            {'name': 'Sports Events', 'icon': '🎟️', 'color': '#c4b5fd'},
+            {'name': 'Streaming Services', 'icon': '📺', 'color': '#ede9fe'},
+            {'name': 'Gaming', 'icon': '🎮', 'color': '#8b5cf6'},
+            {'name': 'Hobbies', 'icon': '♟️', 'color': '#7c3aed'},
+            {'name': 'Subscriptions', 'icon': '🔄', 'color': '#a78bfa'},
+            {'name': 'Events', 'icon': '📅', 'color': '#c4b5fd'},
         ]
     },
 
     # Personal Care
     'Personal Care': {
-        'icon': 'fa-cut',
+        'icon': '✂️',
         'color': '#14b8a6',  # Teal
         'subcategories': [
-            {'name': 'Hair Care', 'icon': 'fa-cut', 'color': '#0d9488'},
-            {'name': 'Salon/Spa', 'icon': 'fa-spa', 'color': '#2dd4bf'},
-            {'name': 'Cosmetics', 'icon': 'fa-makeup', 'color': '#5eead4'},
-            {'name': 'Toiletries', 'icon': 'fa-pump-soap', 'color': '#99f6e4'},
-            {'name': 'Skincare', 'icon': 'fa-hand-sparkles', 'color': '#14b8a6'},
+            {'name': 'Hair Care', 'icon': '✂️', 'color': '#0d9488'},
+            {'name': 'Salon/Spa', 'icon': '💆', 'color': '#2dd4bf'},
+            {'name': 'Cosmetics', 'icon': '💄', 'color': '#5eead4'},
+            {'name': 'Toiletries', 'icon': '🧼', 'color': '#99f6e4'},
+            {'name': 'Skincare', 'icon': '✨', 'color': '#14b8a6'},
         ]
     },
 
     # Education
     'Education': {
-        'icon': 'fa-graduation-cap',
+        'icon': '🎓',
         'color': '#6366f1',  # Indigo
         'subcategories': [
-            {'name': 'Tuition', 'icon': 'fa-school', 'color': '#4f46e5'},
-            {'name': 'Books & Supplies', 'icon': 'fa-book-open', 'color': '#818cf8'},
-            {'name': 'Online Courses', 'icon': 'fa-laptop-code', 'color': '#a5b4fc'},
-            {'name': 'Student Loans', 'icon': 'fa-file-invoice-dollar', 'color': '#c7d2fe'},
-            {'name': 'Workshops', 'icon': 'fa-chalkboard-teacher', 'color': '#6366f1'},
+            {'name': 'Tuition', 'icon': '🏫', 'color': '#4f46e5'},
+            {'name': 'Books & Supplies', 'icon': '📖', 'color': '#818cf8'},
+            {'name': 'Online Courses', 'icon': '💻', 'color': '#a5b4fc'},
+            {'name': 'Student Loans', 'icon': '🧾', 'color': '#c7d2fe'},
+            {'name': 'Workshops', 'icon': '🧑‍🏫', 'color': '#6366f1'},
         ]
     },
 
     # Travel & Vacation
     'Travel': {
-        'icon': 'fa-plane',
+        'icon': '✈️',
         'color': '#f97316',  # Orange-Red
         'subcategories': [
-            {'name': 'Flights', 'icon': 'fa-plane-departure', 'color': '#ea580c'},
-            {'name': 'Hotels', 'icon': 'fa-hotel', 'color': '#fb923c'},
-            {'name': 'Car Rental', 'icon': 'fa-car', 'color': '#fdba74'},
-            {'name': 'Activities', 'icon': 'fa-hiking', 'color': '#fed7aa'},
-            {'name': 'Travel Insurance', 'icon': 'fa-shield-alt', 'color': '#f97316'},
-            {'name': 'Souvenirs', 'icon': 'fa-shopping-bag', 'color': '#ea580c'},
+            {'name': 'Flights', 'icon': '✈️', 'color': '#ea580c'},
+            {'name': 'Hotels', 'icon': '🏨', 'color': '#fb923c'},
+            {'name': 'Car Rental', 'icon': '🚗', 'color': '#fdba74'},
+            {'name': 'Activities', 'icon': '🥾', 'color': '#fed7aa'},
+            {'name': 'Travel Insurance', 'icon': '🛡️', 'color': '#f97316'},
+            {'name': 'Souvenirs', 'icon': '🛍️', 'color': '#ea580c'},
         ]
     },
 
     # Pets
     'Pets': {
-        'icon': 'fa-paw',
+        'icon': '🐾',
         'color': '#84cc16',  # Lime
         'subcategories': [
-            {'name': 'Pet Food', 'icon': 'fa-bone', 'color': '#65a30d'},
-            {'name': 'Veterinary', 'icon': 'fa-stethoscope', 'color': '#a3e635'},
-            {'name': 'Pet Supplies', 'icon': 'fa-paw', 'color': '#bef264'},
-            {'name': 'Grooming', 'icon': 'fa-cut', 'color': '#d9f99d'},
-            {'name': 'Pet Insurance', 'icon': 'fa-shield-alt', 'color': '#84cc16'},
+            {'name': 'Pet Food', 'icon': '🦴', 'color': '#65a30d'},
+            {'name': 'Veterinary', 'icon': '🩺', 'color': '#a3e635'},
+            {'name': 'Pet Supplies', 'icon': '🐾', 'color': '#bef264'},
+            {'name': 'Grooming', 'icon': '✂️', 'color': '#d9f99d'},
+            {'name': 'Pet Insurance', 'icon': '🛡️', 'color': '#84cc16'},
         ]
     },
 
     # Family & Kids
     'Family & Kids': {
-        'icon': 'fa-baby',
+        'icon': '👶',
         'color': '#fbbf24',  # Amber
         'subcategories': [
-            {'name': 'Childcare', 'icon': 'fa-child', 'color': '#f59e0b'},
-            {'name': 'Diapers & Baby Care', 'icon': 'fa-baby-carriage', 'color': '#fcd34d'},
-            {'name': 'Toys', 'icon': 'fa-puzzle-piece', 'color': '#fde68a'},
-            {'name': 'Child Activities', 'icon': 'fa-futbol', 'color': '#fbbf24'},
-            {'name': 'Allowance', 'icon': 'fa-hand-holding-usd', 'color': '#f59e0b'},
+            {'name': 'Childcare', 'icon': '🧒', 'color': '#f59e0b'},
+            {'name': 'Diapers & Baby Care', 'icon': '🍼', 'color': '#fcd34d'},
+            {'name': 'Toys', 'icon': '🧩', 'color': '#fde68a'},
+            {'name': 'Child Activities', 'icon': '⚽', 'color': '#fbbf24'},
+            {'name': 'Allowance', 'icon': '🤲', 'color': '#f59e0b'},
         ]
     },
 
     # Debt & Loans
     'Debt & Loans': {
-        'icon': 'fa-file-invoice-dollar',
+        'icon': '🧾',
         'color': '#dc2626',  # Dark Red
         'subcategories': [
-            {'name': 'Credit Card Payment', 'icon': 'fa-credit-card', 'color': '#b91c1c'},
-            {'name': 'Student Loan', 'icon': 'fa-graduation-cap', 'color': '#dc2626'},
-            {'name': 'Personal Loan', 'icon': 'fa-hand-holding-usd', 'color': '#ef4444'},
-            {'name': 'Car Loan', 'icon': 'fa-car', 'color': '#f87171'},
-            {'name': 'Other Debt', 'icon': 'fa-file-invoice', 'color': '#fca5a5'},
+            {'name': 'Credit Card Payment', 'icon': '💳', 'color': '#b91c1c'},
+            {'name': 'Student Loan', 'icon': '🎓', 'color': '#dc2626'},
+            {'name': 'Personal Loan', 'icon': '🤲', 'color': '#ef4444'},
+            {'name': 'Car Loan', 'icon': '🚗', 'color': '#f87171'},
+            {'name': 'Other Debt', 'icon': '📄', 'color': '#fca5a5'},
         ]
     },
 
     # Savings & Investments
     'Savings & Investments': {
-        'icon': 'fa-piggy-bank',
+        'icon': '🐷',
         'color': '#059669',  # Emerald
         'subcategories': [
-            {'name': 'Emergency Fund', 'icon': 'fa-life-ring', 'color': '#047857'},
-            {'name': 'Retirement', 'icon': 'fa-umbrella-beach', 'color': '#10b981'},
-            {'name': 'Stocks', 'icon': 'fa-chart-line', 'color': '#34d399'},
-            {'name': 'Crypto', 'icon': 'fa-bitcoin', 'color': '#6ee7b7'},
-            {'name': 'Real Estate', 'icon': 'fa-building', 'color': '#a7f3d0'},
-            {'name': 'Other Investments', 'icon': 'fa-coins', 'color': '#d1fae5'},
+            {'name': 'Emergency Fund', 'icon': '🛟', 'color': '#047857'},
+            {'name': 'Retirement', 'icon': '🏖️', 'color': '#10b981'},
+            {'name': 'Stocks', 'icon': '📈', 'color': '#34d399'},
+            {'name': 'Crypto', 'icon': '₿', 'color': '#6ee7b7'},
+            {'name': 'Real Estate', 'icon': '🏢', 'color': '#a7f3d0'},
+            {'name': 'Other Investments', 'icon': '🪙', 'color': '#d1fae5'},
         ]
     },
 
     # Insurance
     'Insurance': {
-        'icon': 'fa-shield-alt',
+        'icon': '🛡️',
         'color': '#0ea5e9',  # Sky Blue
         'subcategories': [
-            {'name': 'Life Insurance', 'icon': 'fa-heart', 'color': '#0284c7'},
-            {'name': 'Health Insurance', 'icon': 'fa-heartbeat', 'color': '#38bdf8'},
-            {'name': 'Auto Insurance', 'icon': 'fa-car', 'color': '#7dd3fc'},
-            {'name': 'Home Insurance', 'icon': 'fa-home', 'color': '#bae6fd'},
-            {'name': 'Disability Insurance', 'icon': 'fa-wheelchair', 'color': '#0ea5e9'},
+            {'name': 'Life Insurance', 'icon': '❤️', 'color': '#0284c7'},
+            {'name': 'Health Insurance', 'icon': '💓', 'color': '#38bdf8'},
+            {'name': 'Auto Insurance', 'icon': '🚗', 'color': '#7dd3fc'},
+            {'name': 'Home Insurance', 'icon': '🏠', 'color': '#bae6fd'},
+            {'name': 'Disability Insurance', 'icon': '♿', 'color': '#0ea5e9'},
         ]
     },
 
     # Taxes
     'Taxes': {
-        'icon': 'fa-receipt',
+        'icon': '🧾',
         'color': '#78716c',  # Stone
         'subcategories': [
-            {'name': 'Federal Tax', 'icon': 'fa-landmark', 'color': '#57534e'},
-            {'name': 'State Tax', 'icon': 'fa-map-marker-alt', 'color': '#78716c'},
-            {'name': 'Property Tax', 'icon': 'fa-home', 'color': '#a8a29e'},
-            {'name': 'Sales Tax', 'icon': 'fa-shopping-cart', 'color': '#d6d3d1'},
+            {'name': 'Federal Tax', 'icon': '🏛️', 'color': '#57534e'},
+            {'name': 'State Tax', 'icon': '📍', 'color': '#78716c'},
+            {'name': 'Property Tax', 'icon': '🏠', 'color': '#a8a29e'},
+            {'name': 'Sales Tax', 'icon': '🛒', 'color': '#d6d3d1'},
         ]
     },
 
     # Charity & Donations
     'Charity': {
-        'icon': 'fa-hands-helping',
+        'icon': '🤝',
         'color': '#d946ef',  # Fuchsia
         'subcategories': [
-            {'name': 'Religious', 'icon': 'fa-pray', 'color': '#c026d3'},
-            {'name': 'Non-Profit', 'icon': 'fa-hand-holding-heart', 'color': '#e879f9'},
-            {'name': 'Gifts', 'icon': 'fa-gift', 'color': '#f0abfc'},
-            {'name': 'Crowdfunding', 'icon': 'fa-users', 'color': '#fae8ff'},
+            {'name': 'Religious', 'icon': '🙏', 'color': '#c026d3'},
+            {'name': 'Non-Profit', 'icon': '❤️', 'color': '#e879f9'},
+            {'name': 'Gifts', 'icon': '🎁', 'color': '#f0abfc'},
+            {'name': 'Crowdfunding', 'icon': '👥', 'color': '#fae8ff'},
         ]
     },
 
     # Business Expenses
     'Business': {
-        'icon': 'fa-briefcase',
+        'icon': '💼',
         'color': '#64748b',  # Slate
         'subcategories': [
-            {'name': 'Office Rent', 'icon': 'fa-building', 'color': '#475569'},
-            {'name': 'Equipment', 'icon': 'fa-laptop', 'color': '#64748b'},
-            {'name': 'Software & Tools', 'icon': 'fa-tools', 'color': '#94a3b8'},
-            {'name': 'Marketing', 'icon': 'fa-bullhorn', 'color': '#cbd5e1'},
-            {'name': 'Professional Services', 'icon': 'fa-user-tie', 'color': '#e2e8f0'},
-            {'name': 'Business Travel', 'icon': 'fa-plane', 'color': '#64748b'},
-            {'name': 'Meals & Entertainment', 'icon': 'fa-utensils', 'color': '#475569'},
+            {'name': 'Office Rent', 'icon': '🏢', 'color': '#475569'},
+            {'name': 'Equipment', 'icon': '💻', 'color': '#64748b'},
+            {'name': 'Software & Tools', 'icon': '🔧', 'color': '#94a3b8'},
+            {'name': 'Marketing', 'icon': '📣', 'color': '#cbd5e1'},
+            {'name': 'Professional Services', 'icon': '👔', 'color': '#e2e8f0'},
+            {'name': 'Business Travel', 'icon': '✈️', 'color': '#64748b'},
+            {'name': 'Meals & Entertainment', 'icon': '🍽️', 'color': '#475569'},
         ]
     },
 
     # Miscellaneous
     'Miscellaneous': {
-        'icon': 'fa-ellipsis-h',
+        'icon': '📦',
         'color': '#9ca3af',  # Gray
         'subcategories': [
-            {'name': 'Bank Fees', 'icon': 'fa-university', 'color': '#6b7280'},
-            {'name': 'ATM Fees', 'icon': 'fa-money-check-alt', 'color': '#9ca3af'},
-            {'name': 'Late Fees', 'icon': 'fa-exclamation-triangle', 'color': '#d1d5db'},
-            {'name': 'Other', 'icon': 'fa-question', 'color': '#e5e7eb'},
+            {'name': 'Bank Fees', 'icon': '🏛️', 'color': '#6b7280'},
+            {'name': 'ATM Fees', 'icon': '💳', 'color': '#9ca3af'},
+            {'name': 'Late Fees', 'icon': '⚠️', 'color': '#d1d5db'},
+            {'name': 'Other', 'icon': '❓', 'color': '#e5e7eb'},
         ]
     },
 }

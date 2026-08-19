@@ -88,7 +88,7 @@ def headers(me, auth_headers):
 
 def _make_category(owner, name, **kwargs):
     category = Category(name=name, user_id=owner.id,
-                        icon=kwargs.pop('icon', 'fa-tag'),
+                        icon=kwargs.pop('icon', '🏷️'),  # emoji: web-ui renders this value as text
                         color=kwargs.pop('color', '#6c757d'), **kwargs)
     _db.session.add(category)
     _db.session.commit()
@@ -110,7 +110,7 @@ def test_pin_get_one_category_returns_a_bare_six_field_dict(
     assert resp.get_json() == {
         'id': category.id,
         'name': 'Groceries',
-        'icon': 'fa-tag',
+        'icon': '🏷️',
         'color': '#112233',
         'parent_id': None,
         'is_system': False,

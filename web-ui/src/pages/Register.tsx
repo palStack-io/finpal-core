@@ -1,3 +1,32 @@
+/*
+ * PRE-AUTH BRAND PALETTE. Four things about the colours in this file:
+ *
+ * 1. They are HARDCODED HEX, and that is deliberate. Every pre-auth page — Landing, Login,
+ *    Register, ForgotPassword, ResetPassword — is dark in BOTH themes and uses zero CSS
+ *    variables. `ThemeProvider` does wrap these routes, so a `var(--…)` would resolve
+ *    here; it would also resolve to LIGHT values in light mode and put near-white text on
+ *    a dark gradient. Making these pages theme-aware is a design decision, not a colour
+ *    fix, and it is not this change.
+ *
+ * 2. The green was NOT a finPal green. It was #10b981 / #059669 — emerald-500/600, which
+ *    is not a brand value and not a token. finPal's is #15803d, with #166534 dark and
+ *    #22c55e glow.
+ *
+ * 3. The page was slate. #0f172a → #1e293b is the same leftover navy that made dark mode
+ *    read as two designs stacked (see darkSurfacesAreNotBlue.test.ts); the gradient is now
+ *    --kt-wash → --kt-card, the palette the rest of dark mode resolves through.
+ *
+ * 4. THE OLD GREEN ALSO FAILED WCAG AA, WHICH IS WHY THE ROLES ARE SPLIT. White on
+ *    #10b981 is 2.54:1 — and that was the primary call to action on this page. The brand
+ *    green fixes it: white on #15803d is 5.02:1 and on #166534 is 7.13:1. But #15803d is
+ *    only 3.64:1 against the new page background, so it is wrong for TEXT. Hence two
+ *    values doing two jobs, not one green used everywhere:
+ *
+ *      button background   #15803d, hover #166534   (white on it: 5.02 / 7.13)
+ *      accent text/icon/border  #22c55e             (on the page: 8.02:1)
+ *
+ *    Measured, not eyeballed. Pinned by authPagesUseBrandColours.test.ts.
+ */
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -119,7 +148,7 @@ export const Register: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

@@ -280,3 +280,23 @@ def member_read_scope(user_id, member_id):
     if member_id is None:
         return scope
     return [member_id] if member_id in scope else None
+
+def default_currency_for(user_id, fallback='USD'):
+    """The currency a new row should take when the client did not name one.
+
+    #126: both `POST /accounts` and `build_transaction` fell back to the literal
+    'USD' here, which overrode a profile that said something else — so a user whose
+    default was EUR had to set it by hand on every account and every transaction.
+    'USD' survives only as the last resort for a user row that has no preference
+    recorded at all, which is what `register()` still writes.
+
+    Lives beside the other user-scoped predicates rather than in either caller, so the
+    two cannot drift; that duplication is what made the account colour defect (#123)
+    land in two forms at once.
+    """
+    from src.models.user import User
+
+    user = User.query.filter_by(id=user_id).first()
+    if user is None:
+        return fallback
+    return getattr(user, 'default_currency_code', None) or fallback

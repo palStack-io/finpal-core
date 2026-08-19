@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, DollarSign, FileText, AlertCircle, Check, Palette } from 'lucide-react';
+import { Wallet, FileText, AlertCircle, Check, Palette } from 'lucide-react';
 import { accountService } from '../../services/accountService';
 import { useToast } from '../../contexts/ToastContext';
 import { teamService } from '../../services/teamService';
@@ -7,6 +7,8 @@ import { TeamMember } from '../../types/team';
 import { formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
+import { ACCOUNT_COLORS, getDefaultColorForType } from '../../constants/accountColors';
+import { getBranding, type Currency } from '../../config/branding';
 
 interface EditAccountFormProps {
   account: any;
@@ -14,27 +16,6 @@ interface EditAccountFormProps {
   onCancel: () => void;
 }
 
-const ACCOUNT_COLORS = [
-  { value: 'var(--accent-blue)', label: 'Blue' },
-  { value: 'var(--brand-green-glow)', label: 'Green' },
-  { value: 'var(--accent-red)', label: 'Red' },
-  { value: '#8b5cf6', label: 'Purple' },
-  { value: 'var(--accent-yellow)', label: 'Orange' },
-  { value: '#ec4899', label: 'Pink' },
-  { value: '#06b6d4', label: 'Cyan' },
-  { value: '#eab308', label: 'Yellow' },
-];
-
-const getDefaultColorForType = (type: string): string => {
-  switch(type) {
-    case 'checking': return 'var(--accent-blue)';
-    case 'savings': return 'var(--brand-green-glow)';
-    case 'credit': return 'var(--accent-red)';
-    case 'investment': return '#8b5cf6';
-    case 'cash': return 'var(--accent-yellow)';
-    default: return 'var(--accent-blue)';
-  }
-};
 
 export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuccess, onCancel }) => {
   const { showToast } = useToast();
@@ -206,7 +187,10 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       {/* Balance */}
       <div>
         <label style={labelStyle}>
-          <DollarSign size={16} style={iconInlineStyle} />
+          {/* The account's own currency symbol rather than a literal $ — see #126. */}
+          <span style={{ ...iconInlineStyle, fontWeight: 600 }} aria-hidden="true">
+            {getBranding((formData.currency as Currency) || 'USD').currencySymbol}
+          </span>
           Balance *
         </label>
         <input

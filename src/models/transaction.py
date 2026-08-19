@@ -16,7 +16,14 @@ class Expense(db.Model):
     card_used = db.Column(db.String(150), nullable=False)
     split_method = db.Column(db.String(20), nullable=False)  # 'equal', 'custom', 'percentage'
     split_value = db.Column(db.Numeric(18, 2))  # deprecated - kept for backward compatibility
-    paid_by = db.Column(db.String(50), nullable=False)
+    # 120, matching `User.id` — this holds a user id, which is an email address, and
+    # `validate_paid_by` refuses anything that is not a real user. It was String(50),
+    # narrower than the ids it stores, so a user whose email exceeded 50 characters
+    # could not be recorded as the payer: on Postgres the insert raised
+    # StringDataRightTruncation, and on SQLite it was silently accepted and over-long.
+    # Widened rather than validated down to 50 — see the note on TransactionInput.paid_by.
+    # Migration: 8f2c1a9d4e7b_widen_expenses_paid_by.py
+    paid_by = db.Column(db.String(120), nullable=False)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
     split_with = db.Column(db.String(500), nullable=True)  # Comma-separated list of user IDs

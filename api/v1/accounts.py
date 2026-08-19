@@ -15,6 +15,7 @@ from datetime import datetime
 import logging
 from src.models.personal_access_token import SCOPE_READ
 from src.utils.api_auth import api_auth_required
+from src.utils.household import default_currency_for
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,9 @@ class AccountList(Resource):
             account_type=validated['account_type'],
             institution=validated.get('institution', ''),
             balance=validated.get('balance', 0),
-            currency_code=validated.get('currency_code', 'USD'),
+            # #126: was `'USD'`, which ignored the profile default.
+            currency_code=validated.get('currency_code')
+            or default_currency_for(current_user_id),
             color=validated.get('color'),
             owner_id=validated.get('owner_id'),
         )
@@ -248,6 +251,10 @@ class AccountDetail(Resource):
             }, 200
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('AccountDetail.put failed')
             db.session.rollback()
             return {
                 'success': False,

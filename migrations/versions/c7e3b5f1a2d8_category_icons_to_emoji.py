@@ -1,10 +1,41 @@
+"""convert FontAwesome category icons to emoji
+
+web-ui renders `categories.icon` as text, which is correct for an emoji and prints a
+class name for anything else. `Category.icon` defaulted to "fa-tag" and every one of the
+147 icons in src/data/default_categories.py was a FontAwesome name, so a fresh install
+seeded a category tree that displayed "fa-home", "fa-money-bill-wave" and so on as
+literal text. FontAwesome has never been a dependency of this project.
+
+The defaults and the seed data are emoji as of this change; this migration is for rows
+that already exist. src/data/convert_icons_to_emoji.py was written for exactly this and
+never applied — its __main__ printed a message and nothing else.
+
+THE MAP IS COPIED IN RATHER THAN IMPORTED. A migration has to keep doing the same thing
+to the same database a year from now, and importing application code makes its behaviour
+depend on a file that is free to change. The copy is generated from ICON_MAP.
+
+Unmapped `fa-*` values fall back to 📁 — the same fallback convert_icon() uses, and the
+same one web-ui's categoryIcon() applies at render time for anyone who never runs this.
+
+Revision ID: c7e3b5f1a2d8
+Revises: 8f2c1a9d4e7b
+Create Date: 2026-08-19
+
 """
-Convert FontAwesome icon names to emoji equivalents
-Run this to update default_categories.py with emoji icons
-"""
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision = 'c7e3b5f1a2d8'
+down_revision = '8f2c1a9d4e7b'
+branch_labels = None
+depends_on = None
+
+
+FALLBACK = '\U0001F4C1'  # 📁
 
 ICON_MAP = {
-    # Income & Money
     'fa-money-bill-wave': '💵',
     'fa-briefcase': '💼',
     'fa-laptop-code': '💻',
@@ -17,8 +48,6 @@ ICON_MAP = {
     'fa-undo': '↩️',
     'fa-cash-register': '💰',
     'fa-plus-circle': '➕',
-
-    # Housing
     'fa-building': '🏢',
     'fa-file-invoice-dollar': '🧾',
     'fa-shield-alt': '🛡️',
@@ -32,8 +61,6 @@ ICON_MAP = {
     'fa-tools': '🔧',
     'fa-couch': '🛋️',
     'fa-paint-brush': '🎨',
-
-    # Transportation
     'fa-car': '🚗',
     'fa-gas-pump': '⛽',
     'fa-wrench': '🔧',
@@ -42,8 +69,6 @@ ICON_MAP = {
     'fa-taxi': '🚕',
     'fa-road': '🛣️',
     'fa-id-card': '🪪',
-
-    # Food
     'fa-utensils': '🍽️',
     'fa-shopping-cart': '🛒',
     'fa-hamburger': '🍔',
@@ -51,8 +76,6 @@ ICON_MAP = {
     'fa-wine-glass': '🍷',
     'fa-motorcycle': '🏍️',
     'fa-box': '📦',
-
-    # Shopping
     'fa-shopping-bag': '🛍️',
     'fa-tshirt': '👕',
     'fa-mobile-alt': '📱',
@@ -61,65 +84,43 @@ ICON_MAP = {
     'fa-dumbbell': '🏋️',
     'fa-spa': '💆',
     'fa-paw': '🐾',
-
-    # Entertainment
     'fa-film': '🎬',
     'fa-music': '🎵',
     'fa-gamepad': '🎮',
     'fa-football-ball': '⚽',
     'fa-palette': '🎨',
     'fa-camera': '📷',
-
-    # Healthcare
     'fa-hospital': '🏥',
     'fa-pills': '💊',
-    'fa-user-md': '👨‍⚕️',
+    'fa-user-md': '👨\u200d⚕️',
     'fa-tooth': '🦷',
     'fa-eye': '👁️',
     'fa-heartbeat': '💓',
-
-    # Fitness
     'fa-running': '🏃',
     'fa-swimming-pool': '🏊',
     'fa-bicycle': '🚴',
-
-    # Travel
     'fa-plane': '✈️',
     'fa-hotel': '🏨',
     'fa-suitcase': '🧳',
     'fa-train': '🚆',
-
-    # Education
     'fa-graduation-cap': '🎓',
     'fa-school': '🏫',
     'fa-pencil-alt': '✏️',
-
-    # Bills & Fees
     'fa-file-invoice': '📄',
     'fa-credit-card': '💳',
     'fa-university': '🏛️',
     'fa-balance-scale': '⚖️',
-
-    # Personal Care
     'fa-cut': '✂️',
     'fa-soap': '🧼',
     'fa-hand-sparkles': '✨',
-
-    # Pet Care
     'fa-dog': '🐕',
     'fa-cat': '🐈',
-
-    # Home & Garden
     'fa-seedling': '🌱',
     'fa-leaf': '🍃',
     'fa-tree': '🌳',
-
-    # Charity
     'fa-hand-holding-heart': '❤️',
     'fa-donate': '🤲',
     'fa-hands-helping': '🤝',
-
-    # Business
     'fa-chart-pie': '📊',
     'fa-file-alt': '📝',
     'fa-envelope': '✉️',
@@ -127,20 +128,12 @@ ICON_MAP = {
     'fa-bullhorn': '📣',
     'fa-shipping-fast': '📮',
     'fa-handshake': '🤝',
-
-    # Investments
     'fa-coins-stacked': '💰',
     'fa-piggy-bank': '🐷',
     'fa-dollar-sign': '💵',
     'fa-wallet': '👛',
     'fa-landmark': '🏛️',
     'fa-bitcoin-sign': '₿',
-
-    # ── Added 2026-08-19 while actually applying this map ────────────────────
-    # 37 icons used by default_categories.py had no entry here, so a conversion
-    # would have collapsed them all onto the 📁 fallback and made a third of the
-    # category tree look identical. The map is only useful if it covers the data
-    # it is pointed at — checked with a set difference, not by eye.
     'fa-baby': '👶',
     'fa-baby-carriage': '🍼',
     'fa-basketball-ball': '🏀',
@@ -148,7 +141,7 @@ ICON_MAP = {
     'fa-bone': '🦴',
     'fa-book-open': '📖',
     'fa-calendar-day': '📅',
-    'fa-chalkboard-teacher': '🧑‍🏫',
+    'fa-chalkboard-teacher': '🧑\u200d🏫',
     'fa-chess': '♟️',
     'fa-child': '🧒',
     'fa-ellipsis-h': '📦',
@@ -178,16 +171,38 @@ ICON_MAP = {
     'fa-user-tie': '👔',
     'fa-watch': '⌚',
     'fa-wheelchair': '♿',
-
-    # Default fallback
     'fa-tag': '🏷️',
     'fa-folder': '📁',
 }
 
-def convert_icon(fa_icon):
-    """Convert FontAwesome icon name to emoji"""
-    return ICON_MAP.get(fa_icon, '📁')  # Default to folder emoji
 
-if __name__ == '__main__':
-    print("Icon conversion map ready!")
-    print(f"Total icons mapped: {len(ICON_MAP)}")
+def _convert(table):
+    """Rewrite every `fa-*` icon in `table` to its emoji. Returns rows changed."""
+    conn = op.get_bind()
+    rows = conn.execute(
+        sa.text(f'SELECT id, icon FROM {table} WHERE icon LIKE :p'), {'p': 'fa-%'}
+    ).fetchall()
+
+    changed = 0
+    for row_id, icon in rows:
+        emoji = ICON_MAP.get((icon or '').strip(), FALLBACK)
+        conn.execute(
+            sa.text(f'UPDATE {table} SET icon = :i WHERE id = :id'),
+            {'i': emoji, 'id': row_id},
+        )
+        changed += 1
+    return changed
+
+
+def upgrade():
+    # `tags` carries no icon column; only categories store one.
+    _convert('categories')
+
+
+def downgrade():
+    # Not reversible, and saying so is better than pretending. The FontAwesome name a
+    # given emoji came from is not recoverable: the map is many-to-one (fa-wrench and
+    # fa-tools are both 🔧, fa-handshake and fa-hands-helping are both 🤝), and an icon
+    # the user has since chosen themselves is indistinguishable from a converted one.
+    # Nothing downstream reads the old form, so there is nothing to restore it for.
+    pass

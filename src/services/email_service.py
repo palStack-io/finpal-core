@@ -86,11 +86,11 @@ class EmailService:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0E1711;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="padding: 40px 20px;">
-                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #16241A 0%, #0E1711 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
@@ -137,9 +137,9 @@ class EmailService:
                                 </tr>
                             </table>
 
-                            <p style="color: #64748b; font-size: 13px; margin: 24px 0 0; text-align: center;">
+                            <p style="color: #9CB3A3; font-size: 13px; margin: 24px 0 0; text-align: center;">
                                 Or copy and paste this link into your browser:<br>
-                                <a href="{invite_link}" style="color: #3b82f6; word-break: break-all;">{invite_link}</a>
+                                <a href="{invite_link}" style="color: #22c55e; word-break: break-all;">{invite_link}</a>
                             </p>
                         </td>
                     </tr>
@@ -147,7 +147,7 @@ class EmailService:
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                            <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
                                 This invitation was sent to {to_email}<br>
                                 If you don't want to join this group, you can safely ignore this email.
                             </p>
@@ -159,7 +159,7 @@ class EmailService:
                 <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
                     <tr>
                         <td style="text-align: center;">
-                            <p style="color: #475569; font-size: 12px; margin: 0;">
+                            <p style="color: #7E9488; font-size: 12px; margin: 0;">
                                 © 2026 finPal
                             </p>
                         </td>
@@ -211,11 +211,11 @@ If you don't want to join this group, you can safely ignore this email.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0E1711;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="padding: 40px 20px;">
-                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #16241A 0%, #0E1711 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
@@ -276,8 +276,8 @@ If you don't want to join this group, you can safely ignore this email.
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
-                                Need help getting started? Check out our <a href="#" style="color: #3b82f6;">guides</a> or <a href="#" style="color: #3b82f6;">contact support</a>.
+                            <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                                Need help getting started? Check out our <a href="#" style="color: #22c55e;">guides</a> or <a href="#" style="color: #22c55e;">contact support</a>.
                             </p>
                         </td>
                     </tr>
@@ -286,7 +286,7 @@ If you don't want to join this group, you can safely ignore this email.
                 <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
                     <tr>
                         <td style="text-align: center;">
-                            <p style="color: #475569; font-size: 12px; margin: 0;">
+                            <p style="color: #7E9488; font-size: 12px; margin: 0;">
                                 © 2026 finPal
                             </p>
                         </td>
@@ -338,15 +338,15 @@ Need help? Check out our guides or contact support.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0E1711;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="padding: 40px 20px;">
-                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #16241A 0%, #0E1711 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
-                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
                                 <span style="font-size: 32px;">✉️</span>
                             </div>
                             <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
@@ -369,21 +369,21 @@ Need help? Check out our guides or contact support.
                             <table role="presentation" style="width: 100%; margin: 0 0 24px;">
                                 <tr>
                                     <td style="text-align: center;">
-                                        <a href="{verification_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                        <a href="{verification_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                                             Verify Email Address
                                         </a>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="color: #64748b; font-size: 13px; margin: 0 0 16px; text-align: center;">
+                            <p style="color: #9CB3A3; font-size: 13px; margin: 0 0 16px; text-align: center;">
                                 Or copy and paste this link into your browser:<br>
-                                <a href="{verification_link}" style="color: #3b82f6; word-break: break-all;">{verification_link}</a>
+                                <a href="{verification_link}" style="color: #22c55e; word-break: break-all;">{verification_link}</a>
                             </p>
 
                             <!-- Info Box -->
-                            <div style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; padding: 16px; margin: 24px 0;">
-                                <p style="color: #3b82f6; font-size: 14px; font-weight: 600; margin: 0 0 8px;">
+                            <div style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 16px; margin: 24px 0;">
+                                <p style="color: #22c55e; font-size: 14px; font-weight: 600; margin: 0 0 8px;">
                                     ℹ️ Why verify?
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 13px; margin: 0; line-height: 1.5;">
@@ -391,7 +391,7 @@ Need help? Check out our guides or contact support.
                                 </p>
                             </div>
 
-                            <p style="color: #64748b; font-size: 13px; margin: 24px 0 0; text-align: center; line-height: 1.5;">
+                            <p style="color: #9CB3A3; font-size: 13px; margin: 24px 0 0; text-align: center; line-height: 1.5;">
                                 This link will expire in 24 hours. If you didn't sign up for finPal, you can safely ignore this email.
                             </p>
                         </td>
@@ -400,8 +400,8 @@ Need help? Check out our guides or contact support.
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
-                                Having trouble? <a href="#" style="color: #3b82f6;">Contact support</a>
+                            <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                                Having trouble? <a href="#" style="color: #22c55e;">Contact support</a>
                             </p>
                         </td>
                     </tr>
@@ -410,7 +410,7 @@ Need help? Check out our guides or contact support.
                 <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
                     <tr>
                         <td style="text-align: center;">
-                            <p style="color: #475569; font-size: 12px; margin: 0;">
+                            <p style="color: #7E9488; font-size: 12px; margin: 0;">
                                 © 2026 finPal
                             </p>
                         </td>
@@ -461,11 +461,11 @@ Having trouble? Contact support.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0E1711;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="padding: 40px 20px;">
-                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #16241A 0%, #0E1711 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
@@ -499,9 +499,9 @@ Having trouble? Contact support.
                                 </tr>
                             </table>
 
-                            <p style="color: #64748b; font-size: 13px; margin: 0 0 16px; text-align: center;">
+                            <p style="color: #9CB3A3; font-size: 13px; margin: 0 0 16px; text-align: center;">
                                 Or copy and paste this link into your browser:<br>
-                                <a href="{reset_link}" style="color: #3b82f6; word-break: break-all;">{reset_link}</a>
+                                <a href="{reset_link}" style="color: #22c55e; word-break: break-all;">{reset_link}</a>
                             </p>
 
                             <!-- Security Notice -->
@@ -519,7 +519,7 @@ Having trouble? Contact support.
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                            <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
                                 For security reasons, we never send your password via email.
                             </p>
                         </td>
@@ -529,7 +529,7 @@ Having trouble? Contact support.
                 <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
                     <tr>
                         <td style="text-align: center;">
-                            <p style="color: #475569; font-size: 12px; margin: 0;">
+                            <p style="color: #7E9488; font-size: 12px; margin: 0;">
                                 © 2026 finPal
                             </p>
                         </td>
@@ -583,6 +583,19 @@ For security reasons, we never send your password via email.
         different actions from the reader — a guessed mapping means "check the
         columns landed in the right fields", while failed rows mean "some data did
         not arrive at all".
+
+        *** THIS TEMPLATE IS A BARE FRAGMENT AND ITS COLOURS FOLLOW DIFFERENT RULES.
+        There is no <html>, no <body> and no surface of its own, so it renders on
+        whatever background the mail client supplies — in practice white. The other six
+        templates paint their own dark card, and their muted text is #9CB3A3 (7.22:1 on
+        that card, 2.24:1 on white). A sweep that set the muted colour across the whole
+        file therefore made THIS one unreadable, which is why the value here is #56685D:
+        5.94:1 on white, and the same --kt-soft the light theme uses. Caught by
+        test_email_templates_are_on_brand.py, which measures each template against the
+        surface it actually has rather than assuming one background for the file. ***
+
+        It also carries no brand colour at all, deliberately left alone: giving it the
+        header, badge and card the others have is a redesign, not a colour fix.
         """
         reasons = []
         if guessed_mapping:
@@ -606,7 +619,7 @@ For security reasons, we never send your password via email.
         <p><a href="{review_link}">Review this import</a></p>
         <p>If it looks wrong you can undo the whole batch from that screen, and
            nothing else in your account is affected.</p>
-        <p style="color:#6b7280;font-size:13px">You are getting this because an
+        <p style="color:#56685D;font-size:13px">You are getting this because an
            automatic import needed attention. finPal does not email you about
            imports that go through cleanly.</p>
         """
@@ -645,15 +658,15 @@ For security reasons, we never send your password via email.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0E1711;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="padding: 40px 20px;">
-                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #16241A 0%, #0E1711 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
-                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
                                 <span style="font-size: 32px;">📊</span>
                             </div>
                             <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 28px; font-weight: 700;">
@@ -725,7 +738,7 @@ For security reasons, we never send your password via email.
                             <table role="presentation" style="width: 100%;">
                                 <tr>
                                     <td style="text-align: center;">
-                                        <a href="{report_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                        <a href="{report_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                                             View Full Report
                                         </a>
                                     </td>
@@ -737,8 +750,8 @@ For security reasons, we never send your password via email.
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
-                                Want to change your report preferences? Visit <a href="#" style="color: #3b82f6;">Settings</a>
+                            <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                                Want to change your report preferences? Visit <a href="#" style="color: #22c55e;">Settings</a>
                             </p>
                         </td>
                     </tr>
@@ -747,7 +760,7 @@ For security reasons, we never send your password via email.
                 <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
                     <tr>
                         <td style="text-align: center;">
-                            <p style="color: #475569; font-size: 12px; margin: 0;">
+                            <p style="color: #7E9488; font-size: 12px; margin: 0;">
                                 © 2026 finPal
                             </p>
                         </td>
@@ -799,11 +812,11 @@ Want to change your report preferences? Visit Settings.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0E1711;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="padding: 40px 20px;">
-                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #16241A 0%, #0E1711 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
@@ -850,9 +863,9 @@ Want to change your report preferences? Visit Settings.
                                 </tr>
                             </table>
 
-                            <p style="color: #64748b; font-size: 13px; margin: 24px 0 0; text-align: center;">
+                            <p style="color: #9CB3A3; font-size: 13px; margin: 24px 0 0; text-align: center;">
                                 Or copy and paste this link into your browser:<br>
-                                <a href="{invite_link}" style="color: #3b82f6; word-break: break-all;">{invite_link}</a>
+                                <a href="{invite_link}" style="color: #22c55e; word-break: break-all;">{invite_link}</a>
                             </p>
                         </td>
                     </tr>
@@ -860,7 +873,7 @@ Want to change your report preferences? Visit Settings.
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                            <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
                                 This invitation was sent to {to_email}<br>
                                 If you don't want to join, you can safely ignore this email.
                             </p>
@@ -872,7 +885,7 @@ Want to change your report preferences? Visit Settings.
                 <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
                     <tr>
                         <td style="text-align: center;">
-                            <p style="color: #475569; font-size: 12px; margin: 0;">
+                            <p style="color: #7E9488; font-size: 12px; margin: 0;">
                                 &copy; 2026 finPal
                             </p>
                         </td>

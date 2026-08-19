@@ -92,7 +92,7 @@ class CategoryList(Resource):
         try:
             new_category = Category(
                 name=validated['name'],
-                icon=validated.get('icon', 'fa-tag'),
+                icon=validated.get('icon', '🏷️'),  # emoji, not a FontAwesome name — web-ui renders it as text
                 # `color` was validated by `category_input` and then dropped on
                 # the floor — a client could send it, get a 201, and find no
                 # colour stored. The retired blueprint's `create_category` did
@@ -117,6 +117,10 @@ class CategoryList(Resource):
             }, 201
 
         except Exception as e:
+            # Logged, not swallowed: this handler used to discard the exception
+            # entirely, so a 500 reached the user as a bare "Internal server
+            # error" with NOTHING in the container log. See #124.
+            logger.exception('CategoryList.post failed')
             db.session.rollback()
             return {
                 'success': False,

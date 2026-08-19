@@ -313,7 +313,10 @@
   --text-muted: var(--kt-soft);
   --nav-hover: rgba(148, 163, 184, 0.1);
   --card-hover-shadow: rgba(0, 0, 0, 0.3);
-  --chart-bg: rgba(15, 23, 42, 0.6);
+  /* rgb(14, 23, 17) is --kt-wash. Needs an alpha, so it cannot be a bare var()
+     reference; it was rgba(15, 23, 42, …), which is slate-900. Keep in step with
+     --kt-wash. */
+  --chart-bg: rgba(14, 23, 17, 0.6);
 
   /* Overlay & Surface */
   --overlay-bg: rgba(0, 0, 0, 0.6);
@@ -323,7 +326,7 @@
   /* Inputs */
   --input-bg: var(--kt-wash);
   --input-border: var(--kt-line);
-  --input-bg-focus: rgba(15, 23, 42, 0.8);
+  --input-bg-focus: rgba(14, 23, 17, 0.8);  /* --kt-wash at 0.8; was slate-900 */
 
   /* Card */
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -341,12 +344,19 @@
   --progress-track: rgba(255, 255, 255, 0.1);
 
   /* Tooltip */
-  --tooltip-bg: #1e293b;
+  /* --kt-hover, not --kt-card: a tooltip floats OVER a card, so it wants the palette's
+     next step up rather than the same paint as the thing behind it. Was #1e293b. */
+  --tooltip-bg: var(--kt-hover);
   --tooltip-border: rgba(148, 163, 184, 0.2);
 
-  /* pointsPal module tokens — dark overrides */
-  --white: #1e293b;
-  --bg: #0f172a;
+  /* pointsPal module tokens — dark overrides.
+
+     `--white` is the module's CARD and `--bg` is its PAGE, and both were slate
+     literals (#1e293b / #0f172a) while the shell around them resolved through the
+     green-black `--kt-*` palette. Routed through the palette so a pointsPal page and a
+     core page are the same colour. */
+  --white: var(--kt-card);
+  --bg: var(--kt-wash);
   --border: rgba(148, 163, 184, 0.15);
   --ink: #f8fafc;
   --ink2: #e2e8f0;
@@ -393,8 +403,18 @@
   --sh-md: 0 6px 20px rgba(0,0,0,.4);
 
   /* ═══ KITCHEN TABLE — DARK, AND IT IS A SECOND PALETTE, NOT A SWAP ═══════
-     The app's dark is slate (--bg-primary: #0f172a); this direction is a
-     green-black. Reusing the slate throws away the warmth the whole direction
+     THIS PARAGRAPH USED TO OPEN "the app's dark is slate (--bg-primary: #0f172a);
+     this direction is a green-black", and that stopped being true when
+     `--bg-primary` was routed to `--kt-wash`. Leaving it standing was not harmless:
+     it read as a standing decision that slate was the app's dark, so the slate
+     literals that had been missed — the `body` background, pointsPal's `--bg` and
+     `--white`, `--tooltip-bg`, `--chart-bg`, `--input-bg-focus` — looked deliberate
+     rather than left behind. The result was a navy page behind green-black cards,
+     which is what a user reported. There is now ONE dark direction and it is this
+     green-black; `darkSurfacesAreNotBlue.test.ts` keeps it that way by measuring hue
+     rather than by banning a hex.
+
+     Reusing slate throws away the warmth the whole direction
      is built on, so every colour above is re-declared here with its own value —
      which is also why the gate asserts both themes declare the SAME COLOUR SET.
      A colour missing from this block does not fall back gracefully: it inherits
@@ -446,9 +466,16 @@ body {
   background: linear-gradient(135deg, #f9fdf6 0%, #fdfdf9 50%, #fffef8 100%);
 }
 
-/* Dark mode solid background */
+/* Dark mode solid background.
+
+   `var(--kt-wash)`, NOT a hex. This was `#0f172a` — slate-900, left over from before
+   the palette went green — while `--bg-card` resolved through `--kt-card: #16241A`. So
+   the page painted navy and every card on it painted green-black, which is what a user
+   reported as "dark mode green seems off": nothing was wrong with the green, the page
+   behind it was the wrong colour. Naming the token is what keeps the two in step the
+   next time the palette moves. Pinned by darkSurfacesAreNotBlue.test.ts. */
 [data-theme="dark"] body {
-  background: #0f172a;
+  background: var(--kt-wash);
 }
 
 /* Main content wrapper */
