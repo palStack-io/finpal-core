@@ -7,7 +7,7 @@ import { TeamMember } from '../../types/team';
 import { formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
-import { ACCOUNT_COLORS, getDefaultColorForType } from '../../constants/accountColors';
+import { ACCOUNT_COLORS, getDefaultColorForType, colorForTypeChange } from '../../constants/accountColors';
 import { getBranding, type Currency } from '../../config/branding';
 
 interface EditAccountFormProps {
@@ -47,9 +47,14 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
     const { name, value } = e.target;
     const updates: any = { [name]: value };
 
-    // Auto-update color when account type changes
+    // Follow the type's default colour, but only while the user has not picked one.
+    // #130: this used to overwrite unconditionally, discarding a deliberate choice.
     if (name === 'type') {
-      updates.color = getDefaultColorForType(value);
+      updates.color = colorForTypeChange({
+        previousType: formData.type,
+        nextType: value,
+        currentColor: formData.color,
+      });
     }
 
     setFormData(prev => ({ ...prev, ...updates }));

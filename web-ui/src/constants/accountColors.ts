@@ -60,3 +60,52 @@ export const getDefaultColorForType = (type: string): string => {
  * against something, not restated.
  */
 export const ACCOUNT_COLOR_MAX_LENGTH = 7;
+
+/** Is this a colour the user can only have got by picking it? */
+const isADeliberateChoice = (currentColor: string | undefined, previousType: string) => {
+  if (!currentColor) return false;
+  // A legacy `var(--...)` value is not pickable from today's swatches — it predates #123
+  // and re-posting it would fail the column. Treat it as unset so changing type heals it.
+  if (!ACCOUNT_COLORS.some((c) => c.value === currentColor)) return false;
+  // Still on the outgoing type's default means the user never touched the swatches.
+  return currentColor !== getDefaultColorForType(previousType);
+};
+
+/**
+ * The colour an account should have after its type changes.
+ *
+ * palStack-io/finpal-core#130: both forms did this unconditionally —
+ *
+ *     if (name === 'type') updates.color = getDefaultColorForType(value);
+ *
+ * — so every type change discarded a colour the user had deliberately picked, with no
+ * way back except re-picking. The reporter described it as "always reset to Green", which
+ * is a real defect imprecisely stated: it resets to the *incoming* type's default, and
+ * green is savings' only. Green is neither the first swatch nor the fallback.
+ *
+ * The behaviour worth keeping is the other half — someone who never opens the swatches
+ * should still get a sensible per-type colour. So the default follows the type only while
+ * the colour is untouched, which is the distinction the old code never drew.
+ *
+ * A colour that happens to equal *another* type's default still counts as chosen: picking
+ * purple while on `checking` is a choice even though purple is investment's default. Only
+ * the OUTGOING type's own default reads as untouched.
+ */
+export const colorForTypeChange = ({
+  previousType,
+  nextType,
+  currentColor,
+}: {
+  previousType: string;
+  nextType: string;
+  currentColor?: string;
+}): string =>
+  isADeliberateChoice(currentColor, previousType)
+    ? (currentColor as string)
+    : getDefaultColorForType(nextType);
+
+/**
+ * The alpha suffix for the account icon's tint, kept here so the contrast guard can read
+ * the same value the page renders instead of restating it.
+ */
+export const ACCOUNT_SWATCH_TINT_ALPHA = '20';

@@ -9,7 +9,7 @@ import { TeamMember } from '../../types/team';
 import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '../../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
-import { ACCOUNT_COLORS, getDefaultColorForType } from '../../constants/accountColors';
+import { ACCOUNT_COLORS, getDefaultColorForType, colorForTypeChange } from '../../constants/accountColors';
 import { getBranding } from '../../config/branding';
 import { useAuthStore } from '../../store/authStore';
 
@@ -80,8 +80,25 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
   const [selectedCardId, setSelectedCardId] = useState<number | ''>('');
   const [members, setMembers] = useState<TeamMember[]>([]);
 
+  // #130: this used to `setValue('color', getDefaultColorForType(watchType))`
+  // unconditionally, so picking a swatch and then changing the type threw the choice
+  // away. The previous type is tracked in a ref because deciding whether the current
+  // colour is "untouched" means comparing it against the default of the type being left,
+  // and `watch` only ever reports the current one.
+  const previousTypeRef = useRef(watchType);
   useEffect(() => {
-    setValue('color', getDefaultColorForType(watchType));
+    const previousType = previousTypeRef.current;
+    previousTypeRef.current = watchType;
+    if (previousType === watchType) return;
+    setValue('color', colorForTypeChange({
+      previousType,
+      nextType: watchType,
+      currentColor: watchColor,
+    }));
+    // `watchColor` is deliberately read but not depended on: this effect must run when the
+    // TYPE changes, not every time the colour does, or picking a swatch would immediately
+    // re-run it against itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchType, setValue]);
 
   // The household. A single-member household gets no picker at all — see the render

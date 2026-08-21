@@ -79,7 +79,11 @@ class RecurringList(Resource):
                 category_id=validated.get('category_id'),
                 start_date=validated.get('start_date'),
                 account_id=validated.get('account_id'),
-                currency_code=validated.get('currency_code')
+                currency_code=validated.get('currency_code'),
+                # #133: declared on RecurringInput and validated, then left out of this
+                # call, so an income rule was stored with the model's 'expense' default.
+                transaction_type=validated.get('transaction_type'),
+                destination_account_id=validated.get('destination_account_id')
             )
 
             if not success:
@@ -356,7 +360,12 @@ class RecurringFromPattern(Resource):
                 amount=pattern.get('amount'),
                 frequency=pattern.get('frequency'),
                 category_id=pattern.get('category_id'),
-                start_date=pattern.get('start_date')
+                start_date=pattern.get('start_date'),
+                # The detector already puts a transaction_type in the pattern dict; this
+                # call dropped it, so a detected INCOME series became an expense rule.
+                # This is web-ui's only create path (D-80), which is what makes #133
+                # every client's bug rather than mobile's.
+                transaction_type=pattern.get('transaction_type')
             )
 
             if not success:

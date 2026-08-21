@@ -199,6 +199,22 @@ class AccountDetail(Resource):
         if not data:
             return {'success': False, 'error': 'Request body required'}, 400
 
+        # #123's constraints guarded the POST and NOTHING guarded this. The 7-character
+        # colour ceiling matching `Account.color = db.String(7)`, the `OneOf` on type, the
+        # 100-char name -- all create-only, so the very values that made #123 unreportable
+        # were still accepted here. That is the D-99 shape: a defect fixed where it was
+        # reported, left open everywhere else the same value can enter.
+        #
+        # `partial=True` because a PUT is a partial update and `AccountInput` marks `name`
+        # and `account_type` required -- a full load would refuse every ordinary edit the
+        # form makes, since it sends only what changed.
+        validated, errors = validate_request(account_input, data, partial=True)
+        if errors:
+            return validation_error_response(errors)
+        # Read from `validated` below, not `data`: that is what applies the ceilings. The
+        # `in data` tests stay, so "sent as null" and "not sent" remain distinguishable.
+        data = validated
+
         try:
             if 'name' in data:
                 account.name = data['name']
