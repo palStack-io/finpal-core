@@ -343,6 +343,24 @@ def create_app(config_name=None):
             db.create_all()
             app.logger.info("Database tables verified")
 
+            # D-121: `create_all()` above builds MISSING TABLES and never adds a column
+            # to a table that already exists — and a declared column with no database
+            # column makes the QUERY raise, not just the field vanish. `users` is read on
+            # essentially every authenticated request, so on an upgraded instance that is
+            # `POST /auth/login` answering 500 rather than a degraded page (#122, #124).
+            #
+            # Runs HERE, inside the lock and BEFORE the module hooks and seeders below,
+            # because those query `users` and `accounts` themselves — reconciling after
+            # them would leave the very code that trips over the gap running first. It is
+            # additive only and never raises; see src/utils/schema_reconcile.py.
+            try:
+                from src.utils.schema_reconcile import reconcile_schema
+                reconcile_schema(app, db)
+            except Exception:
+                app.logger.exception(
+                    'Schema reconcile could not run; if the app now fails on a missing '
+                    'column, run `python scripts/schema_drift.py` and apply what it prints')
+
             # Module startup hooks (seeding, cache warming, etc.)
             try:
                 from src.modules.registry import module_registry

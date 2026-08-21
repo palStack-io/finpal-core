@@ -52,6 +52,55 @@ compose files and upgrade notes are in **[docs/install.md](docs/install.md)**.
 
 ---
 
+## Upgrading an existing install
+
+**Pull the new images and restart. The schema catches itself up.**
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+finPal builds its schema from the models at boot. Until 2026-08-21 that step created
+**missing tables** but never added a **column** to a table that already existed — so an
+instance that had been running for a while ended up missing every column added since it
+was installed. That is not a cosmetic gap: the app selects every column its models
+declare, so one missing column makes the *query* fail. A missing column on `users` meant
+**login itself returned a 500** and nobody could get in. It is what issues
+[#122](https://github.com/palStack-io/finpal-core/issues/122) and
+[#124](https://github.com/palStack-io/finpal-core/issues/124) were.
+
+Boot now reconciles the schema automatically. It is **additive only** — it adds a missing
+nullable column and widens one that is narrower than the model expects, and it will never
+drop, rename, narrow or retype anything. Every statement it runs is logged:
+
+```
+docker logs finpal-backend | grep -i "applied:"
+```
+
+**Take a backup before any upgrade anyway.** It is your data, and a schema change is a
+schema change however careful the code is.
+
+### If you would rather apply it yourself
+
+Set `SCHEMA_AUTO_RECONCILE=false` in `.env`. Nothing will be changed for you, and this
+read-only script prints the exact statements you need:
+
+```bash
+docker exec finpal-backend python scripts/schema_drift.py
+```
+
+It changes nothing, so it is safe to run against production at any time — including just
+to check.
+
+### The one case it will not handle for you
+
+A **`NOT NULL` column with no default** cannot be added to a table that already has rows;
+there is no correct value to put in the existing ones. The reconcile refuses to guess,
+logs the column by name, and leaves it alone. That needs a migration with a backfill, and
+the release notes will say so explicitly when it ever happens.
+
+---
+
 ## What it does
 
 **The problem:** "where did all my money go this month?"

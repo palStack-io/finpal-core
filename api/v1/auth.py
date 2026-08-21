@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 from src.data import seed_user_defaults
 from schemas.input_schemas import login_input, register_input
 from src.utils.validation import validate_request, validation_error_response
+from src.utils.locale import is_a_usable_number_locale
 import logging
 import threading
 from src.models.personal_access_token import SCOPE_READ
@@ -512,6 +513,7 @@ class Login(Resource):
                     'default_currency_code': user.default_currency_code,
                     'hasCompletedOnboarding': user.has_completed_onboarding,
                     'timezone': user.timezone,
+                    'number_locale': user.number_locale,  # #132
                     'modules': _get_user_modules(user.id),
                     'notifications': {
                         'email': user.notification_email if hasattr(user, 'notification_email') else True,
@@ -571,6 +573,7 @@ class CurrentUser(Resource):
                 'is_admin': user.is_admin,
                 'default_currency_code': user.default_currency_code,
                 'timezone': user.timezone,
+                'number_locale': user.number_locale,  # #132
                 'hasCompletedOnboarding': user.has_completed_onboarding,  # camelCase
                 # *** modules WAS MISSING HERE AND login SENDS IT — D-63. ***
                 # The clients gate a module's nav entry AND its routes on
@@ -643,6 +646,19 @@ class CompleteOnboarding(Resource):
             if 'timezone' in data:
                 user.timezone = data['timezone']
 
+            # #132. Validated because this tag is handed to `Intl.NumberFormat` in both
+            # clients, which throws on a malformed one — an unchecked string here is a
+            # crash on every screen that renders money. None clears it back to the
+            # app default.
+            if 'number_locale' in data:
+                candidate = data['number_locale']
+                if candidate is None or candidate == '':
+                    user.number_locale = None
+                elif is_a_usable_number_locale(candidate):
+                    user.number_locale = candidate
+                else:
+                    return {'error': 'number_locale is not a usable locale tag'}, 400
+
             if 'profile_emoji' in data:
                 user.profile_emoji = data['profile_emoji']
 
@@ -668,6 +684,7 @@ class CompleteOnboarding(Resource):
                 'profile_emoji': user.profile_emoji,
                 'default_currency_code': user.default_currency_code,
                 'timezone': user.timezone,
+                'number_locale': user.number_locale,  # #132
                 'hasCompletedOnboarding': True,
                 'is_demo_user': user.is_demo_user,
                 'modules': _get_user_modules(user.id),

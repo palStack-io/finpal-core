@@ -137,6 +137,9 @@ class AccountList(Resource):
             or default_currency_for(current_user_id),
             color=validated.get('color'),
             owner_id=validated.get('owner_id'),
+            # #129: the form has collected this since it was written and it was dropped
+            # at every link in the chain, including this one.
+            description=validated.get('description'),
         )
 
         if not success:
@@ -230,6 +233,11 @@ class AccountDetail(Resource):
                 account.color = data['color']
             if 'external_id' in data:
                 account.external_id = data['external_id']
+            # #129. `in data` rather than a truthiness test, so a description can be
+            # CLEARED as well as set -- `update_recurring`'s `value is not None` guard is
+            # the cautionary sibling, where a field becomes un-emptiable once written.
+            if 'description' in data:
+                account.description = data['description']
             if 'owner_id' in data and data['owner_id'] != account.user_id:
                 # A REASSIGNMENT, which this now checks for FIRST. D-81: the membership
                 # test used to run whenever `owner_id` was merely present, and

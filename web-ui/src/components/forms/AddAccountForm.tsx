@@ -12,6 +12,7 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { ACCOUNT_COLORS, getDefaultColorForType, colorForTypeChange } from '../../constants/accountColors';
 import { getBranding } from '../../config/branding';
 import { useAuthStore } from '../../store/authStore';
+import { parseMoneyInput } from '../../styles/money';
 
 interface AddAccountFormProps {
   onSuccess: () => void;
@@ -120,9 +121,14 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       const newAccount = await accountService.createAccount({
         name: data.name,
         account_type: data.type,
-        balance: parseFloat(data.balance),
+        balance: parseMoneyInput(data.balance),
         currency_code: data.currency,
         color: data.color,
+        // #129: the textarea below has existed since this form was written and its value
+        // was never referenced here, so every description a user typed was discarded in
+        // the browser before any request was made. Sent only when non-empty, matching the
+        // owner_id treatment on the next line.
+        ...(data.description?.trim() ? { description: data.description.trim() } : {}),
         // Omitted entirely when blank, so the server applies its own default rather
         // than being handed an empty string to interpret.
         ...(data.ownerId ? { owner_id: data.ownerId } : {}),

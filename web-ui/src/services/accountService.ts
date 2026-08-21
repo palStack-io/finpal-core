@@ -43,6 +43,7 @@ export interface Account {
   import_source?: 'simplefin' | 'csv' | 'manual';
   external_id?: string;
   last_sync?: string;
+  description?: string | null;
 }
 
 export interface CreateAccountData {
@@ -63,6 +64,13 @@ export interface CreateAccountData {
    * `response.data.error` rather than axios's own message.
    */
   owner_id?: string;
+  /**
+   * Free-form note on the account. #129: the create form has asked for this since it was
+   * written, and the value was discarded at every link in the chain — including the
+   * absence of this very member, which made a corrected form body fail typecheck rather
+   * than transmit.
+   */
+  description?: string;
 }
 
 export interface UpdateAccountData {
@@ -77,6 +85,8 @@ export interface UpdateAccountData {
   color?: string;
   /** Reassign the account to a different household member. See CreateAccountData. */
   owner_id?: string;
+  /** See CreateAccountData.description (#129). */
+  description?: string;
 }
 
 export interface AccountBalanceResponse {

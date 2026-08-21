@@ -322,6 +322,10 @@ def test_login_returns_the_full_user_shape(client, db, user, slash):
         'default_currency_code': user.default_currency_code,
         'hasCompletedOnboarding': user.has_completed_onboarding,
         'timezone': user.timezone,
+        # #132. The clients cache this payload as their user object and the money
+        # formatter reads the preference from it, so a value missing here is a
+        # preference that silently stops applying on the next login.
+        'number_locale': user.number_locale,
         'modules': DEFAULT_MODULES,
         'notifications': {
             'email': True,
@@ -437,6 +441,7 @@ def test_me_returns_the_profile(client, db, user, auth_headers, slash):
         'is_admin': user.is_admin,
         'default_currency_code': user.default_currency_code,
         'timezone': user.timezone,
+        'number_locale': user.number_locale,  # #132
         'hasCompletedOnboarding': user.has_completed_onboarding,
         'notifications': {
             'email': True,
@@ -523,6 +528,11 @@ def test_onboarding_saves_every_preference_it_accepts(
                        headers=auth_headers(user), json={
                            'default_currency_code': 'GBP',
                            'timezone': 'Europe/London',
+                           # #132, sent because this test is named for saving EVERY
+                           # preference onboarding accepts — adding the key to the
+                           # expected shape without exercising it would have widened
+                           # the gate while narrowing what it proves.
+                           'number_locale': 'de-DE',
                            'profile_emoji': '\U0001f9ee',
                            'notifications': {
                                'email': False, 'push': True,
@@ -538,6 +548,7 @@ def test_onboarding_saves_every_preference_it_accepts(
         'profile_emoji': '\U0001f9ee',
         'default_currency_code': 'GBP',
         'timezone': 'Europe/London',
+        'number_locale': 'de-DE',  # #132
         'hasCompletedOnboarding': True,
         'is_demo_user': False,
         'modules': DEFAULT_MODULES,
@@ -547,6 +558,7 @@ def test_onboarding_saves_every_preference_it_accepts(
     saved = User.query.filter_by(id=user.id).first()
     assert saved.default_currency_code == 'GBP'
     assert saved.timezone == 'Europe/London'
+    assert saved.number_locale == 'de-DE'  # #132
     assert saved.notification_email is False
     assert saved.notification_push is True
     assert saved.notification_budget_alerts is False
