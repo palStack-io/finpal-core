@@ -5,7 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney, Money, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
-import { getDefaultColorForType } from '../constants/accountColors';
+import { getDefaultColorForType, ACCOUNT_SWATCH_TINT_ALPHA } from '../constants/accountColors';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddAccountForm } from '../components/forms/AddAccountForm';
 import { EditAccountForm } from '../components/forms/EditAccountForm';
@@ -278,7 +278,11 @@ export const Accounts = () => {
                         is what pushed the account name and its balance past the viewport
                         on a phone — the same fix, and the same reason, as .main-content. */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: 0 }}>
-                      <div style={{ width: '56px', height: '56px', background: `${account.color}20`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: account.color }}>
+                      {/* The tint carries the account's colour; the glyph uses the ink
+                          token so it is legible on BOTH themes from a single declared
+                          value. See accountSwatchContrast.test.ts — the coloured glyph
+                          scored 1.72:1 at worst once this tint started rendering. */}
+                      <div style={{ width: '56px', height: '56px', background: `${account.color}${ACCOUNT_SWATCH_TINT_ALPHA}`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
                         {getAccountIcon(account.type)}
                       </div>
 

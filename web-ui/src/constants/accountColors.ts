@@ -103,3 +103,9 @@ export const colorForTypeChange = ({
   isADeliberateChoice(currentColor, previousType)
     ? (currentColor as string)
     : getDefaultColorForType(nextType);
+
+/**
+ * The alpha suffix for the account icon's tint, kept here so the contrast guard can read
+ * the same value the page renders instead of restating it.
+ */
+export const ACCOUNT_SWATCH_TINT_ALPHA = '20';
