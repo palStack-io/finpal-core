@@ -63,8 +63,18 @@ class RecurringService:
             return None
 
     def add_recurring(self, user_id, description, amount, frequency, category_id=None,
-                     start_date=None, account_id=None, currency_code=None):
-        """Add a new recurring expense"""
+                     start_date=None, account_id=None, currency_code=None,
+                     transaction_type=None, destination_account_id=None):
+        """Add a new recurring expense
+
+        `transaction_type` is accepted HERE for the same reason `_coerce_start_date` is
+        parsed here: every caller passes through `add_recurring`. It was declared on
+        `RecurringInput`, so it survived validation and sat in the handler's `validated`
+        dict -- and both handlers then left it out of this call, so the column fell to its
+        model default and a rule the user marked **income** was stored as an **expense**
+        (#133). Fixing the handlers alone would leave the next caller free to repeat it,
+        and there were already two callers making exactly that mistake.
+        """
         # Before the try/except, so an unparseable date is a NAMED refusal rather than the
         # generic message that hid this for as long as it existed. The exception's own text
         # still must not reach the caller -- that is D-41.
@@ -88,6 +98,16 @@ class RecurringService:
                 paid_by=str(user_id),
                 active=True
             )
+            # Assigned rather than passed to the constructor so that OMITTING the field
+            # still yields the model's `default='expense'`. Passing `transaction_type=None`
+            # explicitly would write a NULL and break every client that does not send it.
+            if transaction_type is not None:
+                recurring.transaction_type = transaction_type
+            # Only meaningful on a transfer, and the model's `to_dict` already discards it
+            # for other types. Accepted here so a transfer rule can name its destination
+            # instead of silently losing it at this same seam.
+            if destination_account_id is not None:
+                recurring.destination_account_id = destination_account_id
 
             db.session.add(recurring)
             db.session.commit()
@@ -99,10 +119,33 @@ class RecurringService:
             return False, 'Could not save the recurring expense', None
 
     def update_recurring(self, recurring_id, user_id, **kwargs):
-        """Update a recurring expense"""
+        """Update a recurring expense
+
+        The date columns are coerced here for the same reason `add_recurring` coerces
+        them, and this half was missing: `RecurringDetail.put` forwards the request body
+        untouched, so a client's plain `'YYYY-MM-DD'` string reached a `DateTime` column
+        and raised the D-80 `TypeError`, which the bare `except` below then reported as
+        "Could not update the recurring expense" -- naming nothing.
+
+        *** IT WAS MASKED, NOT ABSENT. *** Mobile's edit form prefilled the API's full ISO
+        datetime into a field guarded by `/^\\d{4}-\\d{2}-\\d{2}$/`, so the submit never
+        fired (#134) and this line was never reached. Fixing that prefill ARMS this, which
+        is why both are fixed together -- a dropped field is also a field nothing can
+        corrupt, and un-dropping it without this would have turned a blocked save into a
+        failed one.
+        """
         recurring = self.get_recurring(recurring_id, user_id)
         if not recurring:
             return False, 'Recurring expense not found'
+
+        # Outside the try/except so a bad date is a NAMED refusal, matching `add_recurring`.
+        for date_field in ('start_date', 'end_date'):
+            if kwargs.get(date_field) is not None:
+                coerced = self._coerce_start_date(kwargs[date_field])
+                if coerced is None:
+                    label = 'Start date' if date_field == 'start_date' else 'End date'
+                    return False, f'{label} is not a valid date'
+                kwargs[date_field] = coerced
 
         try:
             for key, value in kwargs.items():
