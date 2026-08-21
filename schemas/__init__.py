@@ -103,6 +103,7 @@ class AccountSchema(Schema):
     id = fields.Int(dump_only=True)
     name = fields.Str(required=True)
     account_type = fields.Str(attribute='type', required=True)
+    description = fields.Str(allow_none=True)  # #129
     balance = fields.Float()
     currency_code = fields.Str()
     institution = fields.Str()

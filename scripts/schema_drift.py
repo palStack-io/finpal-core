@@ -20,6 +20,18 @@ run against a production database. It exits 1 when it finds drift, so it can be 
 as a check.
 
     docker exec finpal-backend python scripts/schema_drift.py
+
+*** SINCE 2026-08-21 THE APP ALSO REPAIRS THIS ITSELF AT BOOT (D-121). *** See
+`src/utils/schema_reconcile.py`: an additive reconcile runs after `create_all()` and adds
+missing nullable columns and widens narrowed ones. So on a normal upgrade there is nothing
+left for this script to report. It remains useful for three things: checking a database
+WITHOUT changing it, seeing what an instance running `SCHEMA_AUTO_RECONCILE=false` still
+needs, and printing the statements for a NOT NULL column, which the reconcile deliberately
+refuses to add unattended because it cannot invent a backfill.
+
+The detection below is IMPORTED from that module rather than reimplemented. A read-only
+reporter and an applier that disagreed about what counts as drift would be worse than
+either alone.
 """
 import os
 import sys
@@ -36,37 +48,43 @@ def main():
     from src.extensions import db
     import src.models  # noqa: F401  -- registers every model on db.metadata
 
-    app = create_app()
+    # *** THIS SCRIPT MUST NOT CHANGE ANYTHING, AND `create_app()` NOW WOULD. ***
+    # Since D-121 the app reconciles the schema at boot, so simply constructing it here
+    # would repair the very drift this script exists to REPORT — and a tool documented as
+    # "safe to run against a production database" would quietly be applying DDL. Caught by
+    # `test_schema_drift_detector.py`, which asserts exit 1 on drift and got 0.
+    #
+    # The instance's real setting is captured first, because the messages below describe
+    # what WILL happen on the next boot, not what this process was forced to do.
+    configured_auto = os.getenv('SCHEMA_AUTO_RECONCILE')
+    os.environ['SCHEMA_AUTO_RECONCILE'] = 'false'
+    try:
+        app = create_app()
+    finally:
+        if configured_auto is None:
+            os.environ.pop('SCHEMA_AUTO_RECONCILE', None)
+        else:
+            os.environ['SCHEMA_AUTO_RECONCILE'] = configured_auto
+
     with app.app_context():
-        inspector = inspect(db.engine)
-        live_tables = set(inspector.get_table_names())
+        from src.utils.schema_reconcile import (
+            auto_reconcile_enabled, detect_drift, statements_for,
+        )
 
-        missing_tables = []
-        missing_columns = []
-        narrow_columns = []
-
-        for name, table in sorted(db.metadata.tables.items()):
-            if name not in live_tables:
-                missing_tables.append(name)
-                continue
-
-            live = {c['name']: c for c in inspector.get_columns(name)}
-            for column in table.columns:
-                if column.name not in live:
-                    nullable = column.nullable or column.default is not None
-                    missing_columns.append((name, column.name, column.type, nullable))
-                    continue
-
-                # A width that shrank in the database relative to the model: the model
-                # widened and create_all() could not follow. `paid_by` did this.
-                want = getattr(column.type, 'length', None)
-                have = getattr(live[column.name]['type'], 'length', None)
-                if want and have and have < want:
-                    narrow_columns.append((name, column.name, have, want))
+        missing_tables, addable, unaddable, narrow = detect_drift(
+            db.engine, db.metadata)
+        # Reported together, since to an operator "missing" is one question; they differ
+        # only in whether the reconcile will handle it unattended.
+        missing_columns = [(t, c, True) for t, c in addable] + \
+                          [(t, c, False) for t, c in unaddable]
+        narrow_columns = [(t, c.name, have, want) for t, c, have, want in narrow]
 
         if not (missing_tables or missing_columns or narrow_columns):
             print('No drift: every model table and column is present, and no column '
                   'is narrower than its model.')
+            if not auto_reconcile_enabled():
+                print('NOTE: SCHEMA_AUTO_RECONCILE is off on this instance, so nothing '
+                      'will be repaired automatically on the next boot.')
             return 0
 
         print('SCHEMA DRIFT FOUND. Nothing has been changed.\n')
@@ -83,13 +101,23 @@ def main():
                   'which is #122.\n')
 
         if missing_columns:
+            auto = auto_reconcile_enabled()
             print(f'{len(missing_columns)} column(s) missing. create_all() will NEVER '
                   'add these.')
-            print('  Back up first, then apply:')
-            for table, col, type_, nullable in missing_columns:
-                null = '' if nullable else ' /* model says NOT NULL - needs a default */'
-                print(f'    ALTER TABLE {table} ADD COLUMN {col} '
-                      f'{type_.compile(db.engine.dialect)};{null}')
+            if auto:
+                print('  The boot-time reconcile WILL add the nullable ones by itself; '
+                      'this is what it would run:')
+            else:
+                print('  SCHEMA_AUTO_RECONCILE is off, so nothing will do this for you. '
+                      'Back up first, then apply:')
+            for statement in statements_for(db.engine, addable, narrow):
+                print(f'    {statement};')
+            for table, column, safe in missing_columns:
+                if safe:
+                    continue
+                print(f'    /* {table}.{column.name} is NOT NULL with no default. The '
+                      'reconcile will NOT attempt this: it needs a migration with a '
+                      'backfill. */')
             print()
 
         if narrow_columns:
