@@ -70,6 +70,36 @@ Leave blank to disable email features. Only needed if you want password reset em
 
 ---
 
+## Optional - Schema reconcile
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SCHEMA_AUTO_RECONCILE` | `true` | Bring the database's columns up to the models at boot |
+
+finPal builds its schema from the models at boot rather than from Alembic migrations. That
+step creates **missing tables** but cannot add a **column** to a table that already exists,
+so an instance upgraded after running for a while used to end up missing every column added
+since it was installed — and because the app selects every column its models declare, one
+missing column made the *query* fail. A missing column on `users` meant **login returned a
+500**. That is what issues #122 and #124 were.
+
+With this on (the default), boot adds any missing nullable column and widens any column
+narrower than the model expects, logging every statement:
+
+```
+docker logs finpal-backend | grep -i "applied:"
+```
+
+**It is additive only.** It never drops, renames, narrows or retypes anything, and a
+`NOT NULL` column with no default is reported by name and deliberately left alone, because
+there is no correct value for the rows that already exist.
+
+Set it to `false` to take control yourself; then use the read-only
+`docker exec finpal-backend python scripts/schema_drift.py`, which prints the exact
+statements and changes nothing.
+
+---
+
 ## Optional - Demo Mode
 
 | Variable | Default | Description |
