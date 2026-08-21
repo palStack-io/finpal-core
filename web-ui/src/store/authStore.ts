@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, AuthState, ServerFeatures } from '../types/user';
+import { setNumberLocale } from '../styles/money';
 
 const DEFAULT_FEATURES: ServerFeatures = { simplefin: true, investments: true };
 
@@ -107,3 +108,20 @@ export const useAuthStore = create<AuthStore>()(
     }
   )
 );
+
+/**
+ * Keep the money formatter in step with the user's number-format preference (#132).
+ *
+ * A SUBSCRIPTION rather than a call inside `setUser`/`login`/`updateUser`, because there
+ * are four ways the user object can change — those three plus persist rehydration on a
+ * page load — and a preference that applies on three of them is a preference that
+ * silently stops working on refresh. One seam, nothing to bypass.
+ */
+let appliedNumberLocale: string | null | undefined;
+const applyNumberLocale = (locale: string | null | undefined) => {
+  if (locale === appliedNumberLocale) return;
+  appliedNumberLocale = locale;
+  setNumberLocale(locale ?? null);
+};
+applyNumberLocale(useAuthStore.getState().user?.number_locale);
+useAuthStore.subscribe((state) => applyNumberLocale(state.user?.number_locale));

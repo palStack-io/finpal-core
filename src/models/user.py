@@ -33,6 +33,13 @@ class User(UserMixin, db.Model):
     monthly_report_enabled = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     timezone = db.Column(db.String(50), nullable=True, default='UTC')
+    # #132: how this user wants figures formatted, as a BCP-47 tag ('de-DE' -> 1.234,56).
+    # NULLABLE WITH NO DEFAULT ON PURPOSE: the clients fall back to en-US on null, so an
+    # existing account's figures do not silently change shape on deploy. 35 is the
+    # practical ceiling for a language-script-region-variant tag.
+    # NOTE: a new column on an existing table is invisible to `create_all()` — see
+    # scripts/schema_drift.py (D-121).
+    number_locale = db.Column(db.String(35), nullable=True)
 
     # Onboarding and notification preferences
     has_completed_onboarding = db.Column(db.Boolean, default=False)

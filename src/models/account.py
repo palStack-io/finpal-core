@@ -19,6 +19,13 @@ class Account(db.Model):
     external_id = db.Column(db.String(200), nullable=True)
     status = db.Column(db.String(20), nullable=True)
     color = db.Column(db.String(7), nullable=True)  # Hex color code (e.g., #3b82f6)
+    # #129: the create form has asked for this since it was written and there was nowhere
+    # to put it -- the value was discarded on every save. Text, not String(n): it is a
+    # free-form note ("Joint account - rent, bills and the shared food shop") and a
+    # ceiling here would only re-create the validator-vs-column mismatch of #123.
+    # NOTE: adding a column to an EXISTING table is invisible to `create_all()`, so no
+    # deployed instance gets this from a redeploy -- see scripts/schema_drift.py (D-121).
+    description = db.Column(db.Text, nullable=True)
     
     # Relationships
     user = db.relationship('User', backref=db.backref('accounts', lazy=True))

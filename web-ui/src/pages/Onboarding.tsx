@@ -7,6 +7,8 @@ import { getBranding, supportedCurrencies, type Currency } from '../config/brand
 import type { OnboardingData } from '../types/user';
 import { DollarSign, Globe, Bell, Smile, ChevronRight, ChevronLeft } from 'lucide-react';
 import { apiErrorMessage } from '../utils/apiError';
+import { NUMBER_FORMATS } from '../constants/numberFormats';
+import { tabular } from '../styles/money';
 
 const timezones = [
   'America/New_York',
@@ -38,6 +40,7 @@ export const Onboarding: React.FC = () => {
   const [formData, setFormData] = useState<OnboardingData>({
     default_currency_code: 'USD',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+    number_locale: null as string | null,  // #132; null = the app default
     notifications: {
       email: true,
       push: true,
@@ -178,6 +181,9 @@ export const Onboarding: React.FC = () => {
                     const updatedUser = await authService.completeOnboarding({
                       default_currency_code: formData.default_currency_code,
                       timezone: formData.timezone,
+                      // #132: chosen on the currency step, since what the user is really
+                      // deciding is how their money reads.
+                      number_locale: formData.number_locale,
                       notifications: formData.notifications,
                       profile_emoji: formData.profile_emoji,
                     });
@@ -309,6 +315,48 @@ export const Onboarding: React.FC = () => {
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Number format — #132. On the currency step rather than a step of its
+                    own: what the user is deciding is how their money reads, and adding a
+                    fifth step to a "Step n of 4" flow for one radio group is worse. */}
+                <div style={{ marginTop: '2rem' }}>
+                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#ffffff', marginBottom: '0.25rem' }}>
+                    How should amounts look?
+                  </h3>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                    You can change this later in Settings.
+                  </p>
+                  <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    {NUMBER_FORMATS.map((format) => {
+                      const isSelected = (formData.number_locale ?? null) === format.value;
+                      return (
+                        <button
+                          key={format.value ?? 'default'}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, number_locale: format.value }))}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: `2px solid ${isSelected ? 'var(--brand-main-green)' : 'rgba(255,255,255,0.15)'}`,
+                            background: isSelected ? 'rgba(34,197,94,0.12)' : 'transparent',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <span style={{ ...tabular, fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>
+                            {format.label}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {format.hint}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

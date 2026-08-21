@@ -34,6 +34,8 @@ export interface User {
   is_admin?: boolean;
   default_currency_code?: Currency;
   timezone?: string;
+  /** BCP-47 tag driving number formatting (#132). Null/absent means the app default. */
+  number_locale?: string | null;
   hasCompletedOnboarding?: boolean;
   notifications?: UserNotifications;
   created_at?: string;
@@ -53,6 +55,8 @@ export interface User {
 }
 
 export interface OnboardingData {
+  /** Number-format preference (#132). `null` keeps the app default. */
+  number_locale?: string | null;
   default_currency_code: Currency;
   timezone: string;
   notifications: UserNotifications;
@@ -93,6 +97,11 @@ export interface AuthResponse {
 }
 
 export interface ProfileUpdate {
+  /**
+   * BCP-47 tag for number formatting (#132). `null` clears it back to the app default,
+   * which is a real choice and not an omission — the API distinguishes the two.
+   */
+  number_locale?: string | null;
   name?: string;
   email?: string;
   phone?: string;

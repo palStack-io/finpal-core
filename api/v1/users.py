@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 from src.models.user import User, UserApiSettings
 from src.extensions import db
 from src.utils.decorators import demo_restricted
+from src.utils.locale import is_a_usable_number_locale
 from datetime import datetime
 from flask import current_app
 import os
@@ -121,6 +122,18 @@ class Profile(Resource):
             user.timezone = data.get('timezone')
         if 'default_currency_code' in data:
             user.default_currency_code = data.get('default_currency_code')
+        # #132. Onboarding happens once, so without this the preference would be
+        # unreachable for every already-onboarded user -- including the person who asked
+        # for it. Validated because the tag reaches `Intl.NumberFormat` in two clients,
+        # which throws on a malformed one; None/'' clears it back to the app default.
+        if 'number_locale' in data:
+            candidate = data.get('number_locale')
+            if candidate is None or candidate == '':
+                user.number_locale = None
+            elif is_a_usable_number_locale(candidate):
+                user.number_locale = candidate
+            else:
+                return {'message': 'number_locale is not a usable locale tag'}, 400
 
         db.session.commit()
 
@@ -132,6 +145,7 @@ class Profile(Resource):
             'profile_emoji': user.profile_emoji,
             'default_currency_code': user.default_currency_code,
             'timezone': user.timezone,
+            'number_locale': user.number_locale,  # #132
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'has_completed_onboarding': user.has_completed_onboarding,
         }, 200

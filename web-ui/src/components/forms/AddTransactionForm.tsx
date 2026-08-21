@@ -13,6 +13,7 @@ import { errorTextStyle, formActionsStyle, iconInlineStyle, labelStyle } from '.
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../styles/layoutStyles';
 import { apiErrorMessage } from '../../utils/apiError';
 import { getBranding } from '../../config/branding';
+import { parseMoneyInput } from '../../styles/money';
 
 interface AddTransactionFormProps {
   transaction?: Transaction;
@@ -184,7 +185,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
     try {
       const payload: TransactionPayload = {
         description: data.name,
-        amount: parseFloat(data.amount),
+        amount: parseMoneyInput(data.amount),
         date: data.date,
         transaction_type: data.type,
         currency_code: accounts.find((a) => a.id === parseInt(data.account_id))?.currency_code ?? userCurrency,
@@ -197,7 +198,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
         payload.group_id = parseInt(data.group_id);
         payload.split_method = data.split_method;
         if (data.split_value && data.split_method !== 'equal') {
-          payload.split_value = parseFloat(data.split_value);
+          payload.split_value = parseMoneyInput(data.split_value);
         }
       }
       if (data.type === 'transfer' && data.destination_account_id) {
@@ -218,7 +219,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       const validSplits = categorySplits.filter((s) => s.category_id && s.amount);
       if (validSplits.length > 0) {
         payload.category_splits = validSplits.reduce((acc, split) => {
-          acc[split.category_id] = parseFloat(split.amount);
+          acc[split.category_id] = parseMoneyInput(split.amount);
           return acc;
         }, {} as Record<string, number>);
       } else if (transaction?.has_category_splits) {

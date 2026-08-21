@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Lock, Bell, Globe, Palette, Database, Shield, Mail, Key, Eye, EyeOff, Check, Save, Zap, Link, AlertCircle, Info, Download, Trash2, X, Users, Home, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { NUMBER_FORMATS } from '../constants/numberFormats';
 import { Currency } from '../types/user';
 import { getBranding } from '../config/branding';
 import { SimpleFinSettings } from '../components/import/SimpleFinSettings';
@@ -89,6 +90,7 @@ export const Settings: React.FC = () => {
     userColor: user?.user_color || 'var(--accent-blue)',
     profileEmoji: user?.profile_emoji || '😊',
     timezone: user?.timezone || 'America/New_York',
+    numberLocale: user?.number_locale ?? null,  // #132
     currency: user?.default_currency_code || 'USD'
   });
 
@@ -167,6 +169,7 @@ export const Settings: React.FC = () => {
         userColor: user.user_color || 'var(--accent-blue)',
         profileEmoji: user.profile_emoji || '😊',
         timezone: user.timezone || 'UTC',
+        numberLocale: user.number_locale ?? null,  // #132
         currency: user.default_currency_code || 'USD'
       });
     }
@@ -192,6 +195,9 @@ export const Settings: React.FC = () => {
         profile_emoji: profileData.profileEmoji,
         timezone: profileData.timezone,
         default_currency_code: profileData.currency as any,
+        // #132. Sent even when null: null is a real choice (back to the app default),
+        // not an omission, and the API distinguishes the two.
+        number_locale: profileData.numberLocale,
       });
 
       // Update auth store with new user data
@@ -203,6 +209,7 @@ export const Settings: React.FC = () => {
           profile_emoji: profileData.profileEmoji,
           timezone: profileData.timezone,
           default_currency_code: profileData.currency as any,
+          number_locale: profileData.numberLocale,
         }
       });
 
@@ -522,6 +529,38 @@ export const Settings: React.FC = () => {
                         <option key={tz} value={tz} style={{ background: 'var(--bg-secondary)' }}>{tz}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Number format — #132. Reachable from settings and not only from
+                      onboarding, because the person who asked for it is already
+                      onboarded and would otherwise have no way to use it. */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <label style={fieldLabelStyle}>
+                      Number format
+                    </label>
+                    <select
+                      value={profileData.numberLocale ?? ''}
+                      onChange={(e) => setProfileData({
+                        ...profileData,
+                        numberLocale: e.target.value === '' ? null : e.target.value,
+                      })}
+                      className="fp-input"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {NUMBER_FORMATS.map((format) => (
+                        <option
+                          key={format.value ?? 'default'}
+                          value={format.value ?? ''}
+                          style={{ background: 'var(--bg-secondary)' }}
+                        >
+                          {format.label} — {format.hint}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="fp-hint">
+                      How amounts are shown throughout finPal. Typing an amount accepts
+                      either a comma or a dot whichever you choose.
+                    </p>
                   </div>
 
                   <button

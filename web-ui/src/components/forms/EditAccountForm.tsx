@@ -9,6 +9,7 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../../utils/apiError';
 import { ACCOUNT_COLORS, getDefaultColorForType, colorForTypeChange } from '../../constants/accountColors';
 import { getBranding, type Currency } from '../../config/branding';
+import { parseMoneyInput } from '../../styles/money';
 
 interface EditAccountFormProps {
   account: any;
@@ -26,7 +27,9 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
     currency: account.currency || 'USD',
     institution: account.institution || '',
     accountNumber: account.accountNumber || '',
-    description: '',
+    // #129: this was a hardcoded '' with no textarea in the render — dead state that
+    // read like support for the feature. It is the "cannot be changed" half of the report.
+    description: account.description || '',
     color: account.color || getDefaultColorForType(account.type || 'checking'),
     // Prefilled from the row so the control opens showing the current owner rather
     // than defaulting to the signed-in user, which would silently reassign the
@@ -76,11 +79,14 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       await accountService.updateAccount(account.id, {
         name: formData.name,
         account_type: formData.type,
-        balance: parseFloat(formData.balance),
+        balance: parseMoneyInput(formData.balance),
         currency_code: formData.currency,
         institution: formData.institution,
         account_number: formData.accountNumber,
         color: formData.color,
+        // Sent unconditionally, unlike owner_id below: an empty description is a
+        // meaningful value (the user cleared it) whereas an empty owner is not.
+        description: formData.description,
         // Only sent when it names someone, so an edit made while the members list is
         // still loading cannot blank the owner.
         ...(formData.ownerId ? { owner_id: formData.ownerId } : {})
@@ -222,6 +228,23 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           placeholder="e.g., Chase Bank"
           disabled={isSubmitting}
           className="fp-input"
+        />
+      </div>
+
+      {/* Description — #129. Absent entirely until now, which is why a description
+          could be typed at creation and never seen or changed again. */}
+      <div>
+        <label style={labelStyle}>Description</label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          placeholder="What is this account for?"
+          rows={3}
+          maxLength={2000}
+          disabled={isSubmitting}
+          className="fp-input"
+          style={{ resize: 'vertical' }}
         />
       </div>
 

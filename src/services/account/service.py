@@ -101,7 +101,7 @@ class AccountService:
 
         return True, 'Success', account_data
 
-    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None, owner_id=None):
+    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None, owner_id=None, description=None):
         """
         Add a new account
         Returns (success, message, account)
@@ -144,6 +144,7 @@ class AccountService:
                 color=color,
                 import_source=import_source,
                 external_id=external_id,
+                description=description,
                 user_id=user_id
             )
 

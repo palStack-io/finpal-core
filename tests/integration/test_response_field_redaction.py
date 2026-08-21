@@ -63,6 +63,23 @@ FORBIDDEN_KEYS = {
 ACCOUNT_KEYS = {
     'id', 'name', 'account_type', 'balance', 'currency_code', 'institution',
     'status', 'color', 'user_id', 'current_balance',
+    # #129. Free text the user writes about the account ("Joint account — rent and
+    # bills"). Added because the form had asked for it since it was written while no
+    # column existed to hold it, so every value typed was discarded.
+    #
+    # THE MCP QUESTION, ASKED RATHER THAN WAVED THROUGH, because this file requires it:
+    # no change is needed there, and that was checked rather than assumed.
+    # `finpal-mcp/src/scrub.ts` already lists `description` in `LABEL_KEYS`, so it is
+    # digit-masked on the way to a model — the same treatment as `name` and
+    # `card_used`, which carry SimpleFin's last-four digits.
+    #
+    # Masking rather than dropping is the right call for it. `scrub.ts` DROPS `notes`
+    # wholesale on the stated grounds that "users put account numbers in it", and an
+    # account description is the same kind of field — but digit-masking already removes
+    # exactly that risk while keeping the label readable, which is the reason the file
+    # gives for masking rather than dropping labels. If a description ever needs to carry
+    # something that masking would ruin, revisit it there and not here.
+    'description',
     # Added deliberately in item A of the D-18 build, and the redaction question
     # was considered rather than waved through, because this file asks for that.
     #
