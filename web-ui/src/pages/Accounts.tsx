@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney, Money, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
+import { getDefaultColorForType } from '../constants/accountColors';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddAccountForm } from '../components/forms/AddAccountForm';
 import { EditAccountForm } from '../components/forms/EditAccountForm';
@@ -64,7 +65,12 @@ export const Accounts = () => {
         // difference between a figure you can explain and one you cannot.
         owner: acc.owner || null,
         ownerId: acc.user_id || '',
-        color: acc.color || getAccountColor(acc.account_type || 'checking'),
+        // #123's third copy. This is DATA, not styling: it feeds the row handed to
+        // <EditAccountForm>, so a `var(--...)` fallback here meant that for any account
+        // with a NULL colour the edit form opened holding a value no swatch matched and
+        // saving posted a 18-23 character string into a String(7) column. The alpha
+        // concatenation below (`${account.color}20`) only works on a hex, too.
+        color: acc.color || getDefaultColorForType(acc.account_type || 'checking'),
         creditLimit: acc.credit_limit || null,
         availableCredit: acc.credit_limit ? acc.credit_limit - Math.abs(acc.balance || 0) : null
       }));
@@ -74,17 +80,6 @@ export const Accounts = () => {
       showToast('Failed to load accounts', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getAccountColor = (type: string) => {
-    switch(type) {
-      case 'checking': return 'var(--accent-blue)';
-      case 'savings': return 'var(--brand-green-glow)';
-      case 'credit': return 'var(--accent-red)';
-      case 'investment': return '#8b5cf6';
-      case 'cash': return 'var(--accent-yellow)';
-      default: return 'var(--accent-blue)';
     }
   };
 

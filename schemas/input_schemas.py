@@ -107,6 +107,11 @@ class AccountInput(Schema):
     # without. Membership is checked in AccountService, not here — marshmallow cannot
     # see the database, and a demo account is a valid id that must still be refused.
     owner_id = fields.Str(validate=validate.Length(min=1, max=120))
+    # Assigned by `AccountDetail.put` and previously absent from this schema. That was
+    # harmless only while the PUT ran no validation at all; once it does, `unknown=EXCLUDE`
+    # would have dropped it and the handler would have silently stopped applying it --
+    # turning a missing guard into a dropped field. 200 is `Account.external_id`'s width.
+    external_id = fields.Str(allow_none=True, validate=validate.Length(max=200))
 
 
 class BudgetInput(Schema):

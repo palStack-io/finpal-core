@@ -39,15 +39,23 @@ def _account(owner, name='Primary Checking', balance=5000.0):
 
 
 def _web_ui_payload(acc, owner_id, balance):
-    """What `EditAccountForm.tsx:90-101` actually sends, including `owner_id`.
+    """What `EditAccountForm.tsx` actually sends, including `owner_id`.
 
     Written as the browser's payload rather than a minimal body so it keeps testing the
     real request; `account_number` is in here because the form sends it and the schema
     drops it with `unknown=EXCLUDE` (D-05).
+
+    *** THE COLOUR HERE WAS `var(--accent-blue)` AND HAD GONE STALE AGAINST ITS OWN
+    DOCSTRING. *** #123 / f494909 replaced the forms' `var()` swatch lists with hex, so
+    the browser stopped sending that string in August 2026 — but nothing noticed, because
+    `PUT /accounts/<id>` ran no validation at all and a fixture claiming to mirror the
+    client was free to drift from it. Adding that validation is what surfaced this. A
+    fixture that says "what the client sends" has to be re-read against the client
+    whenever the client changes; that is the whole value of writing it this way.
     """
     return {'name': acc.name, 'account_type': 'checking', 'balance': balance,
             'currency_code': 'USD', 'institution': 'Manual', 'account_number': 'N/A',
-            'color': 'var(--accent-blue)', 'owner_id': owner_id}
+            'color': '#3b82f6', 'owner_id': owner_id}
 
 
 def test_a_demo_account_can_edit_its_own_account(client, db, auth_headers):
