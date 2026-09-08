@@ -122,8 +122,8 @@ stack cannot function without it, so it cannot drift out of the configuration wh
 the demo still works.
 
 **If you run `DEMO_MODE=true` on the same instance as your real household, you will
-not get report emails.** Run the demo as a separate stack, which is what
-`docker-compose.demo.yml` is for.
+not get report emails.** Run the public demo as its own deployment, separate from the
+instance your household actually uses.
 
 ---
 

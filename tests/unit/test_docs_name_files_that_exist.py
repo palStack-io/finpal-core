@@ -66,14 +66,82 @@ def test_the_scan_finds_references_at_all():
     assert any(name == 'docker-compose.yml' for _, name, _ in REFERENCES)
 
 
+def _tracked_files():
+    """Every path git actually ships, as a set of posix strings.
+
+    *** ASKING GIT RATHER THAN THE FILESYSTEM IS THE WHOLE POINT, AND THIS TEST LEARNED IT
+    THE HARD WAY ON 2026-09-08. *** It used to check `(REPO_ROOT / name).exists()`, which
+    is a question about the machine running the test, not about what a reader downloads.
+    `docker-compose.demo.yml` is untracked and server-specific — its own header says so —
+    and it sits on the maintainer's disk. So a new line in `docs/ENV_REFERENCE.md`
+    pointing at it **passed the full local gate** and failed in CI's clean clone, on both
+    interpreters, after the PR had been merged.
+
+    That is D-120's shape exactly (a gate that was green because `load_dotenv()` read this
+    repo's own `.env`, so the suite never once ran the default it claimed to cover), and
+    D-96's subject: the documented install path naming files that have never existed.
+    **A gate whose answer depends on untracked local state is not a gate**, and this one's
+    own failure message already said "not in the repo" while asking a different question.
+
+    Falls back to the filesystem only if git is unavailable, so the test still means
+    something in a tarball export — but says which mode it ran in.
+    """
+    import subprocess
+
+    try:
+        out = subprocess.run(['git', 'ls-files', '-z'], cwd=REPO_ROOT,
+                             capture_output=True, text=True, timeout=30)
+        if out.returncode == 0:
+            return {p for p in out.stdout.split('\0') if p}
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
+
+
 def test_every_compose_and_env_file_named_in_the_docs_exists():
-    missing = []
-    for doc, name, line in REFERENCES:
-        # Named at the repo root in practice; accept a match anywhere so a moved file still counts.
-        if not (REPO_ROOT / name).exists() and not list(REPO_ROOT.rglob(name)):
-            missing.append(f'{doc}:{line} refers to `{name}`, which does not exist')
+    tracked = _tracked_files()
+
+    def is_shipped(name):
+        if tracked is None:
+            # No git: fall back to the disk, which is weaker and admits it.
+            return (REPO_ROOT / name).exists() or bool(list(REPO_ROOT.rglob(name)))
+        # Named at the repo root in practice; accept a match anywhere so a moved file
+        # still counts — but it must be a file git TRACKS, not one that happens to be
+        # lying around.
+        return name in tracked or any(
+            p == name or p.endswith('/' + name) for p in tracked)
+
+    missing = [f'{doc}:{line} refers to `{name}`, which git does not track'
+               for doc, name, line in REFERENCES if not is_shipped(name)]
+
     assert not missing, (
-        'the docs tell users to use files that are not in the repo:\n' + '\n'.join(missing))
+        'the docs tell users to use files that are not in the repo — so a reader who '
+        'clones or downloads it will not have them:\n' + '\n'.join(missing)
+        + ('\n\n(checked against `git ls-files`, not the filesystem: an untracked file '
+           'on your own disk must not make this pass)' if tracked is not None else
+           '\n\n(git unavailable — fell back to the FILESYSTEM, which is weaker)'))
+
+
+def test_this_gate_asks_git_and_not_the_disk():
+    """The guard on the guard, because the difference is invisible when both agree.
+
+    An untracked file present locally must NOT satisfy the test above. Without this,
+    somebody "simplifying" it back to `Path.exists()` would see everything stay green on
+    their machine — which is precisely how the 2026-09-08 failure reached `main`.
+    """
+    tracked = _tracked_files()
+    if tracked is None:
+        import pytest
+        pytest.skip('git unavailable, so there is no distinction to assert')
+
+    probe = REPO_ROOT / 'zz-untracked-probe.yml'
+    probe.write_text('# throwaway, must not satisfy the docs gate\n')
+    try:
+        assert probe.exists(), 'the probe file was not created'
+        assert 'zz-untracked-probe.yml' not in _tracked_files(), (
+            'the probe got itself tracked; this test is not measuring what it claims')
+    finally:
+        probe.unlink(missing_ok=True)
 
 
 # --- relative markdown links -------------------------------------------------------------

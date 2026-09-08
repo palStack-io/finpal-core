@@ -15,6 +15,7 @@ instance/
 
 # Virtual Environment
 venv/
+venv311/
 env/
 ENV/
 .env
