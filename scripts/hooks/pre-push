@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#
+# Refuse a push whose code has not been through the local gate.
+#
+# WHY THIS EXISTS, AND IT IS NOT A HYPOTHETICAL: the owner rule since 2026-08-21 is
+# "run ./scripts/preflight.sh before every commit and push". On 2026-09-08 two branches
+# were pushed and merged while their CI was still pending, so `main` briefly carried code
+# that nothing but one laptop had verified — and that laptop had only ever run the 3.12
+# leg. The rule was right and unenforced, and an unenforced rule is a habit, not a gate.
+#
+# INSTALL (once per clone; hooks are not tracked by git):
+#     ./scripts/install-hooks.sh
+#
+# SKIP IT DELIBERATELY, when you know why:
+#     SKIP_PREFLIGHT=1 git push ...
+# There is no way to skip it by accident, which is the whole point. If you find yourself
+# setting that variable routinely, the gate is too slow and the answer is to make it
+# faster, not to stop running it.
+set -uo pipefail
+
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd "$HERE/../.." && pwd)
+
+if [[ "${SKIP_PREFLIGHT:-}" == "1" ]]; then
+  printf '\033[33m! pre-push: SKIP_PREFLIGHT=1 — pushing without the local gate.\033[0m\n'
+  printf '\033[33m  CI is now the only thing standing between this and main.\033[0m\n'
+  exit 0
+fi
+
+# Nothing to gate when the push deletes a branch or has no new commits.
+GATE_NEEDED=0
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [[ -z "${local_sha:-}" ]] && continue
+  # All-zeroes local sha means "delete this remote branch".
+  [[ "$local_sha" =~ ^0+$ ]] && continue
+  GATE_NEEDED=1
+done
+
+if [[ "$GATE_NEEDED" -eq 0 ]]; then
+  echo "pre-push: nothing being added (branch deletion or no-op) — no gate needed."
+  exit 0
+fi
+
+# *** `quick`, NOT THE FULL GATE, AND THE REASON IS MEASURED. ***
+#
+# `quick` runs pytest on 3.12 — the interpreter the Docker image actually runs — plus all
+# four web steps. It drops only the 3.11 leg, which CI runs anyway.
+#
+# The full gate was tried here first and it is the wrong trade on every axis. Measured
+# 2026-09-08 from real runs: CI does 3.11 (559s) and 3.12 (652s) **in parallel**, so its
+# wall-clock is ~11 minutes on GitHub's machines and free, because the repo is public.
+# `preflight.sh` is a shell script and runs them **sequentially**, on your laptop — 20-40
+# minutes with the local 3.12 leg alone measured between 486s and 1135s. So the full local
+# gate is SLOWER than CI *and* it occupies the machine you are working on.
+#
+# And the practical argument is stronger than the arithmetic: a 20-minute hook gets
+# bypassed routinely, and a gate that is routinely bypassed is worse than no gate, because
+# it manufactures confidence nobody has earned. We discovered that by using it — the fix
+# for a red `main` sat queued behind this hook for twenty minutes.
+#
+# Run `./scripts/preflight.sh` (no argument) before a release, when the 3.11 leg is worth
+# the wait. Do not "restore" the full gate here without making the suite faster first.
+printf '\n\033[1m▶ pre-push: running ./scripts/preflight.sh quick before letting this out\033[0m\n'
+printf '  (3.12 + web; CI runs the 3.11 leg. SKIP_PREFLIGHT=1 to bypass, deliberately)\n\n'
+
+if "$ROOT/scripts/preflight.sh" quick; then
+  printf '\n\033[32m✓ pre-push: local gate green — pushing.\033[0m\n'
+  exit 0
+fi
+
+printf '\n\033[31m✗ pre-push: PUSH REFUSED — the local gate is red.\033[0m\n'
+printf '  Fix it, or push with SKIP_PREFLIGHT=1 if you have a reason.\n'
+printf '  Reminder: a red gate that you push anyway becomes a red CI run on main,\n'
+printf '  and on this repo the docker-build workflow does NOT wait for tests — it\n'
+printf '  republishes :latest regardless, so self-hosters pulling latest get it.\n'
+exit 1

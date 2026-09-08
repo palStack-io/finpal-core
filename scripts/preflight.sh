@@ -10,7 +10,19 @@
 #
 #     ./scripts/preflight.sh          # everything
 #     ./scripts/preflight.sh web      # web-ui only (faster loop)
-#     ./scripts/preflight.sh backend  # pytest only
+#     ./scripts/preflight.sh backend  # pytest only (BOTH interpreters)
+#     ./scripts/preflight.sh quick    # everything except the 3.11 leg
+#
+# *** IT RUNS PYTEST TWICE, ON 3.12 AND 3.11, BECAUSE CI DOES AND THIS FILE CLAIMS TO
+# MIRROR CI. *** Added 2026-09-08 after two branches were merged with their CI still
+# pending: the local gate was green and had only ever run 3.12, so `main` briefly carried
+# code that no 3.11 interpreter had executed anywhere. The workflow's own comment says why
+# that leg exists — *"finpal_core is self-hosted, and self-hosters will not all be on the
+# same interpreter as the shipped image"* — so 3.11 is other people's production, not a
+# formality. 3.12 is what the Docker image runs.
+#
+# Use `quick` while iterating; use the default before you push. The pre-push hook runs the
+# default (see scripts/hooks/pre-push).
 #
 # Mirrors .github/workflows/tests.yml step for step. If a step is added there, add it
 # here — and the last check in this script asserts the two have not drifted apart, so a
@@ -26,6 +38,12 @@ FAILED=()
 # global conda interpreter here, whose pytest_asyncio is broken — an error that looks
 # like a code failure and is not.
 PY=./venv/bin/python
+# The second interpreter. Created with:
+#     uv venv --python 3.11 venv311
+#     uv pip install --python venv311/bin/python -r requirements.txt -r requirements-test.txt
+# Absent rather than broken is treated as a FAILURE, not a skip: a gate that quietly
+# covers less than it claims is the thing this script was written to stop (see the header).
+PY311=./venv311/bin/python
 
 step() {
   local label=$1; shift
@@ -38,12 +56,28 @@ step() {
   fi
 }
 
-if [[ "$WHICH" == "all" || "$WHICH" == "backend" ]]; then
+if [[ "$WHICH" == "all" || "$WHICH" == "backend" || "$WHICH" == "quick" ]]; then
   [[ -x "$PY" ]] || { echo "no venv at $PY — run: python -m venv venv && ./venv/bin/pip install -r requirements.txt"; exit 1; }
-  step "backend: pytest" "$PY" -m pytest -q
+  step "backend: pytest (3.12 — what the image runs)" "$PY" -m pytest -q
 fi
 
-if [[ "$WHICH" == "all" || "$WHICH" == "web" ]]; then
+# The 3.11 leg. Skipped by `quick` and by `web`, run by everything else — including the
+# pre-push hook, which is the moment it matters.
+if [[ "$WHICH" == "all" || "$WHICH" == "backend" ]]; then
+  if [[ -x "$PY311" ]]; then
+    step "backend: pytest (3.11 — what self-hosters run)" "$PY311" -m pytest -q
+  else
+    printf '\n\033[31m✗ no 3.11 venv at %s\033[0m\n' "$PY311"
+    printf '  CI runs pytest on 3.11 as well as 3.12, so without this the local gate\n'
+    printf '  covers five sixths of CI while reporting ALL GREEN. Create it with:\n'
+    printf '    uv venv --python 3.11 venv311\n'
+    printf '    uv pip install --python venv311/bin/python -r requirements.txt -r requirements-test.txt\n'
+    printf '  Or run ./scripts/preflight.sh quick to skip this leg deliberately.\n'
+    FAILED+=("backend: pytest (3.11) — no venv311, so this leg did not run")
+  fi
+fi
+
+if [[ "$WHICH" == "all" || "$WHICH" == "web" || "$WHICH" == "quick" ]]; then
   cd "$ROOT/web-ui" || exit 1
   # `npm run typecheck` (tsc -b), NEVER `npx tsc --noEmit`: the latter compiled ZERO files
   # and exited 0 for five sessions. That is D-45.
