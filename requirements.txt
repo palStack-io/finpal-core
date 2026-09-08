@@ -66,3 +66,9 @@ yfinance==1.5.2
 
 # pointsPal fuzzy matching
 rapidfuzz>=3.6.0
+
+# Server-side money formatting (report email, A2). CLDR data, so the email
+# agrees with `Intl.NumberFormat` in the two clients rather than re-deriving
+# separator conventions by hand: `en-IN` groups in lakhs and `fr-FR` groups
+# with U+202F, neither of which is guessable. BSD-3, so AGPL-compatible.
+Babel==2.18.0
