@@ -207,3 +207,60 @@ def test_boot_actually_calls_it(app):
         'reconcile runs AFTER the seeders, so the code that trips over a missing column '
         'runs first — which is the whole failure being fixed'
     )
+
+
+def test_the_new_invitations_expires_at_column_is_reconciled(app, db):
+    """*** THE D-121 RELEASE-GATING CHECK FOR #143's COLUMN, RUN RATHER THAN ASSUMED. ***
+
+    `Invitation.expires_at` was added 2026-09-08. Every self-hoster's `invitations`
+    table already exists, and `create_all()` never adds a column to a table it did
+    not create — so on upgrade the model declares a column the database lacks, and
+    SQLAlchemy SELECTs every declared column. That does not degrade the invitations
+    page; it makes the QUERY raise, which is #122's shape (`expenses.notes` breaking
+    the dashboard and the transactions list at once).
+
+    So this reproduces the upgrade rather than trusting that "nullable columns are
+    handled": the column is dropped to manufacture exactly the drift an upgrading
+    instance arrives with, the reconcile is run, and then the endpoint that reads it
+    is exercised.
+    """
+    assert 'expires_at' in _columns('invitations')
+    _drop_column('invitations', 'expires_at')
+    assert 'expires_at' not in _columns('invitations'), 'the fixture made no drift'
+
+    applied = reconcile_schema(app, db)
+
+    assert 'expires_at' in _columns('invitations'), f'not restored; applied={applied}'
+    assert any('invitations' in s and 'expires_at' in s for s in applied), applied
+
+
+def test_an_upgrading_instance_can_still_read_its_invitations(app, db, client,
+                                                              auth_headers):
+    """The half that matters to a user: the page works after the reconcile.
+
+    `test_..._is_reconciled` proves the column comes back. This proves the request
+    that would have raised now answers — asserted on the payload, not the status
+    code, because that is the house rule and because a 200 with an empty list is
+    what a swallowed exception looks like.
+    """
+    from src.models.invitation import Invitation
+    from tests.factories import UserFactory
+
+    admin = UserFactory(name='Owner', is_admin=True, password_plain='adminpass')
+    headers = auth_headers(admin, password='adminpass')
+    db.session.add(Invitation(email='pending@test.com', role='member',
+                              invited_by=admin.id))
+    db.session.commit()
+
+    _drop_column('invitations', 'expires_at')
+    reconcile_schema(app, db)
+    db.session.expire_all()
+
+    resp = client.get('/api/v1/team/invitations', headers=headers)
+    assert resp.status_code == 200, resp.get_json()
+    body = resp.get_json()
+    assert [row['email'] for row in body] == ['pending@test.com'], body
+    # The reconciled column is NULL for the pre-existing row, and NULL is not
+    # "expired" — it renders as no expiry rather than invalidating the invitation.
+    assert body[0]['expiresAt'] == '', body
+    assert body[0]['status'] == 'pending', body

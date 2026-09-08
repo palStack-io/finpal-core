@@ -68,9 +68,16 @@ export const teamService = {
   },
 
   /**
-   * Transfer ownership to another member
+   * Transfer ownership to another member.
+   *
+   * `string`, not `number` (#142). A finPal user id IS an email address —
+   * `User.id = db.Column(db.String(120), primary_key=True)` — and the handler does
+   * `User.query.filter_by(id=member_id)`, so a numeric id could never match anybody.
+   * Every sibling method here already takes `id: string`; this one was the outlier,
+   * and it was never called from anywhere, so nothing was going to catch it. That is
+   * D-52's shape: a client type asserting something about the server that is false.
    */
-  async transferOwnership(memberId: number): Promise<void> {
+  async transferOwnership(memberId: string): Promise<void> {
     await api.post('/api/v1/team/transfer-ownership', { memberId });
   },
 

@@ -157,6 +157,10 @@ export const TeamManagement: React.FC = () => {
   const [isLoadingInvitations, setIsLoadingInvitations] = useState(false);
 
   // Invite form state
+  // #142's state. `string`, because a finPal user id is an email address.
+  const [transferTargetId, setTransferTargetId] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
+
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<TeamRole>('member');
   const [isSendingInvite, setIsSendingInvite] = useState(false);
@@ -236,6 +240,41 @@ export const TeamManagement: React.FC = () => {
       loadInvitations();
     } catch (error: any) {
       showToast(apiErrorMessage(error, 'Failed to resend invitation'), 'error');
+    }
+  };
+
+  /**
+   * Members who could become the owner: everybody who is not already one.
+   *
+   * Derived rather than stored, so it cannot go stale against `members` after a
+   * role change or a removal.
+   */
+  const transferCandidates = members.filter((member) => member.role !== 'owner');
+
+  const handleTransferOwnership = async () => {
+    if (!transferTargetId) {
+      showToast('Choose the member who should become the owner', 'error');
+      return;
+    }
+    const target = members.find((member) => member.id === transferTargetId);
+    if (!confirm(
+      `Make ${target?.name ?? transferTargetId} the owner? You will become a ` +
+      'member and lose admin access.'
+    )) {
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      await teamService.transferOwnership(transferTargetId);
+      showToast('Ownership transferred', 'success');
+      setTransferTargetId('');
+      // Both lists move: the new owner's role changes and so does the caller's.
+      await Promise.all([loadMembers(), loadInvitations()]);
+    } catch (error) {
+      showToast(apiErrorMessage(error, 'Failed to transfer ownership'), 'error');
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -442,7 +481,22 @@ export const TeamManagement: React.FC = () => {
                       <span style={{ textTransform: 'capitalize' }}>{invitation.role}</span>
                     </span>
                     <span>Sent: {new Date(invitation.sentAt).toLocaleDateString()}</span>
-                    <span>Expires: {new Date(invitation.expiresAt).toLocaleDateString()}</span>
+                    {/*
+                      * #143. This used to be an unguarded
+                      * `new Date(invitation.expiresAt).toLocaleDateString()`, and
+                      * `new Date('')` is `Invalid Date` — which is what the reporter
+                      * saw. The API now sends a real expiry, but it still sends `''`
+                      * for an invitation created BEFORE the `expires_at` column
+                      * existed, because that row genuinely has no expiry (see the
+                      * model's note on why NULL is not "expired"). So the guard stays:
+                      * those rows say nothing rather than saying "Invalid Date".
+                      */}
+                    {(() => {
+                      if (!invitation.expiresAt) return null;
+                      const expires = new Date(invitation.expiresAt);
+                      if (Number.isNaN(expires.getTime())) return null;
+                      return <span>Expires: {expires.toLocaleDateString()}</span>;
+                    })()}
                   </div>
                 </div>
                 {invitation.status === 'pending' && (
@@ -609,31 +663,68 @@ export const TeamManagement: React.FC = () => {
         )}
       </Card>
 
-      {/* Transfer Ownership (Future) */}
+      {/*
+        * Transfer Ownership (#142).
+        *
+        * *** THIS CARD USED TO BE A STATIC PLACEHOLDER — comment and all: "Transfer
+        * Ownership (Future)". *** It rendered a heading, the sentence "Only the
+        * account owner can transfer ownership to another admin" and an "Admin Only"
+        * badge, and contained no control of any kind. Meanwhile
+        * `POST /api/v1/team/transfer-ownership` exists and works, and
+        * `teamService.transferOwnership` was written and called from nowhere.
+        *
+        * So the reporter was not missing a permission or a step: the feature was
+        * described on screen and had no wiring behind it. That is the affordance-that-
+        * lies shape D-05 and U-04 are both about, and the fix is to connect what is
+        * already there rather than to build anything new.
+        */}
       <Card>
         <h2 style={{ ...sectionTitleStyle, marginBottom: '24px' }}>
           <Crown size={20} />
           Transfer Ownership
         </h2>
         <p className="fp-hint-block">
-          Transfer account ownership to another team member (This action cannot be undone)
+          Hand the owner role to another member. You become a member and they become
+          the owner — this cannot be undone from here, only reversed by the new owner.
         </p>
-        <div style={{ ...panelStyle, padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-            Only the account owner can transfer ownership to another admin
-          </p>
-          <span style={{
-            display: 'inline-block',
-            marginTop: '8px',
-            padding: '4px 12px',
-            background: 'rgba(245, 158, 11, 0.1)',
-            color: AMBER,
-            fontSize: '14px',
-            borderRadius: '6px',
-          }}>
-            Admin Only
-          </span>
-        </div>
+        {transferCandidates.length === 0 ? (
+          <div style={{ ...panelStyle, padding: '24px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+              There is nobody to transfer ownership to yet. Invite another member
+              first.
+            </p>
+          </div>
+        ) : (
+          <div style={{ ...panelStyle, display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
+            <div style={{ ...stackStyle('6px'), flex: '1 1 240px' }}>
+              <label style={labelStyle} htmlFor="transfer-owner-target">
+                New owner
+              </label>
+              <select
+                id="transfer-owner-target"
+                className="fp-input"
+                value={transferTargetId}
+                onChange={(e) => setTransferTargetId(e.target.value)}
+                disabled={isTransferring}
+              >
+                <option value="">Select a member…</option>
+                {transferCandidates.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name} ({member.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              variant="danger"
+              onClick={handleTransferOwnership}
+              disabled={!transferTargetId || isTransferring}
+            >
+              <Crown size={16} />
+              {isTransferring ? 'Transferring…' : 'Transfer ownership'}
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );

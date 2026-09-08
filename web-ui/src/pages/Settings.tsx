@@ -82,6 +82,28 @@ export const Settings: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  /**
+   * Switch tabs and drop whatever the last form said (#145).
+   *
+   * *** `saveError` AND `saveSuccess` ARE ONE PIECE OF STATE SHOWN IN THREE TAB
+   * BODIES *** — profile, security and data each render `{saveError && ...}` — so a
+   * failed password change put "Failed to change password" on the Profile and
+   * Data & Privacy tabs too, which is exactly the pair the reporter named. Nothing
+   * cleared it: the only effect keyed to `saveError` restores scroll position, and
+   * there is no auto-dismiss.
+   *
+   * Cleared on navigation rather than scoped per form on purpose. Giving each of the
+   * three panels its own error state is the tidier fix and a much larger diff across
+   * six handlers, and it would leave the same stale message sitting on a tab the user
+   * comes back to. A message about a form you have navigated away from is not
+   * information.
+   */
+  const changeTab = (tabId: string) => {
+    setSaveError(null);
+    setSaveSuccess(false);
+    setActiveTab(tabId);
+  };
   const [isSaving, setIsSaving] = useState(false);
 
   const [profileData, setProfileData] = useState({
@@ -366,7 +388,7 @@ export const Settings: React.FC = () => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => changeTab(tab.id)}
               className={`nav-item${activeTab === tab.id ? ' active' : ''}`}
               style={{
                 width: '100%', border: 'none', cursor: 'pointer',

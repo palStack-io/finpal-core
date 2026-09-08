@@ -214,9 +214,30 @@ class Password(Resource):
         if not current_password or not new_password:
             return {'message': 'Current and new password required'}, 400
 
-        # Verify current password
+        # Verify current password.
+        #
+        # *** 400, NOT 401, AND THE CODE IS A REAL FIX RATHER THAN PEDANTRY (#144). ***
+        # `web-ui/src/services/api.ts:38` intercepts EVERY 401, tries to refresh the
+        # access token, and logs the user out when that refresh fails — so answering
+        # 401 to a mistyped current password ran the re-authentication path, and a
+        # user whose refresh token had expired got signed out for a typo. The caller
+        # is authenticated; it is their input that is wrong.
+        #
+        # The message names the SSO case without CLAIMING it, and that distinction is
+        # deliberate. An OIDC-created account is given
+        # `set_password(secrets.token_urlsafe(24))` at `src/models/user.py:130` — a
+        # real hash of a password nobody will ever know — so a self-hoster on SSO got
+        # told they had typed it wrong when in fact they had nothing to type. But
+        # nothing here can distinguish that from a genuine typo: `oidc_id` is also set
+        # on a LOCAL account that later links SSO, and those users do have a password
+        # they are entitled to change. Telling them they have none would be a new lie.
+        # Letting an SSO-only user SET a first password needs a column to tell the two
+        # apart, which is release-gating under D-121 and is filed rather than rushed.
         if not user.check_password(current_password):
-            return {'message': 'Current password is incorrect'}, 401
+            return {'message': 'Current password is incorrect. If you sign in with '
+                               'SSO and have never set a local password, there is '
+                               'no password on this account to change — ask your '
+                               'administrator to enable local sign-in.'}, 400
 
         # Validate new password strength
         if len(new_password) < 8:

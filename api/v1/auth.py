@@ -398,6 +398,15 @@ class Register(Resource):
             invitation = Invitation.query.filter_by(
                 email=email, status='pending').first()
 
+            # *** AND IT MUST NOT HAVE EXPIRED (#143). *** This is one of two doors
+            # onto the same token; `POST /team/accept-invitation` is the other, and
+            # both ask `is_usable` so neither can drift. Before the expiry existed an
+            # invite link was a registration credential for the life of the instance.
+            # An invitation predating the column reads as not-expired on purpose —
+            # see the note on `Invitation.expires_at`.
+            if invitation is not None and invitation.is_expired:
+                invitation = None
+
             if user_count > 0 and not invitation:
                 return {'error': 'Registration is by invitation only. '
                                  'Ask your household admin for an invite.'}, 403
@@ -413,6 +422,22 @@ class Register(Resource):
             # First non-demo user becomes admin
             if user_count == 0:
                 user.is_admin = True
+            elif invitation is not None:
+                # *** #140: THE INVITATION'S ROLE WAS STORED, RETURNED BY THE API,
+                # OFFERED BY THE INVITE FORM — AND NEVER READ HERE. *** So every
+                # invited admin arrived as a member, and the only way to get a
+                # second admin was the separate role endpoint the reporter had no
+                # reason to look for.
+                #
+                # `== 'admin'` and not `!= 'member'`: `role` also accepts 'viewer',
+                # and `User` expresses authority as a single `is_admin` boolean with
+                # no viewer concept — so a viewer IS a member today. That gap is
+                # pre-existing and consistent (`PUT /team/members/<id>/role` does the
+                # same comparison), and inventing a permission tier here would be a
+                # feature rather than this bug's fix. Pinned in
+                # `tests/integration/test_team_invitations.py` so it is a recorded
+                # answer rather than an oversight.
+                user.is_admin = (invitation.role == 'admin')
 
             token = user.generate_verification_token()
 
