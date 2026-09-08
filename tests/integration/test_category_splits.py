@@ -34,6 +34,8 @@ produced wrong numbers rather than an error:
     legacy code did this too, and it is what stops the amount being counted once
     through its own category and again through the splits.
 """
+from datetime import datetime
+
 from src.extensions import db
 from src.models.category import Category
 from src.models.transaction import CategorySplit, Expense
@@ -236,7 +238,16 @@ def test_the_budget_counts_a_split_once_through_its_own_category(
     db.session.add(budget)
     db.session.commit()
 
-    _create(client, user, auth_headers, amount=100.0, category_splits={
+    # *** THE DATE MUST BE INSIDE THE BUDGET'S CURRENT PERIOD, AND MUST NOT BE
+    # A LITERAL. *** `calculate_spent_amount()` with no arguments scopes to the
+    # CURRENT calendar month (`Budget.get_current_period_dates`), while this
+    # file's `_create` helper defaults to a hardcoded `2026-08-05`. So this
+    # test passed for as long as it was August 2026 and asserted `0 == 60.0`
+    # from September 1st onwards — it made `main` red for eight days, and the
+    # product was never broken. The no-argument call is kept because that is
+    # the path production uses; it is the fixture date that has to move.
+    _create(client, user, auth_headers, amount=100.0,
+            date=datetime.utcnow().strftime('%Y-%m-%d'), category_splits={
         str(food.id): 60.0, str(home.id): 40.0})
 
     spent = budget.calculate_spent_amount()

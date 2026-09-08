@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_
 from src.models.transaction import Expense
 from src.models.budget import Budget
-from src.models.group import Group
+from src.models.group import Group, Settlement
 from src.models.user import User
 from src.models.category import Category
 from src.models.currency import Currency
@@ -181,8 +181,15 @@ class AnalyticsService:
                 if expense.card_used:
                     unique_cards.add(expense.card_used)
 
-        # Calculate IOU data
-        iou_data = self._calculate_iou_data(user_id, expenses, expense_splits)
+        # Calculate IOU data.
+        #
+        # NOT from `expenses` above, deliberately. That list starts at December
+        # 1st of the previous year to bound the dashboard's queries, and a debt
+        # balance is as-of by nature: what a housemate owes you does not stop
+        # being owed because the meal was in November. `get_iou_data` runs its
+        # own query over split rows only, which is what bounds it instead.
+        # D-152.
+        iou_data = self.get_iou_data(user_id, scope_ids=scope_ids)
 
         # Calculate budget summary
         budget_summary = self._calculate_budget_summary(user_id, now, household_ids)
@@ -244,8 +251,75 @@ class AnalyticsService:
             'now': now
         }
 
-    def _calculate_iou_data(self, user_id, expenses, expense_splits):
-        """Calculate IOU balances between users"""
+    def get_iou_data(self, user_id, scope_ids=None):
+        """Who owes whom, as of now, with repayments applied.
+
+        Public because the report email needs it on its own: it used to be
+        reachable only by building the entire `get_dashboard_data` payload,
+        twenty other fields included, to read three.
+
+        Two properties this has and the old private path did not:
+
+        **Repayments count.** `_calculate_iou_data` summed split shares and
+        never read the `settlements` table, so a debt paid in full was still
+        reported as outstanding — while `Group.calculate_balances` applies
+        settlements when answering the same question. One product, two answers.
+        That is **D-152**, and it was latent only because no client renders the
+        figure; the report email is what would have made it live.
+
+        **It is as-of, not year-to-date.** See the note at the call site.
+
+        Bounded by `split_with` rather than by date: a row nobody split
+        contributes nothing here (asserted, not assumed, in
+        `tests/integration/test_iou_settlements.py`), so filtering to split
+        rows is exact rather than an approximation.
+
+        Scope is `read_scope`/`scope_query` — the household predicate every
+        other analytics query uses. Hand-rolling `is_household_member` on both
+        sides here would be right for ownership and wrong for a shared thing:
+        it forbids demo-to-demo and breaks the public demo, invisibly to any
+        test that only builds real users.
+        """
+        from src.utils.household import read_scope, scope_query
+
+        household_ids = scope_ids or read_scope(user_id)
+
+        expenses = (scope_query(household_ids)
+                    .filter(Expense.split_with.isnot(None),
+                            Expense.split_with != '')
+                    .all())
+
+        users_map = {u.id: u for u in User.query.all()}
+        expense_splits = {e.id: e.calculate_splits(users_map=users_map)
+                          for e in expenses}
+
+        # Only settlements this user is a party to can move this user's
+        # balances, which keeps the query small as the table grows.
+        #
+        # This filter and the party checks inside `_calculate_iou_data`'s
+        # settlement loop are REDUNDANT WITH EACH OTHER, and that is recorded
+        # rather than tidied: removing either one alone changes no behaviour
+        # and fails no test (both sabotages were run), because a settlement
+        # this query returns always has the caller as one party and the
+        # opposite party as the dict key. Removing BOTH does fail. The loop's
+        # checks are kept because they stop being redundant the moment anyone
+        # widens this query — e.g. to compute every member's balances at once.
+        settlements = Settlement.query.filter(
+            or_(Settlement.payer_id == user_id,
+                Settlement.receiver_id == user_id)).all()
+
+        return self._calculate_iou_data(
+            user_id, expenses, expense_splits, settlements)
+
+    def _calculate_iou_data(self, user_id, expenses, expense_splits,
+                            settlements=()):
+        """Calculate IOU balances between users, net of repayments.
+
+        Amounts stay `Decimal` throughout. `Group.calculate_balances`, which
+        this mirrors, accumulates into `defaultdict(float)` and clamps with
+        `max(0.0, ...)`; copying that shape here would either raise on
+        `float + Decimal` or reintroduce the binary error D-58 removed.
+        """
         from types import SimpleNamespace
 
         owes_me = {}  # People who owe current user
@@ -264,7 +338,8 @@ class AnalyticsService:
                     amount = split['amount']
 
                     if split_user_id not in owes_me:
-                        owes_me[split_user_id] = {'name': user_name, 'amount': 0}
+                        owes_me[split_user_id] = {'name': user_name,
+                                                  'amount': Decimal('0')}
                     owes_me[split_user_id]['amount'] += amount
 
             # If current user is in the splits (but not the payer)
@@ -275,12 +350,28 @@ class AnalyticsService:
                 current_user_split = next((split['amount'] for split in splits['splits'] if split['id'] == user_id), 0)
 
                 if payer_id not in i_owe:
-                    i_owe[payer_id] = {'name': payer.name if payer else 'Unknown', 'amount': 0}
+                    i_owe[payer_id] = {'name': payer.name if payer else 'Unknown',
+                                       'amount': Decimal('0')}
                 i_owe[payer_id]['amount'] += current_user_split
 
+        # Apply repayments. A settlement I received reduces what I am owed; one
+        # I made reduces what I owe. Clamped at zero: overpaying a debt must
+        # not turn the other person into my debtor, which would read on the
+        # dashboard as money owed the wrong way round.
+        for settlement in settlements:
+            amount = Decimal(str(settlement.amount))
+            if settlement.receiver_id == user_id and settlement.payer_id in owes_me:
+                owes_me[settlement.payer_id]['amount'] = max(
+                    Decimal('0'), owes_me[settlement.payer_id]['amount'] - amount)
+            elif settlement.payer_id == user_id and settlement.receiver_id in i_owe:
+                i_owe[settlement.receiver_id]['amount'] = max(
+                    Decimal('0'), i_owe[settlement.receiver_id]['amount'] - amount)
+
         # Calculate net balance
-        total_owed = sum(data['amount'] for data in owes_me.values())
-        total_owing = sum(data['amount'] for data in i_owe.values())
+        total_owed = sum((data['amount'] for data in owes_me.values()),
+                         Decimal('0'))
+        total_owing = sum((data['amount'] for data in i_owe.values()),
+                          Decimal('0'))
         net_balance = total_owed - total_owing
 
         return SimpleNamespace(
