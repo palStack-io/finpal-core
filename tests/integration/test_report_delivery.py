@@ -219,10 +219,21 @@ def test_the_subject_names_the_period_it_covers(db, sent):
     assert sent[0]['subject'] == 'Your weekly finPal report — Week of Aug 31 – Sep 6, 2026'
 
 
-def test_each_member_gets_their_own_locale_and_currency(db, sent):
-    """Household figures, personal formatting. `format_money` reads the payload,
-    and the payload is built per recipient — so this is what proves the loop does
-    not build one report and mail it twice."""
+def test_the_loop_builds_a_REPORT_PER_MEMBER_not_one_mailed_twice(db, sent):
+    """Each recipient's payload is built separately, so the formatting is personal.
+
+    *** THIS TEST USED TO ASSERT `any('$')` AND `any('€')` AND THAT WAS BLESSING A
+    DEFECT. *** Those two assertions are satisfied by the correct behaviour AND by
+    D-156 — the household's spend total is the SAME NUMBER for both members while
+    the symbol differs, because `Expense.amount` is never converted and only the
+    account balances are. So it passed either way and was evidence of nothing.
+
+    What it asserts now is only the claim it can actually support: two distinct
+    bodies were rendered, one per recipient, rather than one body mailed twice.
+    The currency question is D-156's, and `test_the_two_members_get_the_same_spend
+    _total_under_different_symbols` below pins the defect explicitly so that fixing
+    it fails a test instead of passing quietly.
+    """
     _spender(name='Harun', default_currency_code='USD', number_locale='en-US')
     UserFactory(name='Amélie', default_currency_code='EUR', number_locale='fr-FR')
 
@@ -230,8 +241,40 @@ def test_each_member_gets_their_own_locale_and_currency(db, sent):
 
     bodies = {m['to']: m['html'] for m in sent}
     assert len(bodies) == 2
-    assert any('$' in html for html in bodies.values())
-    assert any('€' in html for html in bodies.values())
+    assert len(set(bodies.values())) == 2, (
+        'both members received a byte-identical body, so the loop built one report '
+        'and mailed it twice — the per-recipient currency, number_locale and '
+        'timezone are all doing nothing')
+
+
+def test_the_two_members_get_the_same_spend_total_under_different_symbols(db, sent):
+    """*** PINS D-156, WHICH IS A LIVE DEFECT AND NOT THE REPORT'S OWN. ***
+
+    `Expense.amount` is not converted anywhere on read, but
+    `calculate_asset_debt_trends` DOES convert account balances into the viewing
+    user's currency (`src/utils/helpers.py:279`). So one report card carries a
+    converted net worth beside an unconverted spend total, under one symbol.
+
+    Measured, both here and against `get_dashboard_data`, which does exactly the
+    same thing — so this is **pre-existing and live on the deployed dashboard**,
+    not something the report introduced. It is pinned rather than fixed because the
+    fix is a decision about a payload two other clients already consume.
+
+    **When D-156 is fixed, this test must fail.** That is the point of it: it
+    records the current answer so the change is visible instead of silent. Update
+    it in the same commit as the fix, do not delete it.
+    """
+    _spender(name='Dollar', default_currency_code='USD', number_locale='en-US')
+    _spender(name='Euro', default_currency_code='EUR', number_locale='en-US')
+
+    send_reports('weekly', as_of=AS_OF)
+
+    bodies = {m['to']: m['html'] for m in sent}
+    assert len(bodies) == 2
+    # The household spent 150.00 in total (75.00 each). Both members are told the
+    # same figure; only the symbol changes.
+    assert any('$150.00' in html for html in bodies.values())
+    assert any('€150.00' in html for html in bodies.values())
 
 
 def test_the_window_is_resolved_in_each_users_own_timezone(db, sent):
