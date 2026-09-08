@@ -152,6 +152,40 @@ def test_a_user_who_turned_email_off_gets_nothing(db, user, sent):
     assert sent == [], 'notification_email = False must be honoured'
 
 
+def test_a_null_notification_email_still_gets_the_review_email(db, user, sent):
+    """D-155. NULL is "never expressed a preference", and the preference is on.
+
+    *** THE NULL IS WRITTEN WITH RAW SQL BECAUSE THE ORM CANNOT PRODUCE ONE. ***
+    `notification_email` is `db.Column(db.Boolean, default=True)` — a PYTHON-side
+    default — so setting the attribute to `None` and committing stores **True**:
+    SQLAlchemy substitutes the default whenever the attribute is None at INSERT, and
+    a test written that way asserts nothing at all. The assertion below that the
+    stored value really is NULL is not decoration; without it this test passes
+    against the bug.
+
+    The route to a real NULL in production is a column ADDED to a table that already
+    has rows, which is what the boot-time schema reconcile does on every upgrade —
+    so the affected population is the oldest accounts on any database that predates
+    this column. `scanner.py` read that NULL as an opt-out (`not None` is True) while
+    `report/delivery.py` read it as an opt-in. One column, two meanings, and the
+    column's own declared default says which one is right.
+    """
+    from src.services.csv_import.scanner import _notify_if_review_needed
+
+    db.session.execute(
+        db.text('UPDATE users SET notification_email = NULL WHERE id = :i'),
+        {'i': user.id})
+    db.session.commit()
+    db.session.expire(user)
+    assert db.session.execute(
+        db.text('SELECT notification_email FROM users WHERE id = :i'),
+        {'i': user.id}).scalar() is None, 'the NULL did not take — this test proves nothing'
+
+    _notify_if_review_needed(_batch(user.id, _profile(user.id, 'heuristic')))
+
+    assert len(sent) == 1, 'a NULL preference must not be read as an opt-out'
+
+
 def test_a_failing_mailer_never_fails_the_import(db, user, monkeypatch):
     """The import is already committed by the time we notify.
 

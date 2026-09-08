@@ -178,7 +178,14 @@ def _notify_if_review_needed(batch):
             return
 
         user = db.session.get(User, batch.user_id)
-        if user is None or not user.notification_email:
+        # `is False`, not `not user.notification_email`. The column is
+        # `Boolean, default=True` — a PYTHON-side default, so a row that predates
+        # the column reads back NULL, and `not None` is True. Written the falsy way
+        # this guard silently unsubscribed exactly the oldest accounts on any
+        # database old enough to have been reconciled into this column, while
+        # `src/services/report/delivery.py:88` read the same NULL as opted IN. One
+        # column, two meanings; the column's own declared default says True. D-155.
+        if user is None or user.notification_email is False:
             return
 
         guessed = bool(batch.profile and batch.profile.origin == 'heuristic')
