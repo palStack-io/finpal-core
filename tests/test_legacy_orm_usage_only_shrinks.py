@@ -28,7 +28,8 @@ rather than assumed:
 
 Identical, so those sites keep their behaviour. All 65 were printed and read
 before the substitution, and two files needed a `db` import they did not have
-(`notification/service.py`, `transaction/balances.py`).
+(`notification/service.py` — since **deleted**, 2026-09-08 — and
+`transaction/balances.py`).
 
 **`Model.query` the ACCESSOR is untouched and still used widely** — this file has
 never counted it. Only `.get()` on it is gone. Narrowing the accessor is a

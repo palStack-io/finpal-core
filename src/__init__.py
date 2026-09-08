@@ -531,14 +531,47 @@ def setup_scheduled_tasks(app):
             except Exception as e:
                 app.logger.error(f"Budget rollover failed: {e}")
 
-    @scheduler.task('cron', id='monthly_reports', day=1, hour=1, minute=0)
+    # *** BOTH REPORT JOBS FIRE AT 08:00, AND THE HOUR IS LOAD-BEARING. ***
+    #
+    # `scheduler.timezone` is `pytz.timezone('EST')` (src/extensions.py:80) — a FIXED
+    # UTC-5 with no DST — so 08:00 here is 13:00 UTC every day of the year.
+    #
+    # The period each user is reported on is resolved in THEIR timezone from the single
+    # instant the job fires (`resolve_period`, design spec trap 10). That makes the
+    # firing hour decide which period a westward user gets, and the old `hour=1` got it
+    # wrong: 06:00 UTC on the 1st is 22:00 on the LAST DAY OF THE PREVIOUS MONTH in
+    # UTC-8, so `_monthly` returned the month before that and a Pacific user's October
+    # report covered AUGUST. Weekly had the same shape, lagging a full week.
+    #
+    # At 13:00 UTC every zone from UTC-12 to UTC+14 reads Monday or Tuesday locally
+    # (weekly) and the 1st or the 2nd (monthly) — and both of those resolve to the
+    # just-completed period. It also holds with margin if `scheduler.timezone` ever
+    # becomes `America/New_York`: an hour of DST drift changes nothing.
+    #
+    # Harmless to change today because the old body only logged, which is D-149.
+    @scheduler.task('cron', id='monthly_reports', day=1, hour=8, minute=0)
     def scheduled_monthly_reports():
-        """Run on the 1st day of each month at 1:00 AM"""
+        """Send the monthly report on the 1st. See the note above on the hour."""
         with app.app_context():
             try:
-                app.logger.info("Monthly reports task executed")
+                from src.services.report.delivery import send_reports
+                app.logger.info(f"Monthly reports: {send_reports('monthly')}")
             except Exception as e:
-                app.logger.error(f"Monthly reports failed: {e}")
+                app.logger.exception(f"Monthly reports failed: {e}")
+
+    @scheduler.task('cron', id='weekly_reports', day_of_week='mon', hour=8, minute=30)
+    def scheduled_weekly_reports():
+        """Send the weekly report on Mondays. See the note above on the hour.
+
+        Half an hour after the monthly job so that on a 1st-of-the-month Monday the
+        two runs do not walk every household's transactions at the same moment.
+        """
+        with app.app_context():
+            try:
+                from src.services.report.delivery import send_reports
+                app.logger.info(f"Weekly reports: {send_reports('weekly')}")
+            except Exception as e:
+                app.logger.exception(f"Weekly reports failed: {e}")
 
     @scheduler.task('cron', id='simplefin_sync', hour=23, minute=0)
     def scheduled_simplefin_sync():

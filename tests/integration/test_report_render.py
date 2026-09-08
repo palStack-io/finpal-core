@@ -257,3 +257,59 @@ def test_the_renderer_touches_no_database(db):
     _db.session.remove()
 
     assert '$200.00' in render_html(report)
+
+
+# --- D-154: a household member with no name -------------------------------
+
+def test_a_nameless_housemate_does_not_stop_the_report(db):
+    """*** ONE NAMELESS ROW USED TO CRASH THE REPORT FOR THE WHOLE HOUSEHOLD. ***
+
+    `User.name` is `nullable=True`, `household.names` lists **every** member, and
+    `html.escape(None)` raises `AttributeError` — so this was not "that member's
+    name is missing", it was `AttributeError: 'NoneType' object has no attribute
+    'replace'` and no report for anybody on the instance. Proven behaviourally
+    before the row was opened (D-154), which is the D-90 rule.
+
+    Reachable rather than theoretical: registration writes `email.split('@')[0]`,
+    but the OIDC path takes whatever the provider sent, and `api/v1/auth.py:777,823`
+    already carry this same `or user.id.split('@')[0]` fallback inline.
+    """
+    me = UserFactory(name='Harun')
+    nameless = UserFactory(name=None)
+    account = AccountFactory(user_id=me.id, type='checking',
+                             balance=Decimal('2450.00'))
+    food = CategoryFactory(name='Groceries', user_id=me.id)
+    ExpenseFactory(user_id=me.id, account_id=account.id, amount=Decimal('75.00'),
+                   date=INSIDE, paid_by=me.id, category_id=food.id)
+
+    html = render_html(build_report(me.id, WEEK, 'weekly'))
+
+    # The email local part, not a blank and not the word None.
+    assert nameless.id.split('@')[0] in html
+    assert '>None' not in html and 'None &' not in html and '& None' not in html
+    assert 'Harun' in html
+
+
+def test_a_nameless_debtor_is_named_in_the_settling_up_rows(db):
+    """The other three sites of the same crash — the IOU rows carry names too.
+
+    Fixed at the payload boundary in `build_report`, deliberately NOT in
+    `_calculate_iou_data`: the dashboard consumes that payload and renders a
+    `null` name as an empty string in React rather than crashing, so changing
+    the analytics contract would alter two working clients to fix the third.
+    """
+    me = UserFactory(name='Harun')
+    them = UserFactory(name=None)
+    account = AccountFactory(user_id=me.id, type='checking',
+                             balance=Decimal('2450.00'))
+    food = CategoryFactory(name='Groceries', user_id=me.id)
+    ExpenseFactory(user_id=me.id, account_id=account.id, amount=Decimal('100.00'),
+                   date=INSIDE, paid_by=me.id, split_method='equal',
+                   split_with=them.id, category_id=food.id)
+
+    report = build_report(me.id, WEEK, 'weekly')
+
+    assert report['iou']['rows'], 'no IOU row seeded — this test proves nothing'
+    for row in report['iou']['rows']:
+        assert row['who'] and row['owes_whom'], row
+    assert render_html(report)
