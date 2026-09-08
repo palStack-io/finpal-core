@@ -300,3 +300,38 @@ def default_currency_for(user_id, fallback='USD'):
     if user is None:
         return fallback
     return getattr(user, 'default_currency_code', None) or fallback
+
+
+def display_name(user_id, name=None):
+    """Something printable for a user, **never `None`** (D-154).
+
+    `User.name` is `nullable=True` and nothing backfills it: registration writes
+    `email.split('@')[0]` (`api/v1/auth.py:389`) but the OIDC path takes whatever the
+    provider sent, and a row can be edited to empty. `api/v1/auth.py:777,823` already
+    spell this fallback inline as `user.name or user.id.split('@')[0]`, which is the
+    evidence that a null name is reachable rather than theoretical.
+
+    *** IT IS HERE BECAUSE THE REPORT EMAIL CRASHED ON IT AND TOOK THE WHOLE HOUSEHOLD
+    WITH IT. *** `render_html` escapes every name, and `html.escape(None)` raises
+    `AttributeError`. The report's `household.names` block lists **every** member, so one
+    nameless row stopped the report rendering for everyone on the instance, not just for
+    that member — a one-row data condition silencing the entire cron.
+
+    **Fixed at the payload boundary, deliberately, not in analytics.**
+    `_calculate_iou_data` puts `payer.name` straight into its dict and the dashboard
+    renders it in React, where `null` is an empty string and not a crash. Normalising
+    there would change a payload two clients already consume, to fix a defect that only
+    exists in the third. So the report builder normalises what it copies out, and the
+    analytics contract is untouched.
+
+    The two inline copies in `auth.py` are the same expression and are left alone: they
+    sit in the login path, and consolidating them is not this change. If a third caller
+    appears, use this one — D-145's "five copies, five disagreements" started this way.
+    """
+    if name:
+        return name
+    if not user_id:
+        # `_calculate_iou_data` already answers 'Unknown' for a party whose user row
+        # is gone, so this agrees with it rather than inventing a second wording.
+        return 'Unknown'
+    return str(user_id).split('@')[0]

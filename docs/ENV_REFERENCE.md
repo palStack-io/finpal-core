@@ -104,9 +104,26 @@ statements and changes nothing.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DEMO_MODE` | `False` | Enable demo mode (sandboxed sessions) |
+| `DEMO_MODE` | `False` | Enable demo mode (sandboxed sessions). **Also disables the periodic report email — see below.** |
 | `DEMO_TIMEOUT_MINUTES` | `10` | Minutes before a demo session expires |
 | `MAX_CONCURRENT_DEMO_SESSIONS` | `10` | Max simultaneous demo users |
+
+### `DEMO_MODE` also switches off the report email
+
+`DEMO_MODE=true` means **no weekly or monthly report emails are sent from this
+instance at all**, regardless of `EMAIL_ENABLED` or anyone's notification preference.
+The refusal is in `src/services/report/delivery.py`.
+
+This is deliberate. A demo instance's users are seeded personas with published
+passwords and invented money, and its scheduler container runs with
+`RUN_SCHEDULER=true` — so without this, every demo deployment would mail financial
+summaries about fictional finances. `DEMO_MODE` is used as the signal because a demo
+stack cannot function without it, so it cannot drift out of the configuration while
+the demo still works.
+
+**If you run `DEMO_MODE=true` on the same instance as your real household, you will
+not get report emails.** Run the demo as a separate stack, which is what
+`docker-compose.demo.yml` is for.
 
 ---
 

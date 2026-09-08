@@ -109,7 +109,8 @@ def build_report(user_id, period, cadence):
     net-worth trend, and the vs-previous deltas.
     """
     from src.utils.helpers import calculate_asset_debt_trends
-    from src.utils.household import default_currency_for, read_scope
+    from src.utils.household import (default_currency_for, display_name,
+                                     read_scope)
 
     if cadence not in (WEEKLY, MONTHLY):
         raise ValueError(f'Unknown report cadence: {cadence!r}')
@@ -160,7 +161,11 @@ def build_report(user_id, period, cadence):
         'cadence': cadence,
         'period': period._asdict(),
         'household': {
-            'names': [member.name for member in _members(scope_ids)],
+            # `display_name`, not `.name`: `User.name` is nullable, and because this
+            # block lists EVERY member one nameless row crashed the report for the
+            # whole household. D-154.
+            'names': [display_name(member.id, member.name)
+                      for member in _members(scope_ids)],
             'member_ids': list(scope_ids),
         },
         'currency': {
@@ -207,15 +212,22 @@ def _iou_block(user_id, user, scope_ids):
     card nobody renders, which is why it was fixed before being exposed.
     """
     from src.services.analytics.service import AnalyticsService
+    from src.utils.household import display_name
 
     data = AnalyticsService().get_iou_data(user_id, scope_ids=scope_ids)
+    me = display_name(user.id, user.name)
     rows = []
-    for entry in data.owes_me.values():
+    # The dict key is the counterparty's id, which is what makes a fallback
+    # possible at all — `entry['name']` alone cannot distinguish "no name" from
+    # "no such user". D-154; normalised here rather than in analytics, whose
+    # payload the dashboard already consumes.
+    for other_id, entry in data.owes_me.items():
         if entry['amount']:
-            rows.append({'who': entry['name'], 'owes_whom': user.name,
-                         'amount': entry['amount']})
-    for entry in data.i_owe.values():
+            rows.append({'who': display_name(other_id, entry['name']),
+                         'owes_whom': me, 'amount': entry['amount']})
+    for other_id, entry in data.i_owe.items():
         if entry['amount']:
-            rows.append({'who': user.name, 'owes_whom': entry['name'],
+            rows.append({'who': me,
+                         'owes_whom': display_name(other_id, entry['name']),
                          'amount': entry['amount']})
     return {'rows': rows, 'net': data.net_balance}
