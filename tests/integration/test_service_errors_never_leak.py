@@ -428,8 +428,13 @@ def test_no_reachable_write_reports_the_database_to_the_client(
     def explode(*args, **kwargs):
         raise RuntimeError(SECRET)
 
-    # `resend an invitation` never commits — its leak is the SMTP exception, so
-    # the send is what has to fail there.
+    # `resend an invitation` has TWO failure points and both are sabotaged below.
+    # It used not to commit at all — its only leak was the SMTP exception — and that
+    # changed on 2026-09-08 when #143 gave invitations an expiry that resend extends.
+    # The first version of that change put the new `db.session.commit()` OUTSIDE the
+    # handler's `try`, and this test is what caught the raw database error reaching
+    # the response body. Leaving the comment saying "never commits" would have made
+    # the next reader trust a fact that had stopped being true.
     monkeypatch.setattr(_db.session, 'commit', explode)
     from src.services.email_service import email_service
     monkeypatch.setattr(email_service, 'send_invite_email', explode)

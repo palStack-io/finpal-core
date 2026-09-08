@@ -176,9 +176,24 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
+        """Whether `password` matches this account's stored hash.
+
+        **A row with no hash answers False rather than raising**, and the exception
+        list is the point. This used to catch `ValueError` only, while
+        `check_password_hash(None, ...)` raises **AttributeError** on werkzeug 3.1.3
+        (`'NoneType' object has no attribute 'split'`) — measured against the
+        installed version, not inferred from the signature. `password_hash` is
+        nullable, and this method is on the **login** path, so the uncaught case was
+        `POST /auth/login` answering 500 instead of refusing a credential.
+
+        A missing hash means "no local password", which can never match — so False
+        is the honest answer and not a swallowed error. Found while reading #144.
+        """
+        if not self.password_hash:
+            return False
         try:
             return check_password_hash(self.password_hash, password)
-        except ValueError:
+        except (ValueError, TypeError, AttributeError):
             return False
         
     def generate_reset_token(self):
