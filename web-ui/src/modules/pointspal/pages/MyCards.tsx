@@ -406,7 +406,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                       key={slug}
                       style={{ display: 'grid', gridTemplateColumns: '130px 52px 90px 90px 52px', gap: 6, alignItems: 'center', padding: '6px 8px', borderRadius: 8, background: active ? 'var(--g50)' : 'var(--input-bg)', border: `1px solid ${active ? 'var(--g200)' : 'var(--border)'}`, transition: 'all 0.15s' }}
                     >
-                      <span style={{ fontSize: 12, color: active ? 'var(--g700)' : 'var(--ink3)', fontWeight: active ? 700 : 400, fontFamily: "'Bricolage Grotesque', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                      <span style={{ fontSize: 12, color: active ? 'var(--g-ink)' : 'var(--ink3)', fontWeight: active ? 700 : 400, fontFamily: "'Bricolage Grotesque', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
 
                       {/* Multiplier */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -475,7 +475,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                       fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700,
                       border: confidence === lvl ? '2px solid var(--g700)' : '1px solid var(--border)',
                       background: confidence === lvl ? 'var(--g50)' : 'var(--white)',
-                      color: confidence === lvl ? 'var(--g700)' : 'var(--muted)',
+                      color: confidence === lvl ? 'var(--g-ink)' : 'var(--muted)',
                     }}
                   >
                     {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
@@ -679,7 +679,7 @@ const MyCards: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 0, borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                   {[
                     { label: 'Est. Value',   value: `$${card.est_value_usd.toLocaleString()}`,                       color: 'var(--g-ink)' },
-                    { label: 'Annual Fee',   value: card.annual_fee === 0 ? '$0' : `$${card.annual_fee}/yr`,         color: card.annual_fee > 0 ? 'var(--au600)' : 'var(--g700)' },
+                    { label: 'Annual Fee',   value: card.annual_fee === 0 ? '$0' : `$${card.annual_fee}/yr`,         color: card.annual_fee > 0 ? 'var(--au-ink)' : 'var(--g-ink)' },
                     { label: 'Avg Rate YTD', value: `${card.avg_rate_ytd}×`,                                          color: 'var(--g-ink)' },
                     { label: 'Program',      value: card.program || '—',                                               color: 'var(--ink3)' },
                   ].map(({ label, value, color }, i) => (
@@ -692,7 +692,7 @@ const MyCards: React.FC = () => {
 
                 {/* Earn rates */}
                 <div style={{ padding: '10px 14px' }}>
-                  <div style={{ fontSize: 10, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                     Earn Rates & Caps{isStale ? ' (unverified)' : ''}
                     {isStale && <span style={{ color: 'var(--au-ink)', marginLeft: 4 }}>⚠</span>}
                   </div>
@@ -719,7 +719,7 @@ const MyCards: React.FC = () => {
                   {isStale ? (
                     <button
                       onClick={() => setEditingCard(card)}
-                      style={{ flex: 1, padding: '8px', borderRadius: 'var(--rs)', background: 'var(--au500)', color: '#fff', border: 'none', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
+                      style={{ flex: 1, padding: '8px', borderRadius: 'var(--rs)', background: 'var(--au500)', color: '#1e293b', border: 'none', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
                     >
                       Review & Verify Rates →
                     </button>

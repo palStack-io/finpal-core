@@ -207,9 +207,16 @@
      In LIGHT these are DARKER than the surface tokens, not equal to them:
      --au600 (#d97706) as text measures 3.19:1 on white and 2.86:1 on --au100,
      and --re600 (#dc2626) measures 3.95:1 on --re100. One step down each fixes
-     both without touching the hue or any surface. --g-ink keeps the brand green,
-     which already passes as text at 4.87:1 on the card. */
-  --g-ink: #15803d; --au-ink: #b45309; --re-ink: #b91c1c;
+     both without touching the hue or any surface.
+
+     *** --g-ink WENT #15803d -> #166534 ON 2026-09-08, AND THE REASON IS THE ONE
+     THIS COMMENT ORIGINALLY MISSED. *** It said the brand green "already passes as
+     text at 4.87:1 on the card", which is true and is not the whole surface: on
+     Investments' 20%-green secondary button it measures 3.72:1, because the WASH
+     is what fails, not the card. #166534 measures 5.28:1 there and 7.13:1 on
+     white, so it clears both. A fixed hex like --g800 cannot do this job — it does
+     not theme, and it measures 1.86:1 on the dark wash. */
+  --g-ink: #166534; --au-ink: #b45309; --re-ink: #b91c1c;
   --ink: #0f172a; --ink2: #1e293b; --ink3: #334155;
   --muted: #64748b; --light: #94a3b8; --border: #e2e8f0;
   --bg: #f8fafc; --white: #ffffff;

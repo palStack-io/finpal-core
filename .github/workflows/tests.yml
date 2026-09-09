@@ -13,55 +13,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pytest:
-    name: pytest (Python ${{ matrix.python-version }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # 3.12 is what production runs: the Dockerfile is built on
-          # python:3.12-slim. This leg is the one that matters for "will it work
-          # when deployed".
-          #
-          # This used to be a 3.8 leg, because the image was built on ubuntu:20.04
-          # whose `python3` is 3.8.10. That base is gone and 3.8 reached end of
-          # life in October 2024, so testing it no longer described anything we
-          # ship — and supporting it forced yfinance and multitasking to stay on
-          # releases predating Python 3.9.
-          - python-version: '3.12'
-            runner: ubuntu-latest
-          # A second supported version, so a 3.12-only assumption cannot creep in
-          # unnoticed. finpal_core is self-hosted, and self-hosters will not all
-          # be on the same interpreter as the shipped image.
-          - python-version: '3.11'
-            runner: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements-test.txt
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-test.txt
-
-      - name: Run test suite
-        # The suite is self-contained: tests/conftest.py points SQLAlchemy at
-        # sqlite:///:memory: and builds the schema itself, so no database
-        # service is needed. Secrets are stubbed in conftest.
-        run: python -m pytest
-
+  # *** THE pytest JOB WAS REMOVED FROM CI ON 2026-09-09. IT RUNS LOCALLY. ***
+  #
+  # Owner instruction: "i want our pytest running locally so our merge to main via PR
+  # dont need it... when you or i push to main or via PR we dont need to run them
+  # online." The backend suite is ~8 minutes and it was the only thing a PR ever waited
+  # on.
+  #
+  # *** THIS IS ONLY SAFE BECAUSE THE LOCAL GATE NOW RUNS BOTH INTERPRETERS. ***
+  # CI was the ONLY place Python 3.11 ever ran — `preflight.sh quick`, which the
+  # pre-push hook used, is 3.12 only. Deleting this job without that change would have
+  # silently dropped 3.11 everywhere, and 3.11 is not a formality: the workflow's own
+  # comment said self-hosters "will not all be on the same interpreter as the shipped
+  # image". `scripts/preflight.sh` now runs 3.11 and 3.12 IN PARALLEL, the way this job
+  # did, so the full local gate costs about what CI cost.
+  #
+  # THE REQUIRED STATUS CHECKS WERE UPDATED IN THE SAME CHANGE. A required check whose
+  # job no longer exists can never report, and every PR blocks forever on
+  # "N of N required status checks are expected" — which is exactly the refusal this
+  # repo hit on 2026-09-09 when a branch went BEHIND.
   web-ui:
     name: web-ui (typecheck + vitest)
     runs-on: ubuntu-latest

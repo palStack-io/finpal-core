@@ -206,7 +206,14 @@ export const Investments: React.FC = () => {
                     background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                     border: 'none',
                     borderRadius: '8px',
-                    color: 'var(--text-primary)',
+                    /* *** WHITE, NOT `--text-primary`. *** This is a filled green
+                       button, so its label sits on the brand green in BOTH themes
+                       while `--text-primary` flips with the page: it measured
+                       2.83:1 in light (#17301f on #15803d) and 4.32:1 in dark
+                       (#e9f0e6). White measures 5.02:1 on the gradient's first
+                       stop. `color: 'white'` on coloured buttons is this app's
+                       deliberate convention, not an oversight. D-103. */
+                    color: 'white',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -229,7 +236,12 @@ export const Investments: React.FC = () => {
                     background: 'rgba(21, 128, 61, 0.2)',
                     border: '1px solid rgba(21, 128, 61, 0.5)',
                     borderRadius: '8px',
-                    color: 'var(--brand-light-green)',
+                    /* `--brand-light-green` (#86efac) over a 20% green wash on a
+                       LIGHT page composites to 1.04:1 — the worst pair measured on
+                       this surface. The wash is the problem, not the hue: the same
+                       token is fine on the dark page. The darker green reads on
+                       both. D-103. */
+                    color: 'var(--g-ink)',
                     cursor: isRefreshing ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',

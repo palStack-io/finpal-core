@@ -21,9 +21,41 @@ set -uo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 
+# *** THE PRIVACY GUARD RUNS EVEN UNDER SKIP_PREFLIGHT, AND IT IS NOT NEGOTIABLE. ***
+#
+# It takes 0.38 seconds — measured against the very commit that made this necessary — so
+# there is no bypass worth having. On 2026-09-09 a branch was pushed to this PUBLIC repo
+# carrying 980 Chrome-profile files with absolute /Users/<name>/... paths in them (D-169).
+# The guard was correct and would have caught it instantly. It did not run:
+#
+#   * `preflight.sh` had been run by hand BEFORE those files were staged, and the guard
+#     reads `git ls-files` — so at that moment there was genuinely nothing to find.
+#   * This hook runs AFTER the commit exists, which is exactly when the guard CAN see it,
+#     and it was skipped with SKIP_PREFLIGHT=1 on every push that session because the full
+#     gate had "already been run".
+#
+# A correct guard, a correct hook, and a discipline failure between them — which is this
+# file's own header warning happening to the person who wrote it. The correction is not to
+# bypass less. The cheap half of the gate now has no bypass, so a deliberate skip of the
+# slow half cannot leak anything. A leak cannot be taken back: it stays in the history, in
+# every clone and every fork.
+run_privacy_guard() {
+  local py="$ROOT/venv/bin/python"
+  [[ -x "$py" ]] || py=python3
+  if "$py" -m pytest "$ROOT/tests/unit/test_no_private_data_in_tracked_files.py" -q >/dev/null 2>&1; then
+    return 0
+  fi
+  printf '\n\033[31m✗ pre-push: PUSH REFUSED — private data in tracked files.\033[0m\n'
+  printf '  This runs even under SKIP_PREFLIGHT, because a leak cannot be taken back.\n\n'
+  "$py" -m pytest "$ROOT/tests/unit/test_no_private_data_in_tracked_files.py" -q 2>&1 | tail -25
+  return 1
+}
+
 if [[ "${SKIP_PREFLIGHT:-}" == "1" ]]; then
   printf '\033[33m! pre-push: SKIP_PREFLIGHT=1 — pushing without the local gate.\033[0m\n'
   printf '\033[33m  CI is now the only thing standing between this and main.\033[0m\n'
+  run_privacy_guard || exit 1
+  printf '\033[32m  (the privacy guard still ran, and it is clean)\033[0m\n'
   exit 0
 fi
 
@@ -60,10 +92,25 @@ fi
 #
 # Run `./scripts/preflight.sh` (no argument) before a release, when the 3.11 leg is worth
 # the wait. Do not "restore" the full gate here without making the suite faster first.
-printf '\n\033[1m▶ pre-push: running ./scripts/preflight.sh quick before letting this out\033[0m\n'
-printf '  (3.12 + web; CI runs the 3.11 leg. SKIP_PREFLIGHT=1 to bypass, deliberately)\n\n'
+# *** THE FULL GATE, NOT `quick`, BECAUSE CI NO LONGER RUNS pytest AT ALL. ***
+#
+# Until 2026-09-09 this ran `quick` (3.12 + web) and the comment above explained that
+# CI covered 3.11 anyway. That is no longer true: the owner moved the backend suite
+# out of CI entirely so a PR never waits on it, which makes THIS the only place
+# either interpreter runs.
+#
+# The old objection to the full gate was wall clock — 20-40 minutes, because
+# `preflight.sh` ran the two legs sequentially. It now runs them IN PARALLEL, the way
+# CI's matrix did, so the full gate costs about what `quick` used to and there is no
+# longer a reason to cover less than everything.
+printf '\n\033[1m▶ pre-push: running the FULL ./scripts/preflight.sh before letting this out\033[0m\n'
+printf '  (3.11 + 3.12 in parallel, plus every web step. CI does NOT run pytest any more,\n'
+printf '   so this is the only place it runs. SKIP_PREFLIGHT=1 to bypass, deliberately —\n'
+printf '   the privacy guard still runs even then.)\n\n'
 
-if "$ROOT/scripts/preflight.sh" quick; then
+run_privacy_guard || exit 1
+
+if "$ROOT/scripts/preflight.sh"; then
   printf '\n\033[32m✓ pre-push: local gate green — pushing.\033[0m\n'
   exit 0
 fi

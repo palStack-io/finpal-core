@@ -120,7 +120,7 @@ const BestCard: React.FC = () => {
                   style={{
                     padding: '8px 16px',
                     background: loading || !(parseFloat(amount) > 0) ? 'var(--g100)' : 'var(--g700)',
-                    color: loading || !(parseFloat(amount) > 0) ? 'var(--g700)' : '#fff',
+                    color: loading || !(parseFloat(amount) > 0) ? 'var(--g-ink)' : '#fff',
                     border: 'none',
                     borderRadius: 'var(--rs)',
                     fontFamily: "'Bricolage Grotesque', sans-serif",
@@ -185,13 +185,13 @@ const BestCard: React.FC = () => {
               >
                 {/* Glow orb */}
                 <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: '#fff', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, marginBottom: 6 }}>
                   Best card for ${parseFloat(amount).toFixed(2)} · {catLabel}
                 </div>
                 <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', marginBottom: 6 }}>
                   {result.winner.card_name}
                 </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>
+                <div style={{ fontSize: 13, color: '#fff' }}>
                   Earn {result.winner.pts_earned.toLocaleString()} pts ≈ <b>${result.winner.value_usd.toFixed(2)}</b> ({result.winner.effective_rate}×{result.winner.cap_note ? '' : ' · no cap'})
                 </div>
                 {result.displaced_winner && (
