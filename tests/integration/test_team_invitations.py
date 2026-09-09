@@ -73,20 +73,68 @@ def test_a_member_invitation_still_creates_a_member(client, as_admin, db):
     assert created.is_admin is False, 'a member invitation granted admin'
 
 
-def test_a_viewer_invitation_is_not_an_admin_either(client, as_admin, db):
-    """`role` accepts 'viewer' and `User` has no such concept — recorded, not fixed.
+def test_a_viewer_invitation_is_now_REFUSED(client, as_admin, db):
+    """*** THIS TEST USED TO ASSERT A 201, AND THAT WAS THE DEFECT. ***
 
-    `Invitation.role` validates against ('member', 'admin', 'viewer') but the user
-    model expresses authority as a single `is_admin` boolean, so a viewer and a
-    member are the same account. That is pre-existing and consistent (the role
-    endpoint does `is_admin = (new_role == 'admin')` too), and inventing a
-    permission tier here would be a feature, not a bug fix. Pinned so that whoever
-    builds the tier finds a test stating today's answer.
+    It pinned today's answer — `role` accepted 'viewer', `User` has no such concept,
+    so a "viewer" was an ordinary member with full write access wearing a badge that
+    said otherwise — and said inventing a tier would be a feature rather than a bug
+    fix. Owner decision B7 (2026-09-08) took the third option neither the row nor
+    this docstring considered: **stop offering it.** An affordance that is offered,
+    stored, and does nothing is worse than a missing one.
+
+    Kept and inverted rather than deleted, so the change is visible in the file that
+    blessed the old behaviour.
     """
-    assert _invite(client, as_admin, 'viewer@test.com', role='viewer').status_code == 201
-    _register(client, 'viewer@test.com')
+    resp = _invite(client, as_admin, 'viewer@test.com', role='viewer')
 
-    assert User.query.filter_by(id='viewer@test.com').first().is_admin is False
+    assert resp.status_code == 400, resp.get_json()
+    assert Invitation.query.filter_by(email='viewer@test.com').first() is None, (
+        'refused with a 400 and stored the invitation anyway')
+
+
+def test_a_viewer_invitation_STORED_BEFORE_B7_still_registers_as_a_member(client, as_admin, admin, db):
+    """Existing rows keep working, and nothing needs migrating.
+
+    Written directly to the table because the endpoint now refuses to create one —
+    which is the point: the rows that already exist cannot be reproduced through the
+    API any more, so a test that went through the API would silently stop covering
+    them. Registration reads `invitation.role == 'admin'`, so anything else has
+    always resolved to an ordinary member.
+    """
+    invitation = Invitation(email='legacy-viewer@test.com', role='viewer',
+                            token='legacy-viewer-token', status='pending',
+                            invited_by=admin.id,
+                            expires_at=datetime.utcnow() + timedelta(days=7))
+    _db.session.add(invitation)
+    _db.session.commit()
+
+    _register(client, 'legacy-viewer@test.com')
+
+    created = User.query.filter_by(id='legacy-viewer@test.com').first()
+    assert created is not None, 'a pre-B7 viewer invitation stopped working'
+    assert created.is_admin is False
+
+
+def test_the_role_endpoint_refuses_a_role_the_product_does_not_have(client, as_admin,
+                                                                    admin, db):
+    """It answered **200 — "Role updated to viewer"** while setting `is_admin = False`.
+
+    So the API confirmed a role that does not exist, and the caller was told they had
+    a read-only member who could in fact write everything. B7. Asserted on the stored
+    column as well as the status, because a 400 that had already committed would look
+    identical from the response.
+    """
+    target = UserFactory(id='rolecheck@test.com', name='Target')
+    target.is_admin = True
+    _db.session.commit()
+
+    resp = client.put(f'/api/v1/team/members/{target.id}/role',
+                      headers=as_admin, json={'role': 'viewer'})
+
+    assert resp.status_code == 400, resp.get_json()
+    _db.session.expire(target)
+    assert target.is_admin is True, 'refused the role change and applied it anyway'
 
 
 def test_registration_without_an_invitation_is_still_refused(client, as_admin, db):

@@ -186,6 +186,61 @@ oidc_signin_model = ns.model('OidcSignIn', {
     'full_name': fields.String(required=False, description='Display name from the provider'),
 })
 
+def _notifications(user):
+    """The four notification preferences, with a NULL read as its declared default.
+
+    *** D-150's REPORTED DEFECT DOES NOT EXIST, AND PROVING THAT IS WHY THIS HELPER
+    IS THE SHAPE IT IS. ***
+
+    The row said `/auth/login` and `/auth/me` "can report different notification
+    preferences for the same user", because login read the columns behind
+    `hasattr` guards whose fallbacks invert two of the four column defaults
+    (`push` -> False against a default of True, `transactionAlerts` -> True against
+    a default of False). Measured, both with defaults and with real NULLs written by
+    raw SQL: **the two endpoints agree in every case.** `hasattr` on a mapped column
+    is True even when the stored value is NULL, so the fallback branch was
+    unreachable and had always been. That is D-90's shape — a defect read out of the
+    source rather than proven behaviourally.
+
+    *** TWO SMALLER THINGS UNDER IT ARE REAL, AND THIS FIXES BOTH. ***
+
+    1. A NULL preference reached both clients as JSON `null`, so `if (!prefs.email)`
+       reads it as opted OUT while the column's declared default says True. That is
+       D-155 exactly — one NULL, two meanings — moved from two server paths to the
+       server/client boundary. NULL now resolves to the column's own default.
+
+    2. The dead fallbacks encoded values contradicting those defaults. Harmless while
+       unreachable and a trap the moment anyone makes them reachable, so they are
+       deleted rather than corrected.
+
+    The defaults are read OFF THE MODEL rather than repeated here. A second copy of
+    four booleans in the layer that publishes them is how the two ends of this
+    product have disagreed about the same column three times.
+    """
+    columns = User.__table__.columns
+
+    def value(attr):
+        stored = getattr(user, attr, None)
+        if stored is not None:
+            return stored
+        default = columns[attr].default
+        return default.arg if default is not None else None
+
+    return {
+        'email': value('notification_email'),
+        'push': value('notification_push'),
+        'budgetAlerts': value('notification_budget_alerts'),
+        'transactionAlerts': value('notification_transaction_alerts'),
+    }
+
+
+notification_prefs_model = ns.model('NotificationPreferences', {
+    'email': fields.Boolean(required=False, description='Email notifications'),
+    'push': fields.Boolean(required=False, description='Push notifications. finPal has no push stack today; the column is stored and nothing reads it.'),
+    'budgetAlerts': fields.Boolean(required=False, description='Budget threshold alerts'),
+    'transactionAlerts': fields.Boolean(required=False, description='New transaction alerts'),
+})
+
 onboarding_model = ns.model('Onboarding', {
     # Every field optional: the handler rejects only a wholly absent body and
     # reads each key with a default.
@@ -193,10 +248,22 @@ onboarding_model = ns.model('Onboarding', {
     'default_currency_code': fields.String(required=False, description="e.g. 'GBP'"),
     'timezone': fields.String(required=False, description='IANA timezone name'),
     'profile_emoji': fields.String(required=False, description='Avatar emoji'),
-    'notifications': fields.Boolean(required=False, description='Master notification switch'),
-    'push': fields.Boolean(required=False, description='Push notifications'),
-    'budgetAlerts': fields.Boolean(required=False, description='Budget threshold alerts'),
-    'transactionAlerts': fields.Boolean(required=False, description='New transaction alerts'),
+    # *** NESTED, BECAUSE THAT IS WHAT THE HANDLER READS. D-151. ***
+    #
+    # This was declared as `fields.Boolean` — a "master notification switch" — with
+    # `push`, `budgetAlerts` and `transactionAlerts` as three FLAT siblings beside it.
+    # The handler has never read that shape: it does `data['notifications']` and then
+    # indexes `['email']`, `['push']`, `['budgetAlerts']`, `['transactionAlerts']`
+    # inside it. A client following the published docs sent four flat booleans, got a
+    # **200**, and had every preference silently discarded — this is the only endpoint
+    # in the product that writes them, so there was no second chance.
+    #
+    # Declared to match the handler, NOT the reverse. Changing the handler would break
+    # both shipped clients, which send the nested shape; the documentation was the
+    # thing that was wrong. Two doc gates run over this file and neither caught it,
+    # because both check that a field EXISTS, not that it has the right type.
+    'notifications': fields.Nested(notification_prefs_model, required=False,
+                                   description='Notification preferences'),
 })
 
 # TokenResponse and UserResponse used to be declared here. Both were written for
@@ -540,12 +607,7 @@ class Login(Resource):
                     'timezone': user.timezone,
                     'number_locale': user.number_locale,  # #132
                     'modules': _get_user_modules(user.id),
-                    'notifications': {
-                        'email': user.notification_email if hasattr(user, 'notification_email') else True,
-                        'push': user.notification_push if hasattr(user, 'notification_push') else False,
-                        'budgetAlerts': user.notification_budget_alerts if hasattr(user, 'notification_budget_alerts') else True,
-                        'transactionAlerts': user.notification_transaction_alerts if hasattr(user, 'notification_transaction_alerts') else True
-                    }
+                    'notifications': _notifications(user)
                 }
             }, 200
 
@@ -610,12 +672,7 @@ class CurrentUser(Resource):
                 # entitlement, different answer depending on the door used.
                 # One user shape, one source: `_get_user_modules`.
                 'modules': _get_user_modules(user.id),
-                'notifications': {
-                    'email': user.notification_email,
-                    'push': user.notification_push,
-                    'budgetAlerts': user.notification_budget_alerts,
-                    'transactionAlerts': user.notification_transaction_alerts
-                },
+                'notifications': _notifications(user),
                 'created_at': user.created_at.isoformat() if user.created_at else None
             }, 200
 

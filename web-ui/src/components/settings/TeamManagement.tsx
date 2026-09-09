@@ -27,7 +27,7 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
-import type { TeamMember, Invitation, TeamRole } from '../../types/team';
+import type { TeamMember, Invitation, TeamRole, StoredRole } from '../../types/team';
 import { apiErrorMessage } from '../../utils/apiError';
 
 /** Semantic accent colours; deliberately not variablised — see CLAUDE.md. */
@@ -300,7 +300,12 @@ export const TeamManagement: React.FC = () => {
     }
   };
 
-  const getRoleIcon = (role: TeamRole) => {
+  /* `StoredRole`, not `TeamRole`: 'viewer' can no longer be CREATED (B7) but
+     invitations sent before it was removed still carry it, and a row that renders
+     with no badge at all is worse than one that renders honestly. It gets the
+     member treatment, which is what a stored 'viewer' actually becomes — the
+     registration path resolves anything that is not 'admin' to an ordinary member. */
+  const getRoleIcon = (role: StoredRole) => {
     switch (role) {
       case 'owner':
         return <Crown size={16} style={{ color: AMBER }} />;
@@ -313,7 +318,7 @@ export const TeamManagement: React.FC = () => {
     }
   };
 
-  const getRoleBadgeStyle = (role: TeamRole): React.CSSProperties => {
+  const getRoleBadgeStyle = (role: StoredRole): React.CSSProperties => {
     switch (role) {
       case 'owner':
         return badgeStyle('rgba(245, 158, 11, 0.1)', AMBER);
@@ -391,7 +396,7 @@ export const TeamManagement: React.FC = () => {
               onChange={(e) => setInviteRole(e.target.value as TeamRole)}
               className="fp-input"
             >
-              <option value="viewer">Viewer</option>
+              {/* No "Viewer": it was stored and did nothing. Owner decision B7. */}
               <option value="member">Member</option>
               <option value="admin">Admin</option>
             </select>
@@ -640,7 +645,7 @@ export const TeamManagement: React.FC = () => {
                         borderRadius: '8px',
                       }}
                     >
-                      <option value="viewer">Viewer</option>
+                      {/* B7 — see the invite form above. */}
                       <option value="member">Member</option>
                       <option value="admin">Admin</option>
                     </select>

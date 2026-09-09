@@ -3,7 +3,12 @@
  * Types for team collaboration and invitations
  */
 
-export type TeamRole = 'owner' | 'admin' | 'member' | 'viewer';
+/* 'viewer' was removed 2026-09-08 (owner decision B7): it was offered in the invite
+   form, stored on the invitation, and did nothing — `User` carries only `is_admin`,
+   so a "viewer" was an ordinary member with full write access wearing a badge that
+   said otherwise. `StoredRole` keeps it for rendering rows that already hold it. */
+export type TeamRole = 'owner' | 'admin' | 'member';
+export type StoredRole = TeamRole | 'viewer';
 
 export interface TeamMember {
   /**
@@ -19,7 +24,10 @@ export interface TeamMember {
   id: string;
   name: string;
   email: string;
-  role: TeamRole;
+  /* From the server, so `StoredRole`: `/team/members` derives this as
+     `'owner' if is_admin else 'member'` today, but a type that cannot express what
+     the server may send is a type that stops describing it. */
+  role: StoredRole;
   joinedAt: string;
   lastActive?: string;
   avatar?: string;
@@ -28,7 +36,8 @@ export interface TeamMember {
 export interface Invitation {
   id: number;
   email: string;
-  role: TeamRole;
+  /* From the server, and invitations sent before B7 still hold 'viewer'. */
+  role: StoredRole;
   sentAt: string;
   expiresAt: string;
   status: 'pending' | 'accepted' | 'expired' | 'cancelled';
