@@ -207,10 +207,14 @@ class AccountDetail(Resource):
         # questions. Reads above stay household-wide (D-43); mutation is owner-or-admin
         # (D-47). Checked after the fetch so a non-existent id still answers 404 rather
         # than leaking existence through a 403.
-        if not can_manage_owned(account.user_id, current_user_id):
+        # `account_id` passed, so a CO-OWNER of this account counts (B2/B3) — the
+        # point of a joint account is that both partners can edit it. Scoped to this
+        # account: co-owning one account grants nothing over the owner's others.
+        if not can_manage_owned(account.user_id, current_user_id, account_id=account.id):
             return {
                 'success': False,
-                'error': 'Only the account owner or a household admin can change this account',
+                'error': 'Only the account owner, a co-owner or a household admin can '
+                         'change this account',
             }, 403
 
         data = request.get_json() or {}

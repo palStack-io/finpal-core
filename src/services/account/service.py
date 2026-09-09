@@ -202,7 +202,10 @@ class AccountService:
         # which let any member delete a housemate's account — and deleting also nulls
         # `account_id` across the account's entire transaction history, two lines
         # below. Reads stay household-wide; only mutation is narrowed.
-        if not can_manage_owned(account.user_id, user_id):
+        # `account_id` passed, so a CO-OWNER of this account counts (B2/B3). Omitting
+        # it here would leave co-ownership granting nothing through this door, which
+        # is D-106's shape: a helper's own test is not proof of its adoption.
+        if not can_manage_owned(account.user_id, user_id, account_id=account.id):
             return False, 'You do not have permission to delete this account'
 
         try:

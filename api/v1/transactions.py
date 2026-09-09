@@ -116,7 +116,10 @@ def _may_mutate(transaction, caller_id):
     account = transaction.account
     if account is None:
         return False
-    return can_manage_owned(account.user_id, caller_id)
+    # `account_id` passed, so a CO-OWNER of the account counts (B2/B3). A joint
+    # account whose partner cannot correct a row on it is not joint. Still scoped
+    # to this one account, and the orphaned-row clause above is untouched.
+    return can_manage_owned(account.user_id, caller_id, account_id=account.id)
 
 
 def _totals_for(query):
