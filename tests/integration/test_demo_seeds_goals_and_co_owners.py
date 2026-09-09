@@ -255,3 +255,72 @@ def test_the_seeded_goals_satisfy_the_double_counting_INDEX(demo_mode):
         key = (goal.account_id, svc.direction(goal))
         assert key not in seen, f'two active goals share {key}'
         seen.add(key)
+
+
+# --- The correction that reaches a demo seeded by the PREVIOUS version --------
+
+
+def test_only_the_TOUR_persona_owns_a_household_goal(demo_mode):
+    """Four personas each owning one puts four identically-named rows on the
+    page a visitor lands on — because a household goal is visible to everyone on
+    the same side of the demo boundary, and all four demo users are."""
+    DemoService.seed_demo_accounts()
+
+    owners = {g.user_id for g in Goal.query.filter_by(scope='household').all()}
+    assert owners == {'demo1@finpal.demo'}, (
+        f'household goals are owned by {owners}; every one of them renders on '
+        f'demo1’s Goals page, so more than one means duplicate-looking rows'
+    )
+
+
+def test_the_backfill_DEMOTES_household_goals_a_previous_version_created(demo_mode):
+    """*** THE HALF THAT REACHES THE LIVE DEMO, AND IT WAS MISSED ONCE ALREADY.
+    ***
+
+    Reproduces the deployed state exactly: seeded by the PREVIOUS version, where
+    every persona got a household goal. The gap check in `_backfill_demo_gaps`
+    correctly skips a user who already has goals, so nothing but a condition-keyed
+    correction can fix those rows — and shipping the seeder change alone moved
+    `goals 15 -> 15` on the real demo while looking like it had worked.
+    """
+    DemoService.seed_demo_accounts()
+
+    # Put the database back into the shape the old seeder produced.
+    for email in ('demo2@finpal.demo', 'demo3@finpal.demo', 'demo4@finpal.demo'):
+        goal = Goal.query.filter_by(user_id=email).first()
+        assert goal is not None, f'{email} has no goal to convert'
+        goal.scope = 'household'
+        goal.name = 'Emergency fund'
+    _db.session.commit()
+    assert Goal.query.filter_by(scope='household').count() == 4
+
+    # A boot.
+    DemoService.seed_demo_accounts()
+
+    remaining = Goal.query.filter_by(scope='household').all()
+    assert {g.user_id for g in remaining} == {'demo1@finpal.demo'}
+    # Converted, not deleted: the snapshot and the progress were never wrong.
+    for email in ('demo2@finpal.demo', 'demo3@finpal.demo', 'demo4@finpal.demo'):
+        goal = Goal.query.filter_by(user_id=email).first()
+        assert goal is not None, f'{email}’s goal was deleted rather than converted'
+        assert goal.scope == 'personal'
+        assert goal.name != 'Emergency fund', 'the duplicate name survived'
+
+
+def test_what_demo1_SEES_has_no_duplicate_names(demo_mode):
+    """The assertion that matters is the rendered list, not a table count.
+
+    `goals=15` was true before and after the change that was supposed to fix
+    this. What a visitor sees is their own personal goals plus every household
+    goal on their side, and THAT is what had four identical rows in it.
+    """
+    DemoService.seed_demo_accounts()
+
+    visible = Goal.query.filter(
+        _db.or_(
+            _db.and_(Goal.user_id == 'demo1@finpal.demo', Goal.scope != 'household'),
+            Goal.scope == 'household',
+        )
+    ).all()
+    names = [g.name for g in visible]
+    assert len(names) == len(set(names)), f'duplicate rows on demo1’s page: {names}'
