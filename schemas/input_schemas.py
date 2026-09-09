@@ -117,6 +117,55 @@ class AccountInput(Schema):
     # request size rather than a column width -- but it must EXIST, because a field with
     # no declared limit is how an unbounded body reaches the database.
     description = fields.Str(allow_none=True, validate=validate.Length(max=2000))
+    # B1. `fields.Decimal`, not `fields.Float`: this is the input side of a
+    # `Numeric(5,2)` column that gets multiplied into money, and a float turns
+    # 19.99 into 19.989999999999998 before SQLAlchemy ever sees it (D-58).
+    #
+    # `allow_none` on all three so a value can be CLEARED, not only set --
+    # `update_recurring`'s `value is not None` guard is the cautionary sibling,
+    # where a field becomes un-emptiable once written (#129's shape).
+    #
+    # The Range ceilings follow the columns: Numeric(18,2) and Numeric(5,2). A
+    # validator looser than its column does not reject anything, it just moves the
+    # failure from a clean 400 to Postgres's NumericValueOutOfRange (#123).
+    credit_limit = fields.Decimal(allow_none=True, places=2,
+                                  validate=validate.Range(min=0))
+    apr = fields.Decimal(allow_none=True, places=2,
+                         validate=validate.Range(min=0, max=999.99))
+    min_payment = fields.Decimal(allow_none=True, places=2,
+                                 validate=validate.Range(min=0))
+
+
+GOAL_KINDS = ['payoff', 'savings', 'custom']
+GOAL_SCOPES = ['personal', 'household']
+GOAL_STATUSES = ['active', 'achieved', 'archived']
+
+
+class GoalInput(Schema):
+    # 120, matching `Goal.name` = `db.String(120)`. A validator looser than its
+    # column moves a clean 400 to a Postgres truncation error (#123).
+    name = fields.Str(required=True, validate=validate.Length(min=1, max=120))
+    kind = fields.Str(validate=validate.OneOf(GOAL_KINDS))
+    scope = fields.Str(validate=validate.OneOf(GOAL_SCOPES))
+    # NULL = a manual goal. Ownership of the named account is checked in the
+    # handler: marshmallow cannot see the database, and a raw foreign key from a
+    # client cannot be trusted by shape alone.
+    account_id = fields.Int(allow_none=True)
+    target_amount = fields.Decimal(required=True, places=2)
+    # DELIBERATELY NOT ACCEPTED FROM A CLIENT on create: `start_amount` is
+    # snapshotted from `account.balance` by the server, and letting a client name it
+    # would make every linked goal's denominator a typed number -- which is the one
+    # thing linking exists to prevent. Only a MANUAL goal may state one, handled in
+    # the handler rather than here so the rule can see `account_id`.
+    start_amount = fields.Decimal(allow_none=True, places=2)
+    current_manual = fields.Decimal(allow_none=True, places=2)
+    currency_code = fields.Str(validate=validate.Length(equal=3))
+    start_date = fields.Str(validate=validate.Length(min=1))
+    target_date = fields.Str(allow_none=True)
+    # `achieved` is NOT settable by a client -- it is stamped by the server when
+    # progress reaches 1, and a client that could write it could award itself a
+    # badge. Only the archive transition is offered, and it has its own route.
+    status = fields.Str(validate=validate.OneOf(['active', 'archived']))
 
 
 class BudgetInput(Schema):
@@ -168,6 +217,7 @@ login_input = LoginInput()
 register_input = RegisterInput()
 transaction_input = TransactionInput()
 account_input = AccountInput()
+goal_input = GoalInput()
 budget_input = BudgetInput()
 category_input = CategoryInput()
 recurring_input = RecurringInput()

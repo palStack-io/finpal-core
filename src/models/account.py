@@ -26,7 +26,27 @@ class Account(db.Model):
     # NOTE: adding a column to an EXISTING table is invisible to `create_all()`, so no
     # deployed instance gets this from a redeploy -- see scripts/schema_drift.py (D-121).
     description = db.Column(db.Text, nullable=True)
-    
+
+    # B1. learnPal cannot teach credit utilisation or interest cost without these, and
+    # debtPal would otherwise ask the user to re-enter debts finPal already holds --
+    # two sources of truth for what someone owes.
+    #
+    # All NULLABLE: an untouched row must not change meaning. A default of 0 is a
+    # CLAIM ("this card has a $0 limit"), which would make every pre-existing card
+    # look maxed out; NULL is the absence of a claim.
+    #
+    # Numeric(5,2) on apr, not Float: 19.99 is not representable in binary and this
+    # number is multiplied into money (D-58 removed exactly that error). 5 digits
+    # holds 999.99%, which is above any real card and below where a typo is silent.
+    #
+    # NOTE: adding a column to an EXISTING table is invisible to `create_all()`, so no
+    # deployed instance gets these from a redeploy alone -- the boot reconcile
+    # (`src/utils/schema_reconcile.py`, D-121) is what applies them, and it has to be
+    # confirmed on a real old database, not a fresh one.
+    credit_limit = db.Column(db.Numeric(18, 2), nullable=True)
+    apr = db.Column(db.Numeric(5, 2), nullable=True)
+    min_payment = db.Column(db.Numeric(18, 2), nullable=True)
+
     # Relationships
     user = db.relationship('User', backref=db.backref('accounts', lazy=True))
     currency = db.relationship('Currency', backref=db.backref('accounts', lazy=True))

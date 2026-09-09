@@ -111,6 +111,15 @@ class AccountSchema(Schema):
     color = fields.Str()
     user_id = fields.Str(dump_only=True)
 
+    # B1. Dumped as Float to match `balance` above -- one payload should not mix a
+    # JSON number and a JSON string for two money fields, and no client reads these
+    # yet, so the convention that already exists wins. The *column* is `Numeric`,
+    # which is what D-58 is about: the storage and the arithmetic are exact, and
+    # only the presentation crosses the wire as a float.
+    credit_limit = fields.Float(allow_none=True)
+    apr = fields.Float(allow_none=True)
+    min_payment = fields.Float(allow_none=True)
+
     # Calculated balance
     current_balance = fields.Method('get_current_balance', dump_only=True)
 
@@ -119,6 +128,16 @@ class AccountSchema(Schema):
     # next to a row, with his colour and emoji, which is the per-row "whose account
     # this is" label the settled household model calls for.
     owner = fields.Method('get_owner', dump_only=True)
+
+    # B3. The CO-owners, in addition to `owner` above, which stays the primary one.
+    #
+    # *** PRESENTATION IS HALF OF WHAT CO-OWNERSHIP IS *** -- the spec's table is
+    # permission YES, presentation YES, attribution NO -- and a client cannot render
+    # "Joint" from a payload that does not say who else owns the account.
+    #
+    # Always a list, never absent: a missing key and an empty list are different
+    # things to a client, and the missing one is what makes `owners.length` throw.
+    owners = fields.Method('get_owners', dump_only=True)
 
     def get_current_balance(self, obj):
         """Get calculated balance from transactions"""
@@ -137,6 +156,29 @@ class AccountSchema(Schema):
             'color': user.user_color,
             'emoji': user.profile_emoji,
         }
+
+    def get_owners(self, obj):
+        """The co-owners, in the same shape as `owner`, so a client can render one
+        list without two code paths."""
+        from src.extensions import db
+        from src.models.associations import account_owners
+        from src.models.user import User
+
+        if getattr(obj, 'id', None) is None:
+            return []
+        rows = db.session.execute(
+            db.select(User)
+              .join(account_owners, account_owners.c.user_id == User.id)
+              .where(account_owners.c.account_id == obj.id)
+              .order_by(account_owners.c.added_at, User.id)).scalars().all()
+        return [{
+            'id': u.id,
+            # `name` is nullable, and the id is an email address, so fall back to
+            # its local part rather than rendering "None" beside a figure (D-154).
+            'name': u.name or u.id.split('@')[0],
+            'color': u.user_color,
+            'emoji': u.profile_emoji,
+        } for u in rows]
 
 
 class BudgetSchema(Schema):

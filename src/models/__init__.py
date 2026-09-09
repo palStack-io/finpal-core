@@ -3,11 +3,12 @@ Database models package
 Import all models here for easy access
 """
 
-from src.models.associations import group_users, expense_tags
+from src.models.associations import group_users, expense_tags, account_owners
 from src.models.currency import Currency
 from src.models.user import User, UserApiSettings, LoginEvent, RevokedToken
 from src.models.category import Category, CategoryMapping, Tag
 from src.models.account import Account, SimpleFin
+from src.models.goal import Goal
 from src.models.transaction import Expense, CategorySplit
 from src.models.transaction_rule import TransactionRule
 from src.models.group import Group, Settlement
@@ -51,6 +52,7 @@ if _PointsPalModule().is_enabled():
 __all__ = [
     'group_users',
     'expense_tags',
+    'account_owners',
     'Currency',
     'User',
     'UserApiSettings',
@@ -61,6 +63,7 @@ __all__ = [
     'Tag',
     'Account',
     'SimpleFin',
+    'Goal',
     'Expense',
     'CategorySplit',
     'TransactionRule',

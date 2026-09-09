@@ -13,6 +13,7 @@ import { CSVImportModal } from '../components/import/CSVImportModal';
 import { StatCard } from '../components/StatCard';
 import { BankSyncCallout } from '../components/accounts/BankSyncCallout';
 import { OwnerBadge } from '../components/OwnerBadge';
+import { CoOwnerControl } from '../components/accounts/CoOwnerControl';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -64,6 +65,10 @@ export const Accounts = () => {
         // transaction's attribution comes from its account, which makes this the
         // difference between a figure you can explain and one you cannot.
         owner: acc.owner || null,
+        // B3. Co-owners, for the "Joint" label and the manager below it. `?? []`
+        // rather than `|| []` is not the point -- the point is that this must be a
+        // LIST even for an old payload, because every consumer reads `.length`.
+        owners: acc.owners || [],
         ownerId: acc.user_id || '',
         // #123's third copy. This is DATA, not styling: it feeds the row handed to
         // <EditAccountForm>, so a `var(--...)` fallback here meant that for any account
@@ -72,7 +77,21 @@ export const Accounts = () => {
         // concatenation below (`${account.color}20`) only works on a hex, too.
         color: acc.color || getDefaultColorForType(acc.account_type || 'checking'),
         creditLimit: acc.credit_limit || null,
-        availableCredit: acc.credit_limit ? acc.credit_limit - Math.abs(acc.balance || 0) : null
+        // `+ balance`, NOT `- Math.abs(balance)`. Card debt is a NEGATIVE balance
+        // (verified: `balances.py::_move` applies one rule for every account type),
+        // so adding it subtracts what is owed and there is no special case to get
+        // wrong. `Math.abs` treated an OVERPAID card -- a positive balance, where
+        // the bank owes the user -- as more debt, understating available credit by
+        // twice the overpayment: $200 credit on a $5,000 card read $4,800 instead
+        // of $5,200.
+        //
+        // This arithmetic had never run: the block that renders it is gated on
+        // `creditLimit`, and `credit_limit` was not in the account payload until
+        // B1 added the column. Proven behaviourally before being changed, because
+        // D-90 was a defect reported from a read that turned out not to exist.
+        availableCredit: acc.credit_limit != null
+          ? acc.credit_limit + (acc.balance || 0)
+          : null
       }));
 
       setAccounts(formattedAccounts);
@@ -303,7 +322,11 @@ export const Accounts = () => {
                               component when the transactions page needed the
                               identical thing on every row — see OwnerBadge for the
                               single-member rule and why the colour matters. */}
-                          <OwnerBadge owner={account.owner} memberCount={members.length} />
+                          <OwnerBadge
+                            owner={account.owner}
+                            coOwners={account.owners}
+                            memberCount={members.length}
+                          />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                           <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
@@ -373,6 +396,19 @@ export const Accounts = () => {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                      {/* Co-owner management (B3). Only shown when there is
+                          somebody to share with -- on a one-member household the
+                          control has no valid option and would be an affordance
+                          that cannot do anything, which is the shape D-18 exists
+                          to remove. */}
+                      {members.length > 1 && (
+                        <CoOwnerControl
+                          account={account}
+                          members={members}
+                          onChanged={loadAccounts}
+                          onError={(message) => showToast(message, 'error')}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>

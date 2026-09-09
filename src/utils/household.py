@@ -96,6 +96,37 @@ def on_the_same_side(user_a, user_b):
     return rows[user_a] == rows[user_b]
 
 
+def same_side_user_ids(caller_id):
+    """`on_the_same_side` as a SET, for use in a query.
+
+    Lives here, next to the pairwise form, so there is one definition of "the same
+    side of the demo boundary" rather than two -- a filter built ad hoc in a
+    handler is exactly the drift D-18 was opened to remove.
+
+    *** THIS IS NOT `visible_user_ids`, AND THE DIFFERENCE IS THE PUBLIC DEMO. ***
+    `visible_user_ids` collapses a demo caller to ITSELF, which is right for reading
+    a housemate's money and wrong for a *shared* thing: on the public demo, one demo
+    persona must be able to see the household goal another demo persona owns. Use
+    this only for shared things, never to widen a read of owned data.
+    """
+    if not caller_id:
+        return []
+    caller = User.query.with_entities(User.is_demo_user).filter_by(
+        id=caller_id).first()
+    # An id that is not on the instance has no side, so nothing matches it.
+    if caller is None:
+        return []
+    # `is_(True)` / `isnot(True)`, never `== False`. `User.is_demo_user` is NULLABLE
+    # with a PYTHON-side default, so a row written by anything other than the ORM --
+    # a seed script, a backfill, `psql` -- can hold NULL, and `== False` does not
+    # match a NULL in SQL. `on_the_same_side` reads it as `bool(...)` in Python,
+    # where NULL is False, so the two would disagree about exactly the rows the ORM
+    # cannot create (D-155). `household_user_ids` above already uses this idiom.
+    side = (User.is_demo_user.is_(True) if caller.is_demo_user
+            else User.is_demo_user.isnot(True))
+    return [u.id for u in User.query.with_entities(User.id).filter(side).all()]
+
+
 def visible_user_ids(caller_id):
     """The user IDs whose data `caller_id` may see.
 
@@ -147,7 +178,7 @@ def is_admin(user_id):
                 .filter_by(id=user_id).scalar())
 
 
-def can_manage_owned(owner_id, caller_id):
+def can_manage_owned(owner_id, caller_id, account_id=None):
     """Whether `caller_id` may MUTATE a thing owned by `owner_id`.
 
     **Owner or admin — owner decision, 2026-08-06.** Everyone in the household still
@@ -169,6 +200,29 @@ def can_manage_owned(owner_id, caller_id):
     Demo accounts collapse to plain ownership in both directions, keeping the sandbox
     symmetric (D-42): a demo visitor manages only its own rows, and no demo account is
     ever treated as an admin over real household data.
+
+    *** CO-OWNERS ARE ADMITTED FOR ONE ACCOUNT, NOT FOR AN OWNER (B2/B3). ***
+    `account_id` is optional so every existing two-argument caller keeps its exact
+    meaning. When it is supplied, a row in `account_owners` for THAT account also
+    grants management. Scoping to the account is the whole safety property: without
+    it, co-owning one joint account would promote the partner to manager of every
+    account the owner has -- the housemate-deletes-your-account defect with an extra
+    step. Omitting it fails CLOSED: the two-argument question ("may this caller
+    manage things owned by that owner") is one co-ownership does not answer.
+
+    Deliberately NOT "anyone on the same side". `on_the_same_side` is the right
+    predicate for reading a SHARED thing; it is the wrong one for mutating an OWNED
+    thing, and conflating the two is what this function was tightened to stop.
+
+    The demo check stays ABOVE the co-owner check, so D-42 wins over co-ownership in
+    both directions: a demo persona co-owning a real account is still refused, and a
+    real member co-owning a demo account is still refused.
+
+    No verb carve-out. A co-owner may delete the joint account, which nulls
+    `account_id` across its transaction history -- granted deliberately, because a
+    co-owner is not a housemate (the owner named them on that specific account) and
+    a per-verb rule is one nobody remembers, which is how two halves of a permission
+    drift apart (D-99's shape).
     """
     if not owner_id or not caller_id:
         return False
@@ -176,7 +230,20 @@ def can_manage_owned(owner_id, caller_id):
         return True
     if is_demo_user(owner_id) or is_demo_user(caller_id):
         return False
+    if account_id is not None and _is_co_owner(account_id, caller_id):
+        return True
     return is_admin(caller_id)
+
+
+def _is_co_owner(account_id, user_id):
+    """One row lookup. Kept private so nothing outside this module invents a
+    second definition of co-ownership -- the duplication D-18 was opened for."""
+    from src.extensions import db
+    from src.models.associations import account_owners
+    return db.session.execute(
+        db.select(account_owners.c.user_id).where(
+            account_owners.c.account_id == account_id,
+            account_owners.c.user_id == user_id)).first() is not None
 
 
 # --- Attribution ------------------------------------------------------------

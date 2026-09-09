@@ -20,12 +20,51 @@ export interface OwnerBadgeProps {
   memberCount: number;
   /** `sm` for a dense transaction row, `md` for the accounts list. */
   size?: 'sm' | 'md';
+  /**
+   * CO-owners (B3). Optional and defaulted, so the transactions page -- which has
+   * no co-owner data on a row -- keeps its exact current behaviour.
+   *
+   * *** THIS CHANGES THE LABEL, NOT THE MEANING. *** Attribution is still the
+   * primary owner: a charge on a joint card is still that person's spending in
+   * every figure the app computes. What "Joint" says is who can manage it and who
+   * thinks of it as theirs, which is precisely the presentation half of the
+   * co-ownership decision.
+   */
+  coOwners?: AccountOwner[];
 }
 
-export const OwnerBadge: React.FC<OwnerBadgeProps> = ({ owner, memberCount, size = 'md' }) => {
+export const OwnerBadge: React.FC<OwnerBadgeProps> = ({
+  owner, memberCount, size = 'md', coOwners = [],
+}) => {
   if (memberCount <= 1 || !owner) return null;
 
   const small = size === 'sm';
+  const joint = coOwners.length > 0;
+  const everyone = [owner, ...coOwners];
+
+  if (joint) {
+    return (
+      <span
+        title={`Jointly owned by ${everyone.map((o) => o.name).join(' and ')}. `
+          + `Spending on it is still attributed to ${owner.name}.`}
+        style={{
+          padding: small ? '1px 8px' : '2px 10px',
+          borderRadius: '9999px',
+          fontSize: small ? '11px' : '12px',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+          // The PRIMARY owner's colour, not a new one. The colour is how the same
+          // person reads the same on every screen without reading the text, and a
+          // joint account still has one attribution.
+          color: owner.color || 'var(--text-secondary)',
+          background: 'var(--surface-hover)',
+          border: '1px solid var(--border-light)',
+        }}
+      >
+        Joint · {everyone.map((o) => o.name).join(' & ')}
+      </span>
+    );
+  }
 
   return (
     <span

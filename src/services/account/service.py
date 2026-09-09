@@ -101,7 +101,7 @@ class AccountService:
 
         return True, 'Success', account_data
 
-    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None, owner_id=None, description=None):
+    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None, owner_id=None, description=None, credit_limit=None, apr=None, min_payment=None):
         """
         Add a new account
         Returns (success, message, account)
@@ -145,6 +145,12 @@ class AccountService:
                 import_source=import_source,
                 external_id=external_id,
                 description=description,
+                # B1. Not coerced to 0. NULL is the absence of a claim about this
+                # card, and a default of 0 would make every account created without
+                # them look like a maxed-out card with no minimum payment.
+                credit_limit=credit_limit,
+                apr=apr,
+                min_payment=min_payment,
                 user_id=user_id
             )
 
@@ -196,7 +202,10 @@ class AccountService:
         # which let any member delete a housemate's account — and deleting also nulls
         # `account_id` across the account's entire transaction history, two lines
         # below. Reads stay household-wide; only mutation is narrowed.
-        if not can_manage_owned(account.user_id, user_id):
+        # `account_id` passed, so a CO-OWNER of this account counts (B2/B3). Omitting
+        # it here would leave co-ownership granting nothing through this door, which
+        # is D-106's shape: a helper's own test is not proof of its adoption.
+        if not can_manage_owned(account.user_id, user_id, account_id=account.id):
             return False, 'You do not have permission to delete this account'
 
         try:

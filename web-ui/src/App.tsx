@@ -29,6 +29,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Accounts } from './pages/Accounts';
+import { Goals } from './pages/Goals';
 import BudgetsMinimal from './pages/BudgetsMinimal';
 // The canonical categories UI is the component Settings used to host, NOT the
 // 441-line `pages/Categories.tsx` that used to answer this route — that page was
@@ -191,6 +192,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AppLayout><BudgetsMinimal /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/goals"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Goals /></AppLayout>
                 </ProtectedRoute>
               }
             />

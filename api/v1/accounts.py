@@ -41,6 +41,19 @@ ns = Namespace('accounts', description='Account operations')
 # The fields below are the ones `AccountInput` accepts and the handlers apply.
 # `tests/integration/test_accounts_documented_fields.py` asserts that, by
 # POSTing every documented field and reading the row back out of the database.
+# B3. Declared because `test_every_request_body_is_documented.py` requires it, and
+# the reason it requires it is D-05: a generated client that knows a route exists
+# and not what to send it is worse than no route, and a documented body nothing
+# reads is the same defect from the other side. One field, and the handler applies
+# exactly it.
+co_owner_model = ns.model('AccountCoOwner', {
+    'user_id': fields.String(
+        required=True,
+        description='Household member to add as a co-owner. Must be on the same '
+                    'side of the demo boundary as the account owner, and must not '
+                    'already be the primary owner — both are refused with 400.'),
+})
+
 simplefin_connect_model = ns.model('SimplefinConnect', {
     'setup_token': fields.String(
         required=False,
@@ -80,6 +93,16 @@ account_model = ns.model('Account', {
         description='Household member to assign this account to. '
                     'Defaults to the calling user. Must be a household member — '
                     'a demo account or an unknown id is refused with 400.'),
+    # B1. Documented on BOTH verbs because `@ns.expect(account_model)` decorates
+    # POST and PUT alike, so a field applied by only one of them is D-05 with a
+    # single door -- `test_accounts_documented_fields.py` fails on exactly that.
+    'credit_limit': fields.Float(
+        description='Credit limit for a card account. Optional and nullable: '
+                    'omitting it is "not stated", not "zero".'),
+    'apr': fields.Float(
+        description='Annual percentage rate, e.g. 19.99. Optional and nullable.'),
+    'min_payment': fields.Float(
+        description='Minimum monthly payment. Optional and nullable.'),
 })
 
 
@@ -140,6 +163,11 @@ class AccountList(Resource):
             # #129: the form has collected this since it was written and it was dropped
             # at every link in the chain, including this one.
             description=validated.get('description'),
+            # B1. Passed through rather than defaulted here: `None` and "not sent"
+            # mean the same thing on create, and the service writes NULL for both.
+            credit_limit=validated.get('credit_limit'),
+            apr=validated.get('apr'),
+            min_payment=validated.get('min_payment'),
         )
 
         if not success:
@@ -192,10 +220,14 @@ class AccountDetail(Resource):
         # questions. Reads above stay household-wide (D-43); mutation is owner-or-admin
         # (D-47). Checked after the fetch so a non-existent id still answers 404 rather
         # than leaking existence through a 403.
-        if not can_manage_owned(account.user_id, current_user_id):
+        # `account_id` passed, so a CO-OWNER of this account counts (B2/B3) — the
+        # point of a joint account is that both partners can edit it. Scoped to this
+        # account: co-owning one account grants nothing over the owner's others.
+        if not can_manage_owned(account.user_id, current_user_id, account_id=account.id):
             return {
                 'success': False,
-                'error': 'Only the account owner or a household admin can change this account',
+                'error': 'Only the account owner, a co-owner or a household admin can '
+                         'change this account',
             }, 403
 
         data = request.get_json() or {}
@@ -238,6 +270,15 @@ class AccountDetail(Resource):
             # the cautionary sibling, where a field becomes un-emptiable once written.
             if 'description' in data:
                 account.description = data['description']
+            # B1. `in data` rather than a truthiness test, for #129's reason and one
+            # more: 0 is a legitimate `min_payment` and a truthiness test would make
+            # it unsettable. Sending null clears the field back to "not stated".
+            if 'credit_limit' in data:
+                account.credit_limit = data['credit_limit']
+            if 'apr' in data:
+                account.apr = data['apr']
+            if 'min_payment' in data:
+                account.min_payment = data['min_payment']
             if 'owner_id' in data and data['owner_id'] != account.user_id:
                 # A REASSIGNMENT, which this now checks for FIRST. D-81: the membership
                 # test used to run whenever `owner_id` was merely present, and
@@ -299,6 +340,104 @@ class AccountDetail(Resource):
             return {'success': False, 'error': message}, status
 
         return {'success': True, 'message': 'Account deleted successfully'}, 200
+
+
+@ns.route('/<int:id>/owners')
+class AccountOwners(Resource):
+    """Co-owners: permission and presentation, never attribution (B3).
+
+    *** THE MEMBERSHIP PREDICATE IS `on_the_same_side`, NOT `is_household_member`
+    ON BOTH SIDES. *** `account_owners` is a membership list on a shared thing --
+    the same shape as `group_users` -- and D-94 settled that one. The other rule is
+    right for OWNERSHIP (D-81) and still guards reassigning `Account.user_id` in
+    the PUT above; it also forbids demo->demo, which would make co-ownership
+    undemonstrable on the public demo, invisibly to any test built from real users.
+
+    Assigning the account to someone and letting someone co-manage it are two
+    different questions, and only the first moves attribution.
+    """
+
+    @ns.doc('add_account_owner', security='Bearer')
+    @ns.expect(co_owner_model)
+    @jwt_required()
+    def post(self, id):
+        """Add a co-owner. Idempotent -- a double click must not 500 on the PK."""
+        from src.models.associations import account_owners
+        from src.utils.household import on_the_same_side
+
+        current_user_id = get_jwt_identity()
+        account = AccountRepository().get_by_id_in_household(
+            id, visible_user_ids(current_user_id))
+        if not account:
+            return {'success': False, 'error': 'Account not found'}, 404
+        # Granting co-ownership is a management action. Without this any member
+        # could quietly add themselves to a housemate's account.
+        if not can_manage_owned(account.user_id, current_user_id, account_id=account.id):
+            return {'success': False,
+                    'error': 'Only the account owner, a co-owner or a household '
+                             'admin can add a co-owner'}, 403
+
+        data = request.get_json() or {}
+        user_id = data.get('user_id')
+        if not user_id:
+            return {'success': False, 'error': 'user_id is required'}, 400
+        if user_id == account.user_id:
+            return {'success': False,
+                    'error': 'That member already owns this account'}, 400
+        if not on_the_same_side(account.user_id, user_id):
+            return {'success': False,
+                    'error': 'Co-owner must be a member of this household'}, 400
+
+        already = db.session.execute(
+            db.select(account_owners.c.user_id).where(
+                account_owners.c.account_id == account.id,
+                account_owners.c.user_id == user_id)).first()
+        if already is None:
+            db.session.execute(account_owners.insert().values(
+                account_id=account.id, user_id=user_id))
+            db.session.commit()
+
+        return {'success': True, 'account': account_schema.dump(account),
+                'message': 'Co-owner added'}, 200
+
+
+@ns.route('/<int:id>/owners/<path:user_id>')
+class AccountOwnerDetail(Resource):
+    @ns.doc('remove_account_owner', security='Bearer')
+    @jwt_required()
+    def delete(self, id, user_id):
+        """Remove a co-owner.
+
+        *** DELETING THE ROW AND REVOKING THE PERMISSION ARE THE SAME ACT ***, since
+        `can_manage_owned` reads this table directly. A stale grant is worse than no
+        grant, because nothing shows it.
+
+        A co-owner may remove THEMSELVES -- leaving a joint account should not
+        require the other person -- which is why the self case is checked before the
+        management predicate.
+
+        `<path:user_id>` because user ids are email addresses and the default
+        converter stops at a dot.
+        """
+        from src.models.associations import account_owners
+
+        current_user_id = get_jwt_identity()
+        account = AccountRepository().get_by_id_in_household(
+            id, visible_user_ids(current_user_id))
+        if not account:
+            return {'success': False, 'error': 'Account not found'}, 404
+        if user_id != current_user_id and not can_manage_owned(
+                account.user_id, current_user_id, account_id=account.id):
+            return {'success': False,
+                    'error': 'Only the account owner, a co-owner or a household '
+                             'admin can remove a co-owner'}, 403
+
+        db.session.execute(account_owners.delete().where(
+            account_owners.c.account_id == account.id,
+            account_owners.c.user_id == user_id))
+        db.session.commit()
+        return {'success': True, 'account': account_schema.dump(account),
+                'message': 'Co-owner removed'}, 200
 
 
 @ns.route('/<int:id>/balance')
