@@ -92,8 +92,16 @@ echo "────────────────────────�
 # specs demo1@finpal.demo with goals, a co-owned account and credit terms. If the
 # demo seed regresses, this suite goes red — which is the point, because D-77 has
 # escaped three times with everything downstream of the seed staying green.
-SECRET_KEY="e2e-only-not-a-real-secret-000000000000" \
-JWT_SECRET_KEY="e2e-only-not-a-real-secret-111111111111" \
+# GENERATED PER RUN, never a literal. Two reasons and the second is the one that
+# caught this: a fixed key in a published file is indistinguishable from a real
+# one to anybody reading the repo, and `test_no_private_data_in_tracked_files.py`
+# refuses any long literal assigned to SECRET_KEY — a guard that runs even under
+# SKIP_PREFLIGHT, after 980 files carrying home paths reached this public repo
+# (D-169). It stopped the push. It was right to: the rule cannot tell a
+# throwaway from a live credential, and a rule that tried would be the one that
+# eventually waves a real one through.
+SECRET_KEY="$(openssl rand -hex 24)" \
+JWT_SECRET_KEY="$(openssl rand -hex 24)" \
 SQLALCHEMY_DATABASE_URI="sqlite:///$DB_FILE" \
 DEMO_MODE=true \
 EMAIL_ENABLED=false \
