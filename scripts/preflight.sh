@@ -56,25 +56,66 @@ step() {
   fi
 }
 
+# *** THE TWO INTERPRETERS RUN IN PARALLEL, AND THAT IS WHAT MAKES A LOCAL-ONLY
+# BACKEND GATE VIABLE AT ALL. ***
+#
+# CI stopped running pytest on 2026-09-09 (owner instruction: the backend suite runs
+# locally, so a PR never waits on it). CI was the only place 3.11 ever ran, so this
+# script is now the only thing standing between a self-hoster's interpreter and main.
+#
+# Run sequentially, that is 20-40 minutes — and this file's own history says a gate
+# that slow gets bypassed, which is worse than no gate. The two legs are independent
+# processes over an in-memory SQLite database each, exactly as CI's matrix ran them,
+# so they parallelise for free: the wall clock becomes the slower leg (~8-11 min)
+# rather than the sum.
+#
+# Output is buffered to a file per leg and printed after, because two pytest processes
+# interleaving on one terminal produces a progress line nobody can read.
+run_backend_legs() {
+  local want311=$1
+  local pids=() labels=() logs=() rcs=()
+
+  "$PY" -m pytest -q > /tmp/preflight-312.log 2>&1 &
+  pids+=($!); labels+=("backend: pytest (3.12 — what the image runs)"); logs+=(/tmp/preflight-312.log)
+
+  if [[ "$want311" == "yes" ]]; then
+    "$PY311" -m pytest -q > /tmp/preflight-311.log 2>&1 &
+    pids+=($!); labels+=("backend: pytest (3.11 — what self-hosters run)"); logs+=(/tmp/preflight-311.log)
+  fi
+
+  printf '\n\033[1m▶ %s\033[0m\n' "backend: ${#pids[@]} interpreter(s), in parallel"
+  local i
+  for i in "${!pids[@]}"; do
+    if wait "${pids[$i]}"; then
+      printf '\033[32m  ✓ %s\033[0m\n' "${labels[$i]}"
+      tail -1 "${logs[$i]}"
+    else
+      printf '\033[31m  ✗ %s\033[0m\n' "${labels[$i]}"
+      tail -25 "${logs[$i]}"
+      FAILED+=("${labels[$i]}")
+    fi
+  done
+}
+
 if [[ "$WHICH" == "all" || "$WHICH" == "backend" || "$WHICH" == "quick" ]]; then
   [[ -x "$PY" ]] || { echo "no venv at $PY — run: python -m venv venv && ./venv/bin/pip install -r requirements.txt"; exit 1; }
-  step "backend: pytest (3.12 — what the image runs)" "$PY" -m pytest -q
-fi
 
-# The 3.11 leg. Skipped by `quick` and by `web`, run by everything else — including the
-# pre-push hook, which is the moment it matters.
-if [[ "$WHICH" == "all" || "$WHICH" == "backend" ]]; then
-  if [[ -x "$PY311" ]]; then
-    step "backend: pytest (3.11 — what self-hosters run)" "$PY311" -m pytest -q
-  else
-    printf '\n\033[31m✗ no 3.11 venv at %s\033[0m\n' "$PY311"
-    printf '  CI runs pytest on 3.11 as well as 3.12, so without this the local gate\n'
-    printf '  covers five sixths of CI while reporting ALL GREEN. Create it with:\n'
-    printf '    uv venv --python 3.11 venv311\n'
-    printf '    uv pip install --python venv311/bin/python -r requirements.txt -r requirements-test.txt\n'
-    printf '  Or run ./scripts/preflight.sh quick to skip this leg deliberately.\n'
-    FAILED+=("backend: pytest (3.11) — no venv311, so this leg did not run")
+  WANT311=no
+  if [[ "$WHICH" == "all" || "$WHICH" == "backend" ]]; then
+    if [[ -x "$PY311" ]]; then
+      WANT311=yes
+    else
+      printf '\n\033[31m✗ no 3.11 venv at %s\033[0m\n' "$PY311"
+      printf '  *** CI NO LONGER RUNS pytest AT ALL, so this is the only place 3.11\n'
+      printf '  can run. Without it the gate covers one interpreter and says ALL GREEN.\n'
+      printf '  Create it with:\n'
+      printf '    uv venv --python 3.11 venv311\n'
+      printf '    uv pip install --python venv311/bin/python -r requirements.txt -r requirements-test.txt\n'
+      FAILED+=("backend: pytest (3.11) — no venv311, so this leg did not run")
+    fi
   fi
+
+  run_backend_legs "$WANT311"
 fi
 
 if [[ "$WHICH" == "all" || "$WHICH" == "web" || "$WHICH" == "quick" ]]; then
@@ -111,7 +152,7 @@ fi
 # is crude, but it fails LOUDLY when the workflow changes, which is the point: a gate that
 # silently covers less than it claims is how the contrast walk got missed in the first
 # place.
-EXPECTED_CI_RUN_STEPS=7
+EXPECTED_CI_RUN_STEPS=5
 ACTUAL=$(/usr/bin/grep -cE '^\s+run:' .github/workflows/tests.yml)
 if [[ "$ACTUAL" != "$EXPECTED_CI_RUN_STEPS" ]]; then
   printf '\n\033[33m! .github/workflows/tests.yml has %s run-steps, this script expects %s.\033[0m\n' \
