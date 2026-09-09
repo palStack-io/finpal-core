@@ -188,9 +188,23 @@ class DemoService:
         # Create budgets
         DemoService._create_demo_budgets(user, account_data)
 
-        # Create investments for investor persona
+        # *** THE TOUR LANDS ON demo1, AND demo1 OWNED NO INVESTMENTS. D-77. ***
+        #
+        # This was `persona == 'Investor'` alone, so all portfolios belonged to
+        # demo4 and the Investments page demoed itself EMPTY on the account a
+        # visitor actually sees. That is not a cosmetic gap: an empty state and a
+        # broken page are indistinguishable to someone who has never seen the
+        # working version, and it has hidden three defects that way — most
+        # expensively D-107, where a fixture sent keys the API never sends and the
+        # page rendered `$NaN` eight times while both gates called it clean.
+        #
+        # demo4 keeps the richer two-portfolio set; demo1 gets a smaller, plainer
+        # one, so the two accounts still demonstrate different things.
         if persona == 'Investor':
             DemoService._create_demo_investments(user)
+        elif persona == 'Personal budgeter':
+            DemoService._create_starter_portfolio(user)
+
 
         # Seed pointsPal wallet cards + spend history
         if POINTSPAL_AVAILABLE:
@@ -858,10 +872,105 @@ class DemoService:
             db.session.flush()
 
             # Add members
+            members = []
             for member_id in group_config['members']:
                 member = User.query.filter_by(id=member_id).first()
                 if member:
                     group.members.append(member)
+                    members.append(member)
+
+            # *** ALL THREE GROUPS HELD ZERO EXPENSES. D-77. ***
+            # Members and no money, so every split-expense surface — the group
+            # detail page, the IOU tracker, "who owes whom" — demoed itself empty.
+            # Measured on the live demo before this: 3 groups, 0 expenses between
+            # them.
+            DemoService._seed_group_expenses(group, members)
+
+    @staticmethod
+    def _create_starter_portfolio(user):
+        """One small portfolio for the persona the demo tour lands on. D-77.
+
+        Deliberately smaller than the Investor's two portfolios: demo1 should show
+        that the Investments page WORKS, not compete with the account whose whole
+        point is investing.
+        """
+        portfolio = Portfolio(
+            user_id=user.id,
+            name='Starter Portfolio',
+            description='A first index fund and a little cash',
+        )
+        db.session.add(portfolio)
+        db.session.flush()
+
+        for symbol, name, shares, purchase, current in (
+            ('VTI', 'Vanguard Total Stock Market ETF', 12, 218.40, 241.10),
+            ('VXUS', 'Vanguard Total International Stock ETF', 20, 58.10, 61.75),
+        ):
+            db.session.add(Investment(
+                portfolio_id=portfolio.id,
+                symbol=symbol,
+                name=name,
+                shares=shares,
+                purchase_price=purchase,
+                current_price=current,
+                purchase_date=datetime.utcnow() - timedelta(days=240),
+            ))
+
+    @staticmethod
+    def _seed_group_expenses(group, members):
+        """Money in a group, so the split surfaces have something to show. D-77.
+
+        *** SPREAD ACROSS DIFFERENT PAYERS ON PURPOSE. *** If one member pays for
+        everything the IOU tracker shows a single one-way debt, which is the least
+        informative arrangement possible and would still look like a bug to anyone
+        checking whether settling up works. Rotating the payer makes the balances
+        cross, which is what the feature is for.
+
+        `paid_by` is who fronted the cash, NOT attribution — attribution is the
+        account's owner (D-18). Both are correct answers to different questions.
+        """
+        if not members:
+            return
+
+        plans = {
+            'Apartment Roommates': [
+                ('Electricity — March', 142.60, 3),
+                ('Internet — March', 79.00, 9),
+                ('Weekly shop', 213.45, 14),
+            ],
+            'Trip to Vegas': [
+                ('Hotel, three nights', 912.00, 21),
+                ('Show tickets', 448.00, 20),
+                ('Dinner at the Bellagio', 286.30, 19),
+            ],
+            'Office Lunch Club': [
+                ('Thai place', 68.20, 2),
+                ('Pizza Friday', 54.75, 9),
+                ('Sandwiches', 41.90, 16),
+            ],
+        }
+
+        for index, (description, amount, days_ago) in enumerate(
+                plans.get(group.name, [])):
+            payer = members[index % len(members)]
+            payer_account = Account.query.filter_by(
+                user_id=payer.id, type='checking').first()
+            db.session.add(Expense(
+                user_id=payer.id,
+                description=description,
+                amount=amount,
+                transaction_type='expense',
+                date=datetime.utcnow() - timedelta(days=days_ago),
+                account_id=payer_account.id if payer_account else None,
+                group_id=group.id,
+                currency_code=payer_account.currency_code if payer_account else 'USD',
+                card_used='Demo Data',
+                split_method='equal',
+                # Everyone in the group shares it, which is what `auto_include_all`
+                # on these groups already implies.
+                split_with=','.join(m.id for m in members),
+                paid_by=payer.id,
+            ))
 
     @staticmethod
     def reset_demo_user(user_id):
