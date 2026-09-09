@@ -329,6 +329,103 @@ class AccountDetail(Resource):
         return {'success': True, 'message': 'Account deleted successfully'}, 200
 
 
+@ns.route('/<int:id>/owners')
+class AccountOwners(Resource):
+    """Co-owners: permission and presentation, never attribution (B3).
+
+    *** THE MEMBERSHIP PREDICATE IS `on_the_same_side`, NOT `is_household_member`
+    ON BOTH SIDES. *** `account_owners` is a membership list on a shared thing --
+    the same shape as `group_users` -- and D-94 settled that one. The other rule is
+    right for OWNERSHIP (D-81) and still guards reassigning `Account.user_id` in
+    the PUT above; it also forbids demo->demo, which would make co-ownership
+    undemonstrable on the public demo, invisibly to any test built from real users.
+
+    Assigning the account to someone and letting someone co-manage it are two
+    different questions, and only the first moves attribution.
+    """
+
+    @ns.doc('add_account_owner', security='Bearer')
+    @jwt_required()
+    def post(self, id):
+        """Add a co-owner. Idempotent -- a double click must not 500 on the PK."""
+        from src.models.associations import account_owners
+        from src.utils.household import on_the_same_side
+
+        current_user_id = get_jwt_identity()
+        account = AccountRepository().get_by_id_in_household(
+            id, visible_user_ids(current_user_id))
+        if not account:
+            return {'success': False, 'error': 'Account not found'}, 404
+        # Granting co-ownership is a management action. Without this any member
+        # could quietly add themselves to a housemate's account.
+        if not can_manage_owned(account.user_id, current_user_id, account_id=account.id):
+            return {'success': False,
+                    'error': 'Only the account owner, a co-owner or a household '
+                             'admin can add a co-owner'}, 403
+
+        data = request.get_json() or {}
+        user_id = data.get('user_id')
+        if not user_id:
+            return {'success': False, 'error': 'user_id is required'}, 400
+        if user_id == account.user_id:
+            return {'success': False,
+                    'error': 'That member already owns this account'}, 400
+        if not on_the_same_side(account.user_id, user_id):
+            return {'success': False,
+                    'error': 'Co-owner must be a member of this household'}, 400
+
+        already = db.session.execute(
+            db.select(account_owners.c.user_id).where(
+                account_owners.c.account_id == account.id,
+                account_owners.c.user_id == user_id)).first()
+        if already is None:
+            db.session.execute(account_owners.insert().values(
+                account_id=account.id, user_id=user_id))
+            db.session.commit()
+
+        return {'success': True, 'account': account_schema.dump(account),
+                'message': 'Co-owner added'}, 200
+
+
+@ns.route('/<int:id>/owners/<path:user_id>')
+class AccountOwnerDetail(Resource):
+    @ns.doc('remove_account_owner', security='Bearer')
+    @jwt_required()
+    def delete(self, id, user_id):
+        """Remove a co-owner.
+
+        *** DELETING THE ROW AND REVOKING THE PERMISSION ARE THE SAME ACT ***, since
+        `can_manage_owned` reads this table directly. A stale grant is worse than no
+        grant, because nothing shows it.
+
+        A co-owner may remove THEMSELVES -- leaving a joint account should not
+        require the other person -- which is why the self case is checked before the
+        management predicate.
+
+        `<path:user_id>` because user ids are email addresses and the default
+        converter stops at a dot.
+        """
+        from src.models.associations import account_owners
+
+        current_user_id = get_jwt_identity()
+        account = AccountRepository().get_by_id_in_household(
+            id, visible_user_ids(current_user_id))
+        if not account:
+            return {'success': False, 'error': 'Account not found'}, 404
+        if user_id != current_user_id and not can_manage_owned(
+                account.user_id, current_user_id, account_id=account.id):
+            return {'success': False,
+                    'error': 'Only the account owner, a co-owner or a household '
+                             'admin can remove a co-owner'}, 403
+
+        db.session.execute(account_owners.delete().where(
+            account_owners.c.account_id == account.id,
+            account_owners.c.user_id == user_id))
+        db.session.commit()
+        return {'success': True, 'account': account_schema.dump(account),
+                'message': 'Co-owner removed'}, 200
+
+
 @ns.route('/<int:id>/balance')
 @ns.param('id', 'Account ID')
 class AccountBalance(Resource):

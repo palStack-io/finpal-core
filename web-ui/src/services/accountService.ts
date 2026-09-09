@@ -38,12 +38,29 @@ export interface Account {
    */
   user_id: string;
   owner?: AccountOwner | null;
+  /**
+   * CO-owners, in addition to `owner`, which stays the PRIMARY owner. B3.
+   *
+   * *** PERMISSION AND PRESENTATION ONLY. ATTRIBUTION IS UNCHANGED. *** A row on a
+   * co-owned account still belongs, for every figure in the app, to `user_id`.
+   *
+   * Always present as a list -- the server sends `[]` rather than omitting the key,
+   * because a missing key is what makes `owners.length` throw.
+   */
+  owners?: AccountOwner[];
   created_at?: string;
   updated_at?: string;
   import_source?: 'simplefin' | 'csv' | 'manual';
   external_id?: string;
   last_sync?: string;
   description?: string | null;
+  /**
+   * B1. All three are NULLABLE and NULL means "not stated", never zero -- a 0
+   * credit limit would make every card the user has not filled in look maxed out.
+   */
+  credit_limit?: number | null;
+  apr?: number | null;
+  min_payment?: number | null;
 }
 
 export interface CreateAccountData {
@@ -101,6 +118,26 @@ export const accountService = {
   /**
    * Get all accounts for current user
    */
+  /**
+   * Add a co-owner. Idempotent on the server, so a double click is harmless.
+   * Returns the updated account, so the caller does not need a second GET.
+   */
+  async addCoOwner(accountId: number, userId: string): Promise<Account> {
+    const response = await api.post<{ success: boolean; account: Account }>(
+      `/api/v1/accounts/${accountId}/owners`,
+      { user_id: userId },
+    );
+    return response.data.account;
+  },
+
+  /** Remove a co-owner. Revoking the permission and deleting the row are one act. */
+  async removeCoOwner(accountId: number, userId: string): Promise<Account> {
+    const response = await api.delete<{ success: boolean; account: Account }>(
+      `/api/v1/accounts/${accountId}/owners/${encodeURIComponent(userId)}`,
+    );
+    return response.data.account;
+  },
+
   async getAccounts(): Promise<Account[]> {
     const response = await api.get<{ success: boolean; accounts: Account[] }>(
       '/api/v1/accounts'

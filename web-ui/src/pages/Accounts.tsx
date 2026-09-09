@@ -13,6 +13,7 @@ import { CSVImportModal } from '../components/import/CSVImportModal';
 import { StatCard } from '../components/StatCard';
 import { BankSyncCallout } from '../components/accounts/BankSyncCallout';
 import { OwnerBadge } from '../components/OwnerBadge';
+import { CoOwnerControl } from '../components/accounts/CoOwnerControl';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -64,6 +65,10 @@ export const Accounts = () => {
         // transaction's attribution comes from its account, which makes this the
         // difference between a figure you can explain and one you cannot.
         owner: acc.owner || null,
+        // B3. Co-owners, for the "Joint" label and the manager below it. `?? []`
+        // rather than `|| []` is not the point -- the point is that this must be a
+        // LIST even for an old payload, because every consumer reads `.length`.
+        owners: acc.owners || [],
         ownerId: acc.user_id || '',
         // #123's third copy. This is DATA, not styling: it feeds the row handed to
         // <EditAccountForm>, so a `var(--...)` fallback here meant that for any account
@@ -303,7 +308,11 @@ export const Accounts = () => {
                               component when the transactions page needed the
                               identical thing on every row — see OwnerBadge for the
                               single-member rule and why the colour matters. */}
-                          <OwnerBadge owner={account.owner} memberCount={members.length} />
+                          <OwnerBadge
+                            owner={account.owner}
+                            coOwners={account.owners}
+                            memberCount={members.length}
+                          />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                           <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
@@ -373,6 +382,19 @@ export const Accounts = () => {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                      {/* Co-owner management (B3). Only shown when there is
+                          somebody to share with -- on a one-member household the
+                          control has no valid option and would be an affordance
+                          that cannot do anything, which is the shape D-18 exists
+                          to remove. */}
+                      {members.length > 1 && (
+                        <CoOwnerControl
+                          account={account}
+                          members={members}
+                          onChanged={loadAccounts}
+                          onError={(message) => showToast(message, 'error')}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
