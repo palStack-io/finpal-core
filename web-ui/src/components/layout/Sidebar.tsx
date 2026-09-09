@@ -12,6 +12,7 @@ import {
   Repeat,
   Tags,
   Filter,
+  Flag,
   Sun,
   Moon,
   LogOut,
@@ -47,6 +48,7 @@ const navGroups = [
     heading: 'Plan',
     items: [
       { name: 'Budgets', path: '/budgets', icon: Target },
+      { name: 'Goals', path: '/goals', icon: Flag },
       { name: 'Recurring', path: '/recurring', icon: Repeat },
       { name: 'Categories', path: '/categories', icon: Tags },
       { name: 'Rules', path: '/rules', icon: Filter },

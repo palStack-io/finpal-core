@@ -6,7 +6,7 @@
  * about the two pages nobody had rendered.
  */
 import { it, beforeAll, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
@@ -18,6 +18,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { Dashboard } from '../../src/pages/Dashboard';
 import { Accounts } from '../../src/pages/Accounts';
 import BudgetsMinimal from '../../src/pages/BudgetsMinimal';
+import Goals from '../../src/pages/Goals';
 import { Investments } from '../../src/pages/Investments';
 import PointsPalOverview from '../../src/modules/pointspal/pages/Overview';
 import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
@@ -63,6 +64,36 @@ beforeEach(() => {
         { name: 'Eating out', total: 210, color: '#AB5437' },
       ],
       accounts: [{ id: 1, name: 'Everyday Current', balance: 1104.55, type: 'checking' }],
+    })),
+    http.get('*/api/v1/goals', () => HttpResponse.json({
+      success: true,
+      goals: [
+        { id: 1, user_id: 'demo@finpal.app', name: 'Pay off Chase Amazon',
+          kind: 'payoff', scope: 'household', account_id: 7,
+          account_name: 'Chase Amazon', target_amount: 0, start_amount: -1125.41,
+          current_manual: null, currency_code: 'USD', start_date: '2026-01-01',
+          target_date: '2027-06-30', status: 'active', achieved_at: null,
+          current_amount: -450, direction: 'paydown', progress: 0.6001 },
+        { id: 2, user_id: 'demo@finpal.app', name: 'Emergency fund',
+          kind: 'savings', scope: 'personal', account_id: 8,
+          account_name: 'Ally Savings', target_amount: 10000, start_amount: 1000,
+          current_manual: null, currency_code: 'USD', start_date: '2026-01-01',
+          target_date: null, status: 'active', achieved_at: null,
+          current_amount: 4000, direction: 'accumulate', progress: 0.3333 },
+        { id: 3, user_id: 'demo@finpal.app', name: 'New laptop', kind: 'savings',
+          scope: 'personal', account_id: null, account_name: null,
+          target_amount: 2000, start_amount: 0, current_manual: 2100,
+          currency_code: 'USD', start_date: '2026-01-01', target_date: null,
+          status: 'achieved', achieved_at: '2026-08-01T00:00:00',
+          current_amount: 2100, direction: 'accumulate', progress: 1.05 },
+      ],
+    })),
+    http.get('*/api/v1/goals/1/contributions', () => HttpResponse.json({
+      success: true, currency_code: 'USD',
+      contributions: [
+        { user_id: 'harun@test.com', display_name: 'Harun', amount: 400, imported: false },
+        { user_id: 'rachel@test.com', display_name: 'Rachel', amount: 300, imported: true },
+      ],
     })),
     http.get('*/api/v1/budgets/overview', () => HttpResponse.json({
       success: true,
@@ -266,6 +297,18 @@ const cases: Case[] = [
   // and the sweep dutifully walked three stale copies of the same page. The
   // capture now clears the directory, and the page is here as itself.
   ['accounts', Accounts as React.FC],
+  // Captured with its contributions row EXPANDED, not as it first paints: the
+  // breakdown is the only part of this page with a two-column money layout, and
+  // capturing the collapsed state measures a progress bar and nothing else. Same
+  // reason pointspal-mycards is captured with its modal open.
+  ['goals', Goals as React.FC, async () => {
+    // The FIRST goal's button, by name — two linked goals each offer one, and
+    // `getByRole` refuses an ambiguous match rather than picking. Only goal 1 has
+    // a contributions fixture, so it has to be that one.
+    const first = await screen.findByTestId('goal-1');
+    await userEvent.click(within(first).getByRole('button', { name: /Who contributed/ }));
+    await screen.findByText('Rachel');
+  }],
   ['investments', Investments as React.FC],
   ['pointspal-overview', PointsPalOverview as React.FC],
   ['pointspal-caps', CapTracker as React.FC],
