@@ -111,6 +111,17 @@ export interface ProfileUpdate {
   profile_emoji?: string;
   timezone?: string;
   default_currency_code?: Currency;
+  /**
+   * D-148. Partial: only the keys present are written, so a Settings panel can save
+   * its own toggles without resetting the ones it does not render.
+   *
+   * `PUT /users/profile` is the ONLY path that changes these after onboarding.
+   * `POST /auth/onboarding` also writes them and sets `has_completed_onboarding`
+   * unconditionally, so using it as a settings route re-completes onboarding as a
+   * side effect — which is why "wire the UI to the existing endpoint" was the wrong
+   * fix and this field exists.
+   */
+  notifications?: Partial<UserNotifications>;
 }
 
 export interface PasswordChangeRequest {

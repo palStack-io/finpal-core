@@ -122,11 +122,37 @@ export const Settings: React.FC = () => {
     confirmPassword: ''
   });
 
+  /**
+   * *** THESE ARE THE COLUMNS THE API ACTUALLY HAS. D-148. ***
+   *
+   * The four keys here used to be `budgetAlerts`, `monthlyReports`,
+   * `transactionNotifications` and `goalReminders` — hardcoded, never loaded from
+   * the user, never sent anywhere. Only ONE of them named a field the API accepts,
+   * and two named features that do not exist: there is no goal reminder because
+   * there are no savings goals, and "monthly reports" is not a separate preference
+   * (the periodic report honours `email`). So Settings and Onboarding, in the same
+   * app, did not agree on what a notification preference is.
+   *
+   * `push` is deliberately NOT offered. finPal has no push stack of any kind — no
+   * `expo-notifications`, no APNs entitlement, no device-token column, no sender —
+   * and mobile's switch saying "Push Notifications" is being removed for the same
+   * reason (owner decision B2). The column stays because removing it is a
+   * migration; offering a control for it would be the third lying affordance in
+   * this file's history.
+   *
+   * Seeded from the stored preferences rather than from `true`, so the screen shows
+   * what the account actually holds.
+   */
+  const NOTIFICATION_LABELS = {
+    email: 'Email notifications',
+    budgetAlerts: 'Budget alerts',
+    transactionAlerts: 'Transaction alerts',
+  } as const;
+
   const [notificationSettings, setNotificationSettings] = useState({
-    budgetAlerts: true,
-    monthlyReports: true,
-    transactionNotifications: false,
-    goalReminders: true
+    email: user?.notifications?.email ?? true,
+    budgetAlerts: user?.notifications?.budgetAlerts ?? true,
+    transactionAlerts: user?.notifications?.transactionAlerts ?? false,
   });
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -295,8 +321,16 @@ export const Settings: React.FC = () => {
     setSaveSuccess(false);
 
     try {
-      // TODO: Implement notification settings API endpoint
-      // For now, just show success
+      // D-148. This used to be the TODO comment above `setSaveSuccess(true)` — the
+      // user was shown a success state for a request that was never made.
+      const updated = await userService.updateProfile({
+        notifications: notificationSettings,
+      });
+      // Keep the store in step, or navigating away and back re-renders the toggles
+      // from a stale user and silently undoes what was just saved.
+      useAuthStore.setState({
+        user: { ...user!, notifications: { ...user!.notifications, ...notificationSettings } },
+      });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
@@ -907,13 +941,12 @@ export const Settings: React.FC = () => {
                     }}>
                       <div>
                         <p style={{ color: 'var(--text-primary)', fontWeight: '500', fontSize: '14px', marginBottom: '4px' }}>
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                          {NOTIFICATION_LABELS[key as keyof typeof NOTIFICATION_LABELS]}
                         </p>
                         <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                          {key === 'email' && 'Import reviews and your weekly and monthly spending report'}
                           {key === 'budgetAlerts' && 'Get notified when you approach budget limits'}
-                          {key === 'monthlyReports' && 'Receive monthly spending summaries via email'}
-                          {key === 'transactionNotifications' && 'Alert for every new transaction'}
-                          {key === 'goalReminders' && 'Reminders to help you reach your savings goals'}
+                          {key === 'transactionAlerts' && 'Alert for every new transaction'}
                         </p>
                       </div>
                       <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '24px' }}>
