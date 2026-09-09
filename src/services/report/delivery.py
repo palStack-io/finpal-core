@@ -32,7 +32,7 @@ from src.models.user import User
 from src.services.email_service import email_service
 from src.services.report.builder import build_report
 from src.services.report.period import MONTHLY, WEEKLY, resolve_period
-from src.services.report.render import render_html
+from src.services.report.render import render_html, render_text
 from src.utils.household import household_user_ids
 
 logger = logging.getLogger(__name__)
@@ -101,8 +101,16 @@ def _send_one(user_id, cadence, as_of):
 
     subject = f'{SUBJECT[cadence]} — {period.label}'
     # A False here is a real SMTP failure: with email disabled it returns True.
+    # *** BOTH PARTS. OWNER DECISION B8. ***
+    # An HTML-only `multipart/alternative` carries exactly one part, which is a
+    # spam signal at most large providers — the one thing about this email that
+    # could stop it arriving at all, and the one thing no amount of testing the
+    # HTML would surface, because a filtered message renders perfectly.
+    # `send_email` has accepted `text_body` since it was written; the report was
+    # the only caller that never passed one.
     if not email_service.send_email(to_email=user.id, subject=subject,
-                                    html_body=render_html(report)):
+                                    html_body=render_html(report),
+                                    text_body=render_text(report)):
         logger.error('Report to %s was not accepted by the mail transport', user_id)
         return 'failed'
     return 'sent'
