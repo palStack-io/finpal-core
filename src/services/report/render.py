@@ -270,3 +270,119 @@ def render_html(report):
     </table>
 </body>
 </html>'''
+
+
+# ── The plain-text alternative ───────────────────────────────────────────────
+#
+# *** THIS IS DELIVERABILITY, NOT COURTESY. OWNER DECISION B8, 2026-09-08. ***
+#
+# The report went out for its first two real sends as an HTML-only
+# `multipart/alternative` with exactly one part. That is a spam signal at most
+# large providers, and it is the one thing about this email that could stop it
+# arriving at all — which no amount of testing the HTML would ever surface,
+# because the message renders perfectly right up until it is filtered.
+#
+# `EmailService.send_email` has taken a `text_body` since it was written and the
+# report was the one caller that never passed one.
+#
+# *** IT IS A SECOND RENDERER OVER THE SAME PAYLOAD, NOT A STRIPPED COPY OF THE
+# HTML. *** Running a tag-stripper over `render_html` would inherit every layout
+# table as whitespace and, worse, would go silently stale in the one direction
+# that matters: a section added to the HTML would appear in the text as a blob of
+# markup rather than not at all, so nothing would look broken.
+#
+# The guard against the two drifting is `test_report_text.py`, which asserts that
+# every money figure in the HTML also appears in the text. A section added to one
+# renderer and forgotten in the other fails it.
+
+def _text_money(report, amount, **kwargs):
+    """No `escape` — this is the whole difference from `_money`, and it matters.
+
+    `&amp;` in a plain-text part is a bug the HTML part cannot have.
+    """
+    currency = report['currency']
+    return format_money(amount, currency['code'], currency['locale'], **kwargs)
+
+
+def _text_rows(pairs, width=None):
+    """`label .... value`, right-aligned to the longest value in the block.
+
+    Aligned per block rather than to a fixed column: a report in JPY or INR has
+    much longer figures than one in USD, and a hardcoded column would wrap them
+    onto the next line in exactly the currencies whose users are least likely to
+    be reading English.
+    """
+    if not pairs:
+        return []
+    width = width or max(len(value) for _, value in pairs)
+    return [f'  {label}' + ' ' * max(1, 34 - len(label)) + value.rjust(width)
+            for label, value in pairs]
+
+
+def render_text(report):
+    """The same report as `render_html`, as plain text.
+
+    Fed the builder's real output, so it cannot drift from the figures — which is
+    the same reason A5 renders the HTML from a payload rather than from the
+    database. `format_money` still refuses `None`, so a missing figure raises here
+    too rather than printing as `0.00` (D-108).
+    """
+    cadence = 'Weekly' if report['cadence'] == 'weekly' else 'Monthly'
+    out = [
+        f"finPal · {cadence} report",
+        report['period']['label'],
+        ' & '.join(report['household']['names']),
+        '',
+        'THE NUMBERS',
+    ]
+
+    for tile in report['tiles']:
+        line = f"  {tile['label']}: {_text_money(report, tile['value'])}"
+        if tile['delta'] is not None and tile['delta_direction']:
+            # The same words the HTML's arrow means, spelled out. An arrow
+            # glyph in a plain-text part is a mojibake risk for no benefit.
+            direction = {'up': 'up', 'down': 'down', 'flat': 'level'}[tile['delta_direction']]
+            line += (f" ({direction} {_text_money(report, abs(tile['delta']))}"
+                     f" vs last period)")
+        out.append(line)
+
+    out += ['', 'WHERE IT WENT']
+    if report['spend']['rows']:
+        out += _text_rows([(row['name'], _text_money(report, row['amount']))
+                           for row in report['spend']['rows']]
+                          + [('Total', _text_money(report, report['spend']['total']))])
+    else:
+        out.append('  No spending recorded in this period.')
+
+    for title, accounts, empty in (
+            ('CARDS', report['balances']['credit'], 'No credit cards on file.'),
+            ('CASH', report['balances']['cash'], 'No cash accounts on file.')):
+        out += ['', title]
+        if accounts:
+            out += _text_rows([(a['name'], _text_money(report, a['balance']))
+                               for a in accounts])
+        else:
+            out.append(f'  {empty}')
+
+    out += ['', 'SETTLING UP']
+    if report['iou']['rows']:
+        out += [f"  {row['who']} owes {row['owes_whom']}: "
+                f"{_text_money(report, row['amount'])}"
+                for row in report['iou']['rows']]
+    else:
+        out.append('  Nobody owes anybody anything right now.')
+
+    # Monthly only, exactly as in the HTML — `trend` is None for a weekly report,
+    # which is not the same thing as an empty series.
+
+    if report['trend'] is not None:
+        out += ['', 'NET WORTH']
+        if report['trend']:
+            out += _text_rows([(p['month'], _text_money(report, p['net_worth']))
+                               for p in report['trend']])
+        else:
+            out.append('  Not enough history yet to show a net-worth trend.')
+
+    out += ['', 'These are your own figures, straight from finPal. '
+                'Nothing here is advice.']
+    return '\n'.join(out) + '\n'
