@@ -24,6 +24,23 @@ logger = logging.getLogger(__name__)
 ns = Namespace('users', description='User management operations')
 
 # Define request/response models
+# *** ONE MAP, READ BY THE HANDLER AND BY THE PUBLISHED MODEL BELOW. ***
+# The four keys and the four columns have now been spelled out separately in
+# `/auth/onboarding`, `/auth/login`, `/auth/me`, web-ui Settings and mobile Settings,
+# and three of those five disagreed with each other (D-148, D-150, D-151). A map the
+# handler and the documentation both read is what stops a sixth spelling.
+NOTIFICATION_COLUMNS = {
+    'email': 'notification_email',
+    'push': 'notification_push',
+    'budgetAlerts': 'notification_budget_alerts',
+    'transactionAlerts': 'notification_transaction_alerts',
+}
+
+notification_prefs_model = ns.model('NotificationPreferencesUpdate', {
+    key: fields.Boolean(required=False, description=f'Sets `users.{column}`')
+    for key, column in NOTIFICATION_COLUMNS.items()
+})
+
 profile_update_model = ns.model('ProfileUpdate', {
     'name': fields.String(description='User display name'),
     'phone': fields.String(description='Phone number'),
@@ -33,6 +50,12 @@ profile_update_model = ns.model('ProfileUpdate', {
     'profile_emoji': fields.String(description='Profile emoji'),
     'timezone': fields.String(description='User timezone'),
     'default_currency_code': fields.String(description='Default currency code'),
+    'number_locale': fields.String(description='BCP-47 tag for number formatting; null clears it'),
+    # D-148. Partial: only the keys present are written.
+    'notifications': fields.Nested(notification_prefs_model, required=False,
+                                   description='Notification preferences. '
+                                               'The only path that changes these '
+                                               'after onboarding.'),
 })
 
 password_change_model = ns.model('PasswordChange', {
@@ -135,6 +158,34 @@ class Profile(Resource):
             else:
                 return {'message': 'number_locale is not a usable locale tag'}, 400
 
+        # *** THE ONLY PLACE A NOTIFICATION PREFERENCE CAN BE CHANGED AFTER
+        # ONBOARDING. D-148. ***
+        #
+        # Before this, the only write path in the entire product was
+        # `POST /auth/onboarding` — which sets `has_completed_onboarding = True`
+        # eleven lines after it saves the preferences, so re-posting to change one
+        # toggle re-completes onboarding as a side effect. "Wire the UI to the
+        # existing endpoint" was therefore the wrong fix and the row says so.
+        #
+        # It lives on `/profile` rather than a seventeenth route for the reason the
+        # `number_locale` block above records: this is the same object — the things a
+        # user sets about themselves — both clients already call it, and a Settings
+        # save stays one round trip. Owner decision B2, 2026-09-08.
+        #
+        # NESTED, matching `/auth/onboarding` and the `NotificationPreferences` model
+        # published for it (D-151). One shape for one concept; the alternative is the
+        # third spelling of these four keys in this product, and the second one is
+        # already a defect row.
+        if 'notifications' in data:
+            prefs = data.get('notifications')
+            if not isinstance(prefs, dict):
+                # Refused rather than ignored. The failure this endpoint is here to
+                # end was a 200 for a body that changed nothing.
+                return {'message': 'notifications must be an object'}, 400
+            for key, column in NOTIFICATION_COLUMNS.items():
+                if key in prefs:
+                    setattr(user, column, bool(prefs[key]))
+
         db.session.commit()
 
         return {
@@ -148,6 +199,14 @@ class Profile(Resource):
             'number_locale': user.number_locale,  # #132
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'has_completed_onboarding': user.has_completed_onboarding,
+            # Echoed back so a client can round-trip without a second request, and in
+            # the same shape `/auth/login` and `/auth/me` return. A NULL still reads as
+            # the column's declared default — see `_notifications` in `api/v1/auth.py`.
+            'notifications': {
+                key: (getattr(user, column) if getattr(user, column) is not None
+                      else User.__table__.columns[column].default.arg)
+                for key, column in NOTIFICATION_COLUMNS.items()
+            },
         }, 200
 
 
