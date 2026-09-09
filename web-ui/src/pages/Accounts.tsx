@@ -77,7 +77,21 @@ export const Accounts = () => {
         // concatenation below (`${account.color}20`) only works on a hex, too.
         color: acc.color || getDefaultColorForType(acc.account_type || 'checking'),
         creditLimit: acc.credit_limit || null,
-        availableCredit: acc.credit_limit ? acc.credit_limit - Math.abs(acc.balance || 0) : null
+        // `+ balance`, NOT `- Math.abs(balance)`. Card debt is a NEGATIVE balance
+        // (verified: `balances.py::_move` applies one rule for every account type),
+        // so adding it subtracts what is owed and there is no special case to get
+        // wrong. `Math.abs` treated an OVERPAID card -- a positive balance, where
+        // the bank owes the user -- as more debt, understating available credit by
+        // twice the overpayment: $200 credit on a $5,000 card read $4,800 instead
+        // of $5,200.
+        //
+        // This arithmetic had never run: the block that renders it is gated on
+        // `creditLimit`, and `credit_limit` was not in the account payload until
+        // B1 added the column. Proven behaviourally before being changed, because
+        // D-90 was a defect reported from a read that turned out not to exist.
+        availableCredit: acc.credit_limit != null
+          ? acc.credit_limit + (acc.balance || 0)
+          : null
       }));
 
       setAccounts(formattedAccounts);

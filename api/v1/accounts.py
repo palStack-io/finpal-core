@@ -41,6 +41,19 @@ ns = Namespace('accounts', description='Account operations')
 # The fields below are the ones `AccountInput` accepts and the handlers apply.
 # `tests/integration/test_accounts_documented_fields.py` asserts that, by
 # POSTing every documented field and reading the row back out of the database.
+# B3. Declared because `test_every_request_body_is_documented.py` requires it, and
+# the reason it requires it is D-05: a generated client that knows a route exists
+# and not what to send it is worse than no route, and a documented body nothing
+# reads is the same defect from the other side. One field, and the handler applies
+# exactly it.
+co_owner_model = ns.model('AccountCoOwner', {
+    'user_id': fields.String(
+        required=True,
+        description='Household member to add as a co-owner. Must be on the same '
+                    'side of the demo boundary as the account owner, and must not '
+                    'already be the primary owner — both are refused with 400.'),
+})
+
 simplefin_connect_model = ns.model('SimplefinConnect', {
     'setup_token': fields.String(
         required=False,
@@ -345,6 +358,7 @@ class AccountOwners(Resource):
     """
 
     @ns.doc('add_account_owner', security='Bearer')
+    @ns.expect(co_owner_model)
     @jwt_required()
     def post(self, id):
         """Add a co-owner. Idempotent -- a double click must not 500 on the PK."""

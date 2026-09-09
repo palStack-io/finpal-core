@@ -63,6 +63,35 @@ FORBIDDEN_KEYS = {
 ACCOUNT_KEYS = {
     'id', 'name', 'account_type', 'balance', 'currency_code', 'institution',
     'status', 'color', 'user_id', 'current_balance',
+    # B1. Three NULLABLE credit fields, so learnPal can teach utilisation and
+    # interest cost and debtPal does not have to ask for debts finPal already holds.
+    #
+    # THE MCP QUESTION, ASKED RATHER THAN WAVED THROUGH: no change is needed, and
+    # here is why. All three are figures ABOUT the caller's own account, in the same
+    # class as `balance`, which has been in this set since the file was written --
+    # not a credential, not an identifier, and not a digit string that could be
+    # mistaken for an account number. A credit limit is less identifying than the
+    # balance beside it. `scrub.ts` needs no new entry.
+    'credit_limit', 'apr', 'min_payment',
+    # B3. Co-owners, `[{id, name, color, emoji}]`, in the same shape as `owner`
+    # below and empty for an account nobody shares.
+    #
+    # *** THE MCP QUESTION HAS A REAL ANSWER HERE AND IT IS NOT "SAME AS `owner`". ***
+    # A read-scoped PAT is CALLER-scoped (D-50, `read_scope` returns `[user_id]` when
+    # `g.pat` is set), so `owner` on a token-readable account is always the caller
+    # themselves. `owners` is the first key that can put ANOTHER member's email
+    # address and display name into a token response -- and from there into a
+    # third-party hosted model.
+    #
+    # Kept, deliberately, and the reasoning is: the co-owner is somebody the caller
+    # ADDED BY TYPING THEIR EMAIL, so this discloses nothing to the token holder they
+    # did not already supply; and dropping it would make "Joint" unrenderable for any
+    # MCP client while protecting a value that client's own user chose. It is a
+    # NEW CLASS OF DATA REACHING AN LLM THOUGH -- a second person's identity rather
+    # than the caller's own -- so it is written down here rather than left implicit.
+    # If the MCP layer ever gains a "no third-party identities" rule, this is the key
+    # it applies to first, and `scrub.ts`'s LABEL_KEYS is where it would go.
+    'owners',
     # #129. Free text the user writes about the account ("Joint account — rent and
     # bills"). Added because the form had asked for it since it was written while no
     # column existed to hold it, so every value typed was discarded.
