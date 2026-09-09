@@ -13,7 +13,7 @@ from src.models.account import Account, SimpleFin
 from src.models.transaction import Expense
 from src.models.currency import Currency
 from src.models.user import User
-from src.utils.currency_converter import convert_currency, get_base_currency
+from src.utils.currency_converter import convert_currency, get_base_currency, RateTable
 from src.utils.helpers import auto_categorize_transaction
 from src.utils.household import visible_user_ids, can_manage_owned
 from src.repositories.account import AccountRepository
@@ -248,7 +248,11 @@ class AccountService:
                 continue
 
             # Get account's currency code
-            account_currency = account.currency_code or user_currency_code
+            # NULL means the BASE currency, not the reader's — one rule for every
+            # stored row, and the same rule `calculate_asset_debt_trends` and
+            # `RateTable` use. See D-166.
+            account_currency = account.currency_code or (RateTable().base_code
+                                                         or user_currency_code)
 
             # Convert to user's preferred currency if different
             if account_currency != user_currency_code:

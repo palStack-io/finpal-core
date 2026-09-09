@@ -260,9 +260,19 @@ def test_the_two_members_get_the_same_spend_total_under_different_symbols(db, se
     not something the report introduced. It is pinned rather than fixed because the
     fix is a decision about a payload two other clients already consume.
 
-    **When D-156 is fixed, this test must fail.** That is the point of it: it
-    records the current answer so the change is visible instead of silent. Update
-    it in the same commit as the fix, do not delete it.
+    *** D-156 IS NOW FIXED AND THIS TEST WAS REWRITTEN, NOT DELETED. *** It used to
+    assert `€150.00` — the dollar figure under a euro symbol — and said in this
+    docstring that fixing D-156 must make it fail. It did. The third assertion is
+    the one that matters: `not any('€150.00')` fails if anything ever relabels
+    without converting again, which the two positive assertions on their own would
+    not catch.
+
+    *** AND IT ONLY MEANS ANYTHING BECAUSE THE `db` FIXTURE NOW SEEDS CURRENCIES. ***
+    It did not: `create_all()`/`drop_all()` per test wiped the boot-seeded
+    `currencies` table after the first test, so `convert_currency` found no base
+    currency, returned its input, and every conversion in the suite was the
+    identity. This test PASSED against the fixed code for exactly that reason —
+    running it alone failed, running it in its file passed. See D-166.
     """
     _spender(name='Dollar', default_currency_code='USD', number_locale='en-US')
     _spender(name='Euro', default_currency_code='EUR', number_locale='en-US')
@@ -271,10 +281,15 @@ def test_the_two_members_get_the_same_spend_total_under_different_symbols(db, se
 
     bodies = {m['to']: m['html'] for m in sent}
     assert len(bodies) == 2
-    # The household spent 150.00 in total (75.00 each). Both members are told the
-    # same figure; only the symbol changes.
-    assert any('$150.00' in html for html in bodies.values())
-    assert any('€150.00' in html for html in bodies.values())
+
+    # *** THE HOUSEHOLD SPENT ONE AMOUNT; THE TWO MEMBERS SEE IT IN THEIR OWN
+    # CURRENCY, AND THE SYMBOL AND THE FIGURE NOW COME FROM THE SAME RULE. ***
+    # 150.00 USD at EUR's seeded `rate_to_base` of 1.1 is 136.36. The euro reader
+    # used to be shown **€150.00** — the dollar figure, relabelled — which is what
+    # this test pinned before D-156 was fixed.
+    assert any('$150.00' in html for html in bodies.values()), 'the base-currency reader should be unaffected'
+    assert any('€136.36' in html for html in bodies.values()), 'the euro reader must see the CONVERTED total'
+    assert not any('€150.00' in html for html in bodies.values()), 'a dollar figure under a euro symbol is D-156'
 
 
 def test_the_window_is_resolved_in_each_users_own_timezone(db, sent):

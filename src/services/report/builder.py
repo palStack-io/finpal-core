@@ -49,9 +49,18 @@ def _period_figures(user_id, scope_ids, period):
     from src.services.analytics.service import AnalyticsService
     from src.utils.household import scope_query
 
+    # *** ONE CODE FOR THE FIGURES AND THE LABEL, RESOLVED ONCE. ***
+    # `build_report` labels this card with `default_currency_for(user_id)`; passing
+    # anything else to the analytics call would let the number and the symbol be
+    # chosen by two rules again, which is D-156 in one sentence.
+    from src.utils.currency_converter import RateTable
+    from src.utils.household import default_currency_for
+    display_code = default_currency_for(user_id)
+
     rows = AnalyticsService().get_top_categories(
         user_id, limit=SPEND_CATEGORY_LIMIT, start=period.start_dt,
-        end=period.end_dt, transaction_type='expense', scope_ids=scope_ids)
+        end=period.end_dt, transaction_type='expense', scope_ids=scope_ids,
+        display_code=display_code)
 
     total = sum((Decimal(str(row['amount'])) for row in rows), Decimal('0'))
 
@@ -64,8 +73,14 @@ def _period_figures(user_id, scope_ids, period):
                 if total else 0.0),
     } for row in rows]
 
+    # D-156. `get_top_categories` above already restates its rows in that same
+    # currency; summing income raw here would put a converted spend total beside an
+    # unconverted income total in the same card — the defect this report is what
+    # finally exposed, reintroduced two lines from its own fix.
+    rates = RateTable()
     income = sum(
-        (expense.amount for expense in scope_query(scope_ids).filter(
+        (rates.amount_of(expense, display_code)
+         for expense in scope_query(scope_ids).filter(
             Expense.transaction_type == 'income',
             Expense.date >= period.start_dt,
             Expense.date <= period.end_dt).all()),

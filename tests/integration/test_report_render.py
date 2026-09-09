@@ -146,12 +146,24 @@ def test_no_css_variable_survives_into_the_email(html):
 # --- locale ---------------------------------------------------------------
 
 def test_money_follows_the_users_locale_and_currency(db):
+    """Locale controls the SEPARATORS; the currency controls the figure as well.
+
+    *** THE EXPECTED NUMBERS CHANGED WHEN D-156 WAS FIXED, AND THAT IS THE FIX
+    WORKING RATHER THAN THE TEST DRIFTING. *** The fixture stores USD amounts; this
+    reader's currency is EUR at a seeded `rate_to_base` of 1.1. Before the fix the
+    renderer printed the stored dollar figures under a euro symbol — `€200,00` for
+    $200 — which is precisely the defect. 200/1.1 = 181.82 and 3000/1.1 = 2727.27,
+    rendered de-DE as `181,82` and `2.727,27`.
+
+    The `$` assertion is the one doing the original job: separators and symbol both
+    follow the user, and this file is about rendering, not conversion.
+    """
     me, _ = _household(default_currency_code='EUR', number_locale='de-DE')
 
     html = render_html(build_report(me.id, WEEK, 'weekly'))
 
-    assert '€200,00' in html
-    assert '€3.000,00' in html
+    assert '€181,82' in html
+    assert '€2.727,27' in html
     assert '$' not in html
 
 

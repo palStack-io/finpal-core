@@ -9,6 +9,7 @@ from src.models.user import User
 from src.models.category import Category
 from src.models.currency import Currency
 from src.models.account import Account
+from src.utils.currency_converter import RateTable
 from src.models.associations import group_users
 from src.extensions import db
 
@@ -56,6 +57,28 @@ class AnalyticsService:
                     .filter(Expense.date >= dashboard_start)
                     .order_by(Expense.date.desc()).all())
 
+        # *** EVERY FIGURE BELOW IS RESTATED IN THE CURRENCY THAT LABELS IT. D-156. ***
+        #
+        # `base_currency['code']` is the code whose SYMBOL this payload ships, so
+        # converting into it makes the number and the symbol agree by construction
+        # rather than by two functions happening to want the same thing. Before this,
+        # `calculate_asset_debt_trends` converted account balances into the reader's
+        # currency while every transaction figure here was summed straight off
+        # `Expense.amount` — so one dashboard printed a converted net worth beside an
+        # unconverted spend total under one symbol, and had done since it shipped.
+        #
+        # Owner decision B1, 2026-09-08: convert the figures, accepting that dashboard
+        # numbers CHANGE for multi-currency users. Nothing changes on a
+        # single-currency instance — every code is the base code and every conversion
+        # is the identity — which is exactly why this survived so long.
+        #
+        # A MAP, not a write-back: assigning to `expense.amount` would mark the
+        # instance dirty and the next commit in the request would persist a reader's
+        # currency figure. `expense_splits` below is threaded the same way.
+        rates = RateTable()
+        display_code = base_currency['code']
+        amounts = rates.amounts_for(expenses, display_code)
+
         users = User.query.all()
         groups = Group.query.join(group_users).filter(group_users.c.user_id == user_id).all()
 
@@ -90,35 +113,43 @@ class AnalyticsService:
 
                 # Add to total - only add expenses, not income or transfers
                 if not hasattr(expense, 'transaction_type') or expense.transaction_type == 'expense':
-                    monthly_totals[month_key]['total'] += expense.amount
+                    monthly_totals[month_key]['total'] += amounts[expense.id]
 
                     # Add to card totals
                     if expense.card_used not in monthly_totals[month_key]['by_card']:
                         monthly_totals[month_key]['by_card'][expense.card_used] = 0
-                    monthly_totals[month_key]['by_card'][expense.card_used] += expense.amount
+                    monthly_totals[month_key]['by_card'][expense.card_used] += amounts[expense.id]
 
                     # Add to account totals if available
                     if hasattr(expense, 'account') and expense.account:
                         account_name = expense.account.name
                         if account_name not in monthly_totals[month_key]['by_account']:
                             monthly_totals[month_key]['by_account'][account_name] = 0
-                        monthly_totals[month_key]['by_account'][account_name] += expense.amount
+                        monthly_totals[month_key]['by_account'][account_name] += amounts[expense.id]
 
                     # Calculate splits and add to contributors
                     splits = expense_splits[expense.id]
+
+                    # A split share is a fraction of the SAME row, so it carries the
+                    # same currency and needs the same conversion. Converting the
+                    # total and not its parts would make the contributor rows stop
+                    # summing to the month's total for a multi-currency household.
+                    row_code = rates.code_of(expense)
 
                     # Add payer's portion
                     if splits['payer']['amount'] > 0:
                         payer_email = splits['payer']['email']
                         if payer_email not in monthly_totals[month_key]['contributors']:
                             monthly_totals[month_key]['contributors'][payer_email] = 0
-                        monthly_totals[month_key]['contributors'][payer_email] += splits['payer']['amount']
+                        monthly_totals[month_key]['contributors'][payer_email] += rates.convert(
+                            splits['payer']['amount'], row_code, display_code)
 
                     # Add other contributors' portions
                     for split in splits['splits']:
                         if split['email'] not in monthly_totals[month_key]['contributors']:
                             monthly_totals[month_key]['contributors'][split['email']] = 0
-                        monthly_totals[month_key]['contributors'][split['email']] += split['amount']
+                        monthly_totals[month_key]['contributors'][split['email']] += rates.convert(
+                            split['amount'], row_code, display_code)
 
         # Calculate total expenses for current user (only their portions for the current year)
         current_year = now.year
@@ -146,11 +177,11 @@ class AnalyticsService:
         for expense in expenses:
             if hasattr(expense, 'transaction_type'):
                 if expense.transaction_type == 'income':
-                    total_income += expense.amount
+                    total_income += amounts[expense.id]
                     if expense.date.month == now.month and expense.date.year == now.year:
-                        current_month_income += expense.amount
+                        current_month_income += amounts[expense.id]
                 elif expense.transaction_type == 'transfer':
-                    total_transfers += expense.amount
+                    total_transfers += amounts[expense.id]
 
         # Calculate user's share from expense splits
         current_month_total = 0
@@ -171,12 +202,12 @@ class AnalyticsService:
             # computed and still used, by `_calculate_iou_data` — settling up is a
             # different question from whose money it is.
             if not hasattr(expense, 'transaction_type') or expense.transaction_type == 'expense':
-                total_expenses += expense.amount
-                total_expenses_only += expense.amount
+                total_expenses += amounts[expense.id]
+                total_expenses_only += amounts[expense.id]
 
                 if expense.date.month == now.month and expense.date.year == now.year:
-                    current_month_total += expense.amount
-                    current_month_expenses_only += expense.amount
+                    current_month_total += amounts[expense.id]
+                    current_month_expenses_only += amounts[expense.id]
 
                 if expense.card_used:
                     unique_cards.add(expense.card_used)
@@ -219,8 +250,14 @@ class AnalyticsService:
 
         return {
             'expenses': expenses,
+            # The per-row figures, in the same currency as every total above.
+            # `_serialize_expense` reads this instead of `exp.amount`: a recent
+            # transactions list that disagreed with the totals printed over it
+            # would be D-156 again, one widget down.
+            'expense_amounts': amounts,
             'expense_splits': expense_splits,
-            'top_categories': self._get_category_spending(expenses, expense_splits),
+            'top_categories': self._get_category_spending(
+                expenses, expense_splits, amounts=amounts),
             'monthly_totals': monthly_totals,
             'total_expenses': total_expenses,
             'total_expenses_only': total_expenses_only,
@@ -450,7 +487,8 @@ class AnalyticsService:
     UNCATEGORISED_LABEL = 'Uncategorised'
 
     def _get_category_spending(self, expenses, expense_splits, start=None,
-                               end=None, limit=6, transaction_type='expense'):
+                               end=None, limit=6, transaction_type='expense',
+                               amounts=None, display_code=None):
         """Total spending per category over a window, highest first.
 
         `start`/`end` are inclusive datetime bounds; omitting both keeps the
@@ -468,6 +506,17 @@ class AnalyticsService:
             start = datetime(now.year, now.month, 1)
             end = now
 
+        # D-156. Two callers reach this with two different expense lists, so the
+        # converted amounts are passed in when the caller already built them and
+        # derived here when it did not — rather than each caller doing its own
+        # arithmetic, which is how the dashboard and the category pie would end up
+        # disagreeing about the same rows.
+        rates = RateTable()
+        if display_code is None:
+            display_code = rates.base_code
+        if amounts is None:
+            amounts = rates.amounts_for(expenses, display_code)
+
         category_totals = {}
 
         def add(name, amount, color, icon):
@@ -484,21 +533,28 @@ class AnalyticsService:
             if end is not None and expense.date > end:
                 continue
 
+            # A category split is a fraction of the same row and carries the same
+            # currency, so it converts with the row's code — not with the map, which
+            # is keyed by expense and holds the whole amount.
+            row_code = rates.code_of(expense)
+            row_amount = amounts.get(expense.id, expense.amount)
+
             if expense.category_splits:
                 for split in expense.category_splits:
+                    split_amount = rates.convert(split.amount, row_code, display_code)
                     if split.category:
-                        add(split.category.name, split.amount,
+                        add(split.category.name, split_amount,
                             split.category.color, split.category.icon)
                     else:
                         # A split with no category still spent money. Dropping it
                         # made the pie's slices sum to less than the reported
                         # total with no indication anything was missing.
-                        add(self.UNCATEGORISED_LABEL, split.amount, None, None)
+                        add(self.UNCATEGORISED_LABEL, split_amount, None, None)
             elif expense.category:
-                add(expense.category.name, expense.amount,
+                add(expense.category.name, row_amount,
                     expense.category.color, expense.category.icon)
             else:
-                add(self.UNCATEGORISED_LABEL, expense.amount, None, None)
+                add(self.UNCATEGORISED_LABEL, row_amount, None, None)
 
         sorted_categories = sorted(
             [
@@ -517,7 +573,8 @@ class AnalyticsService:
         return sorted_categories[:limit] if limit else sorted_categories
 
     def get_top_categories(self, user_id, limit=8, start=None, end=None,
-                           transaction_type='expense', scope_ids=None):
+                           transaction_type='expense', scope_ids=None,
+                           display_code=None):
         """Category totals for one date window, without the dashboard payload.
 
         /analytics/categories/top used to call get_dashboard_data, which loads
@@ -539,14 +596,32 @@ class AnalyticsService:
         if end is not None:
             query = query.filter(Expense.date <= end)
 
+        # *** THE CALLER MAY NAME THE CURRENCY, AND THE REPORT EMAIL MUST. ***
+        #
+        # The display currency follows the READER — `get_base_currency` prefers the
+        # user's own default and falls back to the system base, which is the rule the
+        # dashboard's own `base_currency` block uses. But the report card labels its
+        # figures with `default_currency_for(user_id)`, and the two rules can differ
+        # for a user whose `default_currency_code` names a currency with no row: one
+        # falls back to the system base, the other returns the dangling code. Letting
+        # each side pick its own would be D-156 rebuilt inside D-156's fix, so the
+        # caller that owns the label passes the code that will appear beside the
+        # number.
+        if display_code is None:
+            from src.utils.helpers import get_base_currency
+            display_code = get_base_currency(db.session.get(User, user_id))['code']
+
         return self._get_category_spending(
             query.all(), {}, start=start, end=end, limit=limit,
-            transaction_type=transaction_type)
+            transaction_type=transaction_type, display_code=display_code)
 
     def get_spending_trends(self, user_id, months=6, scope_ids=None):
         """Get spending trends over time"""
         from src.utils.household import read_scope, scope_query
+        from src.utils.helpers import get_base_currency
         household_ids = scope_ids or read_scope(user_id)
+        rates = RateTable()
+        display_code = get_base_currency(db.session.get(User, user_id))['code']
         trends = []
         for i in range(months):
             month_date = datetime.now() - timedelta(days=30*i)
@@ -555,7 +630,11 @@ class AnalyticsService:
                 Expense.date < datetime(month_date.year, month_date.month + 1, 1) if month_date.month < 12
                     else datetime(month_date.year + 1, 1, 1)
             ).all()
-            total = sum(e.amount for e in expenses)
+            # D-156: the same rule as every other figure. Built inside the loop
+            # rather than hoisted because `RateTable` reads the currencies table
+            # once per instance and the loop runs at most `months` times.
+            total = sum((rates.amount_of(e, display_code) for e in expenses),
+                        Decimal('0'))
             trends.append({'month': month_date.strftime('%Y-%m'), 'total': total})
         return trends
 

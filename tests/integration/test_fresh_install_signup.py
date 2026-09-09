@@ -21,7 +21,17 @@ def test_reference_data_seeding_creates_the_hardcoded_default(db):
     from src import _seed_reference_data
     from flask import current_app
 
-    assert Currency.query.count() == 0, 'fixture should start empty'
+    # *** THE FIXTURE SEEDS CURRENCIES NOW (D-166), SO A FRESH INSTALL IS STAGED
+    # HERE RATHER THAN ASSUMED. *** This test is about `_seed_reference_data` doing
+    # its job on an EMPTY table, and the `db` fixture stopped providing one the day
+    # it started seeding — which it had to, because `drop_all()` was leaving every
+    # test after the first with zero currencies and turning every conversion in the
+    # suite into the identity function. Emptying it explicitly says what the test
+    # needs instead of inheriting it.
+    from src.extensions import db as _db
+    Currency.query.delete()
+    _db.session.commit()
+    assert Currency.query.count() == 0, 'the table was not emptied — this test proves nothing'
 
     _seed_reference_data(current_app)
 
