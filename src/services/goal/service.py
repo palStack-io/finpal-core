@@ -105,6 +105,61 @@ class GoalService:
             return True
         return False
 
+    def contributions(self, goal):
+        """`SUM(amount) GROUP BY paid_by` over money moving INTO the linked account.
+
+        *** `paid_by` IS WHO FRONTED THE CASH, NOT WHOSE MONEY IT IS. ***
+        Attribution is the account's owner (D-18, owner decision 2026-08-06) and
+        stays that way. These are two different questions with two correct answers,
+        and a contribution tracker wants the second: on a joint account Harun owns,
+        attribution reads 700/0 and this reads 400/300.
+
+        *** TWO SHAPES COUNT AS MONEY COMING IN, AND THE SECOND IS THE ONE THE SPEC
+        ACTUALLY DESCRIBES. *** An `income` row on the account, and a `transfer`
+        whose DESTINATION is the account -- the spec's own example of how a couple
+        records a contribution is *"I moved $200 into the emergency fund"*, which is
+        a transfer, and a transfer's `account_id` is the account the money LEFT.
+        Keying this to income alone reports zero for the exact interaction the
+        feature exists for, and every test written from income rows stays green.
+
+        Returns [] for a manual goal: there is no account, so there are no rows and
+        no honest way to say who contributed. An empty list is the correct answer,
+        not a row reading $0.00 -- a zero beside a name reads as a measurement
+        ("this person put in nothing") when the truth is "nobody knows".
+
+        `imported` is per person, via `max()` over the group, not per breakdown:
+        `creation.py` defaults `paid_by` to whoever CREATED the row, so a CSV or
+        SimpleFin row credits the importer rather than the payer. The row stays and
+        the claim is qualified. Flagging everyone because one row was imported would
+        train the user to ignore the label, which is worse than not showing it.
+        """
+        from src.models.transaction import Expense
+        from src.utils.household import display_name
+
+        if goal.account_id is None:
+            return []
+
+        incoming = db.or_(
+            db.and_(Expense.account_id == goal.account_id,
+                    Expense.transaction_type == 'income'),
+            db.and_(Expense.destination_account_id == goal.account_id,
+                    Expense.transaction_type == 'transfer'),
+        )
+        rows = db.session.execute(
+            db.select(Expense.paid_by,
+                      db.func.sum(Expense.amount),
+                      db.func.max(db.case((Expense.import_source.isnot(None), 1),
+                                          else_=0)))
+              .where(incoming)
+              .group_by(Expense.paid_by)).all()
+        return [{'user_id': uid,
+                 # Never None: `User.name` is nullable and nothing backfills it, and
+                 # one nameless row once stopped the whole household's report
+                 # rendering (D-154).
+                 'display_name': display_name(uid),
+                 'amount': total,
+                 'imported': bool(flag)} for uid, total, flag in rows]
+
     def as_payload(self, goal):
         """The computed fields a client must not derive for itself."""
         return {
