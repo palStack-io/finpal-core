@@ -950,6 +950,7 @@ class DemoService:
             if not Goal.query.filter_by(user_id=user.id).first():
                 logger.info('Backfilling demo goals for %s', user.id)
                 DemoService._seed_demo_goals(user)
+        DemoService._backfill_non_tour_household_goals()
         DemoService._seed_demo_co_owners()
 
         for group in Group.query.all():
@@ -960,6 +961,43 @@ class DemoService:
                 continue
             logger.info('Backfilling expenses for demo group %r (D-77)', group.name)
             DemoService._seed_group_expenses(group, members)
+
+    @staticmethod
+    def _backfill_non_tour_household_goals():
+        """Demote a household goal owned by anyone but the tour persona.
+
+        *** THIS IS THE THIRD TIME IN ONE DAY THAT A SEED FIX REACHED NO LIVE
+        DEMO, AND THE REASON IS ALWAYS THE SAME. *** Making `_seed_demo_goals`
+        give only demo1 the household goal fixed FRESH installs. The deployed
+        demo already had goals for all four personas, so the gap check above
+        (`if not Goal.query...`) correctly skipped every one of them and the
+        change landed nowhere. `goals 15 -> 15`, four rows still reading
+        "Emergency fund" on the page a visitor lands on.
+
+        A household goal is visible to everyone on the same side of the demo
+        boundary, and all four demo users are — so four personas each owning one
+        put FOUR identically-named rows on demo1's Goals page. Correct by the
+        model, and indistinguishable from a duplication bug to anybody looking at
+        it, which is the same "looks broken" failure D-77 is about.
+
+        Keyed to the CONDITION rather than to a version marker, like every other
+        backfill here: "a non-tour persona owns a household goal" is checkable and
+        self-correcting. Converts rather than deletes — the goal, its snapshot and
+        its progress are all still true, and only the scope and the name were
+        wrong. Deleting live rows to fix a labelling problem is the wrong tool.
+        """
+        stale = Goal.query.filter(
+            Goal.scope == 'household',
+            Goal.user_id != 'demo1@finpal.demo',
+            Goal.user_id.in_([a['email'] for a in DEMO_ACCOUNTS]),
+        ).all()
+        for goal in stale:
+            owner = User.query.filter_by(id=goal.user_id).first()
+            first_name = (owner.name or goal.user_id).split()[0].split('@')[0]
+            goal.scope = 'personal'
+            goal.name = f'{first_name}’s savings target'
+            logger.info('Demoted a duplicate household demo goal owned by %s',
+                        goal.user_id)
 
     @staticmethod
     def _create_starter_portfolio(user):
