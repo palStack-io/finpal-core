@@ -101,7 +101,7 @@ class AccountService:
 
         return True, 'Success', account_data
 
-    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None, owner_id=None, description=None):
+    def add_account(self, user_id, name, account_type, institution, balance, currency_code, color=None, import_source=None, external_id=None, owner_id=None, description=None, credit_limit=None, apr=None, min_payment=None):
         """
         Add a new account
         Returns (success, message, account)
@@ -145,6 +145,12 @@ class AccountService:
                 import_source=import_source,
                 external_id=external_id,
                 description=description,
+                # B1. Not coerced to 0. NULL is the absence of a claim about this
+                # card, and a default of 0 would make every account created without
+                # them look like a maxed-out card with no minimum payment.
+                credit_limit=credit_limit,
+                apr=apr,
+                min_payment=min_payment,
                 user_id=user_id
             )
 

@@ -111,6 +111,15 @@ class AccountSchema(Schema):
     color = fields.Str()
     user_id = fields.Str(dump_only=True)
 
+    # B1. Dumped as Float to match `balance` above -- one payload should not mix a
+    # JSON number and a JSON string for two money fields, and no client reads these
+    # yet, so the convention that already exists wins. The *column* is `Numeric`,
+    # which is what D-58 is about: the storage and the arithmetic are exact, and
+    # only the presentation crosses the wire as a float.
+    credit_limit = fields.Float(allow_none=True)
+    apr = fields.Float(allow_none=True)
+    min_payment = fields.Float(allow_none=True)
+
     # Calculated balance
     current_balance = fields.Method('get_current_balance', dump_only=True)
 

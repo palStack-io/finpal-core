@@ -80,6 +80,16 @@ account_model = ns.model('Account', {
         description='Household member to assign this account to. '
                     'Defaults to the calling user. Must be a household member — '
                     'a demo account or an unknown id is refused with 400.'),
+    # B1. Documented on BOTH verbs because `@ns.expect(account_model)` decorates
+    # POST and PUT alike, so a field applied by only one of them is D-05 with a
+    # single door -- `test_accounts_documented_fields.py` fails on exactly that.
+    'credit_limit': fields.Float(
+        description='Credit limit for a card account. Optional and nullable: '
+                    'omitting it is "not stated", not "zero".'),
+    'apr': fields.Float(
+        description='Annual percentage rate, e.g. 19.99. Optional and nullable.'),
+    'min_payment': fields.Float(
+        description='Minimum monthly payment. Optional and nullable.'),
 })
 
 
@@ -140,6 +150,11 @@ class AccountList(Resource):
             # #129: the form has collected this since it was written and it was dropped
             # at every link in the chain, including this one.
             description=validated.get('description'),
+            # B1. Passed through rather than defaulted here: `None` and "not sent"
+            # mean the same thing on create, and the service writes NULL for both.
+            credit_limit=validated.get('credit_limit'),
+            apr=validated.get('apr'),
+            min_payment=validated.get('min_payment'),
         )
 
         if not success:
@@ -238,6 +253,15 @@ class AccountDetail(Resource):
             # the cautionary sibling, where a field becomes un-emptiable once written.
             if 'description' in data:
                 account.description = data['description']
+            # B1. `in data` rather than a truthiness test, for #129's reason and one
+            # more: 0 is a legitimate `min_payment` and a truthiness test would make
+            # it unsettable. Sending null clears the field back to "not stated".
+            if 'credit_limit' in data:
+                account.credit_limit = data['credit_limit']
+            if 'apr' in data:
+                account.apr = data['apr']
+            if 'min_payment' in data:
+                account.min_payment = data['min_payment']
             if 'owner_id' in data and data['owner_id'] != account.user_id:
                 # A REASSIGNMENT, which this now checks for FIRST. D-81: the membership
                 # test used to run whenever `owner_id` was merely present, and

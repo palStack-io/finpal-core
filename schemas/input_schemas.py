@@ -117,6 +117,23 @@ class AccountInput(Schema):
     # request size rather than a column width -- but it must EXIST, because a field with
     # no declared limit is how an unbounded body reaches the database.
     description = fields.Str(allow_none=True, validate=validate.Length(max=2000))
+    # B1. `fields.Decimal`, not `fields.Float`: this is the input side of a
+    # `Numeric(5,2)` column that gets multiplied into money, and a float turns
+    # 19.99 into 19.989999999999998 before SQLAlchemy ever sees it (D-58).
+    #
+    # `allow_none` on all three so a value can be CLEARED, not only set --
+    # `update_recurring`'s `value is not None` guard is the cautionary sibling,
+    # where a field becomes un-emptiable once written (#129's shape).
+    #
+    # The Range ceilings follow the columns: Numeric(18,2) and Numeric(5,2). A
+    # validator looser than its column does not reject anything, it just moves the
+    # failure from a clean 400 to Postgres's NumericValueOutOfRange (#123).
+    credit_limit = fields.Decimal(allow_none=True, places=2,
+                                  validate=validate.Range(min=0))
+    apr = fields.Decimal(allow_none=True, places=2,
+                         validate=validate.Range(min=0, max=999.99))
+    min_payment = fields.Decimal(allow_none=True, places=2,
+                                 validate=validate.Range(min=0))
 
 
 class BudgetInput(Schema):

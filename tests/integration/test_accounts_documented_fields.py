@@ -49,6 +49,11 @@ SAMPLE_VALUES = {
     'institution': 'Test Bank',
     'color': '#3b82f6',
     'owner_id': A_HOUSEHOLD_MEMBER,
+    # B1. Values a card really has, so the round-trip proves the write path and not
+    # just that the name is accepted.
+    'credit_limit': 5000.00,
+    'apr': 19.99,
+    'min_payment': 35.00,
 }
 
 
@@ -104,7 +109,15 @@ def test_posting_the_documented_body_persists_every_field(client, auth_headers,
         attribute = DOCUMENTED_TO_ATTRIBUTE.get(field, field)
         stored = getattr(account, attribute)
         if isinstance(sent, float):
-            assert stored == pytest.approx(sent, abs=0.01), field
+            # B1 widened this guard past its first assumption: a documented number
+            # is not necessarily stored as a float. `credit_limit`, `apr` and
+            # `min_payment` are `Numeric` columns and come back as `Decimal`, which
+            # `pytest.approx` cannot subtract from a float -- the failure was a
+            # TypeError, not a wrong value. Compare through float() so the guard
+            # keeps asking its real question (is the value still there) on either
+            # column type, rather than passing only for the types it happened to
+            # see when it was written.
+            assert float(stored) == pytest.approx(sent, abs=0.01), field
         else:
             assert stored == sent, (
                 f'/accounts documents {field!r}, accepted it, and did not store '
