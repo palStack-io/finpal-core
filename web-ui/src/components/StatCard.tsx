@@ -51,16 +51,31 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, i
             {label}
             {scope && <ScopeTag scope={scope} />}
           </p>
-          {/* Tabular figures: every stat card on every page holds a money
+          {/* *** A FIGURE IS NOT A HEADING. *** This was an <h3>, sitting
+              directly under each page's <h1>, so the document outline a screen
+              reader navigates by was a list of money values — "$5,042.18",
+              "$1,204.00" — with a skipped level in front of them. Found by the
+              E2E heading check; the label above is the <p>, and this is its
+              value, so <p> is what it is.
+
+              Tabular figures: every stat card on every page holds a money
               value, so one change here makes the whole app's numbers align in a
               column instead of reading as a ragged edge. */}
-          <h3 style={{
+          <p
+            // A stable handle for tests, now that the value is not a heading.
+            // `TransactionsHousehold.test.tsx` addressed these by `level: 3`
+            // specifically to tell a CARD value from a transaction ROW amount —
+            // both render the same string — so removing the heading removed its
+            // only way to discriminate. The intent was right; it needed a hook
+            // that is not a lie about document structure.
+            data-testid="stat-value"
+            style={{
             fontSize: '28px',
             fontWeight: 'bold',
             color: valueColor || 'var(--text-primary)',
             margin: 0,
             ...tabular,
-          }}>{value}</h3>
+          }}>{value}</p>
         </div>
         <div style={{
           width: '48px',

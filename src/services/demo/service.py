@@ -1056,6 +1056,37 @@ class DemoService:
 
         planned = []
 
+        # *** ONLY THE TOUR PERSONA GETS THE FULL SET, AND THE E2E SUITE IS WHAT
+        # FORCED THAT. *** Giving every persona the same four goals put FOUR goals
+        # named "Emergency fund" on demo1's page, because a household goal is
+        # visible to everyone on the same side of the demo boundary and all four
+        # demo users are. Correct by the model and unreadable on screen: a visitor
+        # sees four identical rows and reads it as a duplication bug, which is the
+        # same "looks broken" failure D-77 is about, arriving from the opposite
+        # direction. Same reason `_create_starter_portfolio` is persona-gated.
+        is_tour_persona = user.id == 'demo1@finpal.demo'
+
+        if not is_tour_persona:
+            # One personal goal, distinctly named, so the other accounts are not
+            # empty and nothing they own shows up on demo1's page.
+            if checking is not None:
+                balance = Decimal(checking.balance or 0)
+                planned.append(dict(
+                    name=f'{user.name.split()[0]}’s savings target', kind='savings',
+                    scope='personal', account=checking,
+                    start_amount=(balance * Decimal('0.5')).quantize(Decimal('1')),
+                    target_amount=(balance * 2).quantize(Decimal('1')),
+                ))
+            for spec in planned:
+                account = spec.pop('account')
+                db.session.add(Goal(
+                    user_id=user.id, account_id=account.id if account else None,
+                    currency_code=(account.currency_code if account else currency),
+                    start_date=today - timedelta(days=120),
+                    target_date=today + timedelta(days=240), status='active', **spec))
+            db.session.flush()
+            return
+
         if credit is not None:
             # A payoff goal: card debt is a NEGATIVE balance, so this runs from the
             # snapshot UP toward zero and `direction` reads `paydown`.

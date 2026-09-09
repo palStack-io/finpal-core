@@ -377,6 +377,11 @@ const BudgetsMinimal = () => {
                 padding: '6px 12px'
               }}>
                 <button
+                  // WCAG 2 AA `button-name`, found by the E2E axe run. The label
+                  // is a lucide icon, which renders an <svg> with no text, so the
+                  // button is announced as "button" with no indication of what it
+                  // does. Both month arrows had this.
+                  aria-label="Previous month"
                   onClick={goToPreviousMonth}
                   style={{
                     padding: '4px',
@@ -403,6 +408,7 @@ const BudgetsMinimal = () => {
                 </div>
 
                 <button
+                  aria-label="Next month"
                   onClick={goToNextMonth}
                   style={{
                     padding: '4px',
@@ -588,9 +594,13 @@ const BudgetsMinimal = () => {
                         {/* Category & Progress */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+                            {/* h2, not h3 — each budget row is a section under
+                                the page's <h1> and there is no level between,
+                                so h3 skipped one. Size is inline; nothing moves
+                                on screen. Caught by the E2E heading check. */}
+                            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
                               {budget.category_name}
-                            </h3>
+                            </h2>
                             {isOver && (
                               <span style={{
                                 padding: '3px 10px',

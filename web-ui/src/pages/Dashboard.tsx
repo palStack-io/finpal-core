@@ -457,6 +457,13 @@ export const Dashboard = () => {
             title="Cash Flow"
             action={
               <select
+                // WCAG 2 AA `select-name`, found by the E2E axe run. A control
+                // with no accessible name is announced as "combo box" and
+                // nothing else, so a screen-reader user cannot tell what it
+                // changes. `MemberFilter.tsx` already does this correctly and is
+                // the pattern to copy; the visible label here is the section
+                // heading, which is not programmatically associated.
+                aria-label="Cash flow time range"
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
                 style={{ padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}
@@ -751,9 +758,14 @@ export const Dashboard = () => {
                           <tr>
                             <td colSpan={5} style={{ padding: '0', background: 'var(--bg-primary)' }}>
                               <div style={{ padding: '16px', borderTop: '1px solid var(--border-light)' }}>
-                                <h5 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                {/* h4, not h5: the nearest heading above this
+                                    is SectionCard's h3, and skipping a level
+                                    breaks the outline a screen reader navigates
+                                    by. The size is inline, so the tag change is
+                                    invisible on screen. */}
+                                <h4 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                                   Individual Transactions ({month.transactions.length})
-                                </h5>
+                                </h4>
                                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                                   <table style={tableStyle}>
                                     <thead>

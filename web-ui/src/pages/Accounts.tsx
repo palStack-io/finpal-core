@@ -307,7 +307,14 @@ export const Accounts = () => {
 
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-                          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{account.name}</h3>
+                          {/* h2, not h3. Each account row is a section of this
+                              page and its name is that section's heading, but
+                              the nearest heading above is the page's own <h1> —
+                              so h3 skipped a level and broke the outline a
+                              screen reader navigates by. Caught by the E2E
+                              heading check; the size is inline, so nothing
+                              moves on screen. */}
+                          <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{account.name}</h2>
                           <span style={{
                             padding: '2px 8px',
                             background: 'var(--border-light)',

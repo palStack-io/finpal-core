@@ -36,11 +36,25 @@ export interface OwnerBadgeProps {
 export const OwnerBadge: React.FC<OwnerBadgeProps> = ({
   owner, memberCount, size = 'md', coOwners = [],
 }) => {
-  if (memberCount <= 1 || !owner) return null;
+  if (!owner) return null;
 
   const small = size === 'sm';
   const joint = coOwners.length > 0;
   const everyone = [owner, ...coOwners];
+
+  // *** THE MEMBER-COUNT RULE DOES NOT APPLY TO A JOINT ACCOUNT, AND THE E2E RUN
+  // IS WHAT FOUND THAT. *** The single-member rule below is right for the plain
+  // owner badge: with one member it always says "you", which is noise on every
+  // row. But a CO-OWNED account has two people on it by definition — that is
+  // what the row is telling you — so suppressing "Joint" because
+  // `teamService.getMembers()` returned one name hides the entire presentation
+  // half of the co-ownership feature.
+  //
+  // It bit on the demo, where `/team/members` is caller-scoped for a demo user:
+  // the account was genuinely co-owned, the API said so, and the badge rendered
+  // nothing. No unit test could see it, because every one of them passes
+  // `memberCount` by hand.
+  if (!joint && memberCount <= 1) return null;
 
   if (joint) {
     return (
