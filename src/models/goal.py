@@ -13,7 +13,47 @@ disagree with it.
 
 from datetime import datetime
 
+from sqlalchemy import text
+
 from src.extensions import db
+
+# `GoalService.direction` re-expressed in SQL, and the ONLY place it is duplicated.
+#
+# *** MECHANISM DECISION (B5), RECORDED HERE BECAUSE THE SPEC ASKED FOR THE
+# CONSTRAINT AND NOT FOR A MECHANISM. *** The constraint has to be "one ACTIVE goal
+# per (account, direction)", and `direction` is derived, not stored -- a partial
+# unique index cannot call a Python method. Three options:
+#
+#   (a) store `direction` in a column written on save. Rejected: derived state in a
+#       column drifts the moment anything writes the row without going through the
+#       writer -- a CSV backfill, a `flask shell`, a raw UPDATE -- and the constraint
+#       would then be enforcing a stale answer.
+#   (b) index on `(account_id, status)` instead. Rejected as STRICTER than the spec:
+#       it would forbid a paydown goal and a savings goal coexisting on one account.
+#   (c) index the EXPRESSION. Chosen. Nothing is stored, so nothing can drift out of
+#       step with the row it describes -- and both engines support an expression in
+#       a partial unique index (SQLite >= 3.9, Postgres).
+#
+# The residual risk of (c) is that this string and `GoalService.direction` are two
+# definitions of one rule, which is the duplication D-18 was opened for. A drifted
+# index does not raise -- it silently constrains the wrong pairs. So
+# `test_goal_double_counting.py::test_the_sql_expression_and_the_python_function_agree`
+# drives both over the same matrix, boundaries included. **Change one, change both,
+# and let that test tell you if you did not.**
+# *** THE OUTER PARENTHESES ARE LOAD-BEARING AND SQLITE WILL NOT TELL YOU. ***
+# Postgres requires an expression in an index to be parenthesised; without them it
+# answers `syntax error at or near "CASE"` and the index is simply NEVER CREATED.
+# SQLite accepts the bare form, so the suite -- which runs on SQLite -- was green
+# with an index that production would have refused, leaving the double-counting
+# vector wide open on the only database where anyone can exploit it. That is
+# D-123's shape exactly, and it was found by running the DDL against a real
+# Postgres 14 rather than by reading it. Verified there: the duplicate is refused,
+# opposite directions coexist, archived does not block, and two manual goals do not
+# collide. Keep them, and keep any reuse of this constant parenthesised too.
+DIRECTION_SQL = (
+    "(CASE WHEN start_amount < 0 OR target_amount < start_amount "
+    "THEN 'paydown' ELSE 'accumulate' END)"
+)
 
 
 class Goal(db.Model):
@@ -62,6 +102,26 @@ class Goal(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow,
                            onupdate=datetime.utcnow)
+
+    # One ACTIVE goal per (account, direction) -- the double-counting constraint.
+    #
+    # In the SCHEMA and not in a service, because an application check RACES: two
+    # requests can each read "no existing goal on this account" before either
+    # writes, and both members then earn points for the same dollars.
+    #
+    # `account_id IS NOT NULL` as well as `status = 'active'`: a manual goal has no
+    # shared pot to double-count. NULLs do not collide in a unique index on either
+    # engine, so the clause is belt-and-braces -- and it is asserted rather than
+    # assumed, because the two engines have differed here before (D-123).
+    __table_args__ = (
+        db.Index(
+            'uq_goal_active_account_direction',
+            'account_id', text(DIRECTION_SQL),
+            unique=True,
+            sqlite_where=text("status = 'active' AND account_id IS NOT NULL"),
+            postgresql_where=text("status = 'active' AND account_id IS NOT NULL"),
+        ),
+    )
 
     # String-based, per the repo rule against importing one model file from another.
     user = db.relationship('User', backref=db.backref('goals', lazy=True))
