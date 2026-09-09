@@ -190,3 +190,42 @@ def test_a_contributor_with_no_name_still_renders(db):
                  target_amount=Decimal('100.00'))
     rows = GoalService().contributions(goal)
     assert rows[0]['display_name'] == 'nameless'
+
+
+# --- The route, because a service method with no caller ships as dead code -------
+
+
+def test_the_endpoint_returns_the_breakdown_with_its_currency(
+        client, auth_headers, db):
+    owner = UserFactory(id='epowner@test.com', name='Owner')
+    partner = UserFactory(id='eppartner@test.com', name='Partner')
+    joint = AccountFactory(user_id=owner.id, name='Joint', type='savings',
+                           balance=Decimal('0.00'), currency_code='USD')
+    _db.session.commit()
+    ExpenseFactory(user_id=owner.id, account_id=joint.id, paid_by=partner.id,
+                   amount=Decimal('250.00'), transaction_type='income',
+                   currency_code='USD', import_source='csv')
+    _db.session.commit()
+    goal = _goal(owner, joint, start_amount=Decimal('0'),
+                 target_amount=Decimal('1000.00'))
+
+    body = client.get(f'/api/v1/goals/{goal.id}/contributions',
+                      headers=auth_headers(owner)).get_json()
+    assert body['currency_code'] == 'USD', 'a figure with no currency is unrenderable'
+    assert body['contributions'] == [{
+        'user_id': partner.id, 'display_name': 'Partner',
+        'amount': 250.0, 'imported': True,
+    }]
+
+
+def test_the_endpoint_is_read_scoped_like_the_goal(client, auth_headers, db):
+    """404 for a goal the caller cannot see -- not an empty breakdown, which would
+    leak that the id exists and read as "nobody contributed"."""
+    demo = UserFactory(id='demo7@finpal.app', is_demo_user=True)
+    real = UserFactory(id='real7@test.com', name='Real')
+    hidden = _goal(real, None, start_amount=Decimal('0'),
+                   target_amount=Decimal('100.00'), scope='personal')
+
+    resp = client.get(f'/api/v1/goals/{hidden.id}/contributions',
+                      headers=auth_headers(demo))
+    assert resp.status_code == 404, resp.get_json()

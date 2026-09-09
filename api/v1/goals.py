@@ -334,6 +334,38 @@ class GoalDetail(Resource):
         return {'success': True, 'message': 'Goal deleted successfully'}, 200
 
 
+@ns.route('/<int:id>/contributions')
+class GoalContributions(Resource):
+    @ns.doc('goal_contributions', security='Bearer')
+    @jwt_required()
+    def get(self, id):
+        """Who put the money in, from `paid_by`.
+
+        Its own route rather than a key on the goal payload: it is a second query
+        per goal, and the list endpoint renders every goal a household has. Folding
+        it in would make the common read pay for the rare one.
+
+        Read-scoped like the goal itself -- if you can see the goal you can see who
+        contributed to it, which is the whole point of a household goal.
+
+        *** `imported: true` MUST BE SHOWN, NOT DROPPED. *** `paid_by` defaults to
+        whoever created the row, so an imported row credits the importer rather
+        than the payer. A client that renders the amount and ignores the flag tells
+        one partner they contributed money the other actually paid.
+        """
+        caller = get_jwt_identity()
+        goal = _find_visible(id, caller)
+        if goal is None:
+            return {'success': False, 'error': 'Goal not found'}, 404
+        rows = GoalService().contributions(goal)
+        return {
+            'success': True,
+            'currency_code': goal.currency_code,
+            'contributions': [{**row, 'amount': float(row['amount'])}
+                              for row in rows],
+        }, 200
+
+
 @ns.route('/<int:id>/archive')
 class GoalArchive(Resource):
     @ns.doc('archive_goal', security='Bearer')

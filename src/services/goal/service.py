@@ -134,6 +134,7 @@ class GoalService:
         train the user to ignore the label, which is worse than not showing it.
         """
         from src.models.transaction import Expense
+        from src.models.user import User
         from src.utils.household import display_name
 
         if goal.account_id is None:
@@ -149,16 +150,27 @@ class GoalService:
             db.select(Expense.paid_by,
                       db.func.sum(Expense.amount),
                       db.func.max(db.case((Expense.import_source.isnot(None), 1),
-                                          else_=0)))
+                                          else_=0)),
+                      # OUTER, because `paid_by` is only validated against visible
+                      # members at write time -- a user deleted afterwards leaves
+                      # rows behind, and an inner join would silently drop that
+                      # person's contribution rather than show it unnamed.
+                      db.func.max(User.name))
+              .select_from(Expense)
+              .outerjoin(User, User.id == Expense.paid_by)
               .where(incoming)
               .group_by(Expense.paid_by)).all()
+        # `display_name` does NOT look the user up -- it takes a name and falls back
+        # to the id's local part -- so the name has to be joined in. Calling it with
+        # the id alone renders every contributor as an email prefix even when they
+        # have a name, which is a defect no status code shows.
         return [{'user_id': uid,
                  # Never None: `User.name` is nullable and nothing backfills it, and
                  # one nameless row once stopped the whole household's report
                  # rendering (D-154).
-                 'display_name': display_name(uid),
+                 'display_name': display_name(uid, name),
                  'amount': total,
-                 'imported': bool(flag)} for uid, total, flag in rows]
+                 'imported': bool(flag)} for uid, total, flag, name in rows]
 
     def as_payload(self, goal):
         """The computed fields a client must not derive for itself."""
