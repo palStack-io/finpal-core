@@ -4,13 +4,16 @@ Handles creation and management of demo accounts with mock data
 """
 
 from datetime import datetime, timedelta
+from decimal import Decimal
 from flask import current_app
 from src.extensions import db
 from src.models.user import User
 from src.models.account import Account
+from src.models.associations import account_owners
 from src.models.transaction import Expense
 from src.models.budget import Budget
 from src.models.category import Category
+from src.models.goal import Goal
 from src.models.group import Group
 from src.models.investment import Portfolio, Investment
 from src.data.seed_defaults import seed_user_defaults
@@ -153,6 +156,10 @@ class DemoService:
         # Create demo groups (involves multiple users)
         DemoService._seed_demo_groups()
 
+        # Co-ownership needs two users to exist, so it runs here rather than in
+        # `_seed_user_data`, for the same reason groups do.
+        DemoService._seed_demo_co_owners()
+
         # *** AND BACKFILL, OR THE FIX ABOVE NEVER REACHES A LIVE DEMO. ***
         #
         # `seed_demo_accounts` does `continue` for a user that already exists, and
@@ -218,6 +225,11 @@ class DemoService:
         elif persona == 'Personal budgeter':
             DemoService._create_starter_portfolio(user)
 
+
+        # B1/B4. Credit terms first, then goals: a payoff goal is only legible
+        # beside a limit, and the Available Credit block needs the limit anyway.
+        DemoService._seed_demo_credit_terms(user)
+        DemoService._seed_demo_goals(user)
 
         # Seed pointsPal wallet cards + spend history
         if POINTSPAL_AVAILABLE:
@@ -927,6 +939,19 @@ class DemoService:
             logger.info('Backfilling a starter portfolio for %s (D-77)', user.id)
             DemoService._create_starter_portfolio(user)
 
+        # B1/B4/B3. Same shape and the same reason: goals, co-owners and credit
+        # terms all arrived AFTER the deployed demo was seeded, so the seeding
+        # above reaches a fresh install only. Each check is keyed to the gap.
+        for account_data in DEMO_ACCOUNTS:
+            user = User.query.filter_by(id=account_data['email']).first()
+            if not user:
+                continue
+            DemoService._seed_demo_credit_terms(user)
+            if not Goal.query.filter_by(user_id=user.id).first():
+                logger.info('Backfilling demo goals for %s', user.id)
+                DemoService._seed_demo_goals(user)
+        DemoService._seed_demo_co_owners()
+
         for group in Group.query.all():
             if Expense.query.filter_by(group_id=group.id).first():
                 continue
@@ -965,6 +990,192 @@ class DemoService:
                 current_price=current,
                 purchase_date=datetime.utcnow() - timedelta(days=240),
             ))
+
+    @staticmethod
+    def _seed_demo_credit_terms(user):
+        """B1's three columns, on every demo credit card. Idempotent.
+
+        Without them the "Available Credit" block on the Accounts page never
+        renders — it is gated on `creditLimit` — so the demo shows a credit card
+        with no limit and no utilisation, which is the state D-77 is about: an
+        empty surface is indistinguishable from a broken one.
+
+        *** THE LIMIT IS ALWAYS COMFORTABLY ABOVE THE DEBT. *** A limit below the
+        balance renders a negative available credit, which reads as a defect rather
+        than as a maxed-out card, and a demo that looks broken is worse than one
+        that is empty.
+
+        Keyed to the gap (`credit_limit is None`), never to a version flag, so a
+        card somebody edits by hand is left alone and a reboot changes nothing.
+        """
+        for card in Account.query.filter_by(user_id=user.id, type='credit').all():
+            if card.credit_limit is not None:
+                continue
+            owed = abs(card.balance or 0)
+            # A round limit near 4x the debt: enough headroom to read as healthy,
+            # tight enough that the utilisation figure is not trivially zero.
+            limit = max(Decimal('1000'), (Decimal(owed) * 4).quantize(Decimal('1000')))
+            card.credit_limit = limit
+            # Numeric(5,2), and a realistic US card rate. Not a round 20: a figure
+            # with cents is the one that would expose a float column (D-58), and
+            # this is the value a screenshot of the demo will show.
+            card.apr = Decimal('19.99')
+            card.min_payment = Decimal('35.00')
+            logger.info('Demo credit terms set on %s (limit %s)', card.name, limit)
+
+    @staticmethod
+    def _seed_demo_goals(user):
+        """Goals for a demo user, in every shape the page can render.
+
+        *** THE TOUR LANDS ON demo1, SO demo1 GETS THE FULL SET. *** D-77's lesson,
+        applied to the feature that just shipped: a Goals page that demos itself
+        empty teaches a visitor nothing and hides any defect in it.
+
+        Every state the page has a branch for is represented — linked and manual,
+        payoff and savings, personal and household, in-progress and achieved —
+        because a state with no fixture is a state nothing exercises.
+
+        *** AND EVERY IN-PROGRESS GOAL SITS BETWEEN 5% AND 95%. *** A bar that
+        renders empty for every goal demonstrates nothing and cannot be told apart
+        from a figure that never arrived; one that renders full hides the
+        arithmetic. `start_amount` is chosen to put the CURRENT balance at a
+        legible fraction, exactly as a real snapshot would have.
+
+        No two active linked goals share an (account, direction) pair, because the
+        product enforces that with a partial unique index — a seed that needs the
+        constraint absent is a fixture describing a product that does not exist,
+        and on Postgres the IntegrityError would abort the whole boot transaction.
+        """
+        if Goal.query.filter_by(user_id=user.id).first():
+            return
+
+        checking = Account.query.filter_by(user_id=user.id, type='checking').first()
+        credit = Account.query.filter_by(user_id=user.id, type='credit').first()
+        currency = user.default_currency_code or 'USD'
+        today = datetime.utcnow().date()
+
+        planned = []
+
+        if credit is not None:
+            # A payoff goal: card debt is a NEGATIVE balance, so this runs from the
+            # snapshot UP toward zero and `direction` reads `paydown`.
+            # (-800 - -1200) / (0 - -1200) = 33%.
+            planned.append(dict(
+                name=f'Pay off the {credit.name}', kind='payoff', scope='personal',
+                account=credit,
+                start_amount=Decimal(abs(credit.balance or 0)) * -2 - Decimal('50'),
+                target_amount=Decimal('0.00'),
+            ))
+
+        if checking is not None:
+            # Household, and on the account that is co-owned below — so this is the
+            # joint goal, and its contribution breakdown has two payers.
+            # (5000 - 2000) / (10000 - 2000) = 37.5%.
+            balance = Decimal(checking.balance or 0)
+            planned.append(dict(
+                name='Emergency fund', kind='savings', scope='household',
+                account=checking,
+                start_amount=(balance * Decimal('0.4')).quantize(Decimal('1')),
+                target_amount=(balance * 2).quantize(Decimal('1')),
+            ))
+
+        # Manual, in progress. Deliberately unlinked: the page says "Tracked by
+        # hand" for these and offers no contribution breakdown, and that branch
+        # needs a case too.
+        planned.append(dict(
+            name='New laptop', kind='savings', scope='personal', account=None,
+            start_amount=Decimal('0.00'), target_amount=Decimal('2000.00'),
+            current_manual=Decimal('650.00'),
+        ))
+
+        # Achieved, so the badge and a full bar have a case. Stamped here rather
+        # than left for `stamp_if_achieved` to do on first read, so the demo looks
+        # the same to the first visitor as to the hundredth.
+        planned.append(dict(
+            name='Holiday fund', kind='savings', scope='personal', account=None,
+            start_amount=Decimal('0.00'), target_amount=Decimal('500.00'),
+            current_manual=Decimal('500.00'), status='achieved',
+        ))
+
+        for spec in planned:
+            account = spec.pop('account')
+            status = spec.pop('status', 'active')
+            goal = Goal(
+                user_id=user.id,
+                account_id=account.id if account is not None else None,
+                currency_code=(account.currency_code if account is not None
+                               else currency),
+                start_date=today - timedelta(days=120),
+                target_date=today + timedelta(days=240),
+                status=status,
+                achieved_at=datetime.utcnow() if status == 'achieved' else None,
+                **spec,
+            )
+            db.session.add(goal)
+        db.session.flush()
+        logger.info('Seeded %d demo goals for %s', len(planned), user.id)
+
+    @staticmethod
+    def _seed_demo_co_owners():
+        """One co-owned account, so "Joint" and the contribution breakdown render.
+
+        *** PERMISSION AND PRESENTATION ONLY — ATTRIBUTION IS UNCHANGED. *** Adding
+        a co-owner moves no figure anywhere: every total still belongs to
+        `Account.user_id` (D-18). That is what makes this safe to backfill onto a
+        live demo.
+
+        demo1 and demo2 are BOTH demo users, which matters: the API's own predicate
+        is `on_the_same_side`, so a real member could not be added here. A seed that
+        writes a row the API would refuse is a fixture describing a product that
+        does not exist, which is D-107's shape.
+
+        Contributions come from money moving INTO the account from two different
+        payers. One payer would show a single bar and demonstrate nothing — the same
+        reason `_seed_group_expenses` rotates who paid.
+        """
+        owner = User.query.filter_by(id='demo1@finpal.demo').first()
+        partner = User.query.filter_by(id='demo2@finpal.demo').first()
+        if owner is None or partner is None:
+            return
+        account = Account.query.filter_by(user_id=owner.id, type='checking').first()
+        if account is None:
+            return
+
+        already = db.session.execute(db.select(account_owners.c.user_id).where(
+            account_owners.c.account_id == account.id,
+            account_owners.c.user_id == partner.id)).first()
+        if already is not None:
+            return
+
+        db.session.execute(account_owners.insert().values(
+            account_id=account.id, user_id=partner.id))
+        logger.info('Demo account %r co-owned by %s', account.name, partner.id)
+
+        # Two payers into the joint account. `transaction_type='income'` because a
+        # contribution is money arriving; a TRANSFER would also count (the service
+        # reads `destination_account_id` too) but needs a source account on the
+        # other side, and the payer here does not own one in this currency.
+        for index, (payer, amount, days_ago) in enumerate((
+            (owner, Decimal('400.00'), 45),
+            (partner, Decimal('300.00'), 30),
+            (owner, Decimal('250.00'), 12),
+        )):
+            db.session.add(Expense(
+                user_id=account.user_id,
+                description='Transfer into the emergency fund',
+                amount=amount,
+                transaction_type='income',
+                date=datetime.utcnow() - timedelta(days=days_ago),
+                account_id=account.id,
+                currency_code=account.currency_code or 'USD',
+                card_used='Demo Data',
+                split_method='equal',
+                # Who FRONTED the cash, which is not attribution — the account's
+                # owner still owns every one of these rows for every figure the app
+                # computes. Both answers are correct to different questions.
+                paid_by=payer.id,
+            ))
+        db.session.flush()
 
     @staticmethod
     def _seed_group_expenses(group, members):
