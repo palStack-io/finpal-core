@@ -94,6 +94,16 @@ if [[ "$WHICH" == "all" || "$WHICH" == "web" || "$WHICH" == "quick" ]]; then
   step "web-ui: contrast tree-walk" node scripts/contrast-walk/run.mjs
   step "web-ui: responsive walk (overflow at 4 widths, both themes)" \
     node scripts/responsive-walk/run.mjs
+
+  # The modal walk has its OWN capture and its own directory. The page capture
+  # writes `container.innerHTML`, and Modal.tsx/SlidePanel.tsx portal to
+  # document.body — so their markup is a sibling of that container and the two
+  # walks above have never seen it.
+  step "web-ui: capture for the modal walk" \
+    env WALK_CAPTURE=scripts/modal-walk/capture-modals.walk.tsx \
+    npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
+  step "web-ui: modal overflow walk (dialogs at 4 widths, both themes)" \
+    node scripts/modal-walk/run.mjs
   cd "$ROOT" || exit 1
 fi
 
@@ -101,7 +111,7 @@ fi
 # is crude, but it fails LOUDLY when the workflow changes, which is the point: a gate that
 # silently covers less than it claims is how the contrast walk got missed in the first
 # place.
-EXPECTED_CI_RUN_STEPS=6
+EXPECTED_CI_RUN_STEPS=7
 ACTUAL=$(/usr/bin/grep -cE '^\s+run:' .github/workflows/tests.yml)
 if [[ "$ACTUAL" != "$EXPECTED_CI_RUN_STEPS" ]]; then
   printf '\n\033[33m! .github/workflows/tests.yml has %s run-steps, this script expects %s.\033[0m\n' \

@@ -81,7 +81,12 @@ def register_commands(app):
         if send_email:
             try:
                 from src.services.email_service import EmailService
-                email_service = EmailService(app.config)
+                # No argument: `EmailService.__init__` takes none and reads every
+                # setting from `os.getenv`. Passing `app.config` raised TypeError
+                # inside a broad `except`, so `--send-email` printed one line about
+                # positional arguments and the operator was never told no mail went
+                # out. D-147.
+                email_service = EmailService()
                 base_url = app.config.get('FRONTEND_URL', 'http://localhost')
                 login_link = f"{base_url}/login"
 
