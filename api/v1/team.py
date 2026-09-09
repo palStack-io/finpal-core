@@ -130,7 +130,15 @@ class Invite(Resource):
         if not email:
             return {'message': 'Email is required'}, 400
 
-        if role not in ('member', 'admin', 'viewer'):
+        # *** 'viewer' IS GONE. IT WAS OFFERED, STORED, AND DID NOTHING. ***
+        # Owner decision B7, 2026-09-08. `User` carries only `is_admin`, and the
+        # registration path reads `invitation.role == 'admin'` — so a 'viewer'
+        # invitation produced an ordinary member with full read AND write access
+        # while the UI badge said "Viewer". An affordance that lies is worse than a
+        # missing one; a real viewer tier is a feature, not this validation line.
+        # Existing rows keep working: `== 'admin'` already resolves any other stored
+        # value to member, so nothing needs migrating.
+        if role not in ('member', 'admin'):
             return {'message': 'Invalid role'}, 400
 
         # Check if user already exists
@@ -422,6 +430,14 @@ class MemberRole(Resource):
 
         data = request.get_json()
         new_role = (data or {}).get('role', 'member')
+
+        # Refused rather than silently downgraded, and the message says what the
+        # product actually has. Before this, `role: 'viewer'` answered 200 with
+        # *"Role updated to viewer"* while setting `is_admin = False` — so the API
+        # confirmed a role that does not exist and the caller was told their
+        # read-only member could not write. B7.
+        if new_role not in ('member', 'admin'):
+            return {'message': "Invalid role. finPal has 'member' and 'admin'."}, 400
 
         target.is_admin = (new_role == 'admin')
         db.session.commit()
