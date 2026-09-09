@@ -36,7 +36,7 @@ ns = Namespace('analytics', description='Analytics and dashboard operations')
 analytics_service = AnalyticsService()
 
 
-def _serialize_expense(exp):
+def _serialize_expense(exp, amounts=None):
     """One expense as plain JSON.
 
     `AnalyticsService.get_dashboard_data` returns live SQLAlchemy `Expense`
@@ -47,7 +47,10 @@ def _serialize_expense(exp):
     return {
         'id': exp.id,
         'description': exp.description,
-        'amount': exp.amount,
+        # D-156: the CONVERTED figure when the service supplied one. A recent
+        # transactions list showing raw stored amounts under the same symbol as the
+        # totals printed above it is the same defect, one widget down.
+        'amount': (amounts or {}).get(exp.id, exp.amount),
         'date': exp.date.isoformat() if exp.date else None,
         'transaction_type': getattr(exp, 'transaction_type', 'expense'),
         'category': {
@@ -68,10 +71,11 @@ def _serialize_dashboard(dashboard_data):
     Shared with `/analytics/stats`, which used to build its response by walking
     the same dict with a recursive `convert_to_dict`.
     """
+    expense_amounts = dashboard_data.get('expense_amounts') or {}
     serialized_expenses = []
     for exp in (dashboard_data.get('expenses') or []):
         try:
-            serialized_expenses.append(_serialize_expense(exp))
+            serialized_expenses.append(_serialize_expense(exp, expense_amounts))
         except Exception:
             logger.exception('Skipping an expense that would not serialize')
             continue

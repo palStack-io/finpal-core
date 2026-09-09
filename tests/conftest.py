@@ -118,9 +118,32 @@ def app():
 
 @pytest.fixture(scope='function')
 def db(app):
-    """Create all tables before each test, drop all after. Function-scoped for isolation."""
+    """Create all tables before each test, drop all after. Function-scoped for isolation.
+
+    *** THE CURRENCIES ARE SEEDED HERE, AND WITHOUT THAT LINE EVERY CURRENCY
+    CONVERSION IN THE SUITE WAS THE IDENTITY FUNCTION. D-166. ***
+
+    `create_default_currencies()` runs once at app boot (`src/__init__.py:408`), and
+    the `app` fixture is session-scoped — so the FIRST test to take this fixture saw
+    22 currency rows and every test after it saw **zero**, because `drop_all()` had
+    taken them. `convert_currency` and `RateTable` both return their input unchanged
+    when no base currency exists, by design: a missing rate must not turn a real
+    figure into zero in the middle of a cron run. That safety valve is what made the
+    hole invisible. Nothing raised, nothing was skipped, and any test that asserted a
+    converted figure was asserting the unconverted one.
+
+    Measured, not inferred: the D-156 test failed when run alone and passed when run
+    in its file, because the file's first test had consumed the only seeded copy. It
+    is also why `calculate_asset_debt_trends` — which HAS converted account balances
+    for as long as it has existed — has never had that behaviour exercised here.
+
+    Seeded per test rather than once, because `drop_all()` is what removes them; the
+    insert is ~22 rows into SQLite and does not show up against the suite's runtime.
+    """
+    from src.cli import create_default_currencies
     with app.app_context():
         _db.create_all()
+        create_default_currencies()
         yield _db
         _db.session.remove()
         _db.drop_all()

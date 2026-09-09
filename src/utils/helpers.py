@@ -247,7 +247,7 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
     from datetime import datetime, timedelta
     from src.models.account import Account
     from src.models.investment import Portfolio
-    from src.utils.currency_converter import convert_currency
+    from src.utils.currency_converter import convert_currency, RateTable
 
     # Initialize tracking
     monthly_assets = {}
@@ -264,6 +264,8 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
 
     # Get user's preferred currency code
     user_currency_code = current_user.default_currency_code or 'USD'
+    # The denomination a row with no currency of its own is in. See below.
+    stored_default_code = RateTable().base_code or user_currency_code
 
     # Calculate true total assets and debts directly from accounts (for accurate current total)
     direct_total_assets = 0
@@ -272,7 +274,15 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
 
     for account in accounts:
         # Get account's currency code, default to user's preferred currency
-        account_currency_code = account.currency_code or user_currency_code
+        # *** A NULL `currency_code` MEANS THE BASE CURRENCY, NOT THE READER'S. ***
+        # One rule for every stored row — see `RateTable`'s docstring. Reading NULL
+        # as "already in whatever this reader prefers" leaves a legacy balance
+        # unconverted while relabelling it, which is D-156 itself; and once
+        # transactions started honouring the base reading (owner decision B1) the
+        # two row types on the SAME dashboard card disagreed about one NULL.
+        # Measured before changing it: a NULL-currency account of 1100 read as
+        # 1100 by a euro member while a NULL-currency expense of 110 read as 100.
+        account_currency_code = account.currency_code or stored_default_code
 
         # Convert account balance to user's currency if needed
         if account_currency_code != user_currency_code:
@@ -310,7 +320,15 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
     # Process each account for historical trends
     for account in accounts:
         # Get account's currency code, default to user's preferred currency
-        account_currency_code = account.currency_code or user_currency_code
+        # *** A NULL `currency_code` MEANS THE BASE CURRENCY, NOT THE READER'S. ***
+        # One rule for every stored row — see `RateTable`'s docstring. Reading NULL
+        # as "already in whatever this reader prefers" leaves a legacy balance
+        # unconverted while relabelling it, which is D-156 itself; and once
+        # transactions started honouring the base reading (owner decision B1) the
+        # two row types on the SAME dashboard card disagreed about one NULL.
+        # Measured before changing it: a NULL-currency account of 1100 read as
+        # 1100 by a euro member while a NULL-currency expense of 110 read as 100.
+        account_currency_code = account.currency_code or stored_default_code
 
         # Categorize account types
         is_asset = account.type in ['checking', 'savings', 'investment'] and account.balance > 0
