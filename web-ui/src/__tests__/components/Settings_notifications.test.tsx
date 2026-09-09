@@ -75,17 +75,22 @@ describe('Settings — Notifications (D-148)', () => {
     const [url, body] = vi.mocked(api.put).mock.calls[0];
     expect(url).toContain('/users/profile');
     expect(body).toHaveProperty('notifications');
-    expect(Object.keys((body as any).notifications).sort())
-      .toEqual(['budgetAlerts', 'email', 'transactionAlerts']);
+    expect(Object.keys((body as any).notifications).sort()).toEqual(['email']);
   });
 
-  it('offers only preferences the API actually stores', () => {
+  it('offers only preferences something actually READS', () => {
+    // D-172. D-148 got this half right: the four invented toggles became three
+    // real column names, and two of those three persisted a value nothing would
+    // ever read. `notification_email` has five consumers; budget alerts and
+    // transaction alerts have zero, and their sender (E-10) was deliberately
+    // deleted. A control that saves and changes nothing is worse than a fake one,
+    // because the screen looks like it worked.
     signIn();
     openNotifications();
 
     expect(screen.getByText('Email notifications')).toBeTruthy();
-    expect(screen.getByText('Budget alerts')).toBeTruthy();
-    expect(screen.getByText('Transaction alerts')).toBeTruthy();
+    expect(screen.queryByText('Budget alerts')).toBeNull();
+    expect(screen.queryByText('Transaction alerts')).toBeNull();
 
     // The three that were invented. `goalReminders` promised reminders for savings
     // goals finPal does not have; `monthlyReports` named a preference with no column
@@ -110,10 +115,8 @@ describe('Settings — Notifications (D-148)', () => {
     openNotifications();
 
     const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
-    // Panel order is email, budgetAlerts, transactionAlerts.
+    expect(checkboxes).toHaveLength(1);
     expect(checkboxes[0].checked).toBe(false);
-    expect(checkboxes[1].checked).toBe(true);
-    expect(checkboxes[2].checked).toBe(true);
   });
 
   it('sends the toggle the user actually flipped', async () => {

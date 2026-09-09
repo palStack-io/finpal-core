@@ -143,16 +143,38 @@ export const Settings: React.FC = () => {
    * Seeded from the stored preferences rather than from `true`, so the screen shows
    * what the account actually holds.
    */
+  /**
+   * *** ONE TOGGLE, BECAUSE ONE PREFERENCE HAS A CONSUMER. D-172. ***
+   *
+   * D-148 replaced four invented toggles with three real column names and wired
+   * them to `PUT /users/profile`. That was better and still wrong: measured across
+   * `src/` and `api/`, outside the model and the read/write endpoints,
+   * `notification_email` has FIVE consumers (the CSV import review, and the weekly
+   * and monthly reports) and `notification_budget_alerts`,
+   * `notification_transaction_alerts` and `notification_push` have **zero**.
+   *
+   * So two of the three toggles persisted a value nothing would ever read — which
+   * is arguably worse than the fakes they replaced, because they now SAVE and the
+   * screen looks like it worked. That is B2's own sentence ("a control that
+   * persists nothing is worse than no control") and D-167's shape, reintroduced by
+   * the fix for D-148.
+   *
+   * There is no sender behind either one: the budget overspend alert (E-10) was
+   * DELETED on 2026-09-08, deliberately, and nothing has ever alerted per
+   * transaction. The columns stay — dropping them is a migration, and the API still
+   * accepts all four so a client with a real use can set them. Only the UI claim is
+   * withdrawn.
+   *
+   * *** RE-ADD A TOGGLE WHEN, AND ONLY WHEN, SOMETHING READS ITS COLUMN. *** The
+   * check is one command:
+   *   grep -rn --include='*.py' notification_budget_alerts src/ api/
+   */
   const NOTIFICATION_LABELS = {
     email: 'Email notifications',
-    budgetAlerts: 'Budget alerts',
-    transactionAlerts: 'Transaction alerts',
   } as const;
 
   const [notificationSettings, setNotificationSettings] = useState({
     email: user?.notifications?.email ?? true,
-    budgetAlerts: user?.notifications?.budgetAlerts ?? true,
-    transactionAlerts: user?.notifications?.transactionAlerts ?? false,
   });
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -945,8 +967,6 @@ export const Settings: React.FC = () => {
                         </p>
                         <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                           {key === 'email' && 'Import reviews and your weekly and monthly spending report'}
-                          {key === 'budgetAlerts' && 'Get notified when you approach budget limits'}
-                          {key === 'transactionAlerts' && 'Alert for every new transaction'}
                         </p>
                       </div>
                       <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '24px' }}>
