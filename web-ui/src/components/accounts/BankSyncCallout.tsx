@@ -72,7 +72,11 @@ export const BankSyncCallout: React.FC = () => {
         </div>
 
         <div style={{ flex: 1, minWidth: '260px' }}>
-          <h3 className="fp-item-title">Connect your bank automatically</h3>
+          {/* h2, not h3. This callout sits directly under the Accounts page's
+              <h1> with nothing between, so h3 skipped a level. `.fp-item-title`
+              carries the size, so the tag change is invisible on screen. Caught
+              by the E2E heading check. */}
+          <h2 className="fp-item-title">Connect your bank automatically</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5, marginTop: '4px' }}>
             SimpleFin keeps balances and transactions up to date so you do not have to
             import them. You set it up in <strong>Settings → Integrations</strong>, using

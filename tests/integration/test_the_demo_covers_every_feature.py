@@ -83,6 +83,27 @@ KNOWN_DEMO_GAPS = {
 }
 
 
+# *** TABLES WHOSE CONTENT DEPENDS ON SOMETHING OUTSIDE THE SEED. ***
+# Neither gated nor stale-checked, because they are legitimately empty OR full
+# depending on whether a network call succeeded — and a gate whose result depends
+# on the network is a gate that goes red for reasons nobody can act on.
+#
+# Found by this gate failing on its own inputs: `pointspal_sync_log` had a row in
+# one run and none in the next, because `_seed_pointspal_data` fetches the program
+# catalogue from raw.githubusercontent.com and is wrapped in a SAVEPOINT precisely
+# so that failing is survivable. Putting it in either dict above would have made
+# the suite flaky in one direction or the other.
+NONDETERMINISTIC = {
+    'pointspal_sync_log': 'written only when the upstream pointsPal catalogue fetch '
+                          'succeeds; the seeder treats failure as survivable',
+    'points_programs': 'fetched from the pointsPal upstream feed at seed time',
+    'points_earn_categories': 'follows points_programs',
+    'user_cards': 'seeded from the fetched programs; empty if the fetch failed',
+    'spend_period_totals': 'follows user_cards',
+    'optimizer_alerts': 'follows user_cards',
+}
+
+
 @pytest.fixture
 def seeded_demo(app, db, monkeypatch):
     monkeypatch.setattr(DemoService, 'is_demo_mode', staticmethod(lambda: True))
@@ -107,7 +128,8 @@ def test_every_table_is_either_seeded_or_explained(seeded_demo):
     feature the demo cannot show, and the alternative is finding out from a user.
     """
     counts = _row_counts()
-    explained = set(NO_DEMO_ROWS_BY_DESIGN) | set(KNOWN_DEMO_GAPS)
+    explained = (set(NO_DEMO_ROWS_BY_DESIGN) | set(KNOWN_DEMO_GAPS)
+                 | set(NONDETERMINISTIC))
     unexplained = sorted(name for name, n in counts.items()
                          if n == 0 and name not in explained)
 
@@ -141,7 +163,8 @@ def test_no_exemption_is_STALE(seeded_demo):
 def test_no_exemption_names_a_table_THAT_DOES_NOT_EXIST(seeded_demo):
     """A renamed or dropped table leaves an entry that silently excuses nothing."""
     counts = _row_counts()
-    ghosts = sorted(name for name in set(NO_DEMO_ROWS_BY_DESIGN) | set(KNOWN_DEMO_GAPS)
+    ghosts = sorted(name for name in (set(NO_DEMO_ROWS_BY_DESIGN) | set(KNOWN_DEMO_GAPS)
+                                      | set(NONDETERMINISTIC))
                     if name not in counts)
     assert not ghosts, f'These entries name tables that no longer exist: {ghosts}'
 

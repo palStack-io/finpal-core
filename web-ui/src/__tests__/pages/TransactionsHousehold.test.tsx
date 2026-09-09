@@ -160,13 +160,20 @@ describe('Transactions page — household', () => {
     renderPage();
 
     /**
-     * The three card values, addressed by their `<h3>`. A transaction row renders
-     * its own amount in a `<p>`, and with one row of $10 on screen a bare
-     * `getByText('\u2212$10.00')` matches both the row and the card \u2014 so it would pass
-     * whether or not the card ever updated.
+     * The three card values, addressed by `data-testid="stat-value"`. A
+     * transaction row renders its own amount in a `<p>`, and with one row of $10
+     * on screen a bare `getByText('\u2212$10.00')` matches both the row and the
+     * card \u2014 so it would pass whether or not the card ever updated.
+     *
+     * This used `getAllByRole('heading', { level: 3 })`, which worked only
+     * because StatCard marked its money VALUE up as an `<h3>`. That put figures
+     * like "$5,042.18" into the document outline a screen reader navigates by,
+     * directly under each page's `<h1>` \u2014 a WCAG heading-order violation the
+     * E2E axe run caught. The discrimination this test needs is real; the
+     * heading was the wrong way to get it.
      */
     const cardValues = () =>
-      screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+      screen.getAllByTestId('stat-value').map((h) => h.textContent);
 
     // Both rows: $20 of expenses against $6 of income.
     await waitFor(() => expect(cardValues()).toContain('\u2212$20.00'));

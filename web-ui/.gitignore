@@ -82,3 +82,6 @@ old_code/
 scripts/*/.chrome-profile*/
 scripts/*/.pages/
 scripts/*/captured/
+e2e/.auth/
+test-results/
+playwright-report/

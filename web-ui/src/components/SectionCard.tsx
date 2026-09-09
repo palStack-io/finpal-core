@@ -17,7 +17,11 @@ export const SectionCard: React.FC<SectionCardProps> = ({ title, subtitle, actio
   }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
       <div>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{title}</h3>
+        {/* h2, not h3. A SectionCard is a top-level section beneath the page's
+            single h1, and h1 -> h3 skips a level — which breaks the outline
+            screen readers navigate by and was caught by the E2E heading check.
+            The font size is inline, so nothing moves on screen. */}
+        <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{title}</h2>
         {subtitle && (
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px', marginBottom: 0 }}>{subtitle}</p>
         )}
