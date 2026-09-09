@@ -100,3 +100,60 @@ def test_group_expenses_are_split_with_the_members(seeded):
         for expense in Expense.query.filter_by(group_id=group.id):
             assert expense.split_with, (
                 f'{expense.description!r} is in a group and split with nobody')
+
+
+def test_a_SECOND_seed_backfills_what_an_existing_demo_is_missing(app, db, monkeypatch):
+    """*** THE HALF THAT MAKES THIS FIX REACH PRODUCTION. ***
+
+    `seed_demo_accounts` does `continue` for a user it has already created, and
+    `_seed_demo_groups` returns early once any group exists. Both are correct —
+    it runs on every boot and must not duplicate — but together they mean the B9
+    work would have applied to a FRESH install only, never to the one deployed
+    demo it was written for, which was seeded months ago.
+
+    So: seed, delete exactly the two things D-77 names, seed again, and assert
+    they came back. A delete-and-reseed of the whole demo would also have worked
+    and is the wrong tool — it destroys live data on a public service to close a
+    gap that is purely additive.
+    """
+    monkeypatch.setitem(app.config, 'DEMO_MODE', True)
+    monkeypatch.setenv('DEMO_MODE', 'true')
+    DemoService.seed_demo_accounts()
+    db.session.commit()
+
+    # Stage an "already seeded, before B9" demo.
+    for portfolio in Portfolio.query.filter_by(user_id=TOUR_LANDS_ON).all():
+        db.session.delete(portfolio)
+    for expense in Expense.query.filter(Expense.group_id.isnot(None)).all():
+        db.session.delete(expense)
+    db.session.commit()
+    assert Portfolio.query.filter_by(user_id=TOUR_LANDS_ON).count() == 0
+    assert Expense.query.filter(Expense.group_id.isnot(None)).count() == 0
+
+    DemoService.seed_demo_accounts()
+    db.session.commit()
+
+    assert Portfolio.query.filter_by(user_id=TOUR_LANDS_ON).count() > 0, (
+        'a second seed did not backfill demo1 — the fix cannot reach a live demo')
+    for group in Group.query.all():
+        assert Expense.query.filter_by(group_id=group.id).count() > 0, (
+            f'a second seed left {group.name!r} empty')
+
+
+def test_the_backfill_does_not_duplicate_on_every_boot(app, db, monkeypatch):
+    """It runs on every start. Additive-but-unconditional would grow the demo
+    without bound, which is the failure mode a delete-and-reseed avoids and a
+    naive backfill introduces."""
+    monkeypatch.setitem(app.config, 'DEMO_MODE', True)
+    monkeypatch.setenv('DEMO_MODE', 'true')
+    DemoService.seed_demo_accounts()
+    db.session.commit()
+    before_portfolios = Portfolio.query.count()
+    before_group_expenses = Expense.query.filter(Expense.group_id.isnot(None)).count()
+
+    for _ in range(2):
+        DemoService.seed_demo_accounts()
+        db.session.commit()
+
+    assert Portfolio.query.count() == before_portfolios
+    assert Expense.query.filter(Expense.group_id.isnot(None)).count() == before_group_expenses

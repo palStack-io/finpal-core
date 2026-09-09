@@ -153,6 +153,19 @@ class DemoService:
         # Create demo groups (involves multiple users)
         DemoService._seed_demo_groups()
 
+        # *** AND BACKFILL, OR THE FIX ABOVE NEVER REACHES A LIVE DEMO. ***
+        #
+        # `seed_demo_accounts` does `continue` for a user that already exists, and
+        # `_seed_demo_groups` returns early once any group exists. Both are correct —
+        # this runs on every boot and must not duplicate. But together they mean the
+        # B9 work would have applied to a FRESH install only, and never to the one
+        # deployed demo it was written for, which was seeded months ago.
+        #
+        # A delete-and-reseed would also have worked and is the wrong tool: it
+        # destroys live data on a public service to close a gap that is purely
+        # additive.
+        DemoService._backfill_demo_gaps()
+
         try:
             db.session.commit()
             logger.info(f"Demo seeding complete: {created_count} created, {existing_count} existing")
@@ -884,6 +897,43 @@ class DemoService:
             # detail page, the IOU tracker, "who owes whom" — demoed itself empty.
             # Measured on the live demo before this: 3 groups, 0 expenses between
             # them.
+            DemoService._seed_group_expenses(group, members)
+
+    @staticmethod
+    def _backfill_demo_gaps():
+        """Add what an already-seeded demo is missing. Idempotent and additive.
+
+        *** THIS IS THE HALF THAT MAKES B9 REACH PRODUCTION. *** The seeder skips
+        users it has already created, so a fix to what it creates is invisible on
+        any instance seeded before the fix — which is every instance that matters.
+
+        Keyed to the GAP rather than to a version marker: "this user has no
+        portfolio" is checkable and self-correcting, whereas a flag saying "B9 has
+        run" is a second source of truth that goes stale the moment somebody edits
+        the seed by hand.
+
+        The two `continue`s are the idempotence, and this runs on EVERY boot — drop
+        either one and the demo grows a portfolio and nine group expenses every time
+        the container restarts.
+        """
+        for account_data in DEMO_ACCOUNTS:
+            if account_data.get('persona') != 'Personal budgeter':
+                continue
+            user = User.query.filter_by(id=account_data['email']).first()
+            if not user:
+                continue
+            if Portfolio.query.filter_by(user_id=user.id).first():
+                continue
+            logger.info('Backfilling a starter portfolio for %s (D-77)', user.id)
+            DemoService._create_starter_portfolio(user)
+
+        for group in Group.query.all():
+            if Expense.query.filter_by(group_id=group.id).first():
+                continue
+            members = list(group.members)
+            if not members:
+                continue
+            logger.info('Backfilling expenses for demo group %r (D-77)', group.name)
             DemoService._seed_group_expenses(group, members)
 
     @staticmethod
