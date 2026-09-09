@@ -149,7 +149,7 @@ const CapTracker: React.FC = () => {
                 <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--ink)', lineHeight: 1.1 }}>
                   {summary.pts_earned.toLocaleString()}
                 </div>
-                <div style={{ fontSize: 11, color: summary.value_missed_usd > 0 ? 'var(--re600)' : 'var(--muted)', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: summary.value_missed_usd > 0 ? 'var(--re-ink)' : 'var(--muted)', marginTop: 4 }}>
                   {summary.value_missed_usd > 0
                     ? `≈ $${summary.value_missed_usd.toFixed(0)} missed to caps`
                     : 'No value missed this period'}
@@ -202,7 +202,7 @@ const CapTracker: React.FC = () => {
                 <div style={cardTitle}>Upcoming Resets</div>
                 {summary.upcoming_resets.map((reset, i) => {
                   const dotColor = i === 0 ? 'var(--re600)' : i === 1 ? 'var(--au500)' : 'var(--g500)';
-                  const textColor = i === 0 ? 'var(--re600)' : i === 1 ? 'var(--au600)' : 'var(--g700)';
+                  const textColor = i === 0 ? 'var(--re-ink)' : i === 1 ? 'var(--au-ink)' : 'var(--g-ink)';
                   const resetDate = new Date(reset.resets_at);
                   const now = new Date();
                   const days = Math.ceil((resetDate.getTime() - now.getTime()) / 86400000);

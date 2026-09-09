@@ -10,34 +10,34 @@ const statusConfig = {
   capped: {
     border: 'var(--re600)',
     barColor: 'var(--re600)',
-    rateColor: 'var(--re600)',
-    pctColor: 'var(--re600)',
+    rateColor: 'var(--re-ink)',
+    pctColor: 'var(--re-ink)',
     bg: 'var(--re50)',
     alertBg: 'var(--re50)',
     alertBorder: 'var(--re100)',
-    alertTitleColor: 'var(--re600)',
+    alertTitleColor: 'var(--re-ink)',
     icon: '🚨',
   },
   warning: {
     border: 'var(--au400)',
     barColor: 'var(--au500)',
-    rateColor: 'var(--au600)',
-    pctColor: 'var(--au600)',
+    rateColor: 'var(--au-ink)',
+    pctColor: 'var(--au-ink)',
     bg: 'var(--white)',
     alertBg: 'var(--au50)',
     alertBorder: 'var(--au100)',
-    alertTitleColor: 'var(--au600)',
+    alertTitleColor: 'var(--au-ink)',
     icon: '⚡',
   },
   ok: {
     border: 'var(--g400)',
     barColor: 'var(--g500)',
-    rateColor: 'var(--g700)',
-    pctColor: 'var(--g700)',
+    rateColor: 'var(--g-ink)',
+    pctColor: 'var(--g-ink)',
     bg: 'var(--white)',
     alertBg: 'var(--g50)',
     alertBorder: 'var(--g100)',
-    alertTitleColor: 'var(--g700)',
+    alertTitleColor: 'var(--g-ink)',
     icon: '✅',
   },
 };
@@ -104,7 +104,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
           >
             {category} · {card_name}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>
             {noCap
               ? 'No cap — always earning'
               : `$${cap_amount?.toLocaleString()}/${cap_period} cap · resets ${resets_at}`}
@@ -122,7 +122,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
           >
             {effective_rate}×
           </div>
-          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: 'var(--ink3)', marginTop: 2 }}>
             {status === 'capped' ? 'Effective now' : status === 'warning' ? `$${room_left} left` : 'Full rate'}
           </div>
         </div>
@@ -173,11 +173,11 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
           justifyContent: 'space-between',
           padding: '6px 16px 12px',
           fontSize: 11,
-          color: 'var(--muted)',
+          color: 'var(--ink3)',
         }}
       >
         <span>${spent.toLocaleString()} spent</span>
-        <b style={{ color: status === 'capped' ? 'var(--re600)' : 'var(--ink3)' }}>
+        <b style={{ color: status === 'capped' ? 'var(--re-ink)' : 'var(--ink3)' }}>
           {noCap
             ? 'No cap — no action needed'
             : status === 'capped'

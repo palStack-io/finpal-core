@@ -81,7 +81,19 @@ const StaleCardBanner: React.FC<StaleCardBannerProps> = ({
         style={{
           flexShrink: 0,
           background: loading ? 'var(--au100)' : 'var(--au500)',
-          color: loading ? 'var(--au600)' : '#fff',
+          /* *** DARK INK ON AMBER, NOT WHITE. *** White on --au500 (#f59e0b)
+             measures 2.15:1 — the worst pair on the whole pointsPal surface, and
+             it is a BUTTON LABEL. Amber is the one accent in this palette light
+             enough that white cannot sit on it; --ink2 measures 6.81:1 and keeps
+             the amber. The theme file's own comment at line 105 already says
+             "#f59e0b is 2.09:1 in light" about a different element. D-103. */
+          /* *** A FIXED SLATE, NOT `--ink2` — AND THE FIRST ATTEMPT HERE MADE
+             DARK MODE WORSE, WHICH IS THE POINT. *** `--ink2` flips with the
+             theme (#1e293b light, #e2e8f0 dark) but amber does NOT: --au500 is
+             #f59e0b in both. So a theme-following ink measured 6.81:1 in light
+             and 1.74:1 in dark — worse than the white it replaced. A surface
+             that does not theme needs a label that does not either. */
+          color: loading ? 'var(--au-ink)' : '#1e293b',
           border: 'none',
           borderRadius: 'var(--rs)',
           padding: '6px 12px',

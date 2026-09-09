@@ -92,7 +92,7 @@ const CardFace: React.FC<CardFaceProps> = ({
         >
           {typeof points === 'number' ? points.toLocaleString() : points}
         </span>
-        <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 10 }}>{ptsLabel}</span>
+        <span style={{ color: '#fff', fontSize: 10 }}>{ptsLabel}</span>
       </div>
 
       {/* Card name */}
@@ -112,7 +112,7 @@ const CardFace: React.FC<CardFaceProps> = ({
       {/* Issuer sub-label */}
       <div
         style={{
-          color: 'rgba(255,255,255,0.65)',
+          color: '#fff',
           fontFamily: "'Bricolage Grotesque', sans-serif",
           fontSize: 10,
           fontWeight: 500,

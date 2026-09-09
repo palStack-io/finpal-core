@@ -189,11 +189,15 @@ const baseline = existsSync(baselinePath)
  * Fixing them is a palette pass, not a layout one. Delete a page from this list when
  * its pairs are fixed — the staleness check below fails if a listed page has none,
  * so the list cannot quietly outlive the problem.
+ *
+ * *** `pointspal-caps` AND `pointspal-overview` WERE REMOVED 2026-09-08 BECAUSE THE
+ * STALENESS CHECK DEMANDED IT, TWICE. *** The D-103 pass took it to zero, the next run exited 1 saying so, and the
+ * pages now sit behind the real gate at a zero bar rather than behind this list.
+ * That is the mechanism working: a page cannot be quietly left "pending" once it
+ * is clean. The other four are still above zero and stay.
  */
 const PENDING_AUDIT = {
   investments: 'D-103 — never contrast-audited; added to captured/ by the responsive pass',
-  'pointspal-overview': 'D-103 — never contrast-audited',
-  'pointspal-caps': 'D-103 — never contrast-audited',
   'pointspal-bestcard': 'D-103 — never contrast-audited',
   'pointspal-mycards': 'D-103 — never contrast-audited',
   'pointspal-redeem': 'D-103 — never contrast-audited',

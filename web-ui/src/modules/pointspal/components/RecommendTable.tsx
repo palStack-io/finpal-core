@@ -12,7 +12,10 @@ interface RecommendTableProps {
 const tagStyles: Record<string, React.CSSProperties> = {
   best:   { background: 'var(--g100)',  color: 'var(--g-ink)',  border: '1px solid var(--g200)' },
   good:   { background: 'var(--au100)', color: 'var(--au-ink)', border: '1px solid var(--au300)' },
-  ok:     { background: '#f1f5f9',      color: 'var(--muted)', border: '1px solid var(--border)' },
+  /* `var(--bg)`, not `#f1f5f9`. A hardcoded light slate does not theme, so in dark
+     mode this badge rendered as a pale box in a dark page with dark-mode text on
+     it. D-103 measured the result at 1.02:1. */
+  ok:     { background: 'var(--bg)',    color: 'var(--ink3)', border: '1px solid var(--border)' },
   capped: { background: 'var(--re100)', color: 'var(--re-ink)', border: '1px solid var(--re100)' },
 };
 
@@ -74,7 +77,13 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
                 key={card.card_name}
                 style={{
                   background: isCapped
-                    ? 'rgba(254,242,242,0.6)'
+                    /* `--re50`, not `rgba(254,242,242,0.6)`. The THIRD hardcoded
+                       light surface in this one file: a 60%-opacity light red that
+                       composited over the dark card into a grey-brown, taking three
+                       different foregrounds down to 1.02:1, 1.05:1 and 1.84:1. The
+                       `isBest` arm beside it was already a themed token, which is
+                       what made the inconsistency invisible to a reader. D-103. */
+                    ? 'var(--re50)'
                     : isBest
                     ? 'var(--g50)'
                     : 'transparent',
@@ -124,7 +133,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
                       fontFamily: "'Bricolage Grotesque', sans-serif",
                       fontWeight: 700,
                       fontSize: 13,
-                      color: isCapped ? 'var(--re600)' : isBest ? 'var(--g700)' : 'var(--ink3)',
+                      color: isCapped ? 'var(--re-ink)' : isBest ? 'var(--g-ink)' : 'var(--ink3)',
                     }}
                   >
                     {card.effective_rate}×
@@ -138,7 +147,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
                       fontFamily: "'Bricolage Grotesque', sans-serif",
                       fontWeight: isBest ? 800 : 600,
                       fontSize: 13,
-                      color: isCapped ? 'var(--re600)' : isBest ? 'var(--g700)' : 'var(--ink3)',
+                      color: isCapped ? 'var(--re-ink)' : isBest ? 'var(--g-ink)' : 'var(--ink3)',
                     }}
                   >
                     ${card.value_usd.toFixed(2)}
@@ -173,7 +182,12 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
         <div
           style={{
             marginTop: 14,
-            background: '#eff6ff',
+            /* *** A HARDCODED LIGHT BLUE INSIDE A THEMED MODULE. *** In dark
+               mode this panel stayed #eff6ff while its text stayed dark-mode
+               slate, which measured 1.36:1 — not a contrast-tuning problem but a
+               surface that ignores the theme, visible as a glaring light box.
+               `--g50` is the module's own wash and is translucent in dark. */
+            background: 'var(--g50)',
             border: '1px solid #dbeafe',
             borderRadius: 'var(--rs)',
             padding: '12px 14px',
@@ -184,7 +198,11 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
               fontFamily: "'Bricolage Grotesque', sans-serif",
               fontWeight: 700,
               fontSize: 12,
-              color: '#1d4ed8',
+              /* The matching half of the hardcoded light panel above: a fixed
+                 blue-700 label that does not theme either. Once the panel became
+                 `--g50` this measured 2.08:1 in dark. `--g-ink` is the module's
+                 own accent ink and themes with it. D-103. */
+              color: 'var(--g-ink)',
               marginBottom: 6,
             }}
           >

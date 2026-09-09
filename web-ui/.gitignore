@@ -65,3 +65,20 @@ archived/
 archived_*/
 backup/
 old_code/
+
+# *** THESE PATTERNS LIVE HERE, NOT IN THE WALK DIRECTORIES, AND THAT IS THE FIX
+# FOR A NEAR-MISS ON A PUBLIC REPO. ***
+#
+# Each browser walk shipped its own `.gitignore` next to its scratch dirs. That
+# works until you switch branches: once `scripts/modal-walk/.gitignore` was
+# COMMITTED on one branch, checking out a branch that predates it DELETED the
+# ignore file while leaving the untracked Chrome profiles on disk — so the next
+# `git add -A web-ui/scripts` swept in 980 files containing absolute
+# `/Users/<name>/...` paths, and pushed them to a public repository.
+#
+# `test_no_private_data_in_tracked_files.py` caught it and failed CI, which is the
+# only reason it is not still there. A per-directory ignore protects a directory
+# only while the branch you are on knows about it; these patterns are repo-wide.
+scripts/*/.chrome-profile*/
+scripts/*/.pages/
+scripts/*/captured/

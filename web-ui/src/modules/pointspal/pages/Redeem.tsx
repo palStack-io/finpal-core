@@ -13,7 +13,7 @@ const cppStyle = (cpp: number): React.CSSProperties => {
 const tagStyles: Record<string, React.CSSProperties> = {
   Best:  { background: 'var(--g100)',  color: 'var(--g-ink)',  border: '1px solid var(--g200)' },
   Good:  { background: 'var(--au100)', color: 'var(--au-ink)', border: '1px solid var(--au300)' },
-  OK:    { background: 'var(--border)', color: 'var(--muted)', border: '1px solid var(--border)' },
+  OK:    { background: 'var(--border)', color: 'var(--ink3)', border: '1px solid var(--border)' },
   Avoid: { background: 'var(--re100)', color: 'var(--re-ink)', border: '1px solid var(--re100)' },
 };
 
@@ -89,13 +89,13 @@ const Redeem: React.FC = () => {
         }}
       >
         <div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, marginBottom: 4 }}>
+          <div style={{ fontSize: 11, color: '#fff', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, marginBottom: 4 }}>
             Maximum extractable value
           </div>
           <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 32, color: '#fff', lineHeight: 1 }}>
             ${data.max_redeemable_usd.toLocaleString('en-US', { minimumFractionDigits: 0 })}
           </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>
+          <div style={{ fontSize: 11, color: '#fff', marginTop: 6 }}>
             from {data.total_points.toLocaleString()} total points across {data.card_count} cards
           </div>
         </div>
@@ -104,13 +104,13 @@ const Redeem: React.FC = () => {
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff' }}>
               ${data.total_value_usd.toLocaleString()}
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Current estimated value</div>
+            <div style={{ fontSize: 11, color: '#fff' }}>Current estimated value</div>
           </div>
           <div>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--au300)' }}>
               +${(data.max_redeemable_usd - data.total_value_usd).toLocaleString()}
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Potential uplift via transfers</div>
+            <div style={{ fontSize: 11, color: '#fff' }}>Potential uplift via transfers</div>
           </div>
         </div>
       </div>
@@ -138,9 +138,9 @@ const Redeem: React.FC = () => {
               </div>
               {data.tips.map((tip, i) => {
                 const tipStyles: Record<string, { bg: string; border: string; titleColor: string }> = {
-                  expiry:   { bg: 'var(--au50)',  border: 'var(--au100)', titleColor: 'var(--au600)' },
-                  transfer: { bg: 'var(--g50)',   border: 'var(--g200)',  titleColor: 'var(--g700)' },
-                  info:     { bg: 'var(--g50)',     border: 'var(--g100)',  titleColor: 'var(--g700)' },
+                  expiry:   { bg: 'var(--au50)',  border: 'var(--au100)', titleColor: 'var(--au-ink)' },
+                  transfer: { bg: 'var(--g50)',   border: 'var(--g200)',  titleColor: 'var(--g-ink)' },
+                  info:     { bg: 'var(--g50)',     border: 'var(--g100)',  titleColor: 'var(--g-ink)' },
                 };
                 const s = tipStyles[tip.type] ?? tipStyles.info;
                 return (
@@ -215,7 +215,7 @@ const ProgramCard: React.FC<{ program: RedemptionOverview['programs'][0] }> = ({
               <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{opt.description}</div>
             </td>
             <td style={{ padding: '9px 6px' }}>
-              <span style={{ background: 'var(--border)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 10, padding: '2px 7px', borderRadius: 20 }}>
+              <span style={{ background: 'var(--border)', color: 'var(--ink3)', border: '1px solid var(--border)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 10, padding: '2px 7px', borderRadius: 20 }}>
                 {opt.type}
               </span>
             </td>

@@ -101,7 +101,7 @@ const PointsPalOverview: React.FC = () => {
             label: 'Pts Missed (this month)',
             value: data.pts_missed_this_month.toLocaleString(),
             sub: data.pts_missed_this_month > 0 ? '⚠ cap hit' : null,
-            valueColor: data.pts_missed_this_month > 0 ? 'var(--re600)' : 'var(--ink)',
+            valueColor: data.pts_missed_this_month > 0 ? 'var(--re-ink)' : 'var(--ink)',
             warn: data.pts_missed_this_month > 0,
           },
           {
@@ -109,7 +109,7 @@ const PointsPalOverview: React.FC = () => {
             value: String(data.active_cap_alerts),
             sub: 'View cap tracker →',
             subAction: () => navigate('/pointspal/caps'),
-            valueColor: data.active_cap_alerts > 0 ? 'var(--re600)' : 'var(--g700)',
+            valueColor: data.active_cap_alerts > 0 ? 'var(--re-ink)' : 'var(--g-ink)',
           },
         ].map(({ label, value, sub, subAction, valueColor, warn }) => (
           <div
@@ -139,7 +139,7 @@ const PointsPalOverview: React.FC = () => {
                 onClick={subAction}
                 style={{
                   fontSize: 11,
-                  color: subAction ? 'var(--g700)' : warn ? 'var(--re600)' : 'var(--muted)',
+                  color: subAction ? 'var(--g-ink)' : warn ? 'var(--re-ink)' : 'var(--muted)',
                   marginTop: 6,
                   cursor: subAction ? 'pointer' : 'default',
                   fontFamily: subAction ? "'Bricolage Grotesque', sans-serif" : undefined,
@@ -228,8 +228,10 @@ const PointsPalOverview: React.FC = () => {
                 </button>
               </div>
               {data.action_items.map((item, i) => {
-                const iconBg = item.type === 'capped' ? 'var(--re50)' : item.type === 'warning' ? 'var(--au50)' : '#eff6ff';
-                const valueColor = item.type === 'capped' ? 'var(--re600)' : item.type === 'warning' ? 'var(--au600)' : 'var(--g700)';
+                // `--g50`, not '#eff6ff': the other two arms are themed tokens and this one was
+                // a hardcoded light blue, so in dark mode one tile in three lit up. D-103.
+                const iconBg = item.type === 'capped' ? 'var(--re50)' : item.type === 'warning' ? 'var(--au50)' : 'var(--g50)';
+                const valueColor = item.type === 'capped' ? 'var(--re-ink)' : item.type === 'warning' ? 'var(--au-ink)' : 'var(--g-ink)';
                 return (
                   <div
                     key={i}
