@@ -96,6 +96,37 @@ def on_the_same_side(user_a, user_b):
     return rows[user_a] == rows[user_b]
 
 
+def same_side_user_ids(caller_id):
+    """`on_the_same_side` as a SET, for use in a query.
+
+    Lives here, next to the pairwise form, so there is one definition of "the same
+    side of the demo boundary" rather than two -- a filter built ad hoc in a
+    handler is exactly the drift D-18 was opened to remove.
+
+    *** THIS IS NOT `visible_user_ids`, AND THE DIFFERENCE IS THE PUBLIC DEMO. ***
+    `visible_user_ids` collapses a demo caller to ITSELF, which is right for reading
+    a housemate's money and wrong for a *shared* thing: on the public demo, one demo
+    persona must be able to see the household goal another demo persona owns. Use
+    this only for shared things, never to widen a read of owned data.
+    """
+    if not caller_id:
+        return []
+    caller = User.query.with_entities(User.is_demo_user).filter_by(
+        id=caller_id).first()
+    # An id that is not on the instance has no side, so nothing matches it.
+    if caller is None:
+        return []
+    # `is_(True)` / `isnot(True)`, never `== False`. `User.is_demo_user` is NULLABLE
+    # with a PYTHON-side default, so a row written by anything other than the ORM --
+    # a seed script, a backfill, `psql` -- can hold NULL, and `== False` does not
+    # match a NULL in SQL. `on_the_same_side` reads it as `bool(...)` in Python,
+    # where NULL is False, so the two would disagree about exactly the rows the ORM
+    # cannot create (D-155). `household_user_ids` above already uses this idiom.
+    side = (User.is_demo_user.is_(True) if caller.is_demo_user
+            else User.is_demo_user.isnot(True))
+    return [u.id for u in User.query.with_entities(User.id).filter(side).all()]
+
+
 def visible_user_ids(caller_id):
     """The user IDs whose data `caller_id` may see.
 
