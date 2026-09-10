@@ -125,10 +125,29 @@ class Budget(db.Model):
 
         household = current_viewer_ids()
 
+        # *** D-183: THIS FILTER WAS MISSING AND A REFUND INCREASED YOUR SPEND. ***
+        #
+        # `transaction_types` has existed on this model since it was written, is
+        # a comma-separated list, and DEFAULTS TO 'expense' -- a column the
+        # schema wrote and nothing read. Without it an `income` row filed
+        # against a budgeted category counted as money going out, and a refund
+        # is normally recorded exactly that way: returning a £90 coat moved the
+        # clothing figure UP by £90 instead of down. Measured before the fix:
+        # 100 expense + 5000 income + 70 transfer on a 600 budget reported
+        # 5170.00 spent and -4570.00 remaining.
+        #
+        # `or 'expense'` covers both NULL (rows written before the Python-side
+        # default existed) and the empty string. A budget that deliberately
+        # asks for 'expense,income' still gets both -- the defect was IGNORING
+        # the column, not the value anyone put in it.
+        wanted = [t.strip() for t in (self.transaction_types or 'expense').split(',')
+                  if t.strip()] or ['expense']
+
         expenses = Expense.query.filter(
             Expense.user_id.in_(household),
             Expense.date >= start_date,
             Expense.date <= end_date,
+            Expense.transaction_type.in_(wanted),
             category_filter
         ).all()
 
@@ -156,6 +175,12 @@ class Budget(db.Model):
             Expense.user_id.in_(household),
             Expense.date >= start_date,
             Expense.date <= end_date,
+            # *** THE SAME D-183 FILTER, EIGHT LINES BELOW THE OTHER ONE. ***
+            # This method runs TWO queries and the first fix only reached the
+            # first, so a refund whose amount is carried by CategorySplit rows
+            # still counted as spending -- 190.00 where 100.00 was correct.
+            # Fixing the reported half is not fixing the defect (D-99).
+            Expense.transaction_type.in_(wanted),
             CategorySplit.category_id.in_(category_ids)
         ).all()
 

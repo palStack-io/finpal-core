@@ -217,25 +217,17 @@ def test_a_classified_category_never_appears_in_unsorted(client, auth_headers, d
     assert body['unsorted']['categories'] == []
 
 
-def test_a_group_actual_INHERITS_D_183_and_counts_income_as_spending(client,
-                                                                     auth_headers, db):
-    """*** THIS PINS A DEFECT, NOT THE BEHAVIOUR ANYONE WANTS. SEE AUDIT D-183. ***
+def test_a_group_actual_EXCLUDES_income_now_that_D_183_IS_FIXED(db, client, auth_headers):
+    """*** THIS TEST DID ITS JOB. ***
 
-    `Budget.calculate_spent_amount()` has NO `transaction_type` filter, although
-    `Budget.transaction_types` exists and defaults to `'expense'`. So an income
-    row filed against a budgeted category -- which is how a refund is normally
-    recorded -- INCREASES the amount you have spent. Measured: 100 expense +
-    5000 income + 70 transfer on a 600 budget reports 5170 spent and -4570
-    remaining.
+    It used to assert 5100.0 -- the WRONG number -- and name AUDIT D-183, so
+    that whoever fixed the underlying defect would see it go red rather than
+    rediscover the whole thing. D-183 was fixed on 2026-09-10 with the owner's
+    approval, this went red exactly as designed, and it now asserts the right
+    number.
 
-    It is PRE-EXISTING on `main` and this piece does not fix it: the fix moves
-    every budget figure in the application and belongs in its own change with
-    its own verification. The group subtotals inherit it because they sum the
-    same per-budget figures the page has always shown.
-
-    Pinned here rather than left silent so that whoever fixes D-183 sees this
-    test go red and knows to update it -- an inherited defect nobody wrote down
-    is one the next session re-discovers.
+    A group subtotal sums the per-budget figures, so it inherits whatever
+    `calculate_spent_amount` reports. That is why the pin lived here.
     """
     user = UserFactory()
     groceries = category(db, user, 'Groceries', 'flexible')
@@ -245,7 +237,7 @@ def test_a_group_actual_INHERITS_D_183_and_counts_income_as_spending(client,
 
     body = overview(client, user, auth_headers)
     flexible = next(g for g in body['groups'] if g['spending_type'] == 'flexible')
-    assert flexible['actual'] == 5100.0     # SHOULD be 100.0 -- see D-183
+    assert flexible['actual'] == 100.0
 
 
 def test_income_does_not_leak_into_the_UNSORTED_total(client, auth_headers, db):
