@@ -379,9 +379,9 @@ class DemoService:
                 {'description': 'Target', 'amount': 89.23, 'type': 'expense', 'date': (today - timedelta(days=11)).strftime('%Y-%m-%d'), 'category_hint': 'shopping'},
                 {'description': 'Best Buy Electronics', 'amount': 199.99, 'type': 'expense', 'date': (today - timedelta(days=25)).strftime('%Y-%m-%d'), 'category_hint': 'shopping', 'use_credit': True},
                 # Utilities
-                {'description': 'Electric Bill', 'amount': 134.50, 'type': 'expense', 'date': (today - timedelta(days=15)).strftime('%Y-%m-%d'), 'category_hint': 'utilities'},
-                {'description': 'Internet - Comcast', 'amount': 79.99, 'type': 'expense', 'date': (today - timedelta(days=16)).strftime('%Y-%m-%d'), 'category_hint': 'utilities'},
-                {'description': 'Water Bill', 'amount': 45.00, 'type': 'expense', 'date': (today - timedelta(days=17)).strftime('%Y-%m-%d'), 'category_hint': 'utilities'},
+                {'description': 'Electric Bill', 'amount': 134.50, 'type': 'expense', 'date': (today - timedelta(days=15)).strftime('%Y-%m-%d'), 'category_hint': 'electricity'},
+                {'description': 'Internet - Comcast', 'amount': 79.99, 'type': 'expense', 'date': (today - timedelta(days=16)).strftime('%Y-%m-%d'), 'category_hint': 'internet'},
+                {'description': 'Water Bill', 'amount': 45.00, 'type': 'expense', 'date': (today - timedelta(days=17)).strftime('%Y-%m-%d'), 'category_hint': 'water'},
                 # Housing
                 # Rent is the demo's showcase for recurring DETECTION, so its spacing
                 # has to be a real monthly cadence on every seed date. The second row
@@ -403,8 +403,17 @@ class DemoService:
                 {'description': 'Rent Payment', 'amount': 1800.00, 'type': 'expense', 'date': (today - timedelta(days=33)).strftime('%Y-%m-%d'), 'category_hint': 'housing'},
                 {'description': 'Rent Payment', 'amount': 1800.00, 'type': 'expense', 'date': (today - timedelta(days=3)).strftime('%Y-%m-%d'), 'category_hint': 'housing'},
                 # Healthcare
-                {'description': 'CVS Pharmacy', 'amount': 23.45, 'type': 'expense', 'date': (today - timedelta(days=9)).strftime('%Y-%m-%d'), 'category_hint': 'healthcare'},
-                {'description': 'Doctor Visit Copay', 'amount': 30.00, 'type': 'expense', 'date': (today - timedelta(days=40)).strftime('%Y-%m-%d'), 'category_hint': 'healthcare'},
+                # *** THE DEMO MUST DEMONSTRATE Unsorted, NOT JUST HAVE IT. ***
+                # D-177: a feature shipping while the demo seed does not know is
+                # a defect, and the demo is where the budget page gets looked at.
+                # A bank fee is deliberately unclassified in the default map --
+                # a monthly account charge is committed and a one-off penalty is
+                # not, and finPal has no way to tell which this is. So it lands
+                # in Unsorted, beside the health rows, and the section shows two
+                # different REASONS a category can be unsorted rather than one.
+                {'description': 'Monthly Account Fee', 'amount': 12.00, 'type': 'expense', 'date': (today - timedelta(days=6)).strftime('%Y-%m-%d'), 'category_hint': 'bank fees'},
+                {'description': 'CVS Pharmacy', 'amount': 23.45, 'type': 'expense', 'date': (today - timedelta(days=9)).strftime('%Y-%m-%d'), 'category_hint': 'pharmacy'},
+                {'description': 'Doctor Visit Copay', 'amount': 30.00, 'type': 'expense', 'date': (today - timedelta(days=40)).strftime('%Y-%m-%d'), 'category_hint': 'doctor visits'},
                 # Fitness
                 # A subscription is the other thing recurring detection is FOR, and a
                 # single row cannot demonstrate it -- with only one occurrence there is
