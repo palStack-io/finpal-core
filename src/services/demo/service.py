@@ -1435,12 +1435,74 @@ class DemoService:
             return {'success': False, 'message': 'Not a demo user'}
 
         try:
-            # Delete existing data
-            Expense.query.filter_by(user_id=user_id).delete()
-            Budget.query.filter_by(user_id=user_id).delete()
-            Account.query.filter_by(user_id=user_id).delete()
-            Category.query.filter_by(user_id=user_id).delete()
-            Portfolio.query.filter_by(user_id=user_id).delete()
+            # *** DELETED IN DEPENDENCY ORDER, AND THE ORDER IS THE WHOLE FIX. ***
+            #
+            # This function was called by NOTHING and had never been run, which
+            # is how it survived: it deleted `Expense`, `Budget`, `Account`,
+            # `Category`, `Portfolio` in that order while SIXTEEN foreign keys
+            # point at `accounts` and `categories` and every one is `NO ACTION`.
+            # Measured on real Postgres, it raised
+            #     ForeignKeyViolation: update or delete on table "expenses"
+            #     violates constraint "category_splits_expense_id_fkey"
+            # on the FIRST statement, rolled back, and returned success=False
+            # having deleted nothing.
+            #
+            # *** AND THE SUITE COULD NOT SEE IT. *** `tests/conftest.py` pins
+            # SQLite in memory and SQLite does not enforce foreign keys without
+            # `PRAGMA foreign_keys=ON`, so seven tests passed against the broken
+            # version. The order below is asserted directly, on any engine, by
+            # `tests/integration/test_demo_reset_fk_order.py`.
+            #
+            # `Query.delete()` is a BULK delete: one statement, no ORM cascade
+            # and no service-layer guard -- including the one D-181 added so an
+            # account deletion cannot silently reset a linked goal. Nothing here
+            # may lean on those; every dependant is removed explicitly.
+            from src.models.goal import Goal
+            from src.models.goal_account import GoalAccount
+            from src.models.transaction import CategorySplit
+            from src.models.transaction_rule import TransactionRule
+            from src.models.recurring import RecurringExpense
+
+            expense_ids = [row.id for row in Expense.query
+                           .filter_by(user_id=user_id).with_entities(Expense.id)]
+            goal_ids = [row.id for row in Goal.query
+                        .filter_by(user_id=user_id).with_entities(Goal.id)]
+
+            # 1. Leaves first -- rows that reference an expense or a goal.
+            if expense_ids:
+                CategorySplit.query.filter(
+                    CategorySplit.expense_id.in_(expense_ids)).delete(
+                        synchronize_session=False)
+            if goal_ids:
+                GoalAccount.query.filter(
+                    GoalAccount.goal_id.in_(goal_ids)).delete(
+                        synchronize_session=False)
+
+            # 2. Rows that reference an account or a category. `transaction_rules`
+            #    points at BOTH, and there were 208 of them on the live demo.
+            TransactionRule.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            RecurringExpense.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            Goal.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            Expense.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            Budget.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            Portfolio.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+
+            # 3. The two tables everything else pointed at. Subcategories before
+            #    parents -- `categories.parent_id` is a self-reference and is
+            #    also NO ACTION.
+            Account.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            Category.query.filter(
+                Category.user_id == user_id,
+                Category.parent_id.isnot(None)).delete(synchronize_session=False)
+            Category.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
 
             db.session.commit()
 
