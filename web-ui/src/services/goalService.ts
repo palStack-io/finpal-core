@@ -44,6 +44,34 @@ export const goalService = {
     return response.data.goal;
   },
 
+  /**
+   * B12. *** ITS OWN ROUTE AND NOT A `PUT`, AND THE SERVER REFUSES `account_ids`
+   * ON `PUT` SO THAT THIS IS NOT OPTIONAL. *** Adding an account snapshots its
+   * balance NOW and extends the goal's denominator by that amount, so the
+   * percentage moves for a stated reason rather than jumping; a `PUT` that
+   * restated the set would rewrite a percentage the user has already seen.
+   */
+  async addGoalAccount(id: number, accountId: number): Promise<Goal> {
+    const response = await api.post<{ success: boolean; goal: Goal }>(
+      `/api/v1/goals/${id}/accounts`,
+      { account_id: accountId },
+    );
+    return response.data.goal;
+  },
+
+  /**
+   * Shrinks the denominator by THAT account's own snapshot. The server refuses
+   * to remove the last one — that is a conversion to a manual goal, not an
+   * unlink — so gate the control on `canUnlinkAccounts` rather than offering a
+   * button that can only fail.
+   */
+  async removeGoalAccount(id: number, accountId: number): Promise<Goal> {
+    const response = await api.delete<{ success: boolean; goal: Goal }>(
+      `/api/v1/goals/${id}/accounts/${accountId}`,
+    );
+    return response.data.goal;
+  },
+
   async deleteGoal(id: number): Promise<void> {
     await api.delete(`/api/v1/goals/${id}`);
   },

@@ -28,6 +28,7 @@ from schemas.input_schemas import goal_input
 from src.extensions import db
 from src.models.account import Account
 from src.models.goal import Goal
+from src.models.goal_account import GoalAccount
 from src.services.goal.service import GoalService
 from src.utils.household import (
     can_manage_owned, default_currency_for, read_scope, same_side_user_ids,
@@ -49,6 +50,14 @@ goal_model = ns.model('Goal', {
         description='Account to link the goal to. Omit for a manual goal. A linked '
                     'goal reads its current figure from the balance, which is what '
                     'makes it honest -- a typed figure can be inflated.'),
+    'account_ids': fields.List(
+        fields.Integer,
+        description='Several accounts, one goal (B12) -- "pay off my cards", "the '
+                    'emergency fund across two savings accounts". Sent INSTEAD of '
+                    '`account_id`; sending both uses this list. Every account must '
+                    'be on the same side of zero: a card and a savings account net '
+                    'to a figure that hides half the goal, and the server refuses '
+                    'the set rather than computing it.'),
     'target_amount': fields.Float(required=True, description='Target figure'),
     'start_amount': fields.Float(
         description='Manual goals only. A LINKED goal snapshots this from the '
@@ -61,6 +70,17 @@ goal_model = ns.model('Goal', {
     'status': fields.String(
         description="'active' or 'archived'. 'achieved' is STAMPED BY THE SERVER "
                     'when progress reaches 1 and cannot be set by a client.'),
+})
+
+
+goal_account_model = ns.model('GoalAccountLink', {
+    'account_id': fields.Integer(
+        required=True,
+        description='An account to add to this goal (B12). Its balance is '
+                    'snapshotted NOW and extends the goal\'s denominator by that '
+                    'amount, so the percentage moves for a stated reason instead '
+                    'of jumping. Must be on the same side of zero as the accounts '
+                    'already linked.'),
 })
 
 
@@ -92,9 +112,29 @@ def _serialize(goal, svc):
         'name': goal.name,
         'kind': goal.kind,
         'scope': goal.scope,
+        # *** THE PRIMARY LINK, MAINTAINED BY THE SERVER, NEVER NULL FOR A LINKED
+        # GOAL. *** Kept beside `accounts` for as long as a deployed client still
+        # reads it. See `GoalService.sync_links`.
         'account_id': goal.account_id,
         # Presentational, and the reason a client does not need a second request.
-        'account_name': goal.account.name if goal.account_id else None,
+        #
+        # *** IT DESCRIBES THE SET, NOT THE PRIMARY, AND THAT IS THE MIGRATION
+        # DOING ITS JOB. *** An unmigrated client renders this string; naming one
+        # card out of three would be false, and NULL would render "Tracked by
+        # hand" for a goal reading three accounts -- D-176's exact shape, where a
+        # key a client already read optimistically switched on a wrong answer.
+        # "3 accounts" is true on every client, migrated or not.
+        'account_name': _account_name(goal),
+        # B12. Shipped BESIDE the singular keys, not instead of them: that is what
+        # makes this a migration rather than a break. Removing `account_id` and
+        # `account_name` is a later, separate change, once both clients read this.
+        'accounts': [
+            {'id': link.account_id,
+             'name': link.account.name,
+             'start_amount': float(link.start_amount)}
+            for link in sorted(goal.links or [],
+                               key=lambda link: link.account_id)
+        ],
         'target_amount': float(goal.target_amount),
         'start_amount': float(goal.start_amount),
         'current_manual': (float(goal.current_manual)
@@ -106,6 +146,102 @@ def _serialize(goal, svc):
         'achieved_at': goal.achieved_at.isoformat() if goal.achieved_at else None,
         **svc.as_payload(goal),
     }
+
+
+def _account_name(goal):
+    """One name, or a count. Never NULL for a linked goal, never a lie."""
+    links = goal.links or []
+    if len(links) > 1:
+        return f'{len(links)} accounts'
+    if links:
+        return links[0].account.name
+    # The pre-backfill window, and the manual case.
+    return goal.account.name if goal.account_id else None
+
+
+def _load_accounts(caller_id, account_ids):
+    """The caller's visible accounts for these ids, in the order given.
+
+    Read scope, not the same-side set: linking is about an OWNED thing, and the
+    caller must be able to see an account to point a goal at it.
+
+    Returns `(accounts, error)`. Duplicates in the request are collapsed rather
+    than refused -- sending the same card twice is a client bug, and counting its
+    balance twice would be the double-counting this feature's index exists to
+    stop, arriving through the front door.
+    """
+    seen, ordered = set(), []
+    for account_id in account_ids:
+        if account_id in seen:
+            continue
+        seen.add(account_id)
+        ordered.append(account_id)
+
+    accounts = []
+    for account_id in ordered:
+        account = Account.query.filter(
+            Account.id == account_id,
+            Account.user_id.in_(visible_user_ids(caller_id))).first()
+        if account is None:
+            return None, ({'success': False, 'error': 'Account not found'}, 404)
+        accounts.append(account)
+    return accounts, None
+
+
+def _snapshot(account):
+    """The balance the SERVER reads, never a figure from the body.
+
+    A client-supplied start on a linked goal makes the denominator a typed number,
+    which is the one thing linking exists to prevent -- and it cannot be corrected
+    later, because the history needed to derive it is gone.
+    """
+    return account.balance if account.balance is not None else 0
+
+
+MIXED_DIRECTION_ERROR = (
+    'A goal cannot mix accounts you are paying DOWN with accounts you are '
+    'building UP -- {debts} would be paid down while {savings} is built up, and '
+    'one percentage over both would hide half the goal. Make two goals.'
+)
+
+
+def _mixed_direction_error(accounts, snapshots):
+    """The 400 body, or None. Names BOTH sides, because "invalid set" is not
+    something a user can act on."""
+    if not GoalService.mixed_direction(snapshots):
+        return None
+    debts = ', '.join(a.name for a, s in zip(accounts, snapshots) if s < 0)
+    savings = ', '.join(a.name for a, s in zip(accounts, snapshots) if s >= 0)
+    return {'success': False,
+            'error': MIXED_DIRECTION_ERROR.format(debts=debts, savings=savings)}
+
+
+def _collision_report(account_ids, direction, exclude_goal_id=None):
+    """Which of these accounts is already held, and by what. '' if none is.
+
+    *** "ARCHIVE THE EXISTING ONE FIRST" WAS ACTIONABLE WHILE A GOAL HELD ONE
+    ACCOUNT AND STOPS BEING SO WHEN IT HOLDS THREE. *** The uniqueness rule did
+    not change -- one active goal per (account, direction), the same as B5 -- but
+    the number of accounts a single refusal can be about did, and a user told
+    that one of their three cards is spoken for cannot act on it. Run AFTER the
+    rollback, so the session is clean and this is an ordinary read.
+    """
+    from src.models.goal_account import GoalAccount
+
+    query = (db.select(Account.name, Goal.name)
+             .select_from(GoalAccount)
+             .join(Account, Account.id == GoalAccount.account_id)
+             .join(Goal, Goal.id == GoalAccount.goal_id)
+             .where(GoalAccount.account_id.in_(account_ids),
+                    GoalAccount.active_direction == direction))
+    if exclude_goal_id is not None:
+        query = query.where(GoalAccount.goal_id != exclude_goal_id)
+    held = db.session.execute(query).all()
+    if not held:
+        return ''
+    return ' ' + ' '.join(
+        f'{account_name} is already tracked by the active goal '
+        f'“{goal_name}”.' for account_name, goal_name in held)
 
 
 def _visible_goals(caller_id):
@@ -172,23 +308,35 @@ class GoalList(Resource):
         if errors:
             return validation_error_response(errors)
 
-        account = None
-        if validated.get('account_id') is not None:
-            # Read scope, not the same-side set: linking is about an OWNED thing,
-            # and the caller must be able to see the account to point a goal at it.
-            account = Account.query.filter(
-                Account.id == validated['account_id'],
-                Account.user_id.in_(visible_user_ids(caller))).first()
-            if account is None:
-                return {'success': False, 'error': 'Account not found'}, 404
+        # B12: `account_ids` wins when both are sent, and an EMPTY list is a
+        # manual goal -- not "fall back to the singular". A client that has
+        # migrated says what it means with one key.
+        if validated.get('account_ids') is not None:
+            requested = list(validated['account_ids'])
+        elif validated.get('account_id') is not None:
+            requested = [validated['account_id']]
+        else:
+            requested = []
 
-        # *** THE SNAPSHOT. *** Taken from the balance the server reads, never from
-        # the body, and never recomputed afterwards. A client-supplied start on a
-        # linked goal would make the denominator a typed number, which is the one
-        # thing linking exists to prevent -- and it cannot be corrected later,
-        # because the history needed to derive it is gone.
-        if account is not None:
-            start_amount = account.balance if account.balance is not None else 0
+        accounts, error = _load_accounts(caller, requested)
+        if error is not None:
+            return error
+
+        # *** THE SNAPSHOT, ONE PER ACCOUNT. *** `goals.start_amount` is their sum
+        # and is maintained by `sync_links`; the per-row values are the immutable
+        # fact underneath it. That is what makes "I forgot a card" answerable
+        # later without restating a denominator the user has already seen.
+        snapshots = [_snapshot(a) for a in accounts]
+
+        # Refused BEFORE anything is written, and on the per-account signs rather
+        # than on their sum -- a card at -1,650 and a savings account at +4,000
+        # sum to a perfectly valid +2,350 and describe nothing that happened.
+        mixed = _mixed_direction_error(accounts, snapshots)
+        if mixed is not None:
+            return mixed, 400
+
+        if accounts:
+            start_amount = sum(snapshots)
         elif validated.get('start_amount') is not None:
             start_amount = validated['start_amount']
         else:
@@ -208,21 +356,33 @@ class GoalList(Resource):
             name=validated['name'],
             kind=validated.get('kind', 'savings'),
             scope=validated.get('scope', 'personal'),
-            account_id=account.id if account else None,
+            # Overwritten by `sync_links` below with the primary link; set here
+            # so a goal is never momentarily inconsistent between the two.
+            account_id=accounts[0].id if accounts else None,
             target_amount=validated['target_amount'],
             start_amount=start_amount,
             # Meaningless on a linked goal, so it is not stored on one -- keeping a
             # figure the service will never read is how a stale number ends up
             # rendered by something that forgets which kind of goal it has.
-            current_manual=(None if account is not None
+            current_manual=(None if accounts
                             else validated.get('current_manual')),
             currency_code=(validated.get('currency_code')
-                           or (account.currency_code if account else None)
+                           or (accounts[0].currency_code if accounts else None)
                            or default_currency_for(caller)),
             start_date=start_date or datetime.utcnow().date(),
             target_date=target_date,
             status='active',
         )
+
+        for account, snapshot in zip(accounts, snapshots):
+            goal.links.append(GoalAccount(account_id=account.id,
+                                          start_amount=snapshot,
+                                          added_at=datetime.utcnow()))
+        svc.sync_links(goal)
+        # Captured BEFORE the commit: after a rollback the instance is expired,
+        # and re-deriving the rule down in the handler is how a second copy of
+        # `direction` gets written.
+        attempted_direction = svc.direction(goal)
 
         try:
             db.session.add(goal)
@@ -231,12 +391,18 @@ class GoalList(Resource):
             db.session.rollback()
             # The uniqueness index is the likely cause and it is the only one worth
             # naming, because it is a rule the user can act on rather than a fault.
+            # B12 widened WHICH account can trip it: the index is now on every
+            # linked account and not only the primary, so a goal can be refused
+            # because of its second or third card.
             logger.exception('GoalList.post failed')
             return {
                 'success': False,
                 'error': 'Could not create this goal. An account can carry only one '
-                         'active goal in each direction -- archive the existing one '
-                         'first.',
+                         'active goal in each direction.'
+                         + (_collision_report([a.id for a in accounts],
+                                              attempted_direction)
+                            or ' Archive the existing goal first.'),
+
             }, 400
 
         return {'success': True, 'goal': _serialize(goal, svc),
@@ -282,6 +448,26 @@ class GoalDetail(Resource):
         if errors:
             return validation_error_response(errors)
 
+        # *** `account_ids` IS REFUSED; `account_id` IS STILL SILENTLY IGNORED,
+        # AND THE ASYMMETRY IS DELIBERATE. *** Both would rewrite the denominator
+        # of a percentage the user has already been shown, so neither is applied.
+        # The difference is who is sending them. `account_id` is on the update
+        # payload of BOTH deployed clients today -- `GoalForm.tsx:111` sets it and
+        # `Goals.tsx:321` includes it -- so refusing it would turn every goal edit
+        # on every installed build into a 400, which is D-99's lesson run
+        # backwards: the server must keep accepting what a deployed client
+        # already sends. `account_ids` is new, nothing sends it, and the natural
+        # way to write "edit this goal's accounts" in a client IS a PUT -- so
+        # answering 'Goal updated successfully' having changed nothing would make
+        # the client look correct while the goal is not what the screen says.
+        # Task 8 is the code that would have written it.
+        if 'account_ids' in validated:
+            return {'success': False,
+                    'error': "A goal's accounts cannot be changed here, because "
+                             'that would restate a denominator the user has '
+                             'already been shown. Use POST or DELETE on '
+                             f'/goals/{id}/accounts.'}, 400
+
         svc = GoalService()
         try:
             if 'target_amount' in validated:
@@ -308,12 +494,29 @@ class GoalDetail(Resource):
         if 'target_date' in validated:
             goal.target_date = target_date
 
+        goal_id = goal.id
+        # B12: `status` and `target_amount` are both settable above and BOTH feed
+        # the derived link fields -- status decides whether the accounts are held
+        # at all, and the amounts decide in which direction. Committing without
+        # this leaves an archived goal still holding every account it reads.
+        svc.sync_links(goal)
+        attempted_direction = svc.direction(goal) if goal.status == 'active' else None
+        linked_ids = svc.linked_account_ids(goal)
+
         try:
             db.session.commit()
         except Exception:
             db.session.rollback()
             logger.exception('GoalDetail.put failed')
-            return {'success': False, 'error': 'Could not update this goal'}, 400
+            # Un-archiving, or moving `target_amount` across the direction
+            # boundary, can both collide with a goal that took the account in the
+            # meantime. Same treatment as create and add-account: name it, or the
+            # user is told "could not update" about a goal reading three cards.
+            report = (_collision_report(linked_ids, attempted_direction,
+                                        exclude_goal_id=goal_id)
+                      if attempted_direction else '')
+            return {'success': False,
+                    'error': 'Could not update this goal.' + (report or '')}, 400
 
         return {'success': True, 'goal': _serialize(goal, svc),
                 'message': 'Goal updated successfully'}, 200
@@ -390,6 +593,150 @@ class GoalArchive(Resource):
                     'error': 'Only the goal owner or a household admin can archive '
                              'this goal'}, 403
         goal.status = 'archived'
+        svc = GoalService()
+        # *** THIS IS WHAT "ARCHIVING RELEASES THE ACCOUNT" NOW MEANS. *** It used
+        # to be a `WHERE status = 'active'` clause on the index over `goals`; with
+        # the accounts on a join table there is no such clause, and the release is
+        # `sync_links` writing NULL into every link's `active_direction`, where
+        # NULLs do not collide. Drop this call and the goal holds its accounts for
+        # ever, with nothing raising.
+        svc.sync_links(goal)
         db.session.commit()
-        return {'success': True, 'goal': _serialize(goal, GoalService()),
+        return {'success': True, 'goal': _serialize(goal, svc),
                 'message': 'Goal archived successfully'}, 200
+
+
+@ns.route('/<int:id>/accounts')
+class GoalAccounts(Resource):
+    """Add an account to an existing goal (B12).
+
+    Same shape and same permission predicate as the co-owner routes
+    (`can_manage_owned`, read-scoped fetch first so an invisible goal answers 404
+    and a visible-but-unmanageable one answers 403 -- answering 404 to the second
+    would mean the read scope had silently narrowed, D-43).
+
+    *** THIS IS THE OPERATION THE SINGLE-ACCOUNT MODEL FLATLY REFUSED, AND IT IS
+    ONLY SAFE BECAUSE OF THE PER-ROW SNAPSHOT. *** `PUT /goals/<id>` will not move
+    `account_id` and will not restate `start_amount`, because both rewrite the
+    denominator of a percentage the user has already been shown. Adding an account
+    here does move the denominator -- it grows by that account's balance AT THIS
+    MOMENT, snapshotted by the server -- and that is honest in a way a restatement
+    is not: the goal got bigger, and the percentage moves for a reason that can be
+    named. Take the snapshot away and this route becomes the forbidden operation
+    wearing a different hat (spec §2.1).
+    """
+
+    @ns.doc('add_goal_account', security='Bearer')
+    @ns.expect(goal_account_model)
+    @jwt_required()
+    def post(self, id):
+        caller = get_jwt_identity()
+        goal = _find_visible(id, caller)
+        if goal is None:
+            return {'success': False, 'error': 'Goal not found'}, 404
+        if not can_manage_owned(goal.user_id, caller, account_id=goal.account_id):
+            return {'success': False,
+                    'error': 'Only the goal owner or a household admin can change '
+                             'this goal'}, 403
+
+        data = request.get_json() or {}
+        account_id = data.get('account_id')
+        if not isinstance(account_id, int):
+            return {'success': False, 'error': 'account_id is required'}, 400
+
+        svc = GoalService()
+        # *** A MANUAL GOAL CANNOT BE CONVERTED INTO A LINKED ONE HERE. *** Its
+        # `start_amount` is a figure the user typed; replacing it with a snapshot
+        # sum is exactly the restatement `PUT` refuses, and the typed history is
+        # not recoverable afterwards. Archive it and create a linked goal.
+        if not svc.linked_account_ids(goal):
+            return {'success': False,
+                    'error': 'This goal is tracked by hand, so it has no accounts '
+                             'to add to. Create a linked goal instead.'}, 400
+
+        accounts, error = _load_accounts(caller, [account_id])
+        if error is not None:
+            return error
+        account = accounts[0]
+
+        # Idempotent, like the co-owner grant next door -- and here it is load
+        # bearing rather than merely tidy: re-adding an account that is already
+        # linked would add its balance to the denominator a SECOND time, which is
+        # the double-counting the index exists to stop, arriving through the
+        # front door instead of through a second goal.
+        if any(link.account_id == account.id for link in goal.links):
+            return {'success': True, 'goal': _serialize(goal, svc),
+                    'message': 'Account already linked to this goal'}, 200
+
+        snapshot = _snapshot(account)
+        existing = [(link.account, link.start_amount) for link in goal.links]
+        mixed = _mixed_direction_error(
+            [a for a, _ in existing] + [account],
+            [s for _, s in existing] + [snapshot])
+        if mixed is not None:
+            return mixed, 400
+
+        goal.links.append(GoalAccount(account_id=account.id,
+                                      start_amount=snapshot,
+                                      added_at=datetime.utcnow()))
+        svc.sync_links(goal)
+        attempted_direction = svc.direction(goal)
+        goal_id = goal.id
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception('GoalAccounts.post failed')
+            return {
+                'success': False,
+                'error': 'Could not add this account. An account can carry only '
+                         'one active goal in each direction.'
+                         + (_collision_report([account.id], attempted_direction,
+                                              exclude_goal_id=goal_id)
+                            or ' Archive the other goal first.'),
+            }, 400
+
+        return {'success': True, 'goal': _serialize(goal, svc),
+                'message': 'Account added to goal'}, 200
+
+
+@ns.route('/<int:id>/accounts/<int:account_id>')
+class GoalAccountDetail(Resource):
+    @ns.doc('remove_goal_account', security='Bearer')
+    @jwt_required()
+    def delete(self, id, account_id):
+        """Unlink an account, shrinking the denominator by ITS OWN snapshot.
+
+        The mirror of the add, and the reason the snapshot is stored per row
+        rather than as one total: without the per-account starts, the sum could
+        never be corrected downwards and removing an account would be
+        unimplementable at any price (spec §2.1).
+        """
+        caller = get_jwt_identity()
+        goal = _find_visible(id, caller)
+        if goal is None:
+            return {'success': False, 'error': 'Goal not found'}, 404
+        if not can_manage_owned(goal.user_id, caller, account_id=goal.account_id):
+            return {'success': False,
+                    'error': 'Only the goal owner or a household admin can change '
+                             'this goal'}, 403
+
+        link = next((l for l in goal.links if l.account_id == account_id), None)
+        if link is None:
+            return {'success': False,
+                    'error': 'That account is not linked to this goal'}, 404
+        # *** REMOVING THE LAST ONE IS NOT AN UNLINK, IT IS A CONVERSION. *** The
+        # goal would become manual with a denominator nobody typed, and a linked
+        # goal's honesty is the whole argument for linking (points are awarded for
+        # linked goals only). Archive it instead; the refusal says so.
+        if len(goal.links) == 1:
+            return {'success': False,
+                    'error': "A goal must keep at least one account. Archive the "
+                             'goal instead of unlinking its last account.'}, 400
+
+        svc = GoalService()
+        goal.links.remove(link)
+        svc.sync_links(goal)
+        db.session.commit()
+        return {'success': True, 'goal': _serialize(goal, svc),
+                'message': 'Account removed from goal'}, 200

@@ -151,6 +151,14 @@ class GoalInput(Schema):
     # handler: marshmallow cannot see the database, and a raw foreign key from a
     # client cannot be trusted by shape alone.
     account_id = fields.Int(allow_none=True)
+    # B12: several accounts, one goal. Accepted ALONGSIDE `account_id` and not
+    # instead of it -- both clients send the singular today, and a payload key a
+    # deployed client still writes cannot be removed in the same release that adds
+    # its replacement (D-99: deleting an affordance is not removing a capability;
+    # here the mirror, keeping the capability while the affordance moves).
+    # `account_id` remains the PRIMARY link and the handler derives it from this
+    # list when the list is what was sent.
+    account_ids = fields.List(fields.Int(), allow_none=True)
     target_amount = fields.Decimal(required=True, places=2)
     # DELIBERATELY NOT ACCEPTED FROM A CLIENT on create: `start_amount` is
     # snapshotted from `account.balance` by the server, and letting a client name it
