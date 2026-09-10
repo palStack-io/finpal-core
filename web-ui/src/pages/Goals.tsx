@@ -3,6 +3,8 @@ import { Archive, Loader2, Plus, Target, Trash2, Users } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney } from '../styles/money';
 import { goalFigures } from '../utils/goalFigures';
+import { goalTrackingLabel } from '../utils/goalTracking';
+import { GoalAccountsControl } from '../components/goals/GoalAccountsControl';
 import { goalService } from '../services/goalService';
 import { accountService, type Account } from '../services/accountService';
 import type { Goal, GoalContribution } from '../types/goal';
@@ -95,9 +97,15 @@ interface GoalRowProps {
   goal: Goal;
   onArchive: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
+  /** B12. Every account the caller can see; the server re-checks visibility. */
+  accounts: Account[];
+  /** Refetch, rather than patching local state: the server owns these figures. */
+  onAccountsChanged: () => void | Promise<void>;
 }
 
-const GoalRow: React.FC<GoalRowProps> = ({ goal, onArchive, onDelete }) => {
+const GoalRow: React.FC<GoalRowProps> = ({
+  goal, onArchive, onDelete, accounts, onAccountsChanged,
+}) => {
   const [contributions, setContributions] = useState<GoalContribution[] | null>(null);
   const [loadingContributions, setLoadingContributions] = useState(false);
   const barWidth = Math.min(100, Math.max(0, goal.progress * 100));
@@ -154,11 +162,12 @@ const GoalRow: React.FC<GoalRowProps> = ({ goal, onArchive, onDelete }) => {
             )}
           </div>
           <div style={mutedSmallStyle}>
-            {goal.account_name
-              // Named, because linking is what makes the figure trustworthy and the
-              // user should be able to see which balance is being read.
-              ? `Tracking ${goal.account_name}`
-              : 'Tracked by hand'}
+            {/* B12: NAMES every linked account, where the server's `account_name`
+                can only say "2 accounts" — it has to degrade, because a client
+                that has not migrated cannot be handed one card's name out of
+                three. `goalTrackingLabel` is duplicated in mobile and the two
+                case tables are identical on purpose; see its header. */}
+            {goalTrackingLabel(goal)}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -219,6 +228,17 @@ const GoalRow: React.FC<GoalRowProps> = ({ goal, onArchive, onDelete }) => {
 
       {goal.account_id !== null && (
         <div style={{ marginTop: 12 }}>
+          {/* B12. Only on an ACTIVE goal: an archived or achieved one has released
+              its accounts, and adding one back would silently make it hold them
+              again. Archiving is how a goal lets go. */}
+          {goal.status === 'active' && (
+            <GoalAccountsControl
+              goal={goal}
+              accounts={accounts}
+              onChanged={onAccountsChanged}
+            />
+          )}
+
           <button type="button" onClick={loadContributions} style={linkButtonStyle}>
             {contributions === null ? 'Who contributed?' : 'Hide contributions'}
           </button>
@@ -277,7 +297,7 @@ export const Goals: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
-  const [accountId, setAccountId] = useState<string>('');
+  const [accountIds, setAccountIds] = useState<number[]>([]);
   const [targetAmount, setTargetAmount] = useState('');
   const [scope, setScope] = useState<'personal' | 'household'>('personal');
   const [targetDate, setTargetDate] = useState('');
@@ -318,12 +338,19 @@ export const Goals: React.FC = () => {
       await goalService.createGoal({
         name,
         scope,
-        account_id: accountId === '' ? null : Number(accountId),
+        /*
+         * *** `account_ids`, AND AN EMPTY LIST MEANS "TRACKED BY HAND". *** The
+         * server treats [] as a manual goal rather than falling back to the
+         * singular `account_id`, so this is a positive statement and not an
+         * omission. The singular is not sent at all: a client that has migrated
+         * says what it means with one key.
+         */
+        account_ids: accountIds,
         target_amount: Number(targetAmount),
         target_date: targetDate === '' ? null : targetDate,
       });
       setShowForm(false);
-      setName(''); setAccountId(''); setTargetAmount(''); setTargetDate('');
+      setName(''); setAccountIds([]); setTargetAmount(''); setTargetDate('');
       setScope('personal');
       await load();
     } catch (err) {
@@ -383,20 +410,57 @@ export const Goals: React.FC = () => {
               />
             </div>
             <div>
-              <label htmlFor="goal-account" style={fieldLabelStyle}>Account</label>
-              <select
-                id="goal-account" className="fp-input" value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-              >
-                <option value="">Track by hand (no account)</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name}</option>
-                ))}
-              </select>
+              <span style={fieldLabelStyle}>Accounts</span>
+              {/* *** A CHECKBOX LIST, NOT `<select multiple>`. *** The native
+                  multi-select needs a modifier key nobody discovers, shows two
+                  rows by default, and has no accessible name per option. A goal
+                  spanning three cards is the case this feature exists for, so
+                  the control that expresses it has to be obvious. */}
+              {accounts.length === 0 ? (
+                <p className="fp-hint">
+                  You have no accounts yet, so this goal will be tracked by hand.
+                </p>
+              ) : (
+                <div
+                  role="group"
+                  aria-label="Accounts this goal tracks"
+                  style={{ display: 'grid', gap: 8 }}
+                >
+                  {accounts.map((account) => (
+                    <label
+                      key={account.id}
+                      htmlFor={`goal-account-${account.id}`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        id={`goal-account-${account.id}`}
+                        type="checkbox"
+                        checked={accountIds.includes(account.id)}
+                        onChange={(e) => setAccountIds((current) => (
+                          e.target.checked
+                            ? [...current, account.id]
+                            : current.filter((id) => id !== account.id)
+                        ))}
+                      />
+                      {account.name}
+                    </label>
+                  ))}
+                </div>
+              )}
               <p className="fp-hint">
-                A linked goal reads its progress from the balance. finPal takes a
-                snapshot of where you are starting from now, and it cannot be
-                changed later.
+                {/* *** THE ONE SENTENCE THAT MAKES THE FEATURE COMPREHENSIBLE. ***
+                    Several accounts, one percentage — and they must be on the
+                    same side of zero, which the server enforces and names.
+                    Unticking everything is a positive choice, not an omission. */}
+                Pick as many as you like — three cards under one payoff goal, or
+                two savings accounts under one fund. They must all be the same
+                kind: money you are paying down, or money you are building up.
+                finPal snapshots where each account starts from now, and that
+                snapshot never changes. Leave them all unticked to track this
+                goal by hand.
               </p>
             </div>
             <div>
@@ -462,7 +526,14 @@ export const Goals: React.FC = () => {
 
       <div style={{ display: 'grid', gap: 16 }}>
         {active.map((goal) => (
-          <GoalRow key={goal.id} goal={goal} onArchive={handleArchive} onDelete={handleDelete} />
+          <GoalRow
+            key={goal.id}
+            goal={goal}
+            onArchive={handleArchive}
+            onDelete={handleDelete}
+            accounts={accounts}
+            onAccountsChanged={load}
+          />
         ))}
       </div>
 
@@ -473,7 +544,14 @@ export const Goals: React.FC = () => {
           </h2>
           <div style={{ display: 'grid', gap: 16 }}>
             {archived.map((goal) => (
-              <GoalRow key={goal.id} goal={goal} onArchive={handleArchive} onDelete={handleDelete} />
+              <GoalRow
+                key={goal.id}
+                goal={goal}
+                onArchive={handleArchive}
+                onDelete={handleDelete}
+                accounts={accounts}
+                onAccountsChanged={load}
+              />
             ))}
           </div>
         </div>

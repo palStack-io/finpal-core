@@ -26,6 +26,14 @@
 export type GoalKind = 'payoff' | 'savings' | 'custom';
 export type GoalScope = 'personal' | 'household';
 export type GoalStatus = 'active' | 'achieved' | 'archived';
+
+/**
+ * Re-exported from the shared presentation helper, which owns the shape because
+ * it is byte-identical in mobile and must stay importable there without a
+ * `types/` folder. See `utils/goalTracking.ts`.
+ */
+export type { GoalAccountLink } from '../utils/goalTracking';
+import type { GoalAccountLink } from '../utils/goalTracking';
 export type GoalDirection = 'accumulate' | 'paydown';
 
 export interface Goal {
@@ -34,9 +42,26 @@ export interface Goal {
   name: string;
   kind: GoalKind;
   scope: GoalScope;
-  /** null for a manual goal. */
+  /**
+   * The PRIMARY link, maintained by the server, and never null for a linked
+   * goal. Kept beside `accounts` while both clients migrate; it is NOT the
+   * whole answer for a goal that spans several accounts.
+   */
   account_id: number | null;
+  /**
+   * *** DESCRIBES THE SET, NOT THE PRIMARY: "2 accounts" for a goal spanning
+   * two. *** It exists for a client that cannot read `accounts` — naming one
+   * card out of three would be false. Prefer `goalTrackingLabel`, which names
+   * them when it can and falls back to this when it cannot.
+   */
   account_name: string | null;
+  /**
+   * B12. *** OPTIONAL BECAUSE A NEW BUNDLE REACHES AN OLDER BACKEND: *** nginx
+   * serves new assets before the backend restarts, and a self-hoster can update
+   * `web-ui` alone. Read it through `goalTrackingLabel` / `canUnlinkAccounts`
+   * rather than mapping it directly.
+   */
+  accounts?: GoalAccountLink[];
   target_amount: number;
   /**
    * Snapshotted by the SERVER when the goal was created and never recomputed.
@@ -78,7 +103,15 @@ export interface CreateGoalData {
   name: string;
   kind?: GoalKind;
   scope?: GoalScope;
+  /** Single-account create. Kept for callers that have not migrated. */
   account_id?: number | null;
+  /**
+   * B12. Sent INSTEAD of `account_id`; the server prefers this when both are
+   * present, and an EMPTY list means a manual goal rather than "fall back to
+   * the singular". Every account must be on the same side of zero — the server
+   * refuses a card-plus-savings set and its message names both sides.
+   */
+  account_ids?: number[];
   target_amount: number;
   /** Manual goals only; ignored for a linked goal. */
   start_amount?: number;
