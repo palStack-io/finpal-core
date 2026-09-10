@@ -21,6 +21,53 @@ export interface Budget {
   updated_at?: string;
 }
 
+/**
+ * *** THE SERVER OWNS EVERY FIGURE HERE (D-101). *** The page renders these
+ * numbers; it must not re-sum `budgets` to derive a group subtotal or a total,
+ * because two clients summing independently is two chances to disagree with
+ * each other and with the database.
+ */
+export type SpendingTypeValue = 'fixed' | 'flexible' | 'non_monthly';
+
+export type BudgetRow = Budget & { spent: number; remaining: number; percentage: number };
+
+export interface SpendingGroup {
+  spending_type: SpendingTypeValue;
+  /** 'Fixed' | 'Flexible' | 'Non-Monthly' -- for a person, not for the database. */
+  label: string;
+  planned: number;
+  actual: number;
+  /** Negative when overspent. NEVER clamped: a 0 the user acts on is a lie. */
+  remaining: number;
+  budgets: BudgetRow[];
+}
+
+export interface UnsortedSection {
+  /** Categories money has actually left through, not every unclassified one. */
+  count: number;
+  actual: number;
+  categories: Array<{ id: number; name: string; actual: number }>;
+  budget_count: number;
+  budgets: BudgetRow[];
+}
+
+export interface BudgetOverview {
+  total_budget: number;
+  total_spent: number;
+  total_remaining: number;
+  percentage_used: number;
+  budget_count: number;
+  budgets: BudgetRow[];
+  /** Always three, always in order, present even when empty. */
+  groups: SpendingGroup[];
+  unsorted: UnsortedSection;
+  totals: { planned: number; actual: number; remaining: number };
+  /** null means "nothing recorded this month" -- it is NOT zero. */
+  income: number | null;
+  /** null whenever `income` is null. Negative when over-committed. */
+  left_to_budget: number | null;
+}
+
 export interface CreateBudgetData {
   name: string;
   amount: number;
@@ -120,25 +167,16 @@ export const budgetService = {
   /**
    * Get budget overview for all budgets
    */
-  async getBudgetOverview(): Promise<{
-    total_budget: number;
-    total_spent: number;
-    total_remaining: number;
-    budgets: Array<Budget & { spent: number; remaining: number; percentage: number }>;
-  }> {
-    const response = await api.get<{
-      success: boolean;
-      total_budget: number;
-      total_spent: number;
-      total_remaining: number;
-      budgets: Array<Budget & { spent: number; remaining: number; percentage: number }>;
-    }>('/api/v1/budgets/overview');
-    return {
-      total_budget: response.data.total_budget,
-      total_spent: response.data.total_spent,
-      total_remaining: response.data.total_remaining,
-      budgets: response.data.budgets,
-    };
+  async getBudgetOverview(): Promise<BudgetOverview> {
+    const response = await api.get<BudgetOverview & { success: boolean }>(
+      '/api/v1/budgets/overview');
+    // *** RETURNED WHOLE, NOT FIELD BY FIELD. *** This used to rebuild the
+    // object key by key, so every field the server added was silently dropped
+    // here and the page could never see it however correct the payload was.
+    // `groups`, `unsorted`, `totals`, `income` and `left_to_budget` would all
+    // have vanished at this line.
+    const { success: _ignored, ...overview } = response.data;
+    return overview;
   },
 };
 
