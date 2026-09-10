@@ -25,6 +25,7 @@ from src.extensions import db as _db
 from src.models.account import Account
 from src.models.associations import account_owners
 from src.models.goal import Goal
+from src.models.goal_account import GoalAccount
 from src.models.transaction import Expense
 from src.models.user import User
 from src.services.demo.service import DemoService
@@ -159,6 +160,15 @@ def test_the_BACKFILL_reaches_a_demo_that_already_existed(demo_mode):
     DemoService.seed_demo_accounts()
 
     # Roll back to the pre-change state, leaving everything else intact.
+    #
+    # `goal_accounts` goes FIRST and explicitly: `Goal.query.delete()` is a bulk
+    # delete, so it bypasses the ORM cascade and would leave link rows pointing at
+    # goals that no longer exist. On SQLite those orphans survive (foreign keys are
+    # off by default) and then collide with the re-seed under the unique index; on
+    # Postgres the bulk delete itself is refused. Either way the fixture would be
+    # describing a state no database can hold, and a pre-B12 database holds no
+    # link rows at all -- which is the state this test exists to simulate.
+    _db.session.execute(_db.delete(GoalAccount))
     Goal.query.delete()
     _db.session.execute(account_owners.delete())
     for card in Account.query.filter_by(type='credit').all():
@@ -171,6 +181,16 @@ def test_the_BACKFILL_reaches_a_demo_that_already_existed(demo_mode):
 
     assert Goal.query.filter_by(user_id='demo1@finpal.demo').count() > 0, (
         'the backfill did not reach an existing demo — this is #158 again')
+    # B12, and the same trap one layer down: the goals could come back with no
+    # `goal_accounts` rows at all and every assertion above would still pass,
+    # because a link-less goal reads its balance through the legacy fallback.
+    # That is the half-migrated state a user finds rather than a test.
+    fund = Goal.query.filter_by(user_id='demo1@finpal.demo',
+                                name='Emergency fund').first()
+    assert fund is not None and len(fund.links) >= 2, (
+        'the demo cannot show a multi-account goal, so nobody can evaluate one '
+        f'(D-177): {fund and [l.account_id for l in fund.links]}')
+    assert fund.start_amount == sum(l.start_amount for l in fund.links)
     assert _db.session.execute(_db.select(account_owners.c.user_id)).first() is not None
     assert all(c.credit_limit is not None
                for c in Account.query.filter_by(type='credit').all())

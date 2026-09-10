@@ -98,3 +98,80 @@ def test_the_index_is_accepted_and_enforced_by_postgres(app):
         count = conn.execute(text('SELECT count(*) FROM goals_pg_check')).scalar()
         conn.execute(text('DROP TABLE goals_pg_check'))
     assert count == 6
+
+
+def test_the_goal_accounts_index_is_accepted_and_NULLS_DO_NOT_COLLIDE(app):
+    """B12's unique index, on the engine that has to hold it.
+
+    *** THE WHOLE ENCODING RESTS ON A CLAIM ABOUT NULLs, AND THAT CLAIM IS
+    ENGINE BEHAVIOUR, NOT SQL THE SUITE CAN READ BACK. *** `active_direction` is
+    'paydown'/'accumulate' while the goal is active and NULL otherwise, and
+    "archiving releases the account" is nothing more than the fact that NULLs do
+    not collide in a unique index. If Postgres treated them as equal, the FIRST
+    archived goal on an account would forbid a second one for ever -- with no
+    error at write time to explain it, because the refusal lands on the next
+    user's create. SQLite agrees with Postgres here; B5 is the row about assuming
+    they agree and being wrong, so it is asserted rather than assumed.
+
+    Rendered from the real model under a scratch name, so it checks the DDL the
+    deploy emits rather than a hand-copy that can drift.
+    """
+    from src.models.goal_account import GoalAccount
+
+    engine = create_engine(PG_URL)
+    index = next(i for i in GoalAccount.__table__.indexes
+                 if i.name == 'uq_goal_account_active_direction')
+
+    with engine.begin() as conn:
+        conn.execute(text('DROP TABLE IF EXISTS goal_accounts_pg_check'))
+    ddl_table = str(CreateTable(GoalAccount.__table__).compile(engine)).replace(
+        'CREATE TABLE goal_accounts', 'CREATE TABLE goal_accounts_pg_check', 1)
+    lines = [line for line in ddl_table.splitlines()
+             if 'FOREIGN KEY' not in line and 'CONSTRAINT fk_' not in line]
+    for i in range(len(lines) - 1, -1, -1):
+        if lines[i].strip() in ('', ')'):
+            continue
+        lines[i] = lines[i].rstrip().rstrip(',')
+        break
+    ddl_table = '\n'.join(lines)
+    ddl_index = str(CreateIndex(index).compile(engine)).replace(
+        ' ON goal_accounts ', ' ON goal_accounts_pg_check ', 1)
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl_table))
+        conn.execute(text(ddl_index))
+
+    def _insert(conn, goal_id, account_id, direction):
+        conn.execute(text(
+            'INSERT INTO goal_accounts_pg_check '
+            '(goal_id, account_id, start_amount, active_direction) '
+            'VALUES (:g, :a, 0, :d)'),
+            {'g': goal_id, 'a': account_id, 'd': direction})
+
+    with engine.begin() as conn:
+        _insert(conn, 1, 10, 'paydown')
+        _insert(conn, 2, 10, 'accumulate')   # opposite direction: allowed
+        # *** THE CLAIM. *** Three released links on ONE account, which is what an
+        # account carried through three finished goals looks like.
+        _insert(conn, 3, 10, None)
+        _insert(conn, 4, 10, None)
+        _insert(conn, 5, 10, None)
+        # A goal may span several accounts.
+        _insert(conn, 1, 11, 'paydown')
+        _insert(conn, 1, 12, 'paydown')
+
+    with pytest.raises(IntegrityError):
+        with engine.begin() as conn:
+            _insert(conn, 6, 10, 'paydown')  # same account, same direction
+
+    with engine.begin() as conn:
+        count = conn.execute(
+            text('SELECT count(*) FROM goal_accounts_pg_check')).scalar()
+        released = conn.execute(text(
+            'SELECT count(*) FROM goal_accounts_pg_check '
+            'WHERE account_id = 10 AND active_direction IS NULL')).scalar()
+        conn.execute(text('DROP TABLE goal_accounts_pg_check'))
+    assert count == 7
+    assert released == 3, (
+        'Postgres collapsed the released links, so archiving would lock an '
+        'account for ever and the whole one-column encoding is wrong')

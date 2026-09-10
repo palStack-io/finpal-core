@@ -361,6 +361,25 @@ def create_app(config_name=None):
                     'Schema reconcile could not run; if the app now fails on a missing '
                     'column, run `python scripts/schema_drift.py` and apply what it prints')
 
+            # B12: `create_all()` above created `goal_accounts` if it was missing --
+            # a new TABLE is created, unlike a new column -- but it cannot put a row
+            # in it. Every goal that already names an account needs a link or it
+            # cannot gain a second account and ships an empty `accounts: []`.
+            #
+            # CONDITION-KEYED and idempotent (D-178): the condition is "names an
+            # account, has no link", so this corrects instances that were already
+            # running when B12 shipped instead of skipping them, which is the exact
+            # failure D-178 records. Runs here, inside the lock and beside the schema
+            # reconcile, because both are "make an existing database match the code".
+            try:
+                from src.services.goal.backfill import backfill_goal_accounts
+                backfill_goal_accounts()
+            except Exception:
+                app.logger.exception(
+                    'Goal account backfill could not run; goals still read their '
+                    'balances through the legacy account_id path, but multi-account '
+                    'goals will not work until this succeeds')
+
             # Module startup hooks (seeding, cache warming, etc.)
             try:
                 from src.modules.registry import module_registry

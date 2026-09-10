@@ -336,7 +336,16 @@ class AccountDetail(Resource):
         success, message = svc.delete_account(id, current_user_id)
 
         if not success:
-            status = 404 if 'not found' in message.lower() else 403
+            # Three outcomes, not two. "A goal is measuring progress against this
+            # account" is neither a missing row nor a permission problem, and
+            # answering 403 to it tells the user to ask an admin for something no
+            # admin can grant.
+            if 'not found' in message.lower():
+                status = 404
+            elif 'permission' in message.lower():
+                status = 403
+            else:
+                status = 400
             return {'success': False, 'error': message}, status
 
         return {'success': True, 'message': 'Account deleted successfully'}, 200

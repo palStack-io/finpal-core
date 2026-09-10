@@ -15,6 +15,94 @@ from src.extensions import db
 class GoalService:
     """Progress, direction, and the achieved stamp."""
 
+    # ---------------------------------------------------------------- B12 ----
+    # A goal may read SEVERAL accounts (`goal_accounts`), and three things below
+    # changed shape for it. They are grouped here rather than scattered so the
+    # coupling between them is visible:
+    #
+    #   * `sync_links` is the ONLY writer of `goal_accounts.active_direction`,
+    #     of `goals.start_amount` on a linked goal, and of `goals.account_id`.
+    #   * `current_amount` sums the linked balances.
+    #   * `mixed_direction` refuses a set whose accounts disagree in sign.
+    #
+    # *** THE THIRD IS WHAT MAKES THE FIRST TWO SAFE, AND THAT IS NOT OBVIOUS.
+    # *** Summing snapshots and summing balances is only honest while every
+    # account in the set is on the same side of zero. A card at -1,650 and a
+    # savings account at +4,000 net to +2,350, and the sum then presents a goal
+    # that is half debt as an accumulation -- one figure, technically computed
+    # correctly, describing nothing that happened. The sign check is per ACCOUNT
+    # and deliberately not a check on the summed start, which would pass that
+    # exact pair. Do not relax one of these without the other.
+
+    def sync_links(self, goal):
+        """Recompute everything derived from the link set. THE ONE WRITER.
+
+        Called on create, on update, on archive, on add- and remove-account, and
+        from `stamp_if_achieved` -- every path that can change a goal's status,
+        its amounts or its accounts. It does not commit; the caller does, in the
+        same transaction as whatever it changed.
+
+        Three derived values, and each is a place a stale copy could sit:
+
+        **`goal_accounts.active_direction`** -- 'paydown'/'accumulate' while the
+        goal is active, NULL otherwise. The unique index on
+        `(account_id, active_direction)` is the double-counting rule, and NULLs
+        do not collide, so writing NULL here is literally what "archiving
+        releases the account" means. A stale value does not raise; it silently
+        constrains the wrong pairs. That is why there is exactly one writer.
+
+        **`goals.start_amount`** -- kept equal to the SUM of the per-row
+        snapshots. The per-row snapshots are the immutable fact; this column is a
+        maintained total of them, which is what lets `progress`, `validate` and
+        `DIRECTION_SQL` stay exactly as they were. It is not a restatement of the
+        denominator by a client: each addend was snapshotted by the server at the
+        moment its account joined, and none of them ever changes.
+
+        **`goals.account_id`** -- the PRIMARY link, the first account added.
+        *** IT IS NEVER NULL FOR A LINKED GOAL, AND THAT IS A DECISION, NOT AN
+        ACCIDENT. *** Leaving it NULL for a multi-account goal would send every
+        such goal down the manual branch of `current_amount` (reading 0%), render
+        `account_name: null` -- "Tracked by hand" -- on any client that has not
+        migrated, and make the old `goals` index inert while its test went on
+        passing. See the plan's "What `goals.account_id` holds".
+        """
+        links = sorted(goal.links or [],
+                       key=lambda link: (link.added_at or datetime.min,
+                                         link.account_id))
+        if links:
+            goal.start_amount = sum(link.start_amount for link in links)
+            goal.account_id = links[0].account_id
+        # Computed AFTER `start_amount` is restated, because `direction` reads it.
+        direction = self.direction(goal) if goal.status == 'active' else None
+        for link in links:
+            link.active_direction = direction
+
+    @staticmethod
+    def linked_account_ids(goal):
+        """Every account this goal reads. [] for a manual goal.
+
+        The single-account fallback is kept for the reason `current_amount`'s is:
+        between the table appearing at boot and the backfill running, an existing
+        goal has an `account_id` and no link.
+        """
+        if goal.links:
+            return [link.account_id for link in goal.links]
+        if goal.account_id is not None:
+            return [goal.account_id]
+        return []
+
+    @staticmethod
+    def mixed_direction(snapshots):
+        """True when a set of snapshot balances spans both sides of zero.
+
+        Per ACCOUNT, never on the sum -- see the block comment above. A negative
+        snapshot is a debt being paid down; zero and above accumulate, and a
+        brand-new savings account at exactly 0.00 must be allowed to join a
+        savings goal, so zero sits with the positives.
+        """
+        values = [Decimal(str(s)) for s in snapshots]
+        return any(v < 0 for v in values) and any(v >= 0 for v in values)
+
     def current_amount(self, goal):
         """The goal's current figure: computed if linked, typed if not.
 
@@ -27,6 +115,15 @@ class GoalService:
         "no progress yet" -- rather than None, which would make `progress` raise a
         TypeError on a goal the API had just created.
         """
+        # B12: the linked set, when there is one. `or 0` because a balance is
+        # nullable and one None would make the whole sum raise -- a goal spanning
+        # three cards is not uncomputable because one of them has never synced.
+        if goal.links:
+            return sum((link.account.balance or 0) for link in goal.links)
+        # *** THE SINGLE-ACCOUNT PATH IS KEPT AND IS NOT DEAD CODE. *** Between
+        # `create_all()` building `goal_accounts` at boot and the backfill filling
+        # it, every existing goal has an `account_id` and no link, and this branch
+        # is what stops that window reading them as manual goals stuck at 0%.
         if goal.account_id is not None:
             return goal.account.balance
         if goal.current_manual is None:
@@ -101,6 +198,12 @@ class GoalService:
         if self.progress(goal) >= 1:
             goal.status = 'achieved'
             goal.achieved_at = datetime.utcnow()
+            # B12: an achieved goal RELEASES its accounts, which is the same rule
+            # archiving has always followed -- and it is now expressed by writing
+            # NULL into every link's `active_direction`. Forgetting this call is
+            # not a cosmetic miss: the goal would keep holding every one of its
+            # accounts against a new goal in the same direction, forever.
+            self.sync_links(goal)
             db.session.commit()
             return True
         return False
@@ -132,18 +235,27 @@ class GoalService:
         SimpleFin row credits the importer rather than the payer. The row stays and
         the claim is qualified. Flagging everyone because one row was imported would
         train the user to ignore the label, which is worse than not showing it.
+
+        *** B12: OVER EVERY LINKED ACCOUNT, AND THE SPEC SAID TO VERIFY THIS RATHER
+        THAN ASSUME IT WIDENED FOR FREE. *** It does not widen for free: the filter
+        names `account_id` and `destination_account_id` explicitly, so a two-account
+        goal left as it was would show who contributed to ONE account underneath a
+        total covering BOTH. That is not a rounding error in a report -- it is one
+        partner's money going unreported beside a figure that counts it, which is
+        the same harm `imported` exists to prevent, reached from the other side.
         """
         from src.models.transaction import Expense
         from src.models.user import User
         from src.utils.household import display_name
 
-        if goal.account_id is None:
+        account_ids = self.linked_account_ids(goal)
+        if not account_ids:
             return []
 
         incoming = db.or_(
-            db.and_(Expense.account_id == goal.account_id,
+            db.and_(Expense.account_id.in_(account_ids),
                     Expense.transaction_type == 'income'),
-            db.and_(Expense.destination_account_id == goal.account_id,
+            db.and_(Expense.destination_account_id.in_(account_ids),
                     Expense.transaction_type == 'transfer'),
         )
         rows = db.session.execute(

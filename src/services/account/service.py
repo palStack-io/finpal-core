@@ -208,6 +208,10 @@ class AccountService:
         if not can_manage_owned(account.user_id, user_id, account_id=account.id):
             return False, 'You do not have permission to delete this account'
 
+        blocked = self._detach_goals_or_refuse(account)
+        if blocked:
+            return False, blocked
+
         try:
             self.repo.nullify_account_on_transactions(account_id)
             self.repo.delete(account)
@@ -217,6 +221,66 @@ class AccountService:
             db.session.rollback()
             current_app.logger.error(f"Error deleting account: {str(e)}")
             return False, 'Error deleting account'
+
+    @staticmethod
+    def _detach_goals_or_refuse(account):
+        """Returns a refusal message, or '' after detaching what can be detached.
+
+        *** DELETING AN ACCOUNT USED TO SILENTLY RESET A LINKED GOAL TO 0%, AND
+        THAT IS PROVEN ON `main`, NOT INFERRED. *** `Goal.account`'s relationship
+        has no delete cascade, so SQLAlchemy de-associates instead: `account_id`
+        goes NULL, the goal becomes a MANUAL goal, `current_manual` is NULL, and
+        `current_amount` falls back to `start_amount` -- so a payoff goal at 60%
+        reads **0%** while the API answers *"Account deleted successfully"*.
+        Measured against `origin/main` (`9aef753`, the deployed commit): progress
+        0.6001 -> 0.0000, `account_id` 1 -> None. Recorded as D-181.
+
+        B12 makes it worse rather than better if left alone. A goal spanning three
+        cards would lose one link to the join table's cascade, keep that card's
+        snapshot in `goals.start_amount`, and go on computing a percentage against
+        a denominator that includes an account that no longer exists -- a figure
+        computed correctly and describing nothing, which is this feature's whole
+        failure mode.
+
+        So, two cases, and they differ because B12 gave the goal somewhere to
+        stand:
+
+        * **The goal reads other accounts too** -- unlink this one and recompute
+          through `sync_links`, exactly as `DELETE /goals/<id>/accounts` does. The
+          denominator shrinks by this account's own snapshot, which is honest, and
+          the goal survives.
+        * **This is the goal's only account** -- refuse, and name the goal. There
+          is no honest figure left: its denominator was snapshotted from a balance
+          that is about to stop existing, and turning it into a manual goal is a
+          conversion the user did not ask for. Same rule, and the same wording, as
+          refusing to unlink a goal's last account.
+        """
+        from src.models.goal import Goal
+        from src.models.goal_account import GoalAccount
+        from src.services.goal.service import GoalService
+
+        linked_ids = {row[0] for row in db.session.execute(
+            db.select(GoalAccount.goal_id)
+              .where(GoalAccount.account_id == account.id)).all()}
+        # The pre-backfill window: a goal names this account and has no link row.
+        legacy_ids = {g.id for g in Goal.query.filter(
+            Goal.account_id == account.id).all()}
+        goals = (Goal.query.filter(Goal.id.in_(linked_ids | legacy_ids)).all()
+                 if (linked_ids | legacy_ids) else [])
+
+        sole = [g for g in goals if len(g.links) <= 1]
+        if sole:
+            names = ', '.join(f'\u201c{g.name}\u201d' for g in sole)
+            return (f'{account.name} is the only account behind {names}. '
+                    'Archive the goal first, or the goal would be left measuring '
+                    'progress against a balance that no longer exists.')
+
+        svc = GoalService()
+        for goal in goals:
+            link = next(l for l in goal.links if l.account_id == account.id)
+            goal.links.remove(link)
+            svc.sync_links(goal)
+        return ''
 
     def calculate_financial_summary(self, user_id, user_currency_code=None):
         """

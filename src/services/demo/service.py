@@ -257,7 +257,14 @@ class DemoService:
         if persona == 'Personal budgeter':
             accounts_config = [
                 {'name': 'Primary Checking', 'type': 'checking', 'balance': 5000.00, 'currency': 'USD'},
-                {'name': 'Visa Credit Card', 'type': 'credit', 'balance': -800.00, 'currency': 'USD'}
+                {'name': 'Visa Credit Card', 'type': 'credit', 'balance': -800.00, 'currency': 'USD'},
+                # B12. The tour persona needs a SECOND account on the same side of
+                # zero, or a goal spanning several accounts has nowhere to be
+                # demonstrated -- and a feature the demo cannot show is one nobody
+                # can evaluate (D-77, D-177). Savings rather than a second card
+                # because it is the owner's own example: *"emergency fund but
+                # multiple accounts for it"*.
+                {'name': 'High-Yield Savings', 'type': 'savings', 'balance': 3000.00, 'currency': 'USD'},
             ]
         elif persona == 'International user':
             accounts_config = [
@@ -951,6 +958,7 @@ class DemoService:
                 logger.info('Backfilling demo goals for %s', user.id)
                 DemoService._seed_demo_goals(user)
         DemoService._backfill_non_tour_household_goals()
+        DemoService._backfill_multi_account_demo_goal()
         DemoService._seed_demo_co_owners()
 
         for group in Group.query.all():
@@ -998,6 +1006,70 @@ class DemoService:
             goal.name = f'{first_name}’s savings target'
             logger.info('Demoted a duplicate household demo goal owned by %s',
                         goal.user_id)
+
+    @staticmethod
+    def _backfill_multi_account_demo_goal():
+        """Give the DEPLOYED demo the second account its Emergency fund needs (B12).
+
+        *** A SEED CHANGE IS NOT SHIPPED UNTIL A CONDITION-KEYED CORRECTION
+        EXISTS FOR THE ROWS THE OLD VERSION WROTE. THIS HAS NOW GONE WRONG THREE
+        TIMES IN ONE DAY (D-177, D-178). *** `_create_demo_accounts` and
+        `_seed_demo_goals` both skip a persona that already has rows, so adding
+        `High-Yield Savings` to the config and a second link to the goal fixes a
+        FRESH install and reaches the live demo nowhere at all. The multi-account
+        feature would then ship to a demo that cannot show it, which is the exact
+        failure D-177 records.
+
+        Two conditions, each checkable and self-correcting, neither a version
+        marker: *the tour persona has no savings account*, and *its Emergency
+        fund reads fewer than two accounts*.
+
+        *** THE TARGET MOVES, AND THAT IS ALLOWED HERE FOR A REASON THAT DOES NOT
+        GENERALISE. *** Adding an account extends the denominator honestly, so
+        leaving the old $10,000 target would jump the bar from 37.5% to 70.6% --
+        true, and a worse demo. These are FIXTURE rows in a public sandbox, not a
+        user's goal being restated behind their back; the API still refuses to
+        move a real user's `start_amount`, and nothing here goes through it.
+        """
+        from src.models.goal_account import GoalAccount
+        from src.services.goal.service import GoalService
+
+        user = User.query.filter_by(id='demo1@finpal.demo').first()
+        if user is None:
+            return
+
+        savings = Account.query.filter_by(user_id=user.id,
+                                          type='savings').first()
+        if savings is None:
+            savings = Account(user_id=user.id, name='High-Yield Savings',
+                              type='savings', balance=3000.00,
+                              currency_code='USD')
+            db.session.add(savings)
+            db.session.flush()
+            logger.info('Backfilled a savings account for the demo tour persona '
+                        'so a multi-account goal has somewhere to live (B12)')
+
+        goal = Goal.query.filter_by(user_id=user.id,
+                                    name='Emergency fund').first()
+        if goal is None or len(goal.links) >= 2:
+            return
+        if any(link.account_id == savings.id for link in goal.links):
+            return
+
+        pots = [link.account for link in goal.links] + [savings]
+        goal.links.append(GoalAccount(
+            account_id=savings.id,
+            # 0.4x the balance, matching how every other demo snapshot is built:
+            # a plausible figure from four months ago, not today's balance, so the
+            # bar shows a legible fraction exactly as a real snapshot would.
+            start_amount=(Decimal(savings.balance or 0)
+                          * Decimal('0.4')).quantize(Decimal('1')),
+            added_at=datetime.utcnow()))
+        goal.target_amount = (sum(Decimal(p.balance or 0) for p in pots)
+                              * 2).quantize(Decimal('1'))
+        GoalService().sync_links(goal)
+        logger.info('Backfilled the demo Emergency fund to span %d accounts (B12)',
+                    len(goal.links))
 
     @staticmethod
     def _create_starter_portfolio(user):
@@ -1111,18 +1183,12 @@ class DemoService:
                 balance = Decimal(checking.balance or 0)
                 planned.append(dict(
                     name=f'{user.name.split()[0]}’s savings target', kind='savings',
-                    scope='personal', account=checking,
-                    start_amount=(balance * Decimal('0.5')).quantize(Decimal('1')),
+                    scope='personal',
+                    links=[(checking,
+                            (balance * Decimal('0.5')).quantize(Decimal('1')))],
                     target_amount=(balance * 2).quantize(Decimal('1')),
                 ))
-            for spec in planned:
-                account = spec.pop('account')
-                db.session.add(Goal(
-                    user_id=user.id, account_id=account.id if account else None,
-                    currency_code=(account.currency_code if account else currency),
-                    start_date=today - timedelta(days=120),
-                    target_date=today + timedelta(days=240), status='active', **spec))
-            db.session.flush()
+            DemoService._add_planned_goals(user, planned, currency, today)
             return
 
         if credit is not None:
@@ -1131,28 +1197,43 @@ class DemoService:
             # (-800 - -1200) / (0 - -1200) = 33%.
             planned.append(dict(
                 name=f'Pay off the {credit.name}', kind='payoff', scope='personal',
-                account=credit,
-                start_amount=Decimal(abs(credit.balance or 0)) * -2 - Decimal('50'),
+                links=[(credit,
+                        Decimal(abs(credit.balance or 0)) * -2 - Decimal('50'))],
                 target_amount=Decimal('0.00'),
             ))
 
         if checking is not None:
             # Household, and on the account that is co-owned below — so this is the
             # joint goal, and its contribution breakdown has two payers.
-            # (5000 - 2000) / (10000 - 2000) = 37.5%.
-            balance = Decimal(checking.balance or 0)
+            #
+            # *** AND IT IS THE B12 CASE: TWO ACCOUNTS, ONE PERCENTAGE. *** With
+            # the savings account it runs (8000 - 3200) / (16000 - 3200) = 37.5%,
+            # which is deliberately the SAME legible fraction the single-account
+            # version showed. A demo whose only multi-account goal also changed
+            # its number would make the two changes indistinguishable to anyone
+            # comparing screenshots.
+            #
+            # Both accounts are on the same side of zero, which is not a
+            # coincidence to be relied on: the API refuses a mixed set, and a seed
+            # that writes a row the API would refuse is a fixture describing a
+            # product that does not exist (D-107's shape).
+            savings = Account.query.filter_by(user_id=user.id,
+                                              type='savings').first()
+            pots = [checking] + ([savings] if savings is not None else [])
             planned.append(dict(
                 name='Emergency fund', kind='savings', scope='household',
-                account=checking,
-                start_amount=(balance * Decimal('0.4')).quantize(Decimal('1')),
-                target_amount=(balance * 2).quantize(Decimal('1')),
+                links=[(pot, (Decimal(pot.balance or 0)
+                              * Decimal('0.4')).quantize(Decimal('1')))
+                       for pot in pots],
+                target_amount=(sum(Decimal(pot.balance or 0) for pot in pots)
+                               * 2).quantize(Decimal('1')),
             ))
 
         # Manual, in progress. Deliberately unlinked: the page says "Tracked by
         # hand" for these and offers no contribution breakdown, and that branch
         # needs a case too.
         planned.append(dict(
-            name='New laptop', kind='savings', scope='personal', account=None,
+            name='New laptop', kind='savings', scope='personal', links=[],
             start_amount=Decimal('0.00'), target_amount=Decimal('2000.00'),
             current_manual=Decimal('650.00'),
         ))
@@ -1161,18 +1242,44 @@ class DemoService:
         # than left for `stamp_if_achieved` to do on first read, so the demo looks
         # the same to the first visitor as to the hundredth.
         planned.append(dict(
-            name='Holiday fund', kind='savings', scope='personal', account=None,
+            name='Holiday fund', kind='savings', scope='personal', links=[],
             start_amount=Decimal('0.00'), target_amount=Decimal('500.00'),
             current_manual=Decimal('500.00'), status='achieved',
         ))
 
+        DemoService._add_planned_goals(user, planned, currency, today)
+        logger.info('Seeded %d demo goals for %s', len(planned), user.id)
+
+    @staticmethod
+    def _add_planned_goals(user, planned, currency, today):
+        """Write the planned goals AND their `goal_accounts` links (B12).
+
+        *** THE LINKS ARE WRITTEN HERE AND NOT LEFT TO THE BOOT BACKFILL. ***
+        `backfill_goal_accounts` runs before the demo seeder in `create_app`, so a
+        FRESH install seeded after it would carry goals with no links until the
+        next restart -- goals that read correctly through the legacy fallback and
+        cannot gain a second account, which is precisely the half-migrated state
+        that gets discovered by a user rather than by a test.
+
+        Everything derived goes through `GoalService.sync_links`, the one writer:
+        `goals.start_amount` as the sum of the snapshots, `goals.account_id` as the
+        primary, and each link's `active_direction`. A seeder that wrote those
+        three by hand would be a second writer of a denormalised column, which is
+        the drift the single-writer rule exists to prevent.
+        """
+        from src.models.goal_account import GoalAccount
+        from src.services.goal.service import GoalService
+
+        svc = GoalService()
+        base = datetime.utcnow()
         for spec in planned:
-            account = spec.pop('account')
+            links = spec.pop('links', [])
             status = spec.pop('status', 'active')
+            primary = links[0][0] if links else None
             goal = Goal(
                 user_id=user.id,
-                account_id=account.id if account is not None else None,
-                currency_code=(account.currency_code if account is not None
+                account_id=primary.id if primary is not None else None,
+                currency_code=(primary.currency_code if primary is not None
                                else currency),
                 start_date=today - timedelta(days=120),
                 target_date=today + timedelta(days=240),
@@ -1180,9 +1287,15 @@ class DemoService:
                 achieved_at=datetime.utcnow() if status == 'achieved' else None,
                 **spec,
             )
+            for offset, (account, snapshot) in enumerate(links):
+                # `added_at` is what decides the primary, so it is set explicitly
+                # and in list order rather than left to collide on one timestamp.
+                goal.links.append(GoalAccount(
+                    account_id=account.id, start_amount=snapshot,
+                    added_at=base + timedelta(seconds=offset)))
+            svc.sync_links(goal)
             db.session.add(goal)
         db.session.flush()
-        logger.info('Seeded %d demo goals for %s', len(planned), user.id)
 
     @staticmethod
     def _seed_demo_co_owners():
