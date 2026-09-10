@@ -68,15 +68,28 @@ beforeEach(() => {
     http.get('*/api/v1/goals', () => HttpResponse.json({
       success: true,
       goals: [
+        // *** GOAL 1 SPANS TWO CARDS (B12), AND ITS `account_name` IS THE
+        // SERVER'S DEGRADED "2 accounts". *** A single-account fixture would
+        // walk the page without ever rendering the longest string this page can
+        // produce, which at 390px is the one at risk.
         { id: 1, user_id: 'demo@finpal.app', name: 'Pay off Chase Amazon',
           kind: 'payoff', scope: 'household', account_id: 7,
-          account_name: 'Chase Amazon', target_amount: 0, start_amount: -1125.41,
+          account_name: '2 accounts',
+          accounts: [
+            { id: 7, name: 'Chase Amazon', start_amount: -1125.41 },
+            { id: 9, name: 'Barclaycard Rewards', start_amount: -524.59 },
+          ],
+          target_amount: 0, start_amount: -1650,
           current_manual: null, currency_code: 'USD', start_date: '2026-01-01',
           target_date: '2027-06-30', status: 'active', achieved_at: null,
-          current_amount: -450, direction: 'paydown', progress: 0.6001 },
+          current_amount: -450, direction: 'paydown', progress: 0.7272 },
+        // Deliberately left single-account, so both shapes are on the page at
+        // once and the walk measures the pair rather than one of them.
         { id: 2, user_id: 'demo@finpal.app', name: 'Emergency fund',
           kind: 'savings', scope: 'personal', account_id: 8,
-          account_name: 'Ally Savings', target_amount: 10000, start_amount: 1000,
+          account_name: 'Ally Savings',
+          accounts: [{ id: 8, name: 'Ally Savings', start_amount: 1000 }],
+          target_amount: 10000, start_amount: 1000,
           current_manual: null, currency_code: 'USD', start_date: '2026-01-01',
           target_date: null, status: 'active', achieved_at: null,
           current_amount: 4000, direction: 'accumulate', progress: 0.3333 },
@@ -86,6 +99,27 @@ beforeEach(() => {
           currency_code: 'USD', start_date: '2026-01-01', target_date: null,
           status: 'achieved', achieved_at: '2026-08-01T00:00:00',
           current_amount: 2100, direction: 'accumulate', progress: 1.05 },
+      ],
+    })),
+    /*
+     * B12. The Goals page loads accounts to build its picker and its
+     * "add another account" list, and without this handler that list is empty —
+     * so the walk would capture the panel's explainer and never its stack of
+     * full-width buttons, which is the widest thing on the page at 390px.
+     *
+     * `Barclaycard Rewards` is deliberately long: a name that fits at 1440 and
+     * overflows at 390 is exactly what the responsive walk exists to catch, and
+     * a fixture of short names cannot produce one.
+     */
+    http.get('*/api/v1/accounts', () => HttpResponse.json({
+      success: true,
+      accounts: [
+        { id: 7, name: 'Chase Amazon', type: 'credit', balance: -1125.41,
+          currency_code: 'USD', user_id: 'demo@finpal.app' },
+        { id: 9, name: 'Barclaycard Rewards', type: 'credit', balance: -524.59,
+          currency_code: 'USD', user_id: 'demo@finpal.app' },
+        { id: 11, name: 'Marcus Online Savings Account', type: 'savings',
+          balance: 8200, currency_code: 'USD', user_id: 'demo@finpal.app' },
       ],
     })),
     http.get('*/api/v1/goals/1/contributions', () => HttpResponse.json({
@@ -297,15 +331,26 @@ const cases: Case[] = [
   // and the sweep dutifully walked three stale copies of the same page. The
   // capture now clears the directory, and the page is here as itself.
   ['accounts', Accounts as React.FC],
-  // Captured with its contributions row EXPANDED, not as it first paints: the
-  // breakdown is the only part of this page with a two-column money layout, and
-  // capturing the collapsed state measures a progress bar and nothing else. Same
-  // reason pointspal-mycards is captured with its modal open.
+  /**
+   * Captured with its contributions row EXPANDED, not as it first paints: the
+   * breakdown is the only part of this page with a two-column money layout, and
+   * capturing the collapsed state measures a progress bar and nothing else. Same
+   * reason pointspal-mycards is captured with its modal open.
+   *
+   * *** AND WITH THE B12 "MANAGE ACCOUNTS" PANEL OPEN, FOR THE SAME REASON. ***
+   * It is a row of account chips, each carrying a name AND a money figure, above
+   * a stack of full-width buttons — the widest content this page can hold, and
+   * none of it exists in the collapsed state. Left closed, the walk would report
+   * the goals page green having measured the version of it that shipped before
+   * this feature.
+   */
   ['goals', Goals as React.FC, async () => {
     // The FIRST goal's button, by name — two linked goals each offer one, and
     // `getByRole` refuses an ambiguous match rather than picking. Only goal 1 has
     // a contributions fixture, so it has to be that one.
     const first = await screen.findByTestId('goal-1');
+    await userEvent.click(within(first).getByRole('button', { name: /Manage accounts/ }));
+    await screen.findByText(/Adding an account counts its balance from today/);
     await userEvent.click(within(first).getByRole('button', { name: /Who contributed/ }));
     await screen.findByText('Rachel');
   }],
