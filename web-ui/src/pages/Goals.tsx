@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Archive, Loader2, Plus, Target, Trash2, Users } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { formatMoney, Money } from '../styles/money';
+import { formatMoney } from '../styles/money';
+import { goalFigures } from '../utils/goalFigures';
 import { goalService } from '../services/goalService';
 import { accountService, type Account } from '../services/accountService';
 import type { Goal, GoalContribution } from '../types/goal';
@@ -100,6 +101,7 @@ const GoalRow: React.FC<GoalRowProps> = ({ goal, onArchive, onDelete }) => {
   const [contributions, setContributions] = useState<GoalContribution[] | null>(null);
   const [loadingContributions, setLoadingContributions] = useState(false);
   const barWidth = Math.min(100, Math.max(0, goal.progress * 100));
+  const figures = goalFigures(goal, (amount) => formatMoney(amount, { currency: goal.currency_code }));
 
   const loadContributions = async () => {
     if (contributions !== null) {
@@ -201,9 +203,14 @@ const GoalRow: React.FC<GoalRowProps> = ({ goal, onArchive, onDelete }) => {
             fontSize: 13, color: 'var(--text-secondary)',
           }}
         >
+          {/* D-179: the phrasing follows `direction`. "X of Y" is written for an
+              accumulation, and reusing it for a paydown is how this line came to
+              read "-$800.00 of $0.00" — every figure right, the sentence
+              meaningless. `goalFigures` is duplicated in mobile on purpose; see
+              its header. */}
           <span>
-            <Money amount={goal.current_amount} currency={goal.currency_code} /> of{' '}
-            <Money amount={goal.target_amount} currency={goal.currency_code} />
+            {figures.primary}
+            {figures.separator !== null && ` ${figures.separator} ${figures.secondary}`}
           </span>
           {/* The server's percentage, rounded for display and nothing else. */}
           <span>{percentLabel(goal.progress)}</span>
