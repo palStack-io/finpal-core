@@ -380,6 +380,23 @@ def create_app(config_name=None):
                     'balances through the legacy account_id path, but multi-account '
                     'goals will not work until this succeeds')
 
+            # Budget spending groups: every category seeded before this shipped
+            # has `spending_type` NULL, and a seed change is not shipped until a
+            # correction exists for the rows the old version wrote (D-178).
+            #
+            # CONDITION-KEYED like the one above, and additionally guarded to run
+            # ONCE PER INSTANCE -- because "unsorted" is written as NULL, so a
+            # category the user deliberately un-sorted looks identical to one that
+            # was never defaulted. Without the guard this line would reverse that
+            # decision on every restart. See services/category/spending_type.py.
+            try:
+                from src.services.category.spending_type import backfill_spending_types
+                backfill_spending_types()
+            except Exception:
+                app.logger.exception(
+                    'spending_type backfill could not run; the budget page will '
+                    'show every category under Unsorted until it succeeds')
+
             # Module startup hooks (seeding, cache warming, etc.)
             try:
                 from src.modules.registry import module_registry

@@ -310,3 +310,67 @@ def default_for_path(path):
 def default_for(name, parent_name=None):
     """The seeded default for a category by name and parent name."""
     return default_for_path(category_path(name, parent_name))
+
+
+def backfill_spending_types():
+    """Apply the defaults to seeded categories that have none. Returns the count set.
+
+    *** CONDITION-KEYED, NOT VERSION-KEYED (D-178). *** Nothing stores "this ran".
+    Both conditions below are read from the data itself, so re-running is a no-op
+    and an instance that was already live when this shipped gets corrected rather
+    than skipped -- which is the exact failure D-178 records.
+
+    *** THE PREDICATE DOES NOT MENTION `is_system`, AND THAT IS DELIBERATE. *** The
+    flag points the wrong way in both directions: `create_default_categories` sets
+    it only on "Other", so 27 of the 28 signup categories are `is_system=False`,
+    while the demo seeder sets it on all 147. Keying on it selects the wrong
+    population whichever value you pick. The path being in the map is a stronger
+    statement than the flag ever was.
+
+    *** THE ONCE-PER-INSTANCE GUARD, AND THE HOLE IT EXISTS FOR. *** Clearing a
+    category back to unsorted writes NULL -- which is precisely this function's
+    other condition -- and this runs at EVERY boot, so without the guard every
+    restart and every deploy would silently re-default a choice the user had just
+    made. Spec section 4 promises the opposite. So: if any category on this
+    instance already carries a spending_type, the feature has taken effect here and
+    there is nothing to do. A fresh install with no categories does NOT arm the
+    guard, so an instance that gains rows later still gets them defaulted; users
+    created after that get theirs from `create_default_categories` at signup.
+
+    Never raises: this runs at boot and a bad row must not stop the app starting.
+    """
+    from src.extensions import db
+    from src.models.category import Category
+
+    try:
+        already_classified = db.session.query(Category.id).filter(
+            Category.spending_type.isnot(None)
+        ).first()
+        if already_classified is not None:
+            return 0
+
+        rows = Category.query.filter(Category.spending_type.is_(None)).all()
+        if not rows:
+            return 0
+
+        # The path needs the parent's NAME, so index every row by id first. One
+        # extra pass over a table with a few hundred rows per instance.
+        name_by_id = {row.id: row.name for row in Category.query.all()}
+
+        changed = 0
+        for row in rows:
+            parent_name = name_by_id.get(row.parent_id) if row.parent_id else None
+            value = default_for_path(category_path(row.name, parent_name))
+            if value is None:
+                continue
+            row.spending_type = value
+            changed += 1
+
+        if changed:
+            db.session.commit()
+            logger.info('Backfilled spending_type on %d categories.', changed)
+        return changed
+    except Exception:
+        db.session.rollback()
+        logger.exception('spending_type backfill failed; continuing boot.')
+        return 0

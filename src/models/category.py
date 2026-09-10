@@ -18,6 +18,20 @@ class Category(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
     is_system = db.Column(db.Boolean, default=False)  # System categories can't be deleted
+
+    # Fixed / Flexible / Non-Monthly. NULLABLE, and NULL is a real state that
+    # renders as "Unsorted" rather than being folded into a group -- a guess
+    # presented as a fact is D-77's shape.
+    #
+    # NOTE: adding a column to an EXISTING table is invisible to `create_all()`,
+    # so no deployed instance gets this from a redeploy alone. The boot reconcile
+    # (`src/utils/schema_reconcile.py`, D-121) applies it, and that has to be
+    # confirmed on a real old database rather than a fresh one.
+    #
+    # *** DO NOT INFER THIS FROM `name` AT RUNTIME. *** Names are user-editable.
+    # The defaults are applied ONCE, at seed time or by the boot backfill, and
+    # read from the column thereafter -- see services/category/spending_type.py.
+    spending_type = db.Column(db.String(12), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
