@@ -93,6 +93,10 @@ class CategorySchema(Schema):
     parent_id = fields.Int(allow_none=True)
     is_system = fields.Bool(dump_only=True)
     user_id = fields.Str(dump_only=True)
+    # 'fixed' | 'flexible' | 'non_monthly' | null. `allow_none` is load-bearing:
+    # null is a REAL state meaning unsorted, and a client has to be able to tell
+    # it from "this backend is too old to know", so the key is always present.
+    spending_type = fields.Str(allow_none=True)
 
     # Nested subcategories
     subcategories = fields.Nested('self', many=True, dump_only=True)
