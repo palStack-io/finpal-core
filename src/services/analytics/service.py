@@ -1009,3 +1009,53 @@ class AnalyticsService:
         }
 
         return trend_data
+
+    def current_month_income(self, user_id, scope_ids=None):
+        """Income recorded in the CURRENT calendar month, or None if there is none.
+
+        *** None MEANS "finPal DOES NOT KNOW", AND IT IS NOT 0.0. *** Zero is a
+        claim that the user earned nothing this month; None says nothing has been
+        recorded yet. The budget page turns the first into "-$1,400 left to
+        budget" and the second into "income not recorded yet", and only one of
+        those is true of somebody who has not been paid on the 3rd.
+
+        *** MEASURED ON THE LIVE DEMO, 2026-09-10: total_income 9950,
+        current_month_income 0 *** -- every seeded income row is in an earlier
+        month. So this is the demo's actual shape, not a hypothetical.
+
+        *** THIS DELIBERATELY DOES NOT CALL `get_dashboard_data`, WHICH COMPUTES
+        THE SAME FIGURE. *** That method calls `sync_investments_with_accounts`
+        (service.py:87), a WRITE, and a budget page load has no business
+        triggering an investment sync. The duplication is instead pinned by a
+        test asserting the two agree on the same fixture -- one rule with a gate,
+        rather than two implementations drifting.
+
+        Scope and currency follow the dashboard exactly: `read_scope`/`scope_query`
+        for whose money this is, and `RateTable` into the reader's base currency,
+        because a figure must be restated in the currency that labels it (D-156).
+        """
+        from src.utils.helpers import get_base_currency
+        from src.utils.household import read_scope, scope_query
+        from src.models.user import User
+
+        now = datetime.now()
+        current_user = db.session.get(User, user_id)
+        base_currency = get_base_currency(current_user)
+
+        if scope_ids is None:
+            scope_ids = read_scope(user_id)
+
+        month_start = datetime(now.year, now.month, 1)
+        rows = (scope_query(scope_ids)
+                .filter(Expense.date >= month_start)
+                .filter(Expense.transaction_type == 'income')
+                .all())
+
+        if not rows:
+            return None
+
+        rates = RateTable()
+        amounts = rates.amounts_for(rows, base_currency['code'])
+        # float, not Decimal: RateTable returns Decimals and the budget
+        # overview subtracts a float planned total from this.
+        return round(float(sum(amounts[row.id] for row in rows)), 2)

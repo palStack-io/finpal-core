@@ -5,7 +5,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.exceptions import HTTPException
 from src.models.category import Category
 from src.extensions import db
-from src.services.category.service import CategoryService
+from src.services.category.service import CategoryService, UNSET
+from src.services.category.spending_type import VALID_SPENDING_TYPES
 from schemas import category_schema, categories_schema
 from schemas.input_schemas import category_input
 from src.utils.validation import validate_request, validation_error_response
@@ -33,6 +34,9 @@ category_model = ns.model('Category', {
     # breaks a generated client as badly as a route that is missing.
     'color': fields.String(description='Hex colour, e.g. #6c757d'),
     'parent_id': fields.Integer(description='Parent category ID for subcategories'),
+    'spending_type': fields.String(
+        description="'fixed' | 'flexible' | 'non_monthly', or null for unsorted. "
+                    "Null is a real state, not an absence."),
 })
 
 
@@ -44,6 +48,11 @@ category_update_model = ns.model('CategoryUpdate', {
     'name': fields.String(required=False, description='New display name'),
     'icon': fields.String(required=False, description='New icon'),
     'color': fields.String(required=False, description='New colour'),
+    'spending_type': fields.String(
+        required=False,
+        description="'fixed' | 'flexible' | 'non_monthly', or null to move the "
+                    "category back to Unsorted. Editable even on a system "
+                    "category, unlike the fields above."),
 })
 
 
@@ -102,6 +111,10 @@ class CategoryList(Resource):
                 # blueprint's.
                 color=validated.get('color', '#6c757d'),
                 parent_id=validated.get('parent_id'),
+                # Absent means unsorted. finPal does not guess a group from a
+                # name the user has just invented -- that is the line in spec
+                # section 4 between a default and an inference.
+                spending_type=validated.get('spending_type'),
                 user_id=current_user_id
             )
 
@@ -194,6 +207,9 @@ class CategoryDetail(Resource):
                 'color': category.color,
                 'parent_id': category.parent_id,
                 'is_system': category.is_system,
+                # Always present, even when null: a client has to be able to
+                # tell "unsorted" from "this backend is too old to know".
+                'spending_type': category.spending_type,
             }, 200
 
         except HTTPException:
@@ -214,12 +230,27 @@ class CategoryDetail(Resource):
             if not data:
                 return {'error': 'Request body is required'}, 400
 
+            # `in data` rather than `.get()`: None is a legitimate value here
+            # meaning "back to unsorted", and an edit that never mentions the
+            # key must leave the column alone. UNSET carries that distinction
+            # into the service, which None cannot.
+            spending_type = data['spending_type'] if 'spending_type' in data else UNSET
+            if spending_type is not UNSET:
+                if spending_type is not None and spending_type not in VALID_SPENDING_TYPES:
+                    # Refused by the SERVER, not only by the client. A defect
+                    # reported in a client is a defect in every client until the
+                    # server says no (D-99).
+                    return {'success': False,
+                            'error': "spending_type must be 'fixed', 'flexible', "
+                                     "'non_monthly', or null."}, 400
+
             success, message = category_service.update_category(
                 category_id,
                 identity,
                 name=data.get('name'),
                 icon=data.get('icon'),
-                color=data.get('color')
+                color=data.get('color'),
+                spending_type=spending_type,
             )
 
             if success:

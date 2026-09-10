@@ -5,6 +5,7 @@ business logic or the database. They are separate from the output
 serialization schemas in __init__.py.
 """
 from marshmallow import Schema, fields, validate
+from src.services.category.spending_type import VALID_SPENDING_TYPES
 
 TRANSACTION_TYPES = ['expense', 'income', 'transfer']
 # Only what `Expense.calculate_splits` actually computes. `shares` was here until D-99 and had
@@ -205,6 +206,12 @@ class CategoryInput(Schema):
     icon = fields.Str(validate=validate.Length(max=50))
     color = fields.Str(validate=validate.Length(max=20))
     parent_id = fields.Int(allow_none=True)
+    # Underscore, not hyphen -- a guard keyed to a spelling goes blind. Refused
+    # here as well as in the client, because a defect reported in a client is a
+    # defect in every client until the SERVER refuses it (D-99).
+    spending_type = fields.Str(
+        allow_none=True,
+        validate=validate.OneOf(VALID_SPENDING_TYPES))
 
 
 class RecurringInput(Schema):

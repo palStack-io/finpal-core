@@ -25,6 +25,7 @@ import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
 import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
+import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
 
@@ -129,14 +130,68 @@ beforeEach(() => {
         { user_id: 'rachel@test.com', display_name: 'Rachel', amount: 300, imported: true },
       ],
     })),
+    /**
+     * *** THE BUDGETS PAGE WAS ALREADY IN THE WALK, WHICH IS NOT THE SAME AS THE
+     * WALK SEEING THE SPENDING GROUPS. *** D-165. The old fixture had three flat
+     * budgets named 'Groceries', 'Bills' and 'Fun' and no `groups` key at all, so
+     * the page would render its empty-list branch and both walks would report a
+     * page that contains none of their subjects.
+     *
+     * *** THE NAMES ARE DELIBERATELY LONG. *** A category name that fits at 1440
+     * and overflows at 390 is the entire point of the responsive walk, and a
+     * fixture full of six-letter words cannot produce one. These are the widest
+     * strings the page can hold: a long name, beside a group control, beside
+     * three money figures.
+     *
+     * The states most likely to be styled carelessly are all present on purpose:
+     * an OVERSPENT flexible group (negative remaining in clay), an EMPTY
+     * non-monthly group, a FIXED card that reports instead of scoring, and an
+     * Unsorted section with two categories and their controls.
+     */
+    /**
+     * *** THE CATEGORY SCREEN WAS NEVER IN THE WALK AT ALL. *** Not "captured
+     * without the new control" -- absent, so neither walk had ever measured a
+     * page that has shipped for as long as the app has. The spending-group
+     * control lands there (spec §1 decision 3), which is what surfaced it.
+     *
+     * Long names on purpose: a category name sits beside a `<select>` and two
+     * icon buttons on one row, which is the narrowest thing on this page and
+     * the first to overflow at 390.
+     */
+    http.get('*/api/v1/categories/', () => HttpResponse.json({ categories: WALK_CATEGORIES })),
+    http.get('*/api/v1/categories', () => HttpResponse.json({ categories: WALK_CATEGORIES })),
     http.get('*/api/v1/budgets/overview', () => HttpResponse.json({
       success: true,
       total_budget: 2000, total_spent: 1450, total_remaining: 550, percentage_used: 72,
+      budget_count: 3,
       budgets: [
-        { id: 1, name: 'Groceries', category: { name: 'Groceries' }, amount: 500, spent: 480, remaining: 20, percentage: 96, period: 'monthly' },
-        { id: 2, name: 'Bills', category: { name: 'Bills' }, amount: 900, spent: 620, remaining: 280, percentage: 69, period: 'monthly' },
-        { id: 3, name: 'Fun', category: { name: 'Fun' }, amount: 600, spent: 720, remaining: -120, percentage: 120, period: 'monthly' },
+        budgetWalkRow(1, 'Rent, service charge and ground rent for the flat', 1300, 1300),
+        budgetWalkRow(2, 'Groceries, household supplies and the corner shop', 500, 723),
+        budgetWalkRow(3, 'Presents, birthdays and seasonal giving', 200, 60),
       ],
+      groups: [
+        { spending_type: 'fixed', label: 'Fixed', planned: 1300, actual: 1300, remaining: 0,
+          budgets: [budgetWalkRow(1, 'Rent, service charge and ground rent for the flat', 1300, 1300)] },
+        { spending_type: 'flexible', label: 'Flexible', planned: 500, actual: 723, remaining: -223,
+          budgets: [budgetWalkRow(2, 'Groceries, household supplies and the corner shop', 500, 723)] },
+        // Deliberately EMPTY: the group still renders, and its empty state is a
+        // full-width line of prose that nothing else on the page produces.
+        { spending_type: 'non_monthly', label: 'Non-Monthly', planned: 0, actual: 0, remaining: 0,
+          budgets: [] },
+      ],
+      unsorted: {
+        count: 2,
+        actual: 241.99,
+        categories: [
+          { id: 901, name: 'Gym membership and physiotherapy appointments', actual: 229.99 },
+          { id: 902, name: 'Monthly bank account maintenance fee', actual: 12 },
+        ],
+        budget_count: 0,
+        budgets: [],
+      },
+      totals: { planned: 2000, actual: 2083, remaining: -83 },
+      income: 4200,
+      left_to_budget: 2200,
     })),
   );
 });
@@ -154,6 +209,34 @@ beforeEach(() => {
  * an empty state, which has no grid to measure — an empty capture passes an
  * overflow gate exactly the way a correct one does.
  */
+const WALK_CATEGORIES = [
+  { id: 1, name: 'Housing, rent and everything the landlord bills for', icon: '🏠',
+    color: '#3498db', parent_id: null, is_system: false, spending_type: 'fixed' },
+  { id: 2, name: 'Home maintenance and occasional emergency repairs', icon: '🔧',
+    color: '#3498db', parent_id: 1, is_system: false, spending_type: 'non_monthly' },
+  { id: 3, name: 'Buildings and contents insurance', icon: '🛡️',
+    color: '#3498db', parent_id: 1, is_system: false, spending_type: null },
+  { id: 4, name: 'Food, drink and the weekly supermarket run', icon: '🍽️',
+    color: '#e74c3c', parent_id: null, is_system: false, spending_type: 'flexible' },
+  { id: 5, name: 'Gym membership and physiotherapy appointments', icon: '💪',
+    color: '#1abc9c', parent_id: null, is_system: false, spending_type: null },
+  { id: 6, name: 'Other', icon: '❓',
+    color: '#95a5a6', parent_id: null, is_system: true, spending_type: null },
+];
+
+const budgetWalkRow = (id: number, name: string, amount: number, spent: number) => ({
+  id, name, amount, spent,
+  remaining: amount - spent,
+  percentage: amount > 0 ? (spent / amount) * 100 : 0,
+  category_id: id + 100,
+  category_name: name,
+  category_icon: '\u{1F3F7}\u{FE0F}',
+  category_color: '#6c757d',
+  category: { name },
+  period: 'monthly',
+  is_active: true,
+});
+
 const cardFace = (id: number, name: string, program: string, color: string) => ({
   id, card_name: name, program, issuer_color: color, points: 84210,
   est_value_usd: 1263.15, annual_fee: 95, expiry_alert: null, stale: false,
@@ -325,7 +408,33 @@ type Case = [string, React.FC, ((c: HTMLElement) => Promise<void>)?];
 
 const cases: Case[] = [
   ['dashboard', Dashboard as React.FC],
-  ['budgets', BudgetsMinimal as React.FC],
+  /**
+   * *** CAPTURED AFTER TOUCHING A GROUP CONTROL, NOT AS IT FIRST PAINTS. ***
+   * Same reason goals is captured with its panel open. The `<select>` carries
+   * four options and sits inline beside a long category name and three money
+   * figures -- it is the widest row this page can produce, and a focused
+   * control is also the only state in which its border and text are measurable
+   * against the card behind it.
+   */
+  ['budgets', BudgetsMinimal as React.FC, async () => {
+    await screen.findByRole('heading', { level: 2, name: 'Fixed' });
+    const controls = await screen.findAllByLabelText('Spending group');
+    controls[0].focus();
+    // Collapse one group so the walk sees a COLLAPSED header too: that is the
+    // state a returning user lands in, and it is styled separately.
+    await userEvent.click(
+      await screen.findByRole('heading', { level: 2, name: 'Non-Monthly' }));
+  }],
+  /**
+   * Captured with a spending-group control FOCUSED. A `<select>` inline beside
+   * a long category name and two icon buttons is the widest row this page can
+   * produce, and focus is the only state in which the control's own border and
+   * text are measurable against the card behind it.
+   */
+  ['categories', CategoryManagement as React.FC, async () => {
+    const controls = await screen.findAllByLabelText('Spending group');
+    controls[0].focus();
+  }],
   // Accounts is walked at ONE realistic count. It was measured at 2/8/20 once,
   // to answer a density question; those captures then lingered in `captured/`
   // and the sweep dutifully walked three stale copies of the same page. The

@@ -374,14 +374,27 @@ class AuthService:
             {"name": "Other", "icon": "fa-question-circle", "color": "#95a5a6", "is_system": True}
         ]
 
+        # *** THE DEFAULT GROUP IS APPLIED HERE, AT SEED TIME, NOT INFERRED AT
+        # READ TIME. *** Names are user-editable, so a category renamed tomorrow
+        # keeps the group it was given today rather than silently reclassifying.
+        # Keyed by PATH, because `Gas` under Transportation is petrol while the
+        # demo seeder's `Gas` under Housing is the utility bill.
+        from src.services.category.spending_type import default_for
+
         for cat_data in default_categories:
             subcategories = cat_data.pop('subcategories', [])
-            category = Category(user_id=user_id, **cat_data)
+            parent_name = cat_data['name']
+            category = Category(user_id=user_id,
+                                spending_type=default_for(parent_name),
+                                **cat_data)
             db.session.add(category)
             db.session.flush()  # Get the ID without committing
 
             for subcat_data in subcategories:
-                subcat = Category(user_id=user_id, parent_id=category.id, **subcat_data)
+                subcat = Category(user_id=user_id, parent_id=category.id,
+                                  spending_type=default_for(subcat_data['name'],
+                                                            parent_name),
+                                  **subcat_data)
                 db.session.add(subcat)
 
         # Create default category mappings after creating categories

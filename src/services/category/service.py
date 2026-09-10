@@ -11,6 +11,12 @@ from src.models.transaction import Expense
 from src.models.recurring import RecurringExpense
 from src.models.budget import Budget
 from src.utils.helpers import auto_categorize_transaction
+from src.services.category.spending_type import VALID_SPENDING_TYPES
+
+#: Distinguishes "the caller did not mention this field" from "the caller sent
+#: null", which for `spending_type` means "back to unsorted" and is a real value.
+UNSET = object()
+
 
 class CategoryService:
     """Service class for category and mapping operations"""
@@ -138,8 +144,27 @@ class CategoryService:
         from src.utils.household import household_user_ids
         return household_user_ids()
 
-    def update_category(self, category_id, user_id, name=None, icon=None, color=None):
-        """Update a category - Returns (success, message)"""
+    def update_category(self, category_id, user_id, name=None, icon=None,
+                        color=None, spending_type=UNSET):
+        """Update a category - Returns (success, message)
+
+        *** `spending_type` IS EDITABLE ON A SYSTEM CATEGORY AND THE OTHER FIELDS
+        ARE NOT. *** The demo seeder sets `is_system=True` on all 147 of its
+        categories, so refusing every edit to a system row would make the
+        spending groups INERT on the one instance anyone browses -- and spec
+        section 4 promises the defaults are editable from the first screen that
+        shows them. The protection this carves out of exists for a different
+        reason: 'Other' is where orphaned transactions land when a category is
+        deleted, and renaming or deleting it breaks that lookup. Classifying does
+        neither.
+
+        A rename smuggled in beside a classification is still refused, because
+        the exemption is for the FIELD, not for the request.
+
+        `spending_type` uses a sentinel rather than None, since None is a real
+        value here meaning "back to unsorted" and `if spending_type:` would
+        silently ignore the clear.
+        """
         category = self.get_category(category_id)
         if not category:
             return False, 'Category not found'
@@ -147,8 +172,17 @@ class CategoryService:
         if not self.can_manage(category, user_id):
             return False, 'You don\'t have permission to edit this category'
 
-        if category.is_system:
+        if category.is_system and (name or icon or color):
             return False, 'System categories cannot be edited'
+
+        if spending_type is not UNSET:
+            if spending_type is not None and spending_type not in VALID_SPENDING_TYPES:
+                # Defence in depth: the API layer refuses this too, but a service
+                # that trusts its caller is one call site away from storing junk.
+                return False, (
+                    "spending_type must be 'fixed', 'flexible', 'non_monthly', "
+                    "or null.")
+            category.spending_type = spending_type
 
         if name:
             category.name = name

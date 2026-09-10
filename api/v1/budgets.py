@@ -12,6 +12,17 @@ from datetime import datetime
 import logging
 from src.models.personal_access_token import SCOPE_READ
 from src.utils.api_auth import api_auth_required
+from src.models.transaction import Expense
+from src.services.analytics.service import AnalyticsService
+from src.services.category.spending_type import VALID_SPENDING_TYPES
+
+#: The same three human labels the two clients hold in `spendingGroups.ts`.
+#: 'Non-Monthly' for a person; 'non_monthly' for the database.
+GROUP_LABELS = {
+    'fixed': 'Fixed',
+    'flexible': 'Flexible',
+    'non_monthly': 'Non-Monthly',
+}
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +257,147 @@ class BudgetDetail(Resource):
             }, 400
 
 
+def _f(value):
+    """Coerce to float for arithmetic.
+
+    `Budget.amount` is a float and `calculate_spent_amount()` returns a
+    `Decimal`, so summing them raw raises `TypeError: unsupported operand
+    type(s) for -: 'float' and 'decimal.Decimal'`. The pre-existing totals never
+    hit it because they only ever ADD to an int accumulator; subtracting one
+    from the other is new here.
+    """
+    return float(value or 0)
+
+
+def _effective_spending_type(category, by_id):
+    """A category's own group, or its parent's, or None.
+
+    *** ONE LEVEL AND NO MORE, MIRRORING `budget.py:72`. *** That rollup reads
+    `filter_by(parent_id=self.category_id)` with no recursion, so a budget on a
+    grandchild never counts its grandparent's other children. Inheriting across
+    two levels here would put that budget in a group whose subtotal the rollup
+    never computed, and the page would disagree with the arithmetic underneath
+    it. The same rule, and the same one-level limit, as the clients'
+    `spendingGroups.ts`.
+    """
+    if category is None:
+        return None
+    if category.spending_type in VALID_SPENDING_TYPES:
+        return category.spending_type
+    if not category.parent_id or category.parent_id == category.id:
+        return None
+    parent = by_id.get(category.parent_id)
+    if parent is None:
+        return None
+    return parent.spending_type if parent.spending_type in VALID_SPENDING_TYPES else None
+
+
+def _group_by_spending_type(budgets, budget_details, scope_ids):
+    """Split the budgets into the three groups, and report unbudgeted spending.
+
+    *** THE SERVER OWNS THESE TOTALS (D-101). *** Two clients summing
+    independently is two chances to disagree with each other and with the
+    database, which is the rule that already keeps goal progress server-side.
+
+    *** ALL THREE GROUPS ARE ALWAYS EMITTED, EVEN EMPTY. *** A group that
+    vanishes when it has nothing in it makes the page jump around, and a missing
+    key and a zero are different things to a client.
+    """
+    from src.models.category import Category
+
+    all_categories = Category.query.filter(
+        Category.user_id.in_(scope_ids)).all()
+    by_id = {c.id: c for c in all_categories}
+
+    buckets = {value: [] for value in VALID_SPENDING_TYPES}
+    unsorted_budgets = []
+
+    for budget, detail in zip(budgets, budget_details):
+        group = _effective_spending_type(by_id.get(budget.category_id), by_id)
+        (buckets[group] if group else unsorted_budgets).append(detail)
+
+    groups = []
+    for value in VALID_SPENDING_TYPES:
+        rows = buckets[value]
+        planned = round(sum(_f(r['amount']) for r in rows), 2)
+        actual = round(sum(_f(r['spent']) for r in rows), 2)
+        groups.append({
+            'spending_type': value,
+            'label': GROUP_LABELS[value],
+            'planned': planned,
+            'actual': actual,
+            # Negative, never clamped: an overspend rendered as 0 is a lie the
+            # user acts on.
+            'remaining': round(planned - actual, 2),
+            'budgets': rows,
+        })
+
+    unsorted = _unsorted_section(all_categories, by_id, scope_ids,
+                                 unsorted_budgets)
+
+    totals = {
+        'planned': round(sum(g['planned'] for g in groups)
+                         + sum(_f(r['amount']) for r in unsorted_budgets), 2),
+        'actual': round(sum(g['actual'] for g in groups)
+                        + unsorted['actual'], 2),
+    }
+    totals['remaining'] = round(totals['planned'] - totals['actual'], 2)
+    return groups, unsorted, totals
+
+
+def _unsorted_section(all_categories, by_id, scope_ids, unsorted_budgets):
+    """Unclassified categories that money has actually left through.
+
+    *** UNBUDGETED SPENDING IS SHOWN, NOT HIDDEN. *** A budget page that lists
+    only budgeted categories tells you your spending is under control while
+    money leaves elsewhere -- so this section is mandatory, not optional.
+
+    *** BUT ONLY CATEGORIES WITH SPENDING. *** Unsorted is a to-do list; padding
+    it with every category nobody has spent against buries the real ones. On the
+    demo that is the difference between five rows and a hundred and twenty.
+    """
+    from sqlalchemy import func
+    from src.utils.household import scope_query
+
+    period_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0,
+                                             microsecond=0)
+    spend_rows = (scope_query(scope_ids)
+                  .filter(Expense.date >= period_start)
+                  .filter(Expense.transaction_type == 'expense')
+                  .filter(Expense.category_id.isnot(None))
+                  .with_entities(Expense.category_id,
+                                 func.sum(Expense.amount))
+                  .group_by(Expense.category_id)
+                  .all())
+
+    categories = []
+    actual = 0.0
+    for category_id, amount in spend_rows:
+        category = by_id.get(category_id)
+        if category is None:
+            continue
+        if _effective_spending_type(category, by_id) is not None:
+            continue
+        actual += float(amount or 0)
+        categories.append({
+            'id': category.id,
+            'name': category.name,
+            'actual': round(float(amount or 0), 2),
+        })
+
+    categories.sort(key=lambda c: c['actual'], reverse=True)
+    return {
+        'count': len(categories),
+        'actual': round(actual, 2),
+        'categories': categories,
+        # Budgets whose category is unclassified. Separate from `count`, which
+        # counts categories money left through -- a budget with no spending is
+        # not a hole in the picture, an unclassified spend is.
+        'budget_count': len(unsorted_budgets),
+        'budgets': unsorted_budgets,
+    }
+
+
 @ns.route('/overview')
 class BudgetOverview(Resource):
     @ns.doc('get_budget_overview', security='Bearer')
@@ -284,6 +436,15 @@ class BudgetOverview(Resource):
 
             total_remaining = total_budget - total_spent
 
+            groups, unsorted, group_totals = _group_by_spending_type(
+                budgets, budget_details, visible_user_ids(current_user_id))
+
+            # *** None, NEVER 0. *** Zero is a claim that the user earned
+            # nothing this month; None says nothing has been recorded yet.
+            income = AnalyticsService().current_month_income(current_user_id)
+            left_to_budget = (None if income is None
+                              else round(income - group_totals['planned'], 2))
+
             return {
                 'success': True,
                 'total_budget': total_budget,
@@ -291,7 +452,14 @@ class BudgetOverview(Resource):
                 'total_remaining': total_remaining,
                 'percentage_used': (total_spent / total_budget * 100) if total_budget > 0 else 0,
                 'budget_count': len(budgets),
-                'budgets': budget_details
+                'budgets': budget_details,
+                # Additive. Everything above is the pre-existing contract, which
+                # mobile and any script read today.
+                'groups': groups,
+                'unsorted': unsorted,
+                'totals': group_totals,
+                'income': income,
+                'left_to_budget': left_to_budget,
             }, 200
 
         except Exception as e:

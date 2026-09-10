@@ -12,6 +12,9 @@ import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { StatCard } from '../components/StatCard';
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
+import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
+import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
+import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -28,6 +31,64 @@ const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)
 
 const mutedSmallStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '13px' };
 const secondaryBodyStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px', margin: 0 };
+
+/**
+ * The three group sections and Unsorted share one shell.
+ *
+ * Inline rather than a named role class: this shell has exactly one consumer,
+ * and a role class with a single caller is a rule nothing keeps right -- two of
+ * the two measured so far had drifted from what the app renders. It becomes a
+ * role class the moment mobile or another page needs the same shell.
+ */
+const groupSectionStyle: React.CSSProperties = {
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border-light)',
+  borderRadius: '16px',
+  padding: '16px 20px',
+};
+
+const groupHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '16px',
+  width: '100%',
+  background: 'transparent',
+  border: 'none',
+  padding: '4px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  color: 'var(--text-primary)',
+  flexWrap: 'wrap',
+};
+
+const groupTitleStyle: React.CSSProperties = {
+  fontSize: '18px',
+  fontWeight: 600,
+  color: 'var(--text-primary)',
+  margin: 0,
+};
+
+const groupFigureStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+  fontSize: '14px',
+  color: 'var(--text-primary)',
+};
+
+const unsortedChipStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '10px',
+  padding: '8px 12px',
+  background: 'var(--bg-secondary)',
+  border: '1px solid var(--border-light)',
+  borderRadius: '10px',
+  fontSize: '13px',
+  color: 'var(--text-primary)',
+  flexWrap: 'wrap',
+};
 
 /**
  * The start and end of the period a budget covers, relative to a reference date.
@@ -86,6 +147,22 @@ const BudgetsMinimal = () => {
   });
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
+  // *** THE SERVER OWNS THESE. *** They are stored exactly as received and
+  // never re-summed here: two clients deriving the same subtotal is two chances
+  // to disagree with each other and with the database (D-101).
+  const [groups, setGroups] = useState<SpendingGroup[]>([]);
+  const [unsorted, setUnsorted] = useState<UnsortedSection>(
+    { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
+  const [totals, setTotals] = useState<{ planned: number; actual: number; remaining: number }>(
+    { planned: 0, actual: 0, remaining: 0 });
+  const [income, setIncome] = useState<number | null>(null);
+  const [leftToBudget, setLeftToBudget] = useState<number | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<SpendingType[]>([]);
+
+  const toggleGroup = (value: SpendingType) => setCollapsedGroups((current) => (
+    current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
+  ));
+
   // Was a local copy that used the user's currency with ZERO decimal places,
   // while every other page hardcoded USD with two — so a user set to EUR saw €
   // here and $ elsewhere, whole units here and cents elsewhere. One formatter
@@ -109,6 +186,15 @@ const BudgetsMinimal = () => {
       // Load budget overview
       const overview = await budgetService.getBudgetOverview();
       const budgetsList = overview?.budgets || [];
+
+      setGroups(overview?.groups || []);
+      setUnsorted(overview?.unsorted
+        || { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
+      // `?? null`, never `|| 0`: null means "nothing recorded this month" and
+      // zero would be a claim that the user earned nothing.
+      setTotals(overview?.totals || { planned: 0, actual: 0, remaining: 0 });
+      setIncome(overview?.income ?? null);
+      setLeftToBudget(overview?.left_to_budget ?? null);
 
       /**
        * Only the window the budgets actually cover, and every page of it.
@@ -345,6 +431,250 @@ const BudgetsMinimal = () => {
     );
   }
 
+  /**
+   * One budget card.
+   *
+   * Extracted from an inline `budgets.map(...)` so the same card can be rendered
+   * inside each of the three group sections and inside Unsorted, without four
+   * copies of it drifting apart.
+   */
+  const renderBudgetCard = (budget: BudgetWithDetails, group: SpendingType | null = null) => {
+                const percentage = budget.percentage;
+                const remaining = budget.remaining;
+                // *** FIXED IS REPORTED, NOT SCORED. *** Setting a target for
+                // rent is theatre: it is usually the biggest line and it cannot
+                // respond this month, and demanding a number for it is a large
+                // part of why budgets get abandoned. So a committed category
+                // shows what it costs and skips the progress bar, the
+                // percentage and the OVER badge -- being "over" on a fixed cost
+                // is not a thing the user did.
+                const reported = group === 'fixed';
+                const isOver = !reported && budget.spent > budget.amount;
+                const isExpanded = expandedBudget === budget.id;
+
+                return (
+                  <div
+                    key={budget.id}
+                    style={{
+                      background: 'var(--bg-card)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s'
+                    }}
+                  >
+                    {/* Budget Header - Clickable */}
+                    <div
+                      style={{
+                        padding: '24px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onClick={() => handleExpandBudget(budget.id)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--surface-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        {/* Icon */}
+                        <div style={{ fontSize: '36px', flexShrink: 0 }}>
+                          {budget.category_icon}
+                        </div>
+
+                        {/* Category & Progress */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                            {/* h2, not h3 — each budget row is a section under
+                                the page's <h1> and there is no level between,
+                                so h3 skipped one. Size is inline; nothing moves
+                                on screen. Caught by the E2E heading check. */}
+                            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+                              {budget.category_name}
+                            </h2>
+                            {/* Edited in place, on the screen that shows the
+                                classification -- spec §4: a default the user
+                                cannot find is one they cannot correct. */}
+                            {budget.category_id != null && (
+                              <SpendingTypeControl
+                                categoryId={budget.category_id}
+                                value={group}
+                                onChanged={loadData}
+                              />
+                            )}
+                            {isOver && (
+                              <span style={{
+                                padding: '3px 10px',
+                                /* The FILL is the wash and the CLAY is the border
+                                   and the text. A red tint under clay measured
+                                   3.87:1 for 11px bold — the badge that shouts
+                                   loudest on the page was the least legible thing
+                                   on it. Clay on the wash is 4.53. */
+                                background: 'var(--kt-wash)',
+                                border: '1px solid var(--status-over)',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                color: 'var(--status-over)',
+                                fontWeight: '700'
+                              }}>
+                                OVER
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenBudgetModal(budget);
+                              }}
+                              aria-label="Edit budget"
+                              style={{
+                                marginLeft: 'auto',
+                                padding: '6px',
+                                background: 'var(--border-light)',
+                                border: '1px solid var(--border-medium)',
+                                borderRadius: '6px',
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--border-medium)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--border-light)';
+                              }}
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                          </div>
+
+                          {/* Progress Bar — omitted for a committed cost, which
+                              has nothing to be a percentage OF. */}
+                          {!reported && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{
+                              width: '100%',
+                              height: '8px',
+                              background: 'var(--progress-track)',
+                              borderRadius: '4px',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{
+                                width: `${Math.min(percentage, 100)}%`,
+                                height: '100%',
+                                background: isOver
+                                  ? 'var(--status-over)'
+                                  : percentage >= 80
+                                    ? 'var(--status-warn)'
+                                    : budget.category_color || 'var(--status-ok)',
+                                borderRadius: '4px',
+                                transition: 'width 0.5s ease'
+                              }}></div>
+                            </div>
+                          </div>
+                          )}
+
+                          {/* Spent / Budget */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <p style={secondaryBodyStyle}>
+                              <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
+                                {formatCurrency(budget.spent)}
+                              </span>
+                              {reported ? ' committed' : ` of ${formatCurrency(budget.amount)}`}
+                            </p>
+                            <p style={{
+                              color: isOver ? 'var(--status-over)' : 'var(--status-ok)',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              margin: 0
+                            }}>
+                              {isOver
+                                ? `+${formatCurrency(Math.abs(remaining))}`
+                                : formatCurrency(remaining)
+                              }
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Expand Icon */}
+                        <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
+                          {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Transactions */}
+                    {isExpanded && (
+                      <div style={{
+                        padding: '0 24px 24px 24px',
+                        borderTop: '1px solid var(--border-light)',
+                        paddingTop: '16px'
+                      }}>
+                        {budget.transactions && budget.transactions.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {budget.transactions.slice(0, 10).map((txn) => (
+                              <div
+                                key={txn.id}
+                                style={{
+                                  padding: '14px 16px',
+                                  background: 'var(--surface-hover)',
+                                  border: '1px solid var(--border-light)',
+                                  borderRadius: '10px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTransactionClick(txn);
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = 'var(--border-light)';
+                                  e.currentTarget.style.borderColor = `${budget.category_color}60`;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'var(--surface-hover)';
+                                  e.currentTarget.style.borderColor = 'var(--border-light)';
+                                }}
+                              >
+                                <div style={{ flex: 1 }}>
+                                  <p style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '500', margin: 0, marginBottom: '4px' }}>
+                                    {txn.description || txn.name || 'Unnamed Transaction'}
+                                  </p>
+                                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
+                                    {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </p>
+                                </div>
+                                <p style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+                                  {formatCurrency(txn.amount)}
+                                </p>
+                              </div>
+                            ))}
+                            {budget.transactions.length > 10 && (
+                              <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '8px' }}>
+                                Showing 10 of {budget.transactions.length} transactions
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '16px' }}>
+                            No transactions yet in this category
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+  };
+
   return (
     <>
       <div style={{ minHeight: '100vh', padding: '24px' }}>
@@ -520,6 +850,31 @@ const BudgetsMinimal = () => {
                   valueColor={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
                   subtitle={<span style={mutedSmallStyle}>{daysLeftInMonth()} days left this month</span>}
                 />
+                <StatCard
+                  label="Left to budget"
+                  scope="household"
+                  /* *** null IS NOT ZERO, AND THIS IS THE WHOLE POINT. *** No
+                     income recorded this month means finPal does not know what
+                     they earn; rendering that as 0 turns into "-$1,400 left to
+                     budget" for somebody who has not been paid yet on the 10th.
+                     Measured on the live demo, where total income is 9,950 and
+                     this month's is nothing. */
+                  value={leftToBudget === null ? '—' : formatCurrency(leftToBudget)}
+                  accentColor={leftToBudget === null
+                    ? 'var(--text-muted)'
+                    : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
+                  valueColor={leftToBudget === null
+                    ? 'var(--text-muted)'
+                    : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
+                  icon={<DollarSign size={24} color={leftToBudget === null ? 'var(--text-muted)' : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'} />}
+                  subtitle={
+                    <span style={mutedSmallStyle}>
+                      {income === null
+                        ? 'No income recorded this month yet'
+                        : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`}
+                    </span>
+                  }
+                />
                 {/* Budget Health — custom layout, not a simple stat */}
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
                   <p className="fp-hint-block">Budget Health</p>
@@ -538,7 +893,7 @@ const BudgetsMinimal = () => {
             );
           })()}
 
-          {/* Clean Budget List */}
+{/* Budget list, grouped by spending type */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {budgets.length === 0 ? (
               <div style={{
@@ -552,221 +907,109 @@ const BudgetsMinimal = () => {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>No budgets yet. Create your first budget to start tracking!</p>
               </div>
             ) : (
-              budgets.map((budget) => {
-                const percentage = budget.percentage;
-                const remaining = budget.remaining;
-                const isOver = budget.spent > budget.amount;
-                const isExpanded = expandedBudget === budget.id;
+              <>
+                {/* *** ALL THREE GROUPS ALWAYS RENDER, EVEN EMPTY. *** A section
+                    that vanishes when it has nothing in it makes the page jump
+                    around between months, and an absent group reads as "you have
+                    no fixed costs" rather than "you have not sorted them yet". */}
+                {groups.map((group) => {
+                  const collapsed = collapsedGroups.includes(group.spending_type);
+                  return (
+                    <section key={group.spending_type} style={groupSectionStyle}>
+                      <button
+                        onClick={() => toggleGroup(group.spending_type)}
+                        aria-expanded={!collapsed}
+                        style={groupHeaderStyle}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {collapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                          <h2 style={groupTitleStyle}>{group.label}</h2>
+                          <span className="fp-hint">
+                            {group.budgets.length} {group.budgets.length === 1 ? 'budget' : 'budgets'}
+                          </span>
+                        </span>
+                        <span style={{ display: 'flex', gap: '24px', alignItems: 'baseline' }}>
+                          <span style={groupFigureStyle}>
+                            <span className="fp-hint">Planned</span>
+                            <Money amount={group.planned} currency={currency} />
+                          </span>
+                          <span style={groupFigureStyle}>
+                            <span className="fp-hint">Actual</span>
+                            <Money amount={group.actual} currency={currency} />
+                          </span>
+                          <span style={groupFigureStyle}>
+                            <span className="fp-hint">Remaining</span>
+                            {/* Negative renders in clay and is NEVER clamped to
+                                zero: an overspend shown as 0 is a lie the user
+                                acts on. */}
+                            <span style={{ color: group.remaining < 0 ? 'var(--status-over)' : 'var(--text-primary)', fontWeight: 600 }}>
+                              {formatCurrency(group.remaining)}
+                            </span>
+                          </span>
+                        </span>
+                      </button>
 
-                return (
-                  <div
-                    key={budget.id}
-                    style={{
-                      background: 'var(--bg-card)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid var(--border-light)',
-                      borderRadius: '16px',
-                      overflow: 'hidden',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    {/* Budget Header - Clickable */}
-                    <div
-                      style={{
-                        padding: '24px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onClick={() => handleExpandBudget(budget.id)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--surface-hover)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        {/* Icon */}
-                        <div style={{ fontSize: '36px', flexShrink: 0 }}>
-                          {budget.category_icon}
-                        </div>
-
-                        {/* Category & Progress */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                            {/* h2, not h3 — each budget row is a section under
-                                the page's <h1> and there is no level between,
-                                so h3 skipped one. Size is inline; nothing moves
-                                on screen. Caught by the E2E heading check. */}
-                            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                              {budget.category_name}
-                            </h2>
-                            {isOver && (
-                              <span style={{
-                                padding: '3px 10px',
-                                /* The FILL is the wash and the CLAY is the border
-                                   and the text. A red tint under clay measured
-                                   3.87:1 for 11px bold — the badge that shouts
-                                   loudest on the page was the least legible thing
-                                   on it. Clay on the wash is 4.53. */
-                                background: 'var(--kt-wash)',
-                                border: '1px solid var(--status-over)',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                color: 'var(--status-over)',
-                                fontWeight: '700'
-                              }}>
-                                OVER
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenBudgetModal(budget);
-                              }}
-                              aria-label="Edit budget"
-                              style={{
-                                marginLeft: 'auto',
-                                padding: '6px',
-                                background: 'var(--border-light)',
-                                border: '1px solid var(--border-medium)',
-                                borderRadius: '6px',
-                                color: 'var(--text-primary)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--border-medium)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--border-light)';
-                              }}
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                          </div>
-
-                          {/* Progress Bar */}
-                          <div style={{ marginBottom: '8px' }}>
-                            <div style={{
-                              width: '100%',
-                              height: '8px',
-                              background: 'var(--progress-track)',
-                              borderRadius: '4px',
-                              overflow: 'hidden'
-                            }}>
-                              <div style={{
-                                width: `${Math.min(percentage, 100)}%`,
-                                height: '100%',
-                                background: isOver
-                                  ? 'var(--status-over)'
-                                  : percentage >= 80
-                                    ? 'var(--status-warn)'
-                                    : budget.category_color || 'var(--status-ok)',
-                                borderRadius: '4px',
-                                transition: 'width 0.5s ease'
-                              }}></div>
-                            </div>
-                          </div>
-
-                          {/* Spent / Budget */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={secondaryBodyStyle}>
-                              <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
-                                {formatCurrency(budget.spent)}
-                              </span>
-                              {' '}of {formatCurrency(budget.amount)}
+                      {!collapsed && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                          {group.budgets.length === 0 ? (
+                            <p className="fp-hint" style={{ padding: '8px 4px' }}>
+                              {/* *** THE FIXED GROUP DOES NOT ASK FOR A TARGET. ***
+                                  Every other empty state on this page invites you
+                                  to set one; demanding a number for rent is
+                                  theatre, so this one reports and stops. */}
+                              {group.spending_type === 'fixed'
+                                ? 'Nothing here yet. Fixed costs are reported, not budgeted — sort a category into Fixed and it will show what it costs.'
+                                : `No ${group.label.toLowerCase()} budgets yet.`}
                             </p>
-                            <p style={{
-                              color: isOver ? 'var(--status-over)' : 'var(--status-ok)',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              margin: 0
-                            }}>
-                              {isOver
-                                ? `+${formatCurrency(Math.abs(remaining))}`
-                                : formatCurrency(remaining)
-                              }
-                            </p>
-                          </div>
+                          ) : (
+                            group.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, group.spending_type))
+                          )}
                         </div>
+                      )}
+                    </section>
+                  );
+                })}
 
-                        {/* Expand Icon */}
-                        <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
-                          {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                        </div>
-                      </div>
+                {/* *** UNSORTED IS SHOWN ONLY WHEN IT HAS CONTENT. *** Unlike the
+                    three groups, an empty Unsorted is not a state worth a heading:
+                    it is a to-do list, and an empty to-do list is just noise. */}
+                {(unsorted.count > 0 || unsorted.budgets.length > 0) && (
+                  <section style={groupSectionStyle}>
+                    <div style={groupHeaderStyle}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h2 style={groupTitleStyle}>{UNSORTED_LABEL}</h2>
+                        <span className="fp-hint">{unsorted.count}</span>
+                      </span>
+                      <span style={groupFigureStyle}>
+                        <span className="fp-hint">Actual</span>
+                        <Money amount={unsorted.actual} currency={currency} />
+                      </span>
                     </div>
-
-                    {/* Expanded Transactions */}
-                    {isExpanded && (
-                      <div style={{
-                        padding: '0 24px 24px 24px',
-                        borderTop: '1px solid var(--border-light)',
-                        paddingTop: '16px'
-                      }}>
-                        {budget.transactions && budget.transactions.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {budget.transactions.slice(0, 10).map((txn) => (
-                              <div
-                                key={txn.id}
-                                style={{
-                                  padding: '14px 16px',
-                                  background: 'var(--surface-hover)',
-                                  border: '1px solid var(--border-light)',
-                                  borderRadius: '10px',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s'
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleTransactionClick(txn);
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'var(--border-light)';
-                                  e.currentTarget.style.borderColor = `${budget.category_color}60`;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'var(--surface-hover)';
-                                  e.currentTarget.style.borderColor = 'var(--border-light)';
-                                }}
-                              >
-                                <div style={{ flex: 1 }}>
-                                  <p style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '500', margin: 0, marginBottom: '4px' }}>
-                                    {txn.description || txn.name || 'Unnamed Transaction'}
-                                  </p>
-                                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                                    {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                  </p>
-                                </div>
-                                <p style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                                  {formatCurrency(txn.amount)}
-                                </p>
-                              </div>
-                            ))}
-                            {budget.transactions.length > 10 && (
-                              <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '8px' }}>
-                                Showing 10 of {budget.transactions.length} transactions
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '16px' }}>
-                            No transactions yet in this category
-                          </p>
-                        )}
+                    <p className="fp-hint" style={{ margin: '4px 4px 12px' }}>
+                      Money left through these categories and they are not in a group
+                      yet. These are starting points until you set them.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                      {unsorted.categories.map((category) => (
+                        <span key={category.id} style={unsortedChipStyle}>
+                          <span style={{ fontWeight: 600 }}>{category.name}</span>
+                          <Money amount={category.actual} currency={currency} />
+                          <SpendingTypeControl
+                            categoryId={category.id}
+                            value={null}
+                            onChanged={loadData}
+                          />
+                        </span>
+                      ))}
+                    </div>
+                    {unsorted.budgets.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                        {unsorted.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, null))}
                       </div>
                     )}
-                  </div>
-                );
-              })
+                  </section>
+                )}
+              </>
             )}
           </div>
 

@@ -9,6 +9,7 @@ from src.models.transaction_rule import TransactionRule
 from src.data.default_categories import DEFAULT_CATEGORIES
 from src.data.default_rules import DEFAULT_RULES
 from src.data.convert_icons_to_emoji import convert_icon
+from src.services.category.spending_type import default_for
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,28 @@ def load_default_categories(user_id):
                 icon=convert_icon(parent_data['icon']),  # Convert FontAwesome to emoji
                 color=parent_data['color'],
                 user_id=user_id,
-                is_system=True  # Mark as system category
+                # *** D-182: ONLY "Other" IS A SYSTEM CATEGORY. ***
+                # This seeder used to flag ALL 147, while
+                # `create_default_categories` flags only "Other" -- so the two
+                # seeders disagreed about what the flag means and the DEMO, the
+                # one instance anyone browses, could not edit a single category.
+                # `CategoryManagement.tsx` renders an Edit pencil on every row,
+                # so the page offered an action the server refused every time.
+                #
+                # The flag's real job is narrow: "Other" is where orphaned
+                # transactions land when a category is deleted
+                # (`category/service.py`), so renaming or deleting it breaks
+                # that lookup. Nothing else needs protecting.
+                #
+                # Owner approved 2026-09-10, knowing the side effect: the other
+                # 146 demo categories become deletable. The demo reseeds, so
+                # that is recoverable.
+                is_system=(parent_name == 'Other'),
+                # D-177: the demo is the one instance anyone browses, and it uses
+                # THIS seeder rather than create_default_categories. A feature
+                # shipping while the demo seed does not know about it is the
+                # defect that row records.
+                spending_type=default_for(parent_name)
             )
             db.session.add(parent_category)
             db.session.flush()  # Get the ID without committing
@@ -52,7 +74,11 @@ def load_default_categories(user_id):
                     color=subcat['color'],
                     parent_id=parent_category.id,
                     user_id=user_id,
-                    is_system=True
+                    # See the note on the parent above. The demo tree's only
+                    # "Other" is `Miscellaneous/Other`, a CHILD -- so the flag
+                    # has to be settable here too, not just at top level.
+                    is_system=(subcat['name'] == 'Other'),
+                    spending_type=default_for(subcat['name'], parent_name)
                 )
                 db.session.add(subcategory)
                 db.session.flush()

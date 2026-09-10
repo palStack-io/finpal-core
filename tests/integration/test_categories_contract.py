@@ -67,7 +67,11 @@ from tests.factories import UserFactory
 BOTH_SPELLINGS = pytest.mark.parametrize('slash', ['', '/'],
                                          ids=['no-slash', 'trailing-slash'])
 
-DETAIL_FIELDS = {'id', 'name', 'icon', 'color', 'parent_id', 'is_system'}
+# `spending_type` joined this set when the budget spending groups shipped. It is
+# always PRESENT and may be null: a client has to be able to tell "unsorted"
+# from "this backend is too old to know", and an omitted key cannot say that.
+DETAIL_FIELDS = {'id', 'name', 'icon', 'color', 'parent_id', 'is_system',
+                 'spending_type'}
 
 
 @pytest.fixture
@@ -100,9 +104,16 @@ def _make_category(owner, name, **kwargs):
 # =============================================================================
 
 @BOTH_SPELLINGS
-def test_pin_get_one_category_returns_a_bare_six_field_dict(
+def test_pin_get_one_category_returns_a_bare_seven_field_dict(
         client, db, me, headers, slash):
-    """No envelope, no `success`, no `category` key — just the fields."""
+    """No envelope, no `success`, no `category` key — just the fields.
+
+    Was six fields until the budget spending groups added `spending_type`.
+    *** IT IS ASSERTED AS PRESENT-AND-NULL, NOT OMITTED. *** An absent key and a
+    null mean different things to a client here: null is "the user has not
+    classified this", absent is "this backend predates the feature", and the
+    Unsorted section depends on telling them apart.
+    """
     category = _make_category(me, 'Groceries', color='#112233')
 
     resp = client.get(f'/api/v1/categories/{category.id}{slash}', headers=headers)
@@ -114,6 +125,7 @@ def test_pin_get_one_category_returns_a_bare_six_field_dict(
         'color': '#112233',
         'parent_id': None,
         'is_system': False,
+        'spending_type': None,
     }
 
 
