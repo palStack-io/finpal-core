@@ -25,6 +25,7 @@ import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
 import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
+import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
 
@@ -147,7 +148,18 @@ beforeEach(() => {
      * non-monthly group, a FIXED card that reports instead of scoring, and an
      * Unsorted section with two categories and their controls.
      */
-    http.get('*/api/v1/categories/', () => HttpResponse.json({ categories: [] })),
+    /**
+     * *** THE CATEGORY SCREEN WAS NEVER IN THE WALK AT ALL. *** Not "captured
+     * without the new control" -- absent, so neither walk had ever measured a
+     * page that has shipped for as long as the app has. The spending-group
+     * control lands there (spec §1 decision 3), which is what surfaced it.
+     *
+     * Long names on purpose: a category name sits beside a `<select>` and two
+     * icon buttons on one row, which is the narrowest thing on this page and
+     * the first to overflow at 390.
+     */
+    http.get('*/api/v1/categories/', () => HttpResponse.json({ categories: WALK_CATEGORIES })),
+    http.get('*/api/v1/categories', () => HttpResponse.json({ categories: WALK_CATEGORIES })),
     http.get('*/api/v1/budgets/overview', () => HttpResponse.json({
       success: true,
       total_budget: 2000, total_spent: 1450, total_remaining: 550, percentage_used: 72,
@@ -197,6 +209,21 @@ beforeEach(() => {
  * an empty state, which has no grid to measure — an empty capture passes an
  * overflow gate exactly the way a correct one does.
  */
+const WALK_CATEGORIES = [
+  { id: 1, name: 'Housing, rent and everything the landlord bills for', icon: '🏠',
+    color: '#3498db', parent_id: null, is_system: false, spending_type: 'fixed' },
+  { id: 2, name: 'Home maintenance and occasional emergency repairs', icon: '🔧',
+    color: '#3498db', parent_id: 1, is_system: false, spending_type: 'non_monthly' },
+  { id: 3, name: 'Buildings and contents insurance', icon: '🛡️',
+    color: '#3498db', parent_id: 1, is_system: false, spending_type: null },
+  { id: 4, name: 'Food, drink and the weekly supermarket run', icon: '🍽️',
+    color: '#e74c3c', parent_id: null, is_system: false, spending_type: 'flexible' },
+  { id: 5, name: 'Gym membership and physiotherapy appointments', icon: '💪',
+    color: '#1abc9c', parent_id: null, is_system: false, spending_type: null },
+  { id: 6, name: 'Other', icon: '❓',
+    color: '#95a5a6', parent_id: null, is_system: true, spending_type: null },
+];
+
 const budgetWalkRow = (id: number, name: string, amount: number, spent: number) => ({
   id, name, amount, spent,
   remaining: amount - spent,
@@ -397,6 +424,16 @@ const cases: Case[] = [
     // state a returning user lands in, and it is styled separately.
     await userEvent.click(
       await screen.findByRole('heading', { level: 2, name: 'Non-Monthly' }));
+  }],
+  /**
+   * Captured with a spending-group control FOCUSED. A `<select>` inline beside
+   * a long category name and two icon buttons is the widest row this page can
+   * produce, and focus is the only state in which the control's own border and
+   * text are measurable against the card behind it.
+   */
+  ['categories', CategoryManagement as React.FC, async () => {
+    const controls = await screen.findAllByLabelText('Spending group');
+    controls[0].focus();
   }],
   // Accounts is walked at ONE realistic count. It was measured at 2/8/20 once,
   // to answer a density question; those captures then lingered in `captured/`

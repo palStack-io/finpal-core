@@ -5,6 +5,7 @@ import { Modal } from './Modal';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
+import { SpendingTypeControl } from './budgets/SpendingTypeControl';
 import { StatCard } from './StatCard';
 
 /**
@@ -596,10 +597,11 @@ export const CategoryManagement: React.FC = () => {
                 }}
               >
                 {/* Parent Category */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: subcategories.length > 0 ? '20px' : '0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: subcategories.length > 0 ? '20px' : '0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0, flex: 1 }}>
                     <div style={{
                       fontSize: '40px',
+                      flexShrink: 0,
                       width: '60px',
                       height: '60px',
                       display: 'flex',
@@ -610,13 +612,26 @@ export const CategoryManagement: React.FC = () => {
                     }}>
                       {categoryIcon(category.icon)}
                     </div>
-                    <div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px', overflowWrap: 'anywhere' }}>
                         {category.name}
                       </h3>
                       <p style={bodyTextStyle}>
                         {subcategories.length} subcategor{subcategories.length === 1 ? 'y' : 'ies'}
                       </p>
+                      {/* *** SPEC §1 DECISION 3: BOTH SCREENS, ONE VALUE. ***
+                          The budget page lists only categories that HAVE a
+                          budget, and its Unsorted section only ones money left
+                          through this month -- so a category with neither had
+                          nowhere to be reclassified, and §4's promise that a
+                          default is always correctable was not true of it. */}
+                      <div style={{ marginTop: '6px' }}>
+                        <SpendingTypeControl
+                          categoryId={category.id}
+                          value={category.spending_type ?? null}
+                          onChanged={loadCategories}
+                        />
+                      </div>
                     </div>
                   </div>
                   <div style={flexRowGap8}>
@@ -679,9 +694,19 @@ export const CategoryManagement: React.FC = () => {
                           transition: 'all 0.3s'
                         }}
                       >
-                        <div style={flexRowGap12}>
+                        {/* *** THE GROUP CONTROL OVERFLOWED THIS ROW AT 390px AND THE
+                            RESPONSIVE WALK CAUGHT IT: 466 against a 390 viewport. ***
+                            Measured A/B -- the same page WITHOUT the control is 390/390,
+                            so this is mine and not pre-existing. The squeeze is real
+                            estate: this list is indented 76px, so a long name, a 40px
+                            icon, a `<select>` and two icon buttons compete for 314px.
+                            Overridden locally rather than by editing the shared
+                            `flexRowGap12`, which a dozen other components use and none
+                            of them asked for this. */}
+                        <div style={{ ...flexRowGap12, flexWrap: 'wrap', minWidth: 0, flex: 1 }}>
                           <div style={{
                             fontSize: '24px',
+                            flexShrink: 0,
                             width: '40px',
                             height: '40px',
                             display: 'flex',
@@ -692,7 +717,19 @@ export const CategoryManagement: React.FC = () => {
                           }}>
                             {categoryIcon(sub.icon)}
                           </div>
-                          <span style={{ color: 'var(--text-primary)', fontSize: '15px' }}>{sub.name}</span>
+                          <span style={{ color: 'var(--text-primary)', fontSize: '15px', minWidth: 0, overflowWrap: 'anywhere' }}>{sub.name}</span>
+                          {/* A subcategory inherits its parent's group until it
+                              is given one, so this is where that override is
+                              made -- and a subcategory is the level at which
+                              the split actually does its work (Groceries vs
+                              Restaurants under Food). */}
+                          <SpendingTypeControl
+                            categoryId={sub.id}
+                            value={sub.spending_type ?? null}
+                            inherited={sub.spending_type == null
+                              && category.spending_type != null}
+                            onChanged={loadCategories}
+                          />
                         </div>
                         <div style={flexRowGap8}>
                           <button

@@ -197,6 +197,24 @@ const baseline = existsSync(baselinePath)
  * is clean. The other four are still above zero and stay.
  */
 const PENDING_AUDIT = {
+  // *** ADDED 2026-09-10 WHEN THE CATEGORY SCREEN ENTERED `captured/` FOR THE
+  // FIRST TIME. *** It has shipped for as long as the app has and had never
+  // been captured by either walk -- "unmeasured is not clean", the same hole
+  // the six pages below were sitting in. The spending-group control landing
+  // there (spec §1 decision 3) is what surfaced it.
+  //
+  // *** THE SIX PAIRS ARE PRE-EXISTING AND THAT WAS MEASURED, NOT ASSUMED. ***
+  // The page was captured A/B, with the new control and without it, and the
+  // failing set is IDENTICAL both ways. They are the page's shipped icon
+  // buttons and its green primary -- #22c55e, #3b82f6 and #ef4444 on their
+  // washes, and #17301f on #15803d -- i.e. the semantic accents that are
+  // deliberately not variablized. Fixing them is a palette pass, not this one.
+  //
+  // The A/B also caught something that WAS mine: the control overflowed the
+  // subcategory row at 390px, 466 against a 390 viewport. That was fixed, not
+  // listed here -- this list is for what shipped before, never for a
+  // regression.
+  categories: 'D-103 — never contrast-audited; entered captured/ 2026-09-10, pairs verified pre-existing A/B',
   investments: 'D-103 — never contrast-audited; added to captured/ by the responsive pass',
   'pointspal-bestcard': 'D-103 — never contrast-audited',
   'pointspal-mycards': 'D-103 — never contrast-audited',
