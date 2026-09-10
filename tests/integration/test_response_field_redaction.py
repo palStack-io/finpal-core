@@ -133,6 +133,14 @@ ACCOUNT_KEYS = {
 CATEGORY_KEYS = {
     'id', 'name', 'icon', 'color', 'parent_id', 'is_system', 'user_id',
     'subcategories',
+    # *** REVIEWED AGAINST THIS TEST'S OWN QUESTION BEFORE BEING ADDED. ***
+    # The guard asks whether the MCP redaction layer needs to know about a new
+    # field. `spending_type` is one of exactly three enum values -- 'fixed',
+    # 'flexible', 'non_monthly' -- or null, chosen by the user to classify a
+    # category they can already see the name of. It carries no credential, no
+    # external id and no identity, so it is strictly less revealing than
+    # `name`, which is already exposed. **No redaction change needed.**
+    'spending_type',
 }
 # Note: TransactionSchema declares `created_at`, but Expense has no such
 # column, so marshmallow silently omits it. Declared-but-absent, hence not
