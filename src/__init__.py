@@ -397,6 +397,20 @@ def create_app(config_name=None):
                     'spending_type backfill could not run; the budget page will '
                     'show every category under Unsorted until it succeeds')
 
+            # D-182: the demo seeder used to flag ALL 147 of its categories
+            # `is_system`, which made every one of them uneditable. Fixing the
+            # seeder fixes nothing already in a database -- `seed_demo_accounts`
+            # skips users that exist, so a redeploy re-seeds nothing. This is
+            # the condition-keyed correction for the rows the old version wrote
+            # (D-178), and it is a no-op on a signup-seeded instance.
+            try:
+                from src.services.category.system_flag import correct_system_category_flag
+                correct_system_category_flag()
+            except Exception:
+                app.logger.exception(
+                    'is_system correction could not run; categories seeded by '
+                    'the old demo seeder stay uneditable until it succeeds')
+
             # Module startup hooks (seeding, cache warming, etc.)
             try:
                 from src.modules.registry import module_registry
