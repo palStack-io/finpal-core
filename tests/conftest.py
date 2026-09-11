@@ -35,6 +35,23 @@ os.environ.setdefault('TESTING', 'true')
 # asserts this held.
 os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 
+# *** learnPal IS `default_enabled = False`, AND ITS MODELS ARE IMPORTED
+# CONDITIONALLY, SO WITHOUT THIS ITS TWO TABLES DO NOT EXIST IN THE SUITE AT
+# ALL. *** `src/models/__init__.py` imports them only when `is_enabled()`, and
+# `create_all()` can only build a table whose model has been imported — so the
+# default would leave every learnPal test erroring on a missing table rather
+# than failing on behaviour.
+#
+# Assigned, not `setdefault`-ed, for the same reason as the URI above: a stray
+# value in .env must not be able to decide what the suite covers.
+#
+# The DISABLED path is therefore not exercised by these fixtures, which is
+# exactly the hole pointsPal fell into. It is covered instead by
+# `test_learnpal_in_core.py`, which drives `is_enabled()` directly with
+# monkeypatched environments and pins the manifest and the model-import guard
+# to one source of truth.
+os.environ['LEARNPAL_ENABLED'] = 'true'
+
 # Off for the same reason — it is read at create_app() time. Leaving it to .env
 # meant every run seeded four demo users, 147 categories and 52 rules apiece
 # before the first test.

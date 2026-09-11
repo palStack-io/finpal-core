@@ -97,6 +97,24 @@ class Goal(db.Model):
     # 'active' | 'achieved' | 'archived'. `achieved` is stamped ONCE by
     # `GoalService.stamp_if_achieved`, so a later transaction that moves the balance
     # back cannot retract a badge the user has already been shown.
+    # *** A WATERMARK, AND THE ONLY REASON IT IS STORED IS THAT UNLOCKS ARE
+    # PERMANENT. *** `progress` is derived from live balances, so it FALLS when
+    # a card is used again. learnPal's altitude gates compare against the
+    # highest point ever reached, not the current one -- otherwise a bad month
+    # would take back a lesson the user had already read (design decision 4).
+    #
+    # It lives on `Goal` in CORE rather than in `src/modules/learnpal/` on the
+    # same reasoning as the table itself: debtPal, retirementPal and firePal all
+    # read goals and none may depend on a learning module. Nothing in core reads
+    # it today, which is honest -- it is a fact about the goal, maintained by
+    # whoever cares.
+    #
+    # *** RELEASE-GATING: A NEW COLUMN ON AN EXISTING TABLE IS INVISIBLE TO
+    # `create_all()`. *** It needs the boot reconcile (`src/utils/schema_reconcile.py`,
+    # D-121) on any database that already has a `goals` table, and both the
+    # backend AND `finpal-scheduler` redeployed.
+    highest_progress = db.Column(db.Numeric(6, 3), nullable=True)
+
     status = db.Column(db.String(20), nullable=False, default='active')
     achieved_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
