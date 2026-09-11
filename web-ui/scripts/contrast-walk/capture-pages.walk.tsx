@@ -183,6 +183,76 @@ beforeEach(() => {
           balance: -612.25, currency_code: 'USD', user_id: 'demo@finpal.app' },
       ],
     })),
+    /*
+     * C1c. *** THE GOALS PAGE REQUESTS THIS NOW, AND WITHOUT A HANDLER THE
+     * WHOLE CAPTURE FAILS. *** MSW's `onUnhandledRequest: 'error'` raises, the
+     * goals capture times out, and CI goes red -- which is precisely how this
+     * was found: I ran the full vitest suite after adding the fetch and did NOT
+     * re-run the walk captures, then pushed with SKIP_PREFLIGHT=1. CI was the
+     * backstop, which is what it is for.
+     *
+     * *** POPULATED RATHER THAN A 404, BECAUSE A 404 WOULD CAPTURE NOTHING
+     * NEW. *** The banner and the per-goal strips are new UI, and a page being
+     * in the walk is not the walk seeing what changed (D-165). The strip's
+     * lesson title is deliberately LONG: it has to be a string that fits at
+     * 1440 and can overflow at 390.
+     */
+    http.get('*/api/v1/learnpal/range', () => HttpResponse.json({
+      success: true,
+      range: {
+        cost: {
+          heading: "What's costing you", unit: 'a month, in interest',
+          total: 312.5,
+          peaks: [{
+            goal_id: 1, name: 'Clear the John Lewis Partnership Mastercard',
+            currency_code: 'USD', progress: 0.7272, status: 'active',
+            peak: { scale: 'cost', magnitude: 312.5, unmeasured: false, band: 5,
+                    mountain: { slug: 'everest', name: 'Everest',
+                                elevation_m: 8849, fact: null, summit_note: null },
+                    hardest_band: 5,
+                    hardest_mountain: { slug: 'everest', name: 'Everest',
+                                        elevation_m: 8849, fact: null,
+                                        summit_note: null },
+                    apr: null },
+            strip: {
+              read: 3, total: 4,
+              next: { slug: 'avalanche-vs-snowball',
+                      title: 'Avalanche or snowball, and which clears it sooner',
+                      unlock_at_progress: 0.25, gear_slug: 'compass' },
+              gear: [
+                { slug: 'headlamp', milestone_slug: 'what-your-apr-costs',
+                  title: 'What your APR actually costs', earned: true },
+                { slug: 'ice-axe', milestone_slug: 'why-minimums-barely-move-it',
+                  title: 'Why the minimum barely moves it', earned: true },
+                { slug: 'rope', milestone_slug: 'a-starter-buffer',
+                  title: 'The rope you tie on first', earned: true },
+                { slug: 'compass', milestone_slug: 'avalanche-vs-snowball',
+                  title: 'Avalanche or snowball', earned: false },
+              ],
+            },
+          }],
+        },
+        build: {
+          heading: "What you're building", unit: 'still to save', total: 6000,
+          peaks: [{
+            goal_id: 2, name: 'Emergency fund', currency_code: 'USD',
+            progress: 0.3333, status: 'active',
+            peak: { scale: 'build', magnitude: 6000, unmeasured: false, band: 3,
+                    mountain: { slug: 'mount-rainier', name: 'Mount Rainier',
+                                elevation_m: 4392, fact: null, summit_note: null },
+                    hardest_band: 3,
+                    hardest_mountain: { slug: 'mount-rainier',
+                                        name: 'Mount Rainier', elevation_m: 4392,
+                                        fact: null, summit_note: null },
+                    apr: 24.99 },
+            strip: { read: 0, total: 2, next: null, gear: [] },
+          }],
+        },
+        ground: { total: 1623, recurring: 1588, minimums: 35 },
+        lessons: { read: 3, total: 8 },
+        kit: [],
+      },
+    })),
     http.get('*/api/v1/goals/1/contributions', () => HttpResponse.json({
       success: true, currency_code: 'USD',
       contributions: [

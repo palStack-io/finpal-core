@@ -188,7 +188,7 @@ export const Range: React.FC = () => {
 
       {nothingYet ? (
         <p style={{ ...mutedStyle, fontStyle: 'italic' }}>
-          No goals yet. <Link to="/goals">Add one</Link> and it appears here as a
+          No goals yet. <Link to="/goals" style={{ color: 'var(--g-ink)' }}>Add one</Link> and it appears here as a
           mountain.
         </p>
       ) : (
@@ -251,7 +251,9 @@ export const Range: React.FC = () => {
         <span style={mutedStyle}>
           {range.lessons.read} of {range.lessons.total} lessons read
         </span>
-        <Link to="/learnpal/lessons">See all lessons</Link>
+        <Link to="/learnpal/lessons" style={{ color: 'var(--g-ink)' }}>
+          See all lessons
+        </Link>
       </div>
     </div>
   );

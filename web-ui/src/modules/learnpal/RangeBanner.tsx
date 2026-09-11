@@ -22,6 +22,19 @@ import type { LearnRange, RangeScaleSide } from '../../types/learnpal';
 
 const MAX_PX = 54;
 
+/*
+ * *** EVERY LINK HERE CARRIES AN EXPLICIT COLOUR, AND IT HAS TO. *** This app
+ * has no global `a { }` rule and no link variable, so an unstyled `<Link>` falls
+ * back to the USER AGENT's blue -- `#0000ee`, which measures 9.13:1 on the light
+ * card and 1.72:1 on the dark one. The contrast walk caught exactly that as a
+ * NEW failing pair (`#0000ee|#16241a`) on the first run after this component
+ * existed, which is the ratchet doing its job.
+ *
+ * `--g-ink` is already theme-aware (#166534 light, #5fce8b dark) and measures
+ * 6.92:1 and 8.21:1 on the two card surfaces, so it is the right existing token
+ * rather than a new one.
+ */
+
 const sideHeading: React.CSSProperties = {
   fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
 };
@@ -97,7 +110,9 @@ export const RangeBanner: React.FC<{ range: LearnRange }> = ({ range }) => {
             )}
           </span>
         </div>
-        <Link to="/learnpal" style={{ fontSize: 13 }}>Open learnPal</Link>
+        <Link to="/learnpal" style={{ fontSize: 13, color: 'var(--g-ink)' }}>
+          Open learnPal
+        </Link>
       </div>
 
       <div style={{ display: 'flex', padding: '10px 16px 4px' }}>
