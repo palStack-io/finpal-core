@@ -50,8 +50,22 @@ export interface User {
   fiscalYearStart?: number;
   // Demo mode fields
   is_demo_user?: boolean;
-  // Module system — slugs granted by adminPal
+  // Module system — slugs granted by adminPal. ENTITLEMENT: "may you".
   modules?: string[];
+  /**
+   * Slugs this user has chosen to HIDE. PREFERENCE: "do you want to" — a
+   * different question from `modules`, and a different table server-side
+   * (`user_module_preferences`, owner decision 2026-09-11).
+   *
+   * *** DELIBERATELY NOT SUBTRACTED FROM `modules`. *** Settings renders its
+   * Modules tab from `modules` and is the only screen that can un-hide one, so
+   * filtering hidden slugs out of that list would make hiding a one-way door.
+   * The sidebar honours this; Settings ignores it.
+   *
+   * Optional because a payload from a server older than this feature has no
+   * such key, and `undefined` must mean "nothing hidden", not "everything".
+   */
+  hidden_modules?: string[];
 }
 
 export interface OnboardingData {

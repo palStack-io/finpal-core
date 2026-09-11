@@ -1003,3 +1003,80 @@ def _import_user_data(user_id, data: dict) -> dict:
 
     db.session.commit()
     return stats
+
+
+@ns.route('/module-preferences')
+class ModulePreferences(Resource):
+    """Which optional modules this user wants to SEE.
+
+    *** A PREFERENCE, NOT AN ENTITLEMENT. *** `UserModuleAccess` answers "may
+    you" and is adminPal's; this answers "do you want to" and is the user's.
+    Owner decision 2026-09-11 to keep them in separate tables — one row meaning
+    both would let an adminPal sync silently erase a user's choice.
+
+    *** THIS EXISTS BECAUSE THE SETTINGS TOGGLE WAS `localStorage`-ONLY. *** It
+    wrote `module_hidden_${slug}` into one browser, so the choice did not follow
+    the user to another device and mobile could not see it at all. That is the
+    prerequisite C1f's module chooser was blocked on.
+    """
+
+    @ns.doc('get_module_preferences', security='Bearer')
+    @jwt_required()
+    def get(self):
+        """Slugs this user has hidden. Absent rows are visible, so this is short."""
+        from src.modules.preference import hidden_modules_for
+        return {'success': True, 'hidden': hidden_modules_for(get_jwt_identity())}
+
+
+# *** `@ns.expect` IS DOCUMENTATION, NOT VALIDATION, AND BOTH MATTER SEPARATELY. ***
+# flask-restx request validation is off in this app, so the handler still checks
+# the body itself. But `test_every_request_body_is_documented` refuses a route
+# that reads a body and publishes no schema — a generated client would know the
+# route exists and not what to send it. It caught this endpoint.
+module_preference_input = ns.model('ModulePreferenceInput', {
+    'visible': fields.Boolean(
+        required=True,
+        description='true shows the module in the sidebar, false hides it. '
+                    'A PREFERENCE, not an entitlement — it can never grant '
+                    'access the deployment or adminPal has withheld.'),
+})
+
+
+@ns.route('/module-preferences/<string:slug>')
+@ns.param('slug', 'Module slug, e.g. pointspal')
+class ModulePreference(Resource):
+
+    @ns.doc('set_module_preference', security='Bearer')
+    @ns.expect(module_preference_input)
+    @jwt_required()
+    def put(self, slug):
+        """Show or hide one module for this user. Body: {"visible": bool}."""
+        from src.modules.preference import hidden_modules_for, set_module_visibility
+        from src.modules.registry import module_registry
+
+        user_id = get_jwt_identity()
+        data = request.get_json(silent=True) or {}
+
+        # *** `'visible' in data`, NOT truthiness. *** `{"visible": false}` is the
+        # entire point of this endpoint, and a truthiness test would read a
+        # deliberate hide as a missing field and answer 400.
+        if 'visible' not in data or not isinstance(data['visible'], bool):
+            return {'success': False, 'error': 'Validation error',
+                    'details': {'visible': ['A boolean is required.']}}, 400
+
+        # *** REFUSE A SLUG THAT IS NOT A REGISTERED MODULE. *** Without this the
+        # table quietly accumulates rows for typos and for modules that no longer
+        # exist, and a client bug looks like a working request. Checked against
+        # the registry rather than a hand-written list, so a module added
+        # tomorrow needs no change here.
+        known = {m.name for m in module_registry.modules}
+        if slug not in known:
+            return {'success': False, 'error': f'Unknown module: {slug}'}, 404
+
+        set_module_visibility(user_id, slug, data['visible'])
+        db.session.commit()
+
+        # Return the whole list, not just the one that changed: the client keeps
+        # a single `hidden_modules` array and a partial response would make it
+        # reconstruct state it can simply be handed.
+        return {'success': True, 'hidden': hidden_modules_for(user_id)}

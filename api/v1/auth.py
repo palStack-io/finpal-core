@@ -74,6 +74,30 @@ def _background_sync(app, user_id: str) -> None:
     thread.start()
 
 
+def _get_hidden_modules(user_id: str) -> list:
+    """Slugs this user has chosen to hide. A SEPARATE question from `modules`.
+
+    *** IT IS DELIBERATELY NOT SUBTRACTED FROM `modules`, AND THAT IS THE WHOLE
+    DESIGN. *** `modules` answers "what may you use" and drives Settings' Modules
+    tab, which is where a hidden module gets UN-hidden. Filtering hidden ones out
+    of that list would make hiding a module a one-way door: it would disappear
+    from the only screen that can bring it back.
+
+    So the client gets both lists and decides per surface -- the sidebar honours
+    `hidden_modules`, Settings ignores it and shows every entitled module with
+    its toggle.
+
+    Fails OPEN, like `_get_user_modules` below: a database problem hides nothing
+    rather than hiding everything.
+    """
+    try:
+        from src.modules.preference import hidden_modules_for
+        return hidden_modules_for(user_id)
+    except Exception:
+        logger.warning('Module preference lookup failed; hiding nothing', exc_info=True)
+        return []
+
+
 def _get_user_modules(user_id: str) -> list:
     """Return list of module slugs enabled for this user."""
     try:
@@ -550,6 +574,7 @@ class Register(Resource):
                     'hasCompletedOnboarding': user.has_completed_onboarding,
                     'profile_emoji': user.profile_emoji,
                     'modules': _get_user_modules(user.id),
+                    'hidden_modules': _get_hidden_modules(user.id),
                 }
             }, 201
 
@@ -607,6 +632,7 @@ class Login(Resource):
                     'timezone': user.timezone,
                     'number_locale': user.number_locale,  # #132
                     'modules': _get_user_modules(user.id),
+                    'hidden_modules': _get_hidden_modules(user.id),
                     'notifications': _notifications(user)
                 }
             }, 200
@@ -672,6 +698,7 @@ class CurrentUser(Resource):
                 # entitlement, different answer depending on the door used.
                 # One user shape, one source: `_get_user_modules`.
                 'modules': _get_user_modules(user.id),
+                'hidden_modules': _get_hidden_modules(user.id),
                 'notifications': _notifications(user),
                 'created_at': user.created_at.isoformat() if user.created_at else None
             }, 200
@@ -770,6 +797,7 @@ class CompleteOnboarding(Resource):
                 'hasCompletedOnboarding': True,
                 'is_demo_user': user.is_demo_user,
                 'modules': _get_user_modules(user.id),
+                'hidden_modules': _get_hidden_modules(user.id),
             }, 200
 
         except HTTPException:

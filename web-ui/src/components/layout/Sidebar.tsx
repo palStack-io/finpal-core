@@ -203,11 +203,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
   const { user, logout, features } = useAuthStore();
   const navigate = useNavigate();
 
-  // Re-render when module hide/show preferences change from Settings
+  // Re-render when a module's nav section is expanded/collapsed elsewhere.
+  //
+  // `module_hidden_` is NO LONGER LISTENED FOR and that is deliberate: hide/show
+  // moved to the server on 2026-09-11, so Settings updates the auth store and
+  // zustand re-renders this component without any storage event. Leaving the
+  // old key in the predicate would have been harmless and misleading — a reader
+  // would conclude localStorage still drove visibility.
+  //
+  // `module_nav_open_` stays in localStorage on purpose: which sections you have
+  // expanded is genuinely per-browser and has no business on the server.
   const [, forceUpdate] = useState(0);
   useEffect(() => {
     const handler = (e: StorageEvent) => {
-      if (e.key?.startsWith('module_hidden_') || e.key?.startsWith('module_nav_open_')) {
+      if (e.key?.startsWith('module_nav_open_')) {
         forceUpdate(n => n + 1);
       }
     };
@@ -298,9 +307,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         {/* ── Modules section — driven by moduleRegistry + user.modules ── */}
         {(() => {
           const activeModules = moduleRegistry.filter(m => user?.modules?.includes(m.slug));
-          const visibleModules = activeModules.filter(m => {
-            try { return localStorage.getItem(`module_hidden_${m.slug}`) !== 'true'; } catch { return true; }
-          });
+          // Server-side since 2026-09-11. This read `localStorage` — a
+          // per-BROWSER hide that did not follow the user to another device and
+          // that mobile could not see at all. `?? []` and not `|| []` is not the
+          // point here; the point is that a payload from an older server has no
+          // `hidden_modules` key, and undefined must mean NOTHING hidden.
+          const hidden = new Set(user?.hidden_modules ?? []);
+          const visibleModules = activeModules.filter(m => !hidden.has(m.slug));
           if (visibleModules.length === 0) return null;
           return (
             <>
