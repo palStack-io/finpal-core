@@ -25,6 +25,8 @@ class LearnPalModule(ModuleBase):
         return []
 
     def on_startup(self, app):
+        # Milestones only. *** MOUNTAINS ARE SEEDED BY CORE *** (src/__init__.py),
+        # because a goal is drawn as a peak whether or not this module is on.
         from src.modules.learnpal.seed import seed_milestones
         seed_milestones()
 

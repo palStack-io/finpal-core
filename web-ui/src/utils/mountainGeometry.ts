@@ -86,20 +86,30 @@ export interface Ceilings {
 }
 
 /**
- * *** PROPOSED, NOT APPROVED. §18 ITEM 1 — THE BAND TABLE — IS UNANSWERED. ***
- * These are placeholders so the arithmetic is testable and the shape of the
- * answer is visible. They are deliberately parameters rather than constants:
- * the caller passes ceilings, so settling the band table later is a change at
- * one call site and not a change to this file.
+ * *** THESE MIRROR THE TOP BAND'S FLOOR IN `src/data/seed_mountains.py`, AND A
+ * TEST ENFORCES THE MIRROR. *** They used to be marked "PROPOSED, NOT APPROVED,
+ * the band table is unanswered"; the band table is answered now — it is two
+ * seeded tables — so these are the offline DEFAULT rather than a proposal.
  *
- * The reasoning behind the numbers, so the owner has something to react to
- * rather than a blank: £250/month of interest is severe for a household budget
- * and a sensible "as tall as it gets"; £20,000 remaining is a large but
- * reachable savings target. Both are in BASE currency.
+ * *** THE TOP BAND'S FLOOR AND THE HEIGHT CEILING MUST BE THE SAME NUMBER. ***
+ * They were not: the floor was 40,000 and this said 20,000, so every build goal
+ * from £20k up saturated at `maxHeight` and an Aconcagua at £25k drew exactly as
+ * tall as an Everest at £60k — a peak named one thing and drawn as another,
+ * which is the failure the band table's own comment warns about. Two
+ * independent numbers will always drift; `test_goal_mountains.py` now reads this
+ * file and compares it against the seed, so the next drift fails a gate.
+ *
+ * Still parameters and not constants, because the caller passes ceilings: when
+ * adminPal can edit the bands, the server sends the ceilings with them and this
+ * object becomes the fallback for a client that asked before they arrived.
+ *
+ * £250/month of interest is severe for a household budget and a sensible "as
+ * tall as it gets"; £40,000 remaining is a large but reachable savings target.
+ * Both are in BASE currency.
  */
-export const PROPOSED_CEILINGS: Ceilings = {
+export const DEFAULT_CEILINGS: Ceilings = {
   costCeiling: 250,
-  buildCeiling: 20000,
+  buildCeiling: 40000,
   maxHeight: 100,
 };
 
@@ -153,7 +163,7 @@ function scaleHeight(magnitude: number, ceiling: number, maxHeight: number): num
  * onto the other scale by relabelling it, which is §5's honesty rule restated in
  * geometry.
  */
-export function peakGeometry(peak: PeakInput, ceilings: Ceilings = PROPOSED_CEILINGS): PeakGeometry {
+export function peakGeometry(peak: PeakInput, ceilings: Ceilings = DEFAULT_CEILINGS): PeakGeometry {
   const unmeasuredResult: PeakGeometry = {
     height: 0, magnitude: null, unmeasured: true, scale: peak.direction,
   };

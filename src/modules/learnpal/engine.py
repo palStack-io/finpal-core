@@ -65,6 +65,34 @@ def raise_watermark(goal):
     return goal.highest_progress
 
 
+def raise_hardest_band(goal):
+    """Move `goal.hardest_band` up to the current band. Never down.
+
+    *** THE MOUNTAIN SHRINKS AS YOU SUCCEED, WHICH IS WHY THIS EXISTS. *** §3
+    recomputes the band from the goal's CURRENT figure, so paying a card down
+    walks it back down the ladder and FINISHING LANDS ON THE SMALLEST MOUNTAIN.
+    A summit note read from the current band would congratulate somebody on
+    Table Mountain for clearing an Aconcagua.
+
+    Does not commit — the caller owns the transaction.
+    """
+    # *** MOUNTAINS ARE CORE NOW. *** learnPal READS them; it does not own them.
+    from src.services.goal.mountains import band_index, mountain_for, peak_magnitude
+
+    scale, magnitude = peak_magnitude(goal)
+    if magnitude is None:
+        return goal.hardest_band          # unmeasured: no band, and not band 0
+    mountain = mountain_for(scale, magnitude)
+    if mountain is None:
+        return goal.hardest_band
+    index = band_index(mountain.slug)
+    if index is None:
+        return goal.hardest_band
+    if goal.hardest_band is None or index > goal.hardest_band:
+        goal.hardest_band = index
+    return goal.hardest_band
+
+
 def _already_unlocked(user_id):
     rows = db.session.query(LearnCompletion.milestone_slug).filter(
         LearnCompletion.user_id == user_id).all()
@@ -113,6 +141,9 @@ def evaluate_for_user(user_id, goal=None):
     # sees the state after this evaluation rather than before it.
     for g in goals:
         raise_watermark(g)
+        # The band watermark rides the same pass. Both only ever rise, and both
+        # are read by things that must not change when a user has a bad month.
+        raise_hardest_band(g)
 
     from src.services.goal.service import GoalService
     service = GoalService()

@@ -77,6 +77,16 @@ NO_DEMO_ROWS_BY_DESIGN = {
                         'demo seeder; the demo stack carries all eight rows',
     'learn_completions': 'earned by a real goal reaching an altitude band — '
                          'seeding one would fabricate a lesson nobody read',
+    # Mountains are CORE reference data as of the C1c redesign (they used to be
+    # learnPal's). Seeded by `seed_mountains()` from core boot, exactly like
+    # `learn_milestones` is seeded by the module's -- so a demo-seed fixture that
+    # never boots the app sees them empty while the demo STACK carries all 18 rows.
+    # Per-user seeding would be wrong, not just unnecessary: these become
+    # adminPal's to edit, and a demo-owned copy would fork from the real one.
+    'mountains': 'core reference data seeded by seed_mountains() at boot, not by the '
+                 'demo seeder; the demo stack carries all six rows',
+    'mountain_bands': 'core reference data seeded alongside mountains at boot; '
+                      'the demo stack carries all twelve rows',
     'category_mappings': 'learned from real CSV imports, which a demo does not run',
     'points_transfer_partners': 'reference data shipped by the pointsPal upstream feed, '
                                 'not per-user; empty until that feed carries partners',
@@ -87,8 +97,14 @@ NO_DEMO_ROWS_BY_DESIGN = {
 # a surface a visitor can reach and find blank, which is the exact condition D-77,
 # D-175 and D-177 were opened for. Reported on every run so it cannot be forgotten.
 KNOWN_DEMO_GAPS = {
-    'recurring_expenses': 'the Recurring page demos itself empty',
-    'ignored_recurring_patterns': 'follows recurring_expenses',
+    # `recurring_expenses` WAS here and is now seeded (eight rows per persona,
+    # including a weekly and a yearly): the goals ground layer reads it, and with
+    # nothing in it the range argued the opposite of its point. Its sibling below
+    # used to say "follows recurring_expenses" and can no longer lean on that.
+    'ignored_recurring_patterns': 'the detector\'s "ignored" list demos itself empty: '
+                                  'the seeder writes recurring expenses directly and '
+                                  'dismisses nothing, so a visitor cannot see what '
+                                  'dismissing a suggestion does',
     'settlements': 'groups have expenses (D-175) but nobody has ever settled up, so '
                    'the settle-up flow shows no history',
     'category_splits': 'a transaction split across categories — the form supports it '

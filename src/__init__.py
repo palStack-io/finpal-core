@@ -380,6 +380,26 @@ def create_app(config_name=None):
                     'balances through the legacy account_id path, but multi-account '
                     'goals will not work until this succeeds')
 
+            # Mountains and their bands. CORE CONTENT, seeded at boot, because a
+            # goal is drawn as a peak whether or not learnPal is installed.
+            #
+            # *** THIS USED TO SEED FROM learnPal's `on_startup` AND THAT WAS THE
+            # BUG THE OWNER SPOTTED. *** Mountains belong to goals; hanging their
+            # seed off an optional module meant a deployment with learnPal off
+            # had a `Goal.hardest_band` column, a `mountains` table and nothing
+            # to put in it.
+            #
+            # Condition-keyed and never version-keyed (D-178): it inserts only
+            # what is missing and never UPDATEs, so it cannot undo an edit --
+            # and these rows become adminPal's to edit.
+            try:
+                from src.data.seed_mountains import seed_mountains
+                seed_mountains()
+            except Exception:
+                app.logger.exception(
+                    'mountain seed could not run; goals will render without a '
+                    'peak until it succeeds')
+
             # Budget spending groups: every category seeded before this shipped
             # has `spending_type` NULL, and a seed change is not shipped until a
             # correction exists for the rows the old version wrote (D-178).
