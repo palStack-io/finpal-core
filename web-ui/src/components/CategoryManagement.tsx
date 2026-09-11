@@ -447,7 +447,16 @@ export const CategoryManagement: React.FC = () => {
   }
 
   return (
-    <div>
+    /* *** THE SHARED PAGE SHELL, ON ONE ELEMENT. *** `pageContainerStyle` is the
+       24px gutter and `pageMaxWidthStyle` the 1400px cap. Measured on the
+       deployed demo at 1440px: this page's content began at 240px, flush against
+       the side nav, while every page using the shell began at 264px.
+       Combined on one div rather than nested, because the two differ only in
+       whether the gutter sits inside or outside the cap and a 240px side nav
+       means the cap cannot bind below a 1640px viewport.
+       *** THIS FILE ALREADY IMPORTED `pageContainerStyle` AND NEVER USED IT. ***
+       A shared barrel import makes a page look like it adopted the shell. */
+    <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Categories</h2>
