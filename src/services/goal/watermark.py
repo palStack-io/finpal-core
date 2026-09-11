@@ -162,6 +162,12 @@ def backfill_goal_watermarks():
     if stamped:
         db.session.commit()
         logger.info('goal watermarks stamped on %s goal(s)', stamped)
-    else:
-        db.session.rollback()
+    # *** NO `else: rollback()`, AND THE FIRST VERSION OF THIS HAD ONE. *** A
+    # no-op needs no rollback, and this runs at boot AFTER `seed_mountains()`:
+    # an unconditional rollback on the nothing-to-do path would have discarded
+    # that seeder's pending fact corrections on every boot where no goal needed
+    # stamping -- which is every boot after the first, on exactly the
+    # already-seeded deployments the corrections exist for. D-188 is that half;
+    # the seeder now commits its own work, and this no longer throws anything
+    # away that is not its own.
     return stamped
