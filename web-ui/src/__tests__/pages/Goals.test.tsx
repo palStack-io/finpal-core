@@ -64,11 +64,27 @@ const PAYOFF_GOAL = {
   progress: 0.6001457246692317,
 };
 
-function mockGoals(goals: unknown[], accounts: unknown[] = []) {
+/**
+ * `range` defaults to a 404, which is what a deployment WITHOUT learnPal
+ * answers — so every existing test here now exercises the module-off path by
+ * default, which is the state most self-hosters are in. Pass a range object to
+ * test the module-on surfaces.
+ *
+ * *** THE HANDLER IS NOT OPTIONAL EVEN WHEN THE ANSWER IS 404. *** The page
+ * makes the request now, and MSW's `onUnhandledRequest: 'error'` raises OUTSIDE
+ * the test: every test reports green and the process exits non-zero. That is
+ * D-95's shape and it already bit once this session.
+ */
+function mockGoals(goals: unknown[], accounts: unknown[] = [], range?: unknown) {
   server.use(
     http.get(`${BASE}/api/v1/goals`, () => HttpResponse.json({ success: true, goals })),
     http.get(`${BASE}/api/v1/accounts`, () =>
       HttpResponse.json({ success: true, accounts })),
+    http.get(`${BASE}/api/v1/learnpal/range`, () => (
+      range === undefined
+        ? HttpResponse.json({ success: false, error: 'Not Found' }, { status: 404 })
+        : HttpResponse.json({ success: true, range })
+    )),
   );
 }
 
@@ -894,5 +910,145 @@ describe('Goals page — the card opens the editor, and delete asks first', () =
     await userEvent.click(screen.getByRole('button', { name: /Edit Emergency fund/i }));
     expect(screen.queryByText(/cannot be undone/i)).toBeNull();
     expect(screen.getByRole('button', { name: /Delete this goal/i })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C1c — the learnPal banner and the per-goal strip
+// ---------------------------------------------------------------------------
+
+const STRIP = {
+  read: 3,
+  total: 4,
+  next: { slug: 'avalanche-vs-snowball', title: 'Avalanche or snowball',
+          unlock_at_progress: 0.25, gear_slug: 'compass' },
+  gear: [
+    { slug: 'headlamp', milestone_slug: 'what-your-apr-costs',
+      title: 'What your APR actually costs', earned: true },
+    { slug: 'ice-axe', milestone_slug: 'why-minimums-barely-move-it',
+      title: 'Why the minimum barely moves it', earned: true },
+    { slug: 'rope', milestone_slug: 'a-starter-buffer',
+      title: 'The rope you tie on first', earned: true },
+    { slug: 'compass', milestone_slug: 'avalanche-vs-snowball',
+      title: 'Avalanche or snowball', earned: false },
+  ],
+};
+
+const RANGE = {
+  cost: {
+    heading: "What's costing you", unit: 'a month, in interest', total: 13.33,
+    peaks: [{
+      goal_id: 1, name: 'Pay off Chase Amazon', currency_code: 'USD',
+      progress: 0.6, status: 'active', peak: COST_PEAK, strip: STRIP,
+    }],
+  },
+  build: {
+    heading: "What you're building", unit: 'still to save', total: 0, peaks: [],
+  },
+  ground: { total: 1600, recurring: 1565, minimums: 35 },
+  lessons: { read: 3, total: 8 },
+  kit: STRIP.gear,
+};
+
+describe('Goals page — learnPal is OFF (what most self-hosters run)', () => {
+  /**
+   * *** THE MODULE BEING ABSENT IS NOT AN ERROR STATE. *** `/learnpal/range`
+   * 404s when `LEARNPAL_ENABLED` is unset, because the namespace is never
+   * registered. The page must look exactly as it did before C1c — and it must
+   * NOT show an error on a page that works perfectly.
+   */
+  it('renders no banner, no strip and no error', async () => {
+    // A goal WITH a peak, because the point is that the CORE mountain survives
+    // learnPal being off. My first version used the bare fixture, which has no
+    // `peak` at all, so it proved nothing about the mountain.
+    mockGoals([peakGoal(COST_PEAK)], []);   // no range argument -> 404
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+
+    expect(screen.queryByTestId('range-banner')).toBeNull();
+    expect(screen.queryByTestId('goal-strip-1')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    // *** THE MOUNTAIN IS CORE AND SURVIVES. *** That is the whole C1c redesign:
+    // turn learnPal off and a goal keeps its peak, its band and its subline.
+    expect(screen.getByText(/What's costing you/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ben Nevis/)).toBeInTheDocument();
+  });
+
+  it('*** A learnPal FAILURE MUST NOT BREAK THE GOALS PAGE ***', async () => {
+    // Not a 404 but a 500: goals are core, so a module blowing up costs the
+    // banner and the strips and nothing else.
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.get(`${BASE}/api/v1/learnpal/range`, () =>
+        HttpResponse.json({ success: false }, { status: 500 })),
+    );
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+    expect(screen.queryByTestId('range-banner')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('Goals page — learnPal is ON', () => {
+  it('shows the range banner with both units and a divider', async () => {
+    mockGoals([PAYOFF_GOAL], [], RANGE);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByTestId('range-banner')).toBeInTheDocument();
+
+    // *** EACH SIDE PRINTS ITS OWN UNIT. *** At banner size the clusters sit
+    // close enough that somebody could read one against the other, and they
+    // share no unit.
+    expect(screen.getByText(/a month, in interest/)).toBeInTheDocument();
+    expect(screen.getByText(/still to save/)).toBeInTheDocument();
+    expect(screen.getByTestId('banner-side-cost')).toBeInTheDocument();
+    expect(screen.getByTestId('banner-side-build')).toBeInTheDocument();
+  });
+
+  it('names the next lesson rather than only counting what is done', async () => {
+    mockGoals([PAYOFF_GOAL], [], RANGE);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByTestId('range-banner');
+    expect(screen.getByText(/3 of 8 lessons read/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Avalanche or snowball/).length).toBeGreaterThan(0);
+  });
+
+  it('shows the ground under both sides, once', async () => {
+    mockGoals([PAYOFF_GOAL], [], RANGE);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByTestId('range-banner');
+    // One strip, not one per side: you stand on it before climbing either.
+    expect(screen.getAllByText(/a month before you climb anything/)).toHaveLength(1);
+  });
+
+  it('shows the per-goal strip with locked gear still visible', async () => {
+    mockGoals([PAYOFF_GOAL], [], RANGE);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    const strip = await screen.findByTestId('goal-strip-1');
+    expect(strip).toHaveTextContent('3 of 4');
+    // Locked gear is SHOWN at reduced opacity, not omitted: the row is what the
+    // user is working towards, and a strip that grew an icon at a time would
+    // never show the shape of it.
+    expect(strip.querySelectorAll('[title]')).toHaveLength(4);
+    expect(strip.querySelector('[title*="not yet"]')).not.toBeNull();
+  });
+
+  it('says so honestly when a goal has no lesson yet', async () => {
+    const bare = { ...RANGE, cost: { ...RANGE.cost, peaks: [{
+      ...RANGE.cost.peaks[0],
+      strip: { read: 0, total: 2, next: null, gear: [] },
+    }] } };
+    mockGoals([PAYOFF_GOAL], [], bare);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    const strip = await screen.findByTestId('goal-strip-1');
+    expect(strip).toHaveTextContent(/no lesson here yet/i);
+  });
+
+  it('renders NO strip on an archived goal', async () => {
+    mockGoals([{ ...PAYOFF_GOAL, status: 'archived' }], [], RANGE);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+    // An archived goal has released its accounts and is not being climbed, so
+    // "next at 25%" would invite the user somewhere they deliberately stopped.
+    expect(screen.queryByTestId('goal-strip-1')).toBeNull();
   });
 });

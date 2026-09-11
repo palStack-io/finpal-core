@@ -5,11 +5,13 @@
  * for its routes and nav to appear.
  */
 
+import learnpal from './learnpal/manifest';
 import pointspal from './pointspal/manifest';
 import type { ModuleManifest } from './registry';
 
 export const moduleRegistry: ModuleManifest[] = [
   pointspal,
+  learnpal,
 ];
 
 // To add a new module:

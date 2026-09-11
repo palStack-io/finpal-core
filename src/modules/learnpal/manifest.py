@@ -20,9 +20,17 @@ class LearnPalModule(ModuleBase):
     default_enabled = False
 
     def get_namespaces(self):
-        # C1b has no UI and no HTTP surface. The engine is reached from the
-        # goal write path and the nightly task. Routes arrive with C1c.
-        return []
+        # C1c. *** READ ENDPOINTS ONLY, PLUS ONE WRITE THAT CANNOT UNLOCK. ***
+        # The engine is still reached from the goal write path and the nightly
+        # task; nothing behind a route decides what opens, or a client could
+        # award itself every piece of gear by POSTing a list of slugs.
+        #
+        # These paths 404 when the module is off, because the namespace is only
+        # registered from here. A client must read that as "learnPal is not
+        # installed" and render nothing -- the same discipline as `peak` being
+        # absent from a goal payload.
+        from src.modules.learnpal.routes import learnpal_ns
+        return [(learnpal_ns, '/learnpal')]
 
     def on_startup(self, app):
         # Milestones only. *** MOUNTAINS ARE SEEDED BY CORE *** (src/__init__.py),

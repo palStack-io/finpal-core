@@ -13,6 +13,10 @@ import {
 import { GoalAccountsControl } from '../components/goals/GoalAccountsControl';
 import { SlidePanel } from '../components/SlidePanel';
 import { pageContainerStyle } from '../styles/layoutStyles';
+import { learnpalService } from '../modules/learnpal/service';
+import { RangeBanner } from '../modules/learnpal/RangeBanner';
+import { GoalStrip } from '../modules/learnpal/GoalStrip';
+import type { LearnRange, RangeStrip } from '../types/learnpal';
 import { goalService } from '../services/goalService';
 import { accountService, type Account } from '../services/accountService';
 import type { Goal, GoalContribution } from '../types/goal';
@@ -121,6 +125,13 @@ const percentLabel = (progress: number): string => `${Math.round(progress * 100)
 
 interface GoalRowProps {
   goal: Goal;
+  /**
+   * *** OPTIONAL BECAUSE learnPal IS OPTIONAL. *** `undefined` means the module
+   * is off (or the range has not loaded), and the card must then look exactly as
+   * it does without learnPal -- no strip, no border, nothing. Same discipline as
+   * `peak` being absent from the payload.
+   */
+  strip?: RangeStrip;
   /** Opens the shared slide-in panel in edit mode. */
   onEdit: (goal: Goal) => void;
   onArchive: (goal: Goal) => void;
@@ -132,7 +143,7 @@ interface GoalRowProps {
 }
 
 const GoalRow: React.FC<GoalRowProps> = ({
-  goal, onEdit, onArchive, onDelete, accounts, onAccountsChanged,
+  goal, strip, onEdit, onArchive, onDelete, accounts, onAccountsChanged,
 }) => {
   const [contributions, setContributions] = useState<GoalContribution[] | null>(null);
   const [loadingContributions, setLoadingContributions] = useState(false);
@@ -389,6 +400,8 @@ const GoalRow: React.FC<GoalRowProps> = ({
       </div>
       </div>
 
+      {strip && <GoalStrip strip={strip} goalId={goal.id} />}
+
       {goal.account_id !== null && (
         <div style={{ marginTop: 12 }}>
           {/* *** THE ACCOUNTS CONTROL MOVED INTO THE EDIT PANEL. *** The owner
@@ -452,6 +465,13 @@ export const Goals: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  /**
+   * *** `null` MEANS learnPal IS NOT INSTALLED, AND THAT IS NOT AN ERROR. ***
+   * The service resolves 404 to null rather than throwing, so a deployment that
+   * does not run learnPal gets the goals page it always had -- no banner, no
+   * strips -- instead of a red error on a page that works.
+   */
+  const [range, setRange] = useState<LearnRange | null>(null);
   // Two-step delete: this holds the id awaiting confirmation, never a boolean,
   // so a confirm left armed on one goal cannot apply to the next one opened.
   const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
@@ -470,13 +490,22 @@ export const Goals: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [fetchedGoals, fetchedAccounts] = await Promise.all([
+      const [fetchedGoals, fetchedAccounts, fetchedRange] = await Promise.all([
         goalService.getGoals(),
         // Only to populate the link picker. A failure here must not hide the goals.
         accountService.getAccounts().catch(() => [] as Account[]),
+        /*
+         * *** learnPal MUST NOT BE ABLE TO BREAK THE GOALS PAGE. *** The service
+         * already resolves a 404 to `null` (module off), and this `catch`
+         * covers the rest: a 500 from the range, a timeout, anything. Goals are
+         * CORE and the mountains on the cards come from the goal payload, so a
+         * learnPal failure costs the banner and the strips and nothing else.
+         */
+        learnpalService.getRange().catch(() => null),
       ]);
       setGoals(fetchedGoals);
       setAccounts(fetchedAccounts);
+      setRange(fetchedRange);
     } catch (err) {
       setError(apiErrorMessage(err, 'Could not load your goals.'));
     } finally {
@@ -633,6 +662,17 @@ export const Goals: React.FC = () => {
    * the write -- so the accounts control inside the panel would be editing a
    * stale link set.
    */
+  /*
+   * Derived, not stored: the range reloads with the goals, and a map rebuilt on
+   * render cannot drift from the list it is drawn beside.
+   */
+  const stripsByGoal = new Map<number, RangeStrip>();
+  if (range) {
+    for (const side of [range.cost, range.build]) {
+      for (const entry of side.peaks) stripsByGoal.set(entry.goal_id, entry.strip);
+    }
+  }
+
   const editingGoal = editingId === null
     ? null
     : goals.find((candidate) => candidate.id === editingId) ?? null;
@@ -887,6 +927,9 @@ export const Goals: React.FC = () => {
         </form>
       </SlidePanel>
 
+      {/* learnPal only, and absent entirely when the module is off. */}
+      {range && <RangeBanner range={range} />}
+
       {loading && <Loader2 size={20} className="animate-spin" aria-label="Loading goals" />}
       {error && <div role="alert" style={{ color: '#ef4444' }}>{error}</div>}
 
@@ -904,6 +947,7 @@ export const Goals: React.FC = () => {
           <GoalRow
             key={goal.id}
             goal={goal}
+            strip={stripsByGoal.get(goal.id)}
             onEdit={openEdit}
             onArchive={handleArchive}
             onDelete={handleDelete}
@@ -919,6 +963,13 @@ export const Goals: React.FC = () => {
             Archived
           </h2>
           <div style={{ display: 'grid', gap: 16 }}>
+            {/* *** NO STRIP ON AN ARCHIVED GOAL, DELIBERATELY. *** The range
+                excludes archived goals server-side, so `stripsByGoal` would
+                answer `undefined` here regardless -- but it is passed nowhere
+                rather than passed-and-empty so the intent is readable: an
+                archived goal has released its accounts and is not being
+                climbed, so "next at 25%" would be inviting the user somewhere
+                they have deliberately stopped going. */}
             {archived.map((goal) => (
               <GoalRow
                 key={goal.id}

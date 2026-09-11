@@ -104,6 +104,38 @@ export const DemoBanner: React.FC<DemoBannerProps> = ({ onDismiss }) => {
         >
           CSV import and API settings are disabled
         </div>
+
+        {/*
+          Active-development warning. This demo tracks in-progress work rather than a
+          released build, so a visitor can hit a half-finished feature. Said plainly
+          here because nothing else on the page tells them -- the countdown and the
+          restrictions note both read as "this is a polished demo with limits", which
+          sets the wrong expectation.
+
+          RESTORED 2026-09-11: this was the owner's uncommitted work and I destroyed
+          it with a `git reset --hard` while cleaning up merged branches, having
+          twice noted that it was not mine to touch. Reconstructed from the diff.
+        */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.375rem',
+            background: 'rgba(0, 0, 0, 0.22)',
+            border: '1px solid rgba(255, 255, 255, 0.35)',
+            padding: '0.375rem 0.75rem',
+            borderRadius: '9999px',
+            color: '#ffffff',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+          }}
+        >
+          <AlertCircle size={14} />
+          <span>
+            Actively in development &mdash; expect rough edges, and don&apos;t rely on
+            anything you enter here
+          </span>
+        </div>
       </div>
 
       {/* Sign Up CTA */}

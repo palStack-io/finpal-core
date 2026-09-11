@@ -237,3 +237,79 @@ def test_report_the_known_gaps(seeded_demo, capsys):
               f'tables seeded, {len(KNOWN_DEMO_GAPS)} known gaps')
         for name, reason in sorted(KNOWN_DEMO_GAPS.items()):
             print(f'    GAP  {name:<28} {reason}')
+
+
+# ---------------------------------------------------------------------------
+# The backfill, and why the create path alone is not enough (D-178)
+# ---------------------------------------------------------------------------
+
+def test_RECURRING_EXPENSES_REACH_AN_ALREADY_SEEDED_DEMO(db):
+    """*** THE CREATE PATH ALONE SHIPPED NOTHING, AND IT WAS MEASURED. ***
+
+    C1c's PR1 added `_seed_demo_recurring` to the path that CREATES a demo user
+    and stopped there. `seed_demo_accounts` does `continue` for a user that
+    already exists -- correct, it runs every boot and must not duplicate -- so
+    the deployed demo, seeded months ago, still had ZERO recurring rows after
+    the fix went live. Measured on it: `0 recurring rows`, and the goals range
+    reporting "$0.00 recurring and $35.00 of card minimums" -- the precise
+    figure PR1 was written to correct.
+
+    D-178, for the third time in two days.
+
+    Goes through `_backfill_demo_gaps` directly rather than
+    `seed_demo_accounts`, which refuses when `DEMO_MODE` is off -- and the test
+    config sets it off (`conftest.py:58`). The existing demo tests build their
+    user the same way for the same reason.
+    """
+    from src.models.recurring import RecurringExpense
+    from src.services.demo.service import DEMO_ACCOUNTS, DemoService
+    from tests.factories import UserFactory
+
+    # A demo user that already exists, with no recurring rows -- exactly the
+    # shape of the deployed demo before this fix.
+    email = DEMO_ACCOUNTS[0]['email']
+    UserFactory(id=email, is_demo_user=True)
+    db.session.commit()
+    assert RecurringExpense.query.filter_by(user_id=email).count() == 0
+
+    DemoService._backfill_demo_gaps()
+    db.session.commit()
+
+    made = RecurringExpense.query.filter_by(user_id=email).count()
+    assert made > 0, (
+        'the backfill did not seed recurring expenses, so the fix reaches no '
+        'demo that already exists'
+    )
+    # Both conversion branches are present, which is what makes the ground worth
+    # trusting: a weekly row catches a 4-weeks-is-a-month error.
+    freqs = {r.frequency for r in
+             RecurringExpense.query.filter_by(user_id=email).all()}
+    assert 'weekly' in freqs and 'yearly' in freqs and 'monthly' in freqs
+
+
+def test_the_backfill_does_NOT_duplicate_on_every_boot(db):
+    """The idempotence, which is the other half and is easy to lose.
+
+    `_backfill_demo_gaps` runs on EVERY container start. Keyed to the GAP
+    ("this user has none") rather than to a version marker, so it is
+    self-correcting -- but drop the check and the demo grows eight recurring
+    expenses per persona on every restart.
+    """
+    from src.models.recurring import RecurringExpense
+    from src.services.demo.service import DEMO_ACCOUNTS, DemoService
+    from tests.factories import UserFactory
+
+    email = DEMO_ACCOUNTS[0]['email']
+    UserFactory(id=email, is_demo_user=True)
+    db.session.commit()
+
+    DemoService._backfill_demo_gaps()
+    db.session.commit()
+    once = RecurringExpense.query.filter_by(user_id=email).count()
+    assert once > 0
+
+    for _ in range(3):
+        DemoService._backfill_demo_gaps()
+        db.session.commit()
+
+    assert RecurringExpense.query.filter_by(user_id=email).count() == once
