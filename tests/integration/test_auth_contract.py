@@ -124,7 +124,24 @@ def no_outbound_mail(monkeypatch):
 # re-derives the value it is checking checks nothing — and
 # `test_the_module_list_is_computed_not_hardcoded` proves the list really is
 # built from the registry rather than being a constant in the handler.
-DEFAULT_MODULES = ['pointspal']
+def _enabled_modules():
+    """The modules this deployment actually has on, in registry order.
+
+    *** SPELLED AS `['pointspal']` UNTIL 2026-09-10, WHEN learnPal ARRIVED AND
+    FIVE TESTS WENT RED FOR A CORRECT PAYLOAD. *** The list is a fact about the
+    deployment's configuration, not a constant -- `Settings.tsx` gates its
+    Modules tab on it being non-empty, so it has to reflect reality. Derived
+    from the registry, so registering a module is no longer a change that
+    breaks the auth contract tests for no reason.
+
+    It still FAILS if the handler stops listing a module that is enabled, which
+    is the thing worth pinning.
+    """
+    from src.modules.registry import module_registry
+    return [m.name for m in module_registry.modules if m.is_enabled()]
+
+
+DEFAULT_MODULES = _enabled_modules()
 
 
 @pytest.fixture
@@ -477,7 +494,12 @@ def test_me_returns_the_profile(client, db, user, auth_headers, slash):
     # same shape from now on, keyed to the WHOLE payload rather than to this one
     # key — so the next gating field cannot repeat D-63 by being added to login
     # alone.
-    assert body['modules'] == ['pointspal']
+    # Derived, not spelled — see `_enabled_modules` at the top. This line read
+    # `== ['pointspal']` until learnPal was registered on 2026-09-10 and it went
+    # red for a payload that was entirely correct. What is worth pinning is that
+    # `/me` lists every ENABLED module, not that there happens to be one.
+    assert body['modules'] == DEFAULT_MODULES
+    assert 'pointspal' in body['modules']
 
 
 @BOTH_SPELLINGS

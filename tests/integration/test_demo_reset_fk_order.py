@@ -161,8 +161,30 @@ CLOSURE_SEEDS = frozenset({'accounts', 'categories', 'portfolios',
                            'expenses', 'goals', 'budgets'})
 
 
+def _blocks(fk):
+    """True if this foreign key can actually REFUSE a delete.
+
+    *** ADDED 2026-09-10 AFTER THIS GUARD CAUGHT A REAL DEFECT AND THEN ASKED
+    FOR THE WRONG FIX. *** When it was written, every FK into `accounts` and
+    `categories` was NO ACTION, so "references it" and "blocks deleting it"
+    were the same thing and the distinction did not exist.
+
+    learnPal's `learn_completions.unlocked_by_goal_id` is the first that is
+    not: it is `ON DELETE SET NULL`, because an optional learning module must
+    never be able to make a core deletion fail. The database releases the
+    reference and the goal deletes cleanly, so demanding that `reset_demo_user`
+    clear that table would be asking core to know about a module -- exactly the
+    coupling the SET NULL exists to avoid.
+
+    A guard that cannot tell a blocking edge from a released one grows a
+    hard-coded exception list the first time it meets one, and that is how a
+    derived guard turns back into a spelling-keyed one.
+    """
+    return (fk.ondelete or '').upper() not in ('SET NULL', 'CASCADE', 'SET DEFAULT')
+
+
 def fk_closure():
-    """Every table reachable by a foreign key INTO one the reset deletes."""
+    """Every table whose foreign key can REFUSE a delete of one the reset clears."""
     closure = set(CLOSURE_SEEDS)
     changed = True
     while changed:
@@ -170,7 +192,8 @@ def fk_closure():
         for table in db.metadata.sorted_tables:
             if table.name in closure:
                 continue
-            if any(fk.column.table.name in closure for fk in table.foreign_keys):
+            if any(fk.column.table.name in closure and _blocks(fk)
+                   for fk in table.foreign_keys):
                 closure.add(table.name)
                 changed = True
     return closure
@@ -185,7 +208,7 @@ def fk_edges(closure):
             continue
         for fk in table.foreign_keys:
             parent = fk.column.table.name
-            if parent in closure and parent != table.name:
+            if parent in closure and parent != table.name and _blocks(fk):
                 yield table.name, parent
 
 

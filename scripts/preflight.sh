@@ -45,11 +45,60 @@ PY=./venv/bin/python
 # covers less than it claims is the thing this script was written to stop (see the header).
 PY311=./venv311/bin/python
 
+# *** EVERY STEP RUNS UNDER A WALL CLOCK, ADDED 2026-09-10 ON THE OWNER'S
+# INSTRUCTION. *** Nothing here had one. A step that hangs -- a walk waiting on a
+# Chrome that never launched, an MSW handler that never answers, a scheduler job
+# sharing the request's connection (D-61) -- blocked the whole gate until a human
+# noticed, and on 2026-09-10 that cost roughly half an hour of a session sitting
+# on a run that was never going to answer.
+#
+# Implemented in pure bash because *** macOS HAS NEITHER `timeout` NOR
+# `gtimeout` *** unless coreutils is installed, and a gate that depends on an
+# optional Homebrew package is a gate that silently does not run.
+#
+# A timed-out step is a FAILURE, never a skip. "It took too long" and "it passed"
+# must not look the same from the summary -- that is the shape of every silent
+# gate this project has been bitten by.
+STEP_TIMEOUT=${STEP_TIMEOUT:-900}      # 15 min; the slowest honest step is ~8
+
+run_with_timeout() {
+  local secs=$1; shift
+  # *** `set -m` IS LOAD-BEARING AND WAS ADDED AFTER TESTING, NOT BEFORE. ***
+  # Without job control a background child is NOT a process-group leader, so
+  # `kill -- -PID` fails and only the direct child dies. Proven with a parent
+  # spawning a long-lived grandchild: without this the grandchild survived the
+  # timeout, which for a real step means an orphaned pytest or a headless Chrome
+  # left holding a port. With it, the whole group goes and 0 orphans remain.
+  set -m
+  "$@" &
+  local pid=$!
+  set +m
+  local waited=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$waited" -ge "$secs" ]; then
+      # The step's own children (pytest, node, chrome) are what actually hold the
+      # time, so kill the process GROUP, not just the shell that launched it.
+      kill -TERM -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null
+      sleep 3
+      kill -KILL -"$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null
+      return 124
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  wait "$pid"
+}
+
 step() {
   local label=$1; shift
   printf '\n\033[1m▶ %s\033[0m\n' "$label"
-  if "$@"; then
+  local rc=0
+  run_with_timeout "$STEP_TIMEOUT" "$@" || rc=$?
+  if [ "$rc" -eq 0 ]; then
     printf '\033[32m  ✓ %s\033[0m\n' "$label"
+  elif [ "$rc" -eq 124 ]; then
+    printf '\033[31m  ✗ %s — TIMED OUT after %ss\033[0m\n' "$label" "$STEP_TIMEOUT"
+    FAILED+=("$label (TIMED OUT after ${STEP_TIMEOUT}s — it hung, it did not fail)")
   else
     printf '\033[31m  ✗ %s\033[0m\n' "$label"
     FAILED+=("$label")

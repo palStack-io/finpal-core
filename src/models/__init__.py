@@ -50,6 +50,16 @@ if _PointsPalModule().is_enabled():
         SpendPeriodTotal, OptimizerAlert,
     )
 
+# Same conditional-import rule as pointsPal above, and the same trap: these two
+# tables are created by `create_all()` ONLY if the models are imported by the
+# time it runs, so this `if` is what decides whether they exist at all.
+# `test_learnpal_in_core.py` pins this reader and the manifest to one source of
+# truth, because pointsPal shipped a version where the suite could never run the
+# default it claimed to cover.
+from src.modules.learnpal.manifest import LearnPalModule as _LearnPalModule
+if _LearnPalModule().is_enabled():
+    from src.modules.learnpal.models import LearnMilestone, LearnCompletion
+
 __all__ = [
     'group_users',
     'expense_tags',
