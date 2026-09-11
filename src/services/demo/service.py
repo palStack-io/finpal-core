@@ -980,6 +980,31 @@ class DemoService:
             if not Goal.query.filter_by(user_id=user.id).first():
                 logger.info('Backfilling demo goals for %s', user.id)
                 DemoService._seed_demo_goals(user)
+
+            # *** C1c: THE RECURRING EXPENSES, AND LEAVING THIS OUT IS EXACTLY
+            # THE MISTAKE THIS FUNCTION'S DOCSTRING WARNS ABOUT. ***
+            #
+            # PR1 added `_seed_demo_recurring` to the CREATE path and stopped
+            # there, so the deployed demo — seeded months ago — still had ZERO
+            # recurring rows and the goals range reported a ground of £35, which
+            # is the precise figure PR1 was written to fix. Measured on the live
+            # demo after deploying: "0 recurring rows", ground "$0.00 recurring
+            # and $35.00 of card minimums".
+            #
+            # That is D-178 for the third time in two days: a seed change is not
+            # shipped until a condition-keyed correction exists for the rows the
+            # old version never wrote. Keyed to the GAP ("this user has none")
+            # and not to a version marker, so it is self-correcting and cannot
+            # duplicate on the next boot.
+            #
+            # The ground matters more than it looks: with £35 of ground the
+            # range argues the OPPOSITE of its point — obligations are trivial,
+            # it is all down to you — which is D-77's shape.
+            from src.models.recurring import RecurringExpense
+            if not RecurringExpense.query.filter_by(user_id=user.id).first():
+                logger.info('Backfilling demo recurring expenses for %s (C1c)',
+                            user.id)
+                DemoService._seed_demo_recurring(user, account_data)
         DemoService._backfill_non_tour_household_goals()
         DemoService._backfill_multi_account_demo_goal()
         DemoService._seed_demo_co_owners()
