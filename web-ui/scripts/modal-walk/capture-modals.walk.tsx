@@ -107,6 +107,38 @@ beforeEach(() => {
                 apr: null },
       }],
     })),
+    /*
+     * *** THE TWO WALKS HAVE SEPARATE CAPTURE FILES WITH SEPARATE HANDLERS, SO
+     * A REQUEST ADDED TO A PAGE MUST BE HANDLED IN BOTH. *** This walk renders
+     * the Goals page for the two panel states, so it makes the same
+     * `/learnpal/range` request the page capture does -- and without a handler
+     * MSW's `onUnhandledRequest: 'error'` raises and `captures
+     * slidepanel-goal-edit` times out at 5s.
+     *
+     * *** THIS IS THE SECOND TIME THE SAME OMISSION SHIPPED, ONE LAYER OVER. ***
+     * I added the handler to the page capture, then ran
+     * `node scripts/modal-walk/run.mjs` and read it as "the modal walk is
+     * green" -- but `run.mjs` MEASURES already-captured HTML. The CAPTURE step
+     * (`WALK_CAPTURE=...capture-modals...`) is the one that renders the page,
+     * and it is a different command. Running the measurement proves nothing
+     * about the capture.
+     *
+     * A minimal-but-real payload: this walk roots at the DIALOG, so the banner
+     * and the card strips are out of frame here. It exists so the page renders
+     * without raising, not to be measured.
+     */
+    http.get('*/api/v1/learnpal/range', () => HttpResponse.json({
+      success: true,
+      range: {
+        cost: { heading: "What's costing you", unit: 'a month, in interest',
+                total: 0, peaks: [] },
+        build: { heading: "What you're building", unit: 'still to save',
+                 total: 0, peaks: [] },
+        ground: { total: 1623, recurring: 1588, minimums: 35 },
+        lessons: { read: 3, total: 8 },
+        kit: [],
+      },
+    })),
     http.get('*/api/v1/goals/1/contributions', () => HttpResponse.json({
       success: true, contributions: [],
     })),
