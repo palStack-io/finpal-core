@@ -30,6 +30,7 @@ from src.models.account import Account
 from src.models.goal import Goal
 from src.models.goal_account import GoalAccount
 from src.services.goal.service import GoalService
+from src.services.goal.peak import peak_payload
 from src.utils.household import (
     can_manage_owned, default_currency_for, read_scope, same_side_user_ids,
     visible_user_ids,
@@ -144,6 +145,19 @@ def _serialize(goal, svc):
         'target_date': goal.target_date.isoformat() if goal.target_date else None,
         'status': goal.status,
         'achieved_at': goal.achieved_at.isoformat() if goal.achieved_at else None,
+        # C1c. *** THE SERVER DECIDES THE MOUNTAIN BECAUSE THE CLIENT CANNOT. ***
+        # The band comes from a SEEDED TABLE and the magnitude from balances and
+        # APRs, neither of which a client holds -- the same reason `progress`,
+        # `direction` and `current_amount` are computed here. Turning the
+        # magnitude into a height is presentational and stays in the clients'
+        # `mountainGeometry.ts`.
+        #
+        # Shipped as a nested block rather than flattened keys so that a client
+        # can test for the whole feature at once: `peak` ABSENT means a backend
+        # that predates mountains and must render the old card, which is a
+        # different state from `unmeasured` and from a magnitude of zero. See
+        # `src/services/goal/peak.py`.
+        **peak_payload(goal),
         **svc.as_payload(goal),
     }
 
