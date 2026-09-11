@@ -61,6 +61,15 @@ NO_DEMO_ROWS_BY_DESIGN = {
     'import_batches': 'the record of an import that has happened; see import_sources',
     'agent_actions': 'the audit trail of an MCP/agent write, which nothing does at seed',
     'user_module_access': 'entitlements are a Premium concept; core grants by config',
+    # learnPal, C1b. `learn_milestones` IS seeded -- by the module's own
+    # `on_startup`, not by the demo seeder -- so it is empty in a demo-seed
+    # fixture that never boots the module. `learn_completions` is genuinely
+    # earned: a row appears when a user's goal reaches an altitude band, and
+    # seeding one would be fabricating a lesson somebody had read.
+    'learn_milestones': 'seeded by LearnPalModule.on_startup at boot, not by the '
+                        'demo seeder; the demo stack carries all eight rows',
+    'learn_completions': 'earned by a real goal reaching an altitude band — '
+                         'seeding one would fabricate a lesson nobody read',
     'category_mappings': 'learned from real CSV imports, which a demo does not run',
     'points_transfer_partners': 'reference data shipped by the pointsPal upstream feed, '
                                 'not per-user; empty until that feed carries partners',

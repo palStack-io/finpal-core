@@ -115,12 +115,21 @@ class LearnCompletion(db.Model):
     # Which goal's altitude opened it, when that is how it opened. Nullable
     # because a `check_type` unlock has no goal behind it.
     #
-    # *** `ondelete` IS DELIBERATELY ABSENT AND THE COLUMN IS NULLABLE. *** D-184
-    # was this table class deleting in an order Postgres refuses; a learnPal row
-    # must never be the thing that blocks deleting a goal, and losing the
-    # attribution is a far smaller harm than losing the unlock.
+    # *** `ondelete='SET NULL'`, AND THE FIRST VERSION OF THIS GOT IT WRONG. ***
+    # The comment here used to say `ondelete` was "deliberately absent" so that
+    # a learnPal row could never block deleting a goal -- which is the right
+    # intent and the opposite of what a bare FK does. A plain NO ACTION
+    # reference is EXACTLY the thing that blocks the delete.
+    #
+    # Caught by `test_EVERY_TABLE_IN_THE_FK_CLOSURE_IS_DELETED_and_in_order`,
+    # the guard written for D-184 this same day, which put `learn_completions`
+    # into the reset's dependency closure and failed. An optional learning
+    # module must never be able to make a core deletion fail, so the database
+    # releases the reference instead. Losing the attribution of WHICH goal
+    # opened a lesson is a far smaller harm than losing the unlock -- and the
+    # unlock is the row, which survives.
     unlocked_by_goal_id = db.Column(
-        db.Integer, db.ForeignKey('goals.id'), nullable=True)
+        db.Integer, db.ForeignKey('goals.id', ondelete='SET NULL'), nullable=True)
 
     unlocked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
