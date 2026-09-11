@@ -123,6 +123,66 @@ CHECKS = {
 }
 
 
+# *** WHY A PREDICATE-GATED LESSON IS LOCKED, IN WORDS, AND WHY IT LIVES HERE
+# RATHER THAN IN THE VIEW. *** The learnPal home has to answer "what is next and
+# why can I not read it yet", and a reason assembled in a template drifts from
+# the predicate it describes the moment one of them changes. Keeping the two in
+# one file means adding a predicate without a reason is a visible omission.
+#
+# `{n}` and `{pct}` are filled from the milestone's own `check_args`, so the
+# number in the sentence is the number the predicate actually tests -- never a
+# default typed twice. A predicate with no placeholder ignores the args.
+#
+# *** FAIL-CLOSED, LIKE `CHECKS` ITSELF. *** An unknown `check_type` gets `None`
+# and the client says it cannot explain the lock, rather than a plausible
+# sentence about a condition nobody is testing. `run_check` already refuses to
+# unlock such a milestone; this refuses to describe it.
+# `(sentence, defaults)`. The defaults exist because a seeded row MAY omit
+# `check_args`, and they are a second copy of the numbers inside the predicates
+# above -- which is precisely the drift this project keeps paying for. So
+# `test_learnpal_stats.py` pins them BEHAVIOURALLY: for each entry it calls the
+# predicate with no args and with the declared default and asserts the two agree
+# on a fixture sitting exactly on the boundary. A spelling guard would go blind
+# the moment somebody renamed a key (D-165's class); a boundary fixture cannot.
+CHECK_REASONS = {
+    'categorised_transactions_at_least':
+        ('Give {n} transactions a category', {'n': 20}),
+    'has_active_budget':
+        ('Have an active budget', {}),
+    'categories_classified_at_least':
+        ('Classify {n} categories as fixed, flexible or non-monthly', {'n': 5}),
+    'credit_utilisation_below':
+        ('Get your card utilisation below {pct}%', {'pct': 30}),
+    'has_debt_account_with_a_rate':
+        ('Record the interest rate on a card or loan', {}),
+}
+
+
+def check_reason(check_type, args=None):
+    """One line saying what this predicate wants, or `None` if it cannot say.
+
+    *** NEVER GUESS. *** `None` is a handled state the client renders as "we
+    cannot explain this one yet", which is honest about a seeded row naming a
+    predicate this build does not have -- and the same fail-closed rule
+    `run_check` follows. `run_check` refuses to unlock such a milestone; this
+    refuses to describe it.
+
+    The number in the sentence comes from the milestone's OWN `check_args`
+    wherever it has them, so it is the number the predicate actually tests
+    rather than one typed twice.
+    """
+    entry = CHECK_REASONS.get(check_type)
+    if entry is None:
+        return None
+    template, defaults = entry
+    values = dict(defaults)
+    values.update({k: v for k, v in (args or {}).items() if k in defaults})
+    try:
+        return template.format(**values)
+    except (KeyError, IndexError, ValueError):
+        return None
+
+
 def run_check(check_type, user_id, args=None):
     """Dispatch, failing CLOSED on anything unexpected.
 

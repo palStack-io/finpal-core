@@ -22,15 +22,29 @@ Read against live progress, that lesson is unreachable forever for the people
 who have already done the hardest part of the work. Read against a watermark
 that only ever rises, it opens.
 
-*** NOTHING HERE RUNS ON A READ. *** Every entry point is a write path or the
-nightly task. An engine that unlocked during a GET would make a list endpoint
-mutate the database, which is the kind of surprise that makes a deploy's
-behaviour depend on who looked at what.
+*** NOTHING HERE RUNS ON A READ. *** Every entry point is a write path, the
+nightly task or learnPal's own startup catch-up. An engine that unlocked during
+a GET would make a list endpoint mutate the database, which is the kind of
+surprise that makes a deploy's behaviour depend on who looked at what.
+
+*** AND UNTIL D-187 THE "WRITE PATH" HALF OF THAT SENTENCE WAS FICTION. ***
+`evaluate_for_goal` had zero non-test callers: this docstring, and `routes.py`'s
+*"the engine is reached from the goal write path and the nightly task"*, both
+asserted a call site nobody had ever wired. So the 04:15 cron was the only
+entry point in existence, and on the llm demo -- which has no scheduler service
+-- there was none at all. `demo1` had four goals, one of them FINISHED, and
+`lessons: {read: 0, total: 8}`. **Stating a call site in prose is not making
+one**, and `test_learnpal_engine.py` calls this module directly, so it proves
+the engine works and can say nothing about whether anything calls it (D-106).
+
+*** THE WATERMARKS ARE RAISED IN TWO PLACES AND ONLY ONE OF THEM IS HERE. ***
+Core raises them on the goal read AND write paths, beside `stamp_if_achieved`,
+because they only ever rise and sampling them more often makes *"the hardest it
+ever got"* more true rather than less. **Unlocks are not like that** and stay
+off the read path, which is what the paragraph above is about.
 """
 
 import logging
-from decimal import Decimal, InvalidOperation
-
 from sqlalchemy.exc import IntegrityError
 
 from src.extensions import db
@@ -41,56 +55,17 @@ from src.modules.learnpal.models import LearnCompletion, LearnMilestone
 logger = logging.getLogger(__name__)
 
 
-def _as_decimal(value):
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError):
-        return None
-
-
-def raise_watermark(goal):
-    """Move `goal.highest_progress` up to current progress. Never down.
-
-    Returns the watermark after the call. Does NOT commit -- the caller owns the
-    transaction, so a goal write and its unlocks land together or not at all.
-    """
-    from src.services.goal.service import GoalService
-
-    current = _as_decimal(GoalService().progress(goal))
-    if current is None:
-        return goal.highest_progress
-
-    if goal.highest_progress is None or current > goal.highest_progress:
-        goal.highest_progress = current
-    return goal.highest_progress
-
-
-def raise_hardest_band(goal):
-    """Move `goal.hardest_band` up to the current band. Never down.
-
-    *** THE MOUNTAIN SHRINKS AS YOU SUCCEED, WHICH IS WHY THIS EXISTS. *** §3
-    recomputes the band from the goal's CURRENT figure, so paying a card down
-    walks it back down the ladder and FINISHING LANDS ON THE SMALLEST MOUNTAIN.
-    A summit note read from the current band would congratulate somebody on
-    Table Mountain for clearing an Aconcagua.
-
-    Does not commit — the caller owns the transaction.
-    """
-    # *** MOUNTAINS ARE CORE NOW. *** learnPal READS them; it does not own them.
-    from src.services.goal.mountains import band_index, mountain_for, peak_magnitude
-
-    scale, magnitude = peak_magnitude(goal)
-    if magnitude is None:
-        return goal.hardest_band          # unmeasured: no band, and not band 0
-    mountain = mountain_for(scale, magnitude)
-    if mountain is None:
-        return goal.hardest_band
-    index = band_index(mountain.slug)
-    if index is None:
-        return goal.hardest_band
-    if goal.hardest_band is None or index > goal.hardest_band:
-        goal.hardest_band = index
-    return goal.hardest_band
+# *** THE TWO WATERMARK RAISERS ARE CORE'S, NOT THIS MODULE'S — D-187. ***
+# They used to be defined here, which put the only writers of two columns on a
+# CORE table (`Goal.highest_progress`, `Goal.hardest_band`) inside an OPTIONAL
+# module. `services/goal/peak.py` sends `hardest_band` and `hardest_mountain` on
+# every goal payload and the summit note reads them, so with learnPal off the
+# column existed, the key was sent and nothing ever filled it in.
+#
+# Imported rather than re-implemented so there is ONE copy: the engine still
+# raises both at the start of every evaluation, because an altitude gate must
+# see the state AFTER this pass rather than before it.
+from src.services.goal.watermark import raise_hardest_band, raise_watermark  # noqa: F401
 
 
 def _already_unlocked(user_id):
@@ -206,5 +181,5 @@ def sync_all_users(app):
             db.session.rollback()
             logger.exception('learnpal: nightly evaluation failed for %s', user_id)
     if total:
-        app.logger.info('learnPal nightly: %s milestone(s) unlocked', total)
+        app.logger.info('learnPal: %s milestone(s) unlocked', total)
     return total

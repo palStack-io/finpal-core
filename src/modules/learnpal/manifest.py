@@ -38,6 +38,29 @@ class LearnPalModule(ModuleBase):
         from src.modules.learnpal.seed import seed_milestones
         seed_milestones()
 
+        # *** SEEDING A LESSON IS NOT DELIVERING IT — D-187 AND D-178 TOGETHER.
+        # *** `seed_milestones` inserts what is missing, so a new slug exists at
+        # the next boot and unlocks for NOBODY until something evaluates. Until
+        # today the only evaluator was the 04:15 cron below, so every user on a
+        # stack with no scheduler service had `read: 0 of 8` for ever -- and the
+        # 11 approved drafts, once seeded, would have landed the same way.
+        #
+        # This is the condition-keyed correction for the rows every previous
+        # version wrote: `evaluate_for_user` skips any milestone that already
+        # has a completion, so it is idempotent and a no-op on a caught-up
+        # instance. It runs AFTER the seeder so a slug added in this very deploy
+        # is included.
+        #
+        # *** IT MUST NOT BREAK BOOT. *** An optional module's catch-up failing
+        # is not a reason for finPal not to start, and the cron re-runs it.
+        try:
+            from src.modules.learnpal.engine import sync_all_users
+            sync_all_users(app)
+        except Exception:
+            app.logger.exception(
+                'learnPal startup catch-up failed; lessons already earned are '
+                'unaffected and the nightly pass will retry')
+
     def register_tasks(self, scheduler, app):
         # *** PROGRESS MOVES WITHOUT ANY GOAL BEING WRITTEN. *** It is derived
         # from account balances, so paying a card down changes it with no goal

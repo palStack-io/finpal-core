@@ -31,6 +31,7 @@ from src.models.goal import Goal
 from src.models.goal_account import GoalAccount
 from src.services.goal.service import GoalService
 from src.services.goal.peak import peak_payload
+from src.services.goal.watermark import refresh_watermarks
 from src.utils.household import (
     can_manage_owned, default_currency_for, read_scope, same_side_user_ids,
     visible_user_ids,
@@ -258,6 +259,67 @@ def _collision_report(account_ids, direction, exclude_goal_id=None):
         f'“{goal_name}”.' for account_name, goal_name in held)
 
 
+
+def _stamp(goal, svc):
+    """Everything a goal path must stamp before it answers. D-187's single door.
+
+    *** THREE STAMPS, ONE CALL, BECAUSE FIVE ROUTES EACH REMEMBERING THREE IS
+    D-66's SHAPE. *** `stamp_if_achieved` was already called on the two READ
+    paths, with a comment saying exactly why: *"nothing else runs when a balance
+    moves, so a goal reached by an ordinary transaction would otherwise never be
+    marked"*. That reasoning is the whole of D-187 -- and the watermarks, added
+    later, were never given the same treatment. They are stamped here for the
+    same reason and in the same place.
+
+    *** THE WATERMARKS ARE SAFE ON A READ AND THE UNLOCKS ARE NOT. *** Both
+    watermarks are `max(stored, current)`, so sampling them on a GET cannot
+    change an answer -- and sampling them often is what makes *"the hardest it
+    ever got"* true rather than approximately true, since a balance can spike
+    and fall between two writes. A learnPal unlock INSERTS a row and makes
+    content appear, so it never runs from here; `engine.py` says so in capitals
+    and this respects it.
+
+    Returns True if anything needs committing. The caller commits, because a
+    write path already owns a transaction and a read path must not commit on
+    every request for ever.
+    """
+    dirty = refresh_watermarks(goal)
+    # `stamp_if_achieved` commits itself, on the transition only. Called second
+    # so the watermark of a goal that reaches 100% on this very request is
+    # already on the instance when it does.
+    svc.stamp_if_achieved(goal)
+    return dirty
+
+
+def _unlock_lessons(goal):
+    """learnPal's half, on a WRITE path only. A no-op when the module is off.
+
+    *** THE IMPORT IS INSIDE THE FUNCTION AND THAT IS LOAD-BEARING. *** With
+    `LEARNPAL_ENABLED` unset the module's models are never imported
+    (`src/models/__init__.py`), so its tables do not exist; importing the engine
+    at module scope would make a core route file depend on an optional module
+    being installed.
+
+    Does not commit -- the caller's transaction carries the unlocks, so a goal
+    write and its unlocks land together or not at all.
+    """
+    # *** THE SAME READER `src/models/__init__.py` USES, NOT A SECOND ONE. ***
+    # That file's conditional import is what decides whether the two learnPal
+    # TABLES exist, so asking any other question here could produce "enabled"
+    # for a database with no `learn_completions` to write to.
+    from src.modules.learnpal.manifest import LearnPalModule
+    if not LearnPalModule().is_enabled():
+        return []
+    try:
+        from src.modules.learnpal.engine import evaluate_for_goal
+        return evaluate_for_goal(goal)
+    except Exception:
+        # An optional module must never be the reason a goal write fails. The
+        # nightly pass and the startup catch-up both re-run this.
+        logger.exception('learnPal evaluation failed for goal %s', goal.id)
+        return []
+
+
 def _visible_goals(caller_id):
     """Own personal goals, plus every household goal on the caller's side.
 
@@ -305,8 +367,17 @@ class GoalList(Resource):
         # Stamped on read, which is where the spec puts the achieved predicate:
         # nothing else runs when a balance moves, so a goal reached by an ordinary
         # transaction would otherwise never be marked.
+        #
+        # *** THE TWO WATERMARKS NEEDED THE SAME TREATMENT AND NEVER GOT IT —
+        # D-187. *** The sentence above is the entire argument for stamping
+        # `highest_progress` and `hardest_band` here too, and they were added
+        # later without it. One commit for the whole list rather than one per
+        # goal, and only when something actually moved.
+        dirty = False
         for goal in goals:
-            svc.stamp_if_achieved(goal)
+            dirty = _stamp(goal, svc) or dirty
+        if dirty:
+            db.session.commit()
         return {'success': True,
                 'goals': [_serialize(g, svc) for g in goals]}, 200
 
@@ -400,6 +471,17 @@ class GoalList(Resource):
 
         try:
             db.session.add(goal)
+            # *** FLUSHED, NOT COMMITTED, AND THE ORDER IS THE WHOLE POINT. ***
+            # `unlocked_by_goal_id` needs the goal's primary key and a new goal
+            # has none until it reaches the database -- and `refresh_watermarks`
+            # reads `progress`, which autoflush would trigger anyway. Flushing
+            # explicitly keeps the watermarks, the unlocks and the goal itself in
+            # ONE transaction, so a collision that rolls the goal back cannot
+            # leave a `learn_completions` row attributing a lesson to a goal that
+            # does not exist (D-187).
+            db.session.flush()
+            refresh_watermarks(goal)
+            _unlock_lessons(goal)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -433,7 +515,8 @@ class GoalDetail(Resource):
         if goal is None:
             return {'success': False, 'error': 'Goal not found'}, 404
         svc = GoalService()
-        svc.stamp_if_achieved(goal)
+        if _stamp(goal, svc):
+            db.session.commit()
         return {'success': True, 'goal': _serialize(goal, svc)}, 200
 
     @ns.doc('update_goal', security='Bearer')
@@ -518,6 +601,11 @@ class GoalDetail(Resource):
         linked_ids = svc.linked_account_ids(goal)
 
         try:
+            # Both watermarks and any unlock ride the SAME transaction as the
+            # edit: an edit that moves `target_amount` moves `progress`, so the
+            # goal can cross an altitude gate on this very request (D-187).
+            refresh_watermarks(goal)
+            _unlock_lessons(goal)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -697,6 +785,22 @@ class GoalAccounts(Resource):
         attempted_direction = svc.direction(goal)
         goal_id = goal.id
         try:
+            # *** FLUSHED FIRST, FOR THE SAME REASON THE CREATE PATH IS. *** The
+            # `GoalAccount` appended above is a pending object, so `link.account`
+            # is None until the row reaches the database -- and
+            # `GoalService.current_amount` reads `link.account.balance` with no
+            # guard. Without this flush the route raised an AttributeError,
+            # caught it, and answered **400 "an account can carry only one
+            # active goal in each direction"** -- a confident, specific and
+            # entirely wrong explanation of a crash. Caught by
+            # `test_adding_an_account_extends_the_denominator_by_ITS_BALANCE_NOW`
+            # in the full suite, not by the new tests.
+            db.session.flush()
+            # Adding a card changes the magnitude the band is read from, so this
+            # is one of the paths that can make a goal a harder mountain than it
+            # has ever been (D-187).
+            refresh_watermarks(goal)
+            _unlock_lessons(goal)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -751,6 +855,12 @@ class GoalAccountDetail(Resource):
         svc = GoalService()
         goal.links.remove(link)
         svc.sync_links(goal)
+        # Unlinking can only lower the current figure, and both watermarks refuse
+        # to fall -- so this call cannot shrink a mountain. It is here because
+        # `progress` moves too, and the goal may cross an altitude gate upward
+        # when the account holding it back is removed (D-187).
+        refresh_watermarks(goal)
+        _unlock_lessons(goal)
         db.session.commit()
         return {'success': True, 'goal': _serialize(goal, svc),
                 'message': 'Account removed from goal'}, 200
