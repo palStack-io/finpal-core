@@ -115,6 +115,23 @@ class Goal(db.Model):
     # backend AND `finpal-scheduler` redeployed.
     highest_progress = db.Column(db.Numeric(6, 3), nullable=True)
 
+    # *** THE HARDEST BAND EVER FACED, BECAUSE THE MOUNTAIN SHRINKS AS YOU
+    # SUCCEED. *** §3 recomputes the band from the goal's CURRENT figure, so
+    # paying a card down walks it back down the ladder — "your Visa is no longer
+    # an Everest", which the spec calls out as a feature and is one. But it
+    # means finishing lands you on the SMALLEST mountain, and a summit note
+    # fired there would congratulate somebody on Table Mountain for finishing an
+    # Aconcagua.
+    #
+    # So this only ever rises, exactly like `highest_progress` above, and the
+    # summit note reads from it. A watermark rather than "the band at creation"
+    # because **B12 made the account set mutable**: adding a second card to a
+    # payoff goal raises the interest and can push the band UP mid-life.
+    #
+    # Same release-gating as `highest_progress`: a new column on an existing
+    # table is invisible to `create_all()` and needs the boot reconcile (D-121).
+    hardest_band = db.Column(db.Integer, nullable=True)
+
     status = db.Column(db.String(20), nullable=False, default='active')
     achieved_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -28,6 +28,9 @@ from src.modules.access import UserModuleAccess  # noqa: F401
 # table vanished the moment a deployment turned every module off, taking the
 # user's choices with it.
 from src.modules.preference import UserModulePreference  # noqa: F401
+# Mountains are CORE -- a goal is drawn as a peak with or without learnPal --
+# so these are imported unconditionally, unlike a module's own models.
+from src.models.mountain import Mountain, MountainBand  # noqa: F401
 
 # pointsPal models — imported when the module is enabled, so that Alembic
 # autogenerate and db.create_all() both see them in exactly the environments that
