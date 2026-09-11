@@ -624,3 +624,130 @@ describe('Goals page — a finished goal reads the WATERMARK', () => {
     expect(screen.queryByText(/That is finished/)).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Editing a goal — the endpoint and the service method both already existed
+// ---------------------------------------------------------------------------
+
+describe('Goals page — editing a goal', () => {
+  /**
+   * *** THERE WAS NO WAY TO EDIT A GOAL, AND IT WAS NOT A MISSING ENDPOINT. ***
+   * `PUT /goals/<id>` has always existed and `goalService.updateGoal` was
+   * already written — with no caller anywhere in this client. A dead service
+   * method is the tell: the shape of a feature whose last step was never wired.
+   */
+  it('opens the panel prefilled from the goal', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Edit goal')).toBeInTheDocument();
+    expect((screen.getByLabelText(/Name/i) as HTMLInputElement).value)
+      .toBe('Pay off Chase Amazon');
+    expect((screen.getByLabelText(/Target amount/i) as HTMLInputElement).value).toBe('0');
+  });
+
+  it('*** SENDS ONLY WHAT THE SERVER WILL APPLY, AND NO ACCOUNT KEYS ***', async () => {
+    // `PUT /goals/<id>` REFUSES `account_ids` and silently ignores `account_id`,
+    // because either would rewrite the denominator of a percentage the user has
+    // already been shown. Sending them would be a payload whose values are
+    // discarded — so the panel does not offer them and the request omits them.
+    let body: any = null;
+    let url = '';
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.put(`${BASE}/api/v1/goals/:id`, async ({ request }) => {
+        body = await request.json();
+        url = request.url;
+        return HttpResponse.json({ success: true, goal: PAYOFF_GOAL });
+      }),
+    );
+
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    const name = screen.getByLabelText(/Name/i);
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Clear the Chase card');
+    await userEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(url).toContain('/goals/1');
+    expect(body.name).toBe('Clear the Chase card');
+    expect(body).not.toHaveProperty('account_ids');
+    expect(body).not.toHaveProperty('account_id');
+    expect(body).not.toHaveProperty('start_amount');
+  });
+
+  it('offers NO account picker on an edit, because the server discards it', async () => {
+    mockGoals([PAYOFF_GOAL], [
+      { id: 7, name: 'Chase Amazon', account_type: 'credit', balance: -1125.41,
+        currency_code: 'USD', user_id: 'alice@test.com' },
+    ]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+
+    // Creating offers it...
+    await userEvent.click(await screen.findByRole('button', { name: /New goal/i }));
+    expect(screen.getByLabelText('Chase Amazon')).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText('Close panel'));
+
+    // ...editing must not, or it is an affordance whose changes are thrown away.
+    await userEvent.click(screen.getByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    expect(screen.queryByLabelText('Chase Amazon')).toBeNull();
+  });
+
+  it('surfaces the server’s refusal instead of closing as if it saved', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.put(`${BASE}/api/v1/goals/:id`, () => HttpResponse.json(
+        { success: false, error: 'Only the goal owner or a household admin can change this goal' },
+        { status: 403 })),
+    );
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/household admin/i);
+    // Still open, so the edit is not silently lost.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('*** SLICES A TIMESTAMP FOR THE DATE INPUT, OR THE FIELD RENDERS EMPTY ***', async () => {
+    // `<input type="date">` accepts only YYYY-MM-DD. Handing it a full
+    // timestamp makes the control render BLANK, and saving then clears a date
+    // the user never touched.
+    mockGoals([{ ...PAYOFF_GOAL, target_date: '2027-06-30T00:00:00' }], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    expect((screen.getByLabelText(/Target date/i) as HTMLInputElement).value)
+      .toBe('2027-06-30');
+  });
+
+  it('shows no Edit control on an archived goal', async () => {
+    mockGoals([{ ...PAYOFF_GOAL, status: 'archived' }], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+    expect(screen.queryByRole('button', { name: /Edit Pay off Chase Amazon/i })).toBeNull();
+  });
+});
+
+describe('Goals page — the shared page shell', () => {
+  /**
+   * *** GOALS WAS THE ONE PAGE THAT NEVER ADOPTED IT. *** Measured on the
+   * deployed demo at 1440px: the Goals heading sat at 240px while
+   * accounts/budgets/transactions all sat at 264px, because every other page
+   * wraps its content in `pageContainerStyle` (24px padding) plus
+   * `.page-container`. The owner saw it as "padded to the side nav weirdly",
+   * which is what a missing gutter looks like when only one page misses it.
+   */
+  it('wraps its content in the shell every other page uses', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    const { container } = render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+
+    const shell = container.querySelector('.page-container');
+    expect(shell).not.toBeNull();
+    const outer = shell!.parentElement as HTMLElement;
+    expect(outer.style.padding).toBe('24px');
+  });
+});
