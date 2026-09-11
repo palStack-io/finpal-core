@@ -4,6 +4,12 @@ import { useAuthStore } from '../store/authStore';
 import { formatMoney } from '../styles/money';
 import { goalFigures } from '../utils/goalFigures';
 import { goalTrackingLabel } from '../utils/goalTracking';
+import { MountainSilhouette } from '../components/MountainSilhouette';
+import { heightForMagnitude } from '../utils/mountainGeometry';
+import {
+  UNMEASURED_SUBLINE, peakColorVar, peakEyebrow, peakHardestLine,
+  peakSubline, peakSummitLine,
+} from '../utils/peakCopy';
 import { GoalAccountsControl } from '../components/goals/GoalAccountsControl';
 import { goalService } from '../services/goalService';
 import { accountService, type Account } from '../services/accountService';
@@ -87,8 +93,26 @@ const linkButtonStyle: React.CSSProperties = {
  * a savings goal is not an error state, and colouring it like one would make the
  * page nag.
  */
-const progressBarColor = (goal: Goal): string =>
-  goal.status === 'achieved' ? '#22c55e' : goal.direction === 'paydown' ? '#3b82f6' : '#22c55e';
+/**
+ * *** THE BAR IS THE SCALE'S COLOUR, AND THE COLOUR IS THE NEVER-COMPARE RULE. ***
+ * `cost` (monthly interest) and `build` (distance remaining) share no unit, so
+ * clay and forest are what stop the two being read against each other -- which
+ * means no caption has to say so.
+ *
+ * Was blue `#3b82f6` for a paydown and `#22c55e` for everything else. The peak
+ * variables are theme-aware BECAUSE THEY HAD TO BE: measured against the dark
+ * card (#16241A) the mockup's clay is 3.12:1 and its forest 3.22:1 -- large-text
+ * only -- so shipping the mockup's literals would have put two AA failures on
+ * the eyebrow that states the rule. See `finpal-theme.css`.
+ *
+ * A goal with NO `peak` (a backend older than mountains) keeps the old colours
+ * exactly, because that card must be unchanged.
+ */
+const progressBarColor = (goal: Goal): string => {
+  if (goal.status === 'achieved') return '#22c55e';
+  if (goal.peak) return peakColorVar(goal.peak);
+  return goal.direction === 'paydown' ? '#3b82f6' : '#22c55e';
+};
 
 /** A percentage for display. The server's number, only rounded. */
 const percentLabel = (progress: number): string => `${Math.round(progress * 100)}%`;
@@ -111,6 +135,18 @@ const GoalRow: React.FC<GoalRowProps> = ({
   const barWidth = Math.min(100, Math.max(0, goal.progress * 100));
   const figures = goalFigures(goal, (amount) => formatMoney(amount, { currency: goal.currency_code }));
 
+  // C1c. `undefined` is load-bearing: see the comment beside the eyebrow.
+  const peak = goal.peak;
+  // The summit note reads the WATERMARK, never the current band -- the mountain
+  // shrinks as the goal succeeds, so a cleared goal sits on the smallest one.
+  const cleared = goal.status === 'achieved';
+  const summitLine = peak && cleared ? peakSummitLine(peak) : null;
+  const hardestLine = peak && cleared ? peakHardestLine(peak) : null;
+  // Height is the CLIENT's half of the split: the server picked the mountain,
+  // this turns its one number into pixels. `heightForMagnitude` is byte-identical
+  // in mobile and its ceilings are gated against the seeded band table (D-185).
+  const peakHeight = peak ? heightForMagnitude(peak.magnitude, peak.scale) : 0;
+
   const loadContributions = async () => {
     if (contributions !== null) {
       setContributions(null);
@@ -126,8 +162,40 @@ const GoalRow: React.FC<GoalRowProps> = ({
   };
 
   return (
-    <div style={cardStyle} data-testid={`goal-${goal.id}`}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+    <div
+      style={{ ...cardStyle, position: 'relative', overflow: 'hidden' }}
+      data-testid={`goal-${goal.id}`}
+    >
+      {/* C1c. *** DECORATION, AND THE ONLY PLACE THE MOUNTAIN IS DRAWN ON THIS
+          CARD. *** `aria-hidden`, behind the figures, clipped by the card, and
+          it never carries a fact on its own -- every number it stands behind is
+          also written in the subline. Absent entirely when `peak` is, so a card
+          from an older backend is untouched.
+
+          Opacity comes from `--peak-backdrop-opacity` rather than a literal
+          because the same alpha reads as much less over the dark surface: 11%
+          light, 17% dark. */}
+      {peak && (
+        <div
+          aria-hidden="true"
+          data-testid={`goal-peak-${goal.id}`}
+          style={{
+            position: 'absolute', right: 0, bottom: 0,
+            pointerEvents: 'none', lineHeight: 0,
+          }}
+        >
+          <MountainSilhouette
+            band={peak.band}
+            height={peakHeight}
+            scale={peak.scale}
+            unmeasured={peak.unmeasured}
+            maxPixelHeight={132}
+            decorative
+            style={{ opacity: 'var(--peak-backdrop-opacity)' } as React.CSSProperties}
+          />
+        </div>
+      )}
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <strong style={{ color: 'var(--text-primary)', fontSize: 16 }}>{goal.name}</strong>
@@ -169,6 +237,41 @@ const GoalRow: React.FC<GoalRowProps> = ({
                 case tables are identical on purpose; see its header. */}
             {goalTrackingLabel(goal)}
           </div>
+          {/* C1c. *** RENDERS NOTHING WITHOUT `peak`, WHICH IS A THIRD STATE AND
+              NOT A FLAVOUR OF UNMEASURED. *** No peak means the backend predates
+              mountains, and that card must look exactly as it did before this
+              feature — not like a goal whose rate we failed to find. */}
+          {peak && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{
+                fontSize: 11.5, fontWeight: 600, letterSpacing: 0.3,
+                textTransform: 'uppercase', color: peakColorVar(peak),
+              }}>
+                {peakEyebrow(peak)}
+              </div>
+              <div style={{
+                ...mutedSmallStyle,
+                marginTop: 2,
+                fontStyle: peak.unmeasured ? 'italic' : undefined,
+              }}>
+                {peak.unmeasured
+                  ? UNMEASURED_SUBLINE
+                  : peakSubline(peak, (amount) => formatMoney(
+                      amount, { currency: goal.currency_code })) }
+              </div>
+              {summitLine && (
+                <div style={{ ...mutedSmallStyle, marginTop: 4,
+                              color: 'var(--text-primary)' }}>
+                  {summitLine}
+                  {hardestLine && (
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {` · ${hardestLine}`}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {goal.status !== 'archived' && (
