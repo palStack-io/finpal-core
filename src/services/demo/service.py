@@ -1457,8 +1457,11 @@ class DemoService:
             # and no service-layer guard -- including the one D-181 added so an
             # account deletion cannot silently reset a linked goal. Nothing here
             # may lean on those; every dependant is removed explicitly.
+            from src.models.associations import account_owners, expense_tags
+            from src.models.category import CategoryMapping
             from src.models.goal import Goal
             from src.models.goal_account import GoalAccount
+            from src.models.investment import Investment, InvestmentTransaction
             from src.models.transaction import CategorySplit
             from src.models.transaction_rule import TransactionRule
             from src.models.recurring import RecurringExpense
@@ -1467,31 +1470,71 @@ class DemoService:
                            .filter_by(user_id=user_id).with_entities(Expense.id)]
             goal_ids = [row.id for row in Goal.query
                         .filter_by(user_id=user_id).with_entities(Goal.id)]
+            account_ids = [row.id for row in Account.query
+                           .filter_by(user_id=user_id).with_entities(Account.id)]
+            portfolio_ids = [row.id for row in Portfolio.query
+                             .filter_by(user_id=user_id)
+                             .with_entities(Portfolio.id)]
+            investment_ids = [row.id for row in Investment.query.filter(
+                Investment.portfolio_id.in_(portfolio_ids))
+                .with_entities(Investment.id)] if portfolio_ids else []
 
-            # 1. Leaves first -- rows that reference an expense or a goal.
+            # 1. Leaves first -- rows that reference an expense, a goal or an
+            #    investment.
             if expense_ids:
                 CategorySplit.query.filter(
                     CategorySplit.expense_id.in_(expense_ids)).delete(
                         synchronize_session=False)
+                db.session.execute(expense_tags.delete().where(
+                    expense_tags.c.expense_id.in_(expense_ids)))
             if goal_ids:
                 GoalAccount.query.filter(
                     GoalAccount.goal_id.in_(goal_ids)).delete(
+                        synchronize_session=False)
+            if investment_ids:
+                InvestmentTransaction.query.filter(
+                    InvestmentTransaction.investment_id.in_(
+                        investment_ids)).delete(synchronize_session=False)
+            if portfolio_ids:
+                Investment.query.filter(
+                    Investment.portfolio_id.in_(portfolio_ids)).delete(
                         synchronize_session=False)
 
             # 2. Rows that reference an account or a category. `transaction_rules`
             #    points at BOTH, and there were 208 of them on the live demo.
             TransactionRule.query.filter_by(user_id=user_id).delete(
                 synchronize_session=False)
-            RecurringExpense.query.filter_by(user_id=user_id).delete(
-                synchronize_session=False)
             Goal.query.filter_by(user_id=user_id).delete(
                 synchronize_session=False)
             Expense.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            # *** AFTER `expenses`, NOT BEFORE. *** `expenses.recurring_id`
+            # points here (`expenses_recurring_id_fkey`, confirmed on the live
+            # demo), so the original position violated the foreign key the
+            # moment a single generated expense carried a `recurring_id`. Zero
+            # rows do today, which is the only reason this had not fired yet --
+            # it was found by deriving the edges from `db.metadata`, not by
+            # anybody reading the function.
+            RecurringExpense.query.filter_by(user_id=user_id).delete(
                 synchronize_session=False)
             Budget.query.filter_by(user_id=user_id).delete(
                 synchronize_session=False)
             Portfolio.query.filter_by(user_id=user_id).delete(
                 synchronize_session=False)
+            CategoryMapping.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False)
+            # *** KEYED BY ACCOUNT, NOT BY USER, AND THE DIFFERENCE IS THE BUG.
+            # *** A co-owner is somebody ELSE -- on the live demo the one row in
+            # this table is `(account 1 owned by demo1, user demo2)`. Clearing it
+            # by `user_id == demo1` would delete nothing and `accounts` would
+            # still be referenced. Both predicates run: the first is what the
+            # foreign key demands, the second stops this user's co-ownership of
+            # somebody else's account outliving their own reset.
+            if account_ids:
+                db.session.execute(account_owners.delete().where(
+                    account_owners.c.account_id.in_(account_ids)))
+            db.session.execute(account_owners.delete().where(
+                account_owners.c.user_id == user_id))
 
             # 3. The two tables everything else pointed at. Subcategories before
             #    parents -- `categories.parent_id` is a self-reference and is
@@ -1516,6 +1559,14 @@ class DemoService:
             if account_data:
                 DemoService._seed_user_data(user, account_data)
                 db.session.commit()
+
+            # The co-owned account is seeded OUTSIDE `_seed_user_data`, so
+            # without this a reset leaves the demo with no joint account until
+            # the next boot -- and "Joint" plus the contribution breakdown are
+            # the only things that row exists to demonstrate. It is idempotent
+            # and it no-ops unless both demo1 and demo2 are present.
+            DemoService._seed_demo_co_owners()
+            db.session.commit()
 
             return {'success': True, 'message': 'Demo user data reset successfully'}
         except Exception:
