@@ -28,7 +28,7 @@
  *   node scripts/modal-walk/run.mjs
  */
 import { it, beforeAll, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
@@ -103,6 +103,62 @@ beforeEach(() => {
       ],
     })),
     http.get('*/api/v1/groups', () => HttpResponse.json({ success: true, groups: [] })),
+    /*
+      Choosing `credit` makes `AddAccountForm` fetch the pointsPal wallet, which
+      no other state reaches — MSW is configured `onUnhandledRequest: 'error'`, so
+      the capture succeeded while the run reported an unhandled rejection. Two
+      cards rather than none, because the empty branch renders a one-line hint
+      where the populated one renders a `<select>`, and the taller of the two is
+      what the overflow walk should be measuring.
+    */
+    http.get('*/api/v1/pointspal/cards', () => HttpResponse.json([
+      /*
+        A BARE ARRAY, not `{success, cards}`. `pointspalService.getCards()` returns
+        `response.data` whole, so an envelope here made `walletCards` a non-array
+        and `walletCards.map` threw inside render, unmounting the entire panel --
+        the walk then reported "unable to find role=dialog" and the capture would
+        have been of nothing at all. *** THE FIXTURE'S SHAPE WAS READ OFF THE
+        SERVICE, NOT GUESSED, ON THE SECOND ATTEMPT *** -- which is D-107's lesson
+        (an investments fixture sent three keys the API has never sent and the page
+        rendered `$NaN` eight times while both gates called it clean).
+      */
+      { id: 1, card_name: 'Barclaycard Platinum Cashback Plus', last_four: '4417',
+        program: 'Cashback Rewards' },
+      { id: 2, card_name: 'Amex British Airways Premium Plus', last_four: '1009',
+        program: 'Avios' },
+    ])),
+    /*
+      C1a. The shared handler serves ONE checking account, and the card/loan terms
+      block only renders for `credit` and `loan` — so without this the two states
+      below would open a panel with no terms in it and the walk would report clean
+      on a control it had never drawn. *** A PAGE BEING IN THE WALK IS NOT THE SAME
+      AS THE WALK SEEING WHAT YOU CHANGED *** (D-165's shape, and it cost a near-miss
+      in B12 task 8).
+
+      The name is DELIBERATELY LONG. A short fixture cannot produce the failure
+      these widths exist to find: a string that fits at 1440 and overflows at 390.
+      The terms themselves are the widest realistic values too — a five-digit limit
+      and a four-character APR — because `999.99` is the ceiling the column imposes
+      and a three-column `auto-fit` grid is exactly where that overflows first.
+    */
+    http.get('*/api/v1/accounts', () => HttpResponse.json({
+      success: true,
+      accounts: [{
+        id: 1,
+        name: 'Barclaycard Platinum Cashback Plus Rewards Mastercard',
+        account_type: 'credit',
+        balance: -1284.55,
+        currency_code: 'GBP',
+        institution: 'Barclays Bank UK PLC — Personal Banking Division',
+        is_active: true,
+        user_id: 'alice@test.com',
+        import_source: 'manual',
+        credit_limit: 12500,
+        apr: 999.99,
+        min_payment: 250,
+        owners: [],
+      }],
+    })),
     http.get('*/api/v1/investments/exchanges', () => HttpResponse.json({ success: true, exchanges: [] })),
     http.get('*/api/v1/investments/quote/:symbol', ({ params }) => HttpResponse.json({
       success: true,
@@ -249,6 +305,61 @@ const cases: Case[] = [
       await screen.findByRole('button', { name: /Add Account/ }, { timeout: 6000 });
       await userEvent.click(screen.getByRole('button', { name: /Add Account/ }));
       const dialog = await screen.findByRole('dialog');
+      return dialog as HTMLElement;
+    },
+  },
+  {
+    /*
+      C1a — the SAME panel, with a type selected. The state above opens on
+      `checking`, where the terms block does not exist, so it cannot measure the
+      three inputs this slice adds. Selecting the type IS the interaction; adding
+      the fixture without it would have captured nothing new.
+    */
+    name: 'slidepanel-add-account-credit-terms',
+    Page: Accounts as React.FC,
+    open: async () => {
+      await screen.findByRole('button', { name: /Add Account/ }, { timeout: 6000 });
+      await userEvent.click(screen.getByRole('button', { name: /Add Account/ }));
+      const dialog = await screen.findByRole('dialog');
+      // Reached through its OPTION, not by accessible name: the Account Type
+      // `<label>` in `AddAccountForm` carries no `htmlFor` and the `<select>` no
+      // `id`, so the control has no accessible name to query by. (The three
+      // inputs this slice adds are properly associated — `getByLabelText(/APR/i)`
+      // below works because of it.) Left as-is rather than fixed in passing:
+      // relabelling an existing control is its own change with its own blast
+      // radius, and it is noted in the checkpoint instead.
+      const typeSelect = within(dialog).getByRole('option', { name: /Credit Card/i })
+        .closest('select') as HTMLSelectElement;
+      await userEvent.selectOptions(typeSelect, 'credit');
+      // Do not proceed until the terms have actually rendered: a capture taken a
+      // tick early measures the panel WITHOUT them and passes.
+      await within(dialog).findByLabelText(/APR/i);
+      // *** AND WAIT FOR THE WALLET FETCH, THEN RE-QUERY. *** Choosing `credit`
+      // also kicks off `pointspalService.getCards()`; resolving it re-renders the
+      // panel and detaches the node captured above, so returning the original
+      // `dialog` failed the walk's own "is this element still in the document"
+      // check. It failed LOUDLY, which is the only reason this was caught — an
+      // earlier run captured 107 elements from a node that was about to be
+      // replaced.
+      return (await screen.findByRole('dialog')) as HTMLElement;
+    },
+  },
+  {
+    /*
+      The edit half. `AddAccountForm` and `EditAccountForm` are separate files that
+      have drifted apart before (#123 was two copies of one colour list), so the
+      shared control is measured in BOTH — a field that overflows in one and not
+      the other is exactly what a single capture would miss. This one also proves
+      the PREFILL renders: the fixture's 999.99 is the widest APR the column can
+      hold.
+    */
+    name: 'slidepanel-edit-account-credit-terms',
+    Page: Accounts as React.FC,
+    open: async () => {
+      const edit = await screen.findByRole('button', { name: /Edit account/i }, { timeout: 6000 });
+      await userEvent.click(edit);
+      const dialog = await screen.findByRole('dialog');
+      await within(dialog).findByLabelText(/APR/i);
       return dialog as HTMLElement;
     },
   },

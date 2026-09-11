@@ -76,7 +76,29 @@ export const Accounts = () => {
         // saving posted a 18-23 character string into a String(7) column. The alpha
         // concatenation below (`${account.color}20`) only works on a hex, too.
         color: acc.color || getDefaultColorForType(acc.account_type || 'checking'),
-        creditLimit: acc.credit_limit || null,
+        // `??`, NOT `||`, and it changed with C1a. While this row was READ-ONLY,
+        // coercing a stored 0 to null was harmless. It is not any more: the edit
+        // panel now round-trips through here, so `0 -> null -> '' -> null` meant
+        // opening a 0-limit card to RENAME it and pressing Save wrote NULL over
+        // the limit — a value destroyed by an edit the user did not make.
+        //
+        // The type's "a 0 credit limit would make every card look maxed out"
+        // note is about not treating UNSTATED as zero; it does not license
+        // discarding a real one. The available-credit block below is gated on
+        // `account.creditLimit &&`, so 0 is falsy either way and nothing on the
+        // page renders differently.
+        creditLimit: acc.credit_limit ?? null,
+        // C1a. Carried through so <EditAccountForm> opens showing what is stored
+        // rather than three empty boxes -- an edit form that silently forgets a
+        // field is how a value gets cleared by someone who only came to rename
+        // the account.
+        //
+        // `??`, NOT `||`, and the difference is the whole point: `0` is a real
+        // 0% intro APR and a real minimum payment, and `||` would turn both into
+        // `null`, blank the box, and then write NULL back on the next save.
+        // `creditLimit` above also uses `??` now -- see the note on it.
+        apr: acc.apr ?? null,
+        minPayment: acc.min_payment ?? null,
         // `+ balance`, NOT `- Math.abs(balance)`. Card debt is a NEGATIVE balance
         // (verified: `balances.py::_move` applies one rule for every account type),
         // so adding it subtracts what is owed and there is no special case to get

@@ -22,6 +22,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
@@ -106,5 +107,45 @@ describe('Accounts — available credit', () => {
     // an unscoped match would pass on one of those instead.
     const label = await screen.findByText('Available Credit');
     expect(label.parentElement).toHaveTextContent('$0.00');
+  });
+});
+
+/**
+ * The round trip that C1a opened, and the reason this lives HERE rather than
+ * beside `creditFieldsFromAccount`.
+ *
+ * *** THE COERCION IS IN THE PAGE MAPPING, UPSTREAM OF EVERY UNIT TEST. ***
+ * `CreditFieldsControl.test.tsx` already proves `creditFieldsFromAccount({
+ * creditLimit: 0 })` yields `'0'` — and it passed while this was broken, because
+ * `Accounts.tsx` mapped `acc.credit_limit || null` and the function never saw
+ * the zero. `0 -> null -> '' -> null` meant opening a 0-limit card to RENAME it
+ * and pressing Save wrote NULL over the limit.
+ *
+ * Harmless for as long as this row was read-only, which is exactly why the
+ * `||` survived review twice: it only became a defect when the edit panel
+ * started writing back through it. A test that crosses the page is the only
+ * one that can see that.
+ */
+describe('Accounts — a stored ZERO limit survives the edit panel', () => {
+  it('opens the edit form showing 0, not an empty box', async () => {
+    mockCard(-50, 0);
+    render(<MemoryRouter><Accounts /></MemoryRouter>);
+
+    await screen.findByText('Chase Amazon');
+    await userEvent.click(screen.getByRole('button', { name: /Edit account/i }));
+
+    const limit = await screen.findByLabelText(/credit limit/i);
+    expect(limit).toHaveValue(0);
+  });
+
+  it('still hides Available Credit for a zero limit, so nothing on screen moved', async () => {
+    // The block is gated on `account.creditLimit &&`, so 0 is falsy either way.
+    // Asserted rather than assumed: `??` would be a visible regression if the
+    // gate had been `!= null`.
+    mockCard(-50, 0);
+    render(<MemoryRouter><Accounts /></MemoryRouter>);
+
+    await screen.findByText('Chase Amazon');
+    expect(screen.queryByText('Available Credit')).not.toBeInTheDocument();
   });
 });
