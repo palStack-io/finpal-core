@@ -70,7 +70,18 @@ run_with_timeout() {
   # timeout, which for a real step means an orphaned pytest or a headless Chrome
   # left holding a port. With it, the whole group goes and 0 orphans remain.
   set -m
-  "$@" &
+  # *** `< /dev/null` IS INSURANCE AGAINST THE CLASSIC CAUSE OF EXACTLY THE
+  # SYMPTOM THIS WRAPPER EXISTS TO CATCH. *** `set -m` puts the job in its own
+  # process group, and a background process group that READS STDIN gets SIGTTIN
+  # and is STOPPED — not killed, stopped — which looks identical to a hang and
+  # lasts until the wall clock fires. No step here has any business reading
+  # stdin, so closing it converts that failure mode into an immediate EOF.
+  #
+  # Added after the contrast walk timed out at 900s inside a full run on
+  # 2026-09-11 and then completed in 18s both standalone AND through this
+  # wrapper — i.e. NOT REPRODUCED. This does not claim to be the cause; it
+  # removes the likeliest one so a recurrence means something else.
+  "$@" < /dev/null &
   local pid=$!
   set +m
   local waited=0

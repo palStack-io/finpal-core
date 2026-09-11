@@ -61,6 +61,13 @@ NO_DEMO_ROWS_BY_DESIGN = {
     'import_batches': 'the record of an import that has happened; see import_sources',
     'agent_actions': 'the audit trail of an MCP/agent write, which nothing does at seed',
     'user_module_access': 'entitlements are a Premium concept; core grants by config',
+    # Its sibling, and the distinction is the point (owner, 2026-09-11):
+    # `user_module_access` is "may you" and adminPal's; this is "do you want to"
+    # and the user's. A seeded row would be asserting that a demo persona had
+    # opened Settings and hidden something, which nobody did -- and ABSENT means
+    # visible, so an empty table is the correct state for a fresh demo.
+    'user_module_preferences': 'a choice the user makes in Settings; absent means '
+                               'visible, so an empty table IS the default',
     # learnPal, C1b. `learn_milestones` IS seeded -- by the module's own
     # `on_startup`, not by the demo seeder -- so it is empty in a demo-seed
     # fixture that never boots the module. `learn_completions` is genuinely

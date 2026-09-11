@@ -13,26 +13,46 @@ import { AgentAccess } from '../components/settings/AgentAccess';
 import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
+import { moduleService } from '../services/moduleService';
 import type { ModuleManifest } from '../modules/registry';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { useToast } from '../contexts/ToastContext';
 
 // ---------------------------------------------------------------------------
 // ModuleCard — per-module hide/show toggle card for Settings > Modules tab
 // ---------------------------------------------------------------------------
 const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
-  const hiddenKey = `module_hidden_${manifest.slug}`;
-  const [hidden, setHidden] = useState<boolean>(() => {
-    try { return localStorage.getItem(hiddenKey) === 'true'; } catch { return false; }
-  });
+  // *** SERVER-SIDE SINCE 2026-09-11. *** This held `module_hidden_${slug}` in
+  // localStorage, which meant the choice was per-BROWSER: it did not follow the
+  // user to another device and mobile could not see it at all. That is the
+  // prerequisite C1f's module chooser was blocked on.
+  //
+  // Read from the auth store rather than local state, so the sidebar and this
+  // card cannot disagree — they now read one value.
+  const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const hidden = (user?.hidden_modules ?? []).includes(manifest.slug);
+  const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
 
-  const toggle = () => {
+  const toggle = async () => {
+    if (saving) return;
     const next = !hidden;
-    setHidden(next);
+    setSaving(true);
     try {
-      localStorage.setItem(hiddenKey, String(next));
-      window.dispatchEvent(new StorageEvent('storage', { key: hiddenKey, newValue: String(next) }));
-    } catch {}
+      // The server returns the WHOLE list, so there is nothing to reconstruct
+      // here and no chance of this drifting from what `/me` would say.
+      const hiddenNow = await moduleService.setVisible(manifest.slug, !next);
+      updateUser({ hidden_modules: hiddenNow });
+    } catch (err) {
+      // *** NO OPTIMISTIC UPDATE. *** The old localStorage write could not fail;
+      // a request can. Flipping the switch first and rolling it back on error
+      // shows the user a state the server never accepted.
+      showToast(apiErrorMessage(err, 'Could not save that preference'), 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -50,17 +70,34 @@ const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
           {hidden ? 'Hidden in sidebar' : 'Visible in sidebar'}
         </span>
-        <div onClick={toggle} style={{
-          width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
-          background: hidden ? 'var(--border-color)' : 'var(--g500)',
-          position: 'relative', transition: 'background 0.2s',
-        }}>
+        {/*
+          *** A REAL <button role="switch">, NOT A BARE <div onClick>. *** It was
+          a div: no role, no keyboard access, no accessible name, and nothing a
+          screen reader would announce as a control. It was also untestable by
+          role, which is how the test that named this toggle stayed green while
+          asserting nothing at all.
+        */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={!hidden}
+          aria-label={`${manifest.label} in sidebar`}
+          onClick={toggle}
+          disabled={saving}
+          style={{
+            width: 44, height: 24, borderRadius: 12, padding: 0, border: 'none',
+            cursor: saving ? 'wait' : 'pointer',
+            background: hidden ? 'var(--border-color)' : 'var(--g500)',
+            position: 'relative', transition: 'background 0.2s',
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
           <div style={{
             position: 'absolute', top: 3, borderRadius: '50%',
             width: 18, height: 18, background: '#fff',
             left: hidden ? 3 : 23, transition: 'left 0.2s',
           }} />
-        </div>
+        </button>
       </div>
     </div>
   );

@@ -222,6 +222,11 @@ def test_register_first_user_becomes_admin(client, db, slash, no_outbound_mail):
         'hasCompletedOnboarding': False,
         'profile_emoji': None,
         'modules': DEFAULT_MODULES,
+        # A user's show/hide choice, SEPARATE from entitlement — see
+        # `test_module_preferences.py`. Empty for a fresh user, and it must stay
+        # a distinct key: subtracting it from `modules` would make hiding a
+        # module a one-way door out of the only screen that can un-hide it.
+        'hidden_modules': [],
     }
     # The verification mail is fire-and-forget, but it is part of the contract.
     assert len(no_outbound_mail) == 1
@@ -344,6 +349,11 @@ def test_login_returns_the_full_user_shape(client, db, user, slash):
         # preference that silently stops applying on the next login.
         'number_locale': user.number_locale,
         'modules': DEFAULT_MODULES,
+        # A user's show/hide choice, SEPARATE from entitlement — see
+        # `test_module_preferences.py`. Empty for a fresh user, and it must stay
+        # a distinct key: subtracting it from `modules` would make hiding a
+        # module a one-way door out of the only screen that can un-hide it.
+        'hidden_modules': [],
         'notifications': {
             'email': True,
             'push': False,
@@ -467,6 +477,11 @@ def test_me_returns_the_profile(client, db, user, auth_headers, slash):
             'transactionAlerts': True,
         },
         'modules': DEFAULT_MODULES,
+        # A user's show/hide choice, SEPARATE from entitlement — see
+        # `test_module_preferences.py`. Empty for a fresh user, and it must stay
+        # a distinct key: subtracting it from `modules` would make hiding a
+        # module a one-way door out of the only screen that can un-hide it.
+        'hidden_modules': [],
         'created_at': user.created_at.isoformat() if user.created_at else None,
     }
     # `/me` is the only auth route carrying user_color and created_at.
@@ -574,6 +589,11 @@ def test_onboarding_saves_every_preference_it_accepts(
         'hasCompletedOnboarding': True,
         'is_demo_user': False,
         'modules': DEFAULT_MODULES,
+        # A user's show/hide choice, SEPARATE from entitlement — see
+        # `test_module_preferences.py`. Empty for a fresh user, and it must stay
+        # a distinct key: subtracting it from `modules` would make hiding a
+        # module a one-way door out of the only screen that can un-hide it.
+        'hidden_modules': [],
     }
 
     # Asserted on the row, not on the echo: the response repeats the request.

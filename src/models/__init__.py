@@ -23,6 +23,11 @@ from src.models.agent_action import AgentAction  # noqa: F401
 
 # Module access control (always imported — table exists regardless of feature flags)
 from src.modules.access import UserModuleAccess  # noqa: F401
+# Imported UNCONDITIONALLY, unlike a module's own models: a module PREFERENCE
+# is a core concern. Gating it on any module being enabled would mean the
+# table vanished the moment a deployment turned every module off, taking the
+# user's choices with it.
+from src.modules.preference import UserModulePreference  # noqa: F401
 
 # pointsPal models — imported when the module is enabled, so that Alembic
 # autogenerate and db.create_all() both see them in exactly the environments that
