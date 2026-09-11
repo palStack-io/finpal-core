@@ -234,3 +234,51 @@ describe('MountainSilhouette — defensive and accessible', () => {
     expect(container.querySelector('title')?.textContent).toBe('Aconcagua, 6,961 m');
   });
 });
+
+describe('MountainSilhouette — the backdrop is measured, not decorated', () => {
+  /**
+   * *** THE SNOW IS WHITE, SO BEHIND TEXT ON A DARK CARD IT REDUCES CONTRAST. ***
+   * Measured: `--text-secondary` (#9CB3A3) over the dark card (#16241A)
+   * composited with the snow at the backdrop alpha is 3.95:1 at 22% and still
+   * only 4.42:1 at 18% — large-text only, so a normal-size figure over the
+   * summit fails AA. Without the snow the worst case is the body at 4.69:1.
+   *
+   * The contrast walk CANNOT see this: it reads computed colours from the DOM
+   * and never composites an SVG lying behind text. So this assertion is the
+   * only thing standing between that blend and a shipped AA failure.
+   */
+  it('omits the white snow cap when it is a decorative backdrop', () => {
+    for (const band of [1, 2, 3, 4, 5]) {
+      const { container } = render(
+        <MountainSilhouette band={band} height={90} scale="cost"
+                            maxPixelHeight={116} decorative />,
+      );
+      expect(container.querySelectorAll('path')).toHaveLength(1);
+      expect(container.querySelector('path[fill="#ffffff"]')).toBeNull();
+    }
+  });
+
+  it('still draws the snow when the peak is the subject, not the backdrop', () => {
+    const { container } = render(
+      <MountainSilhouette band={5} height={90} scale="cost"
+                          maxPixelHeight={116} title="Everest" />,
+    );
+    expect(container.querySelectorAll('path')).toHaveLength(2);
+    expect(container.querySelector('path[fill="#ffffff"]')).not.toBeNull();
+  });
+
+  it('keeps the outline identical with and without the snow', () => {
+    const a = render(
+      <MountainSilhouette band={4} height={90} scale="cost"
+                          maxPixelHeight={116} decorative />,
+    );
+    const b = render(
+      <MountainSilhouette band={4} height={90} scale="cost"
+                          maxPixelHeight={116} title="Aconcagua" />,
+    );
+    // The BODY is what names the mountain, so the backdrop must lose nothing
+    // that makes its band readable.
+    expect(a.container.querySelector('path')!.getAttribute('d'))
+      .toBe(b.container.querySelector('path')!.getAttribute('d'));
+  });
+});

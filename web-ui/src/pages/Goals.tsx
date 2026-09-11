@@ -166,35 +166,43 @@ const GoalRow: React.FC<GoalRowProps> = ({
       style={{ ...cardStyle, position: 'relative', overflow: 'hidden' }}
       data-testid={`goal-${goal.id}`}
     >
-      {/* C1c. *** DECORATION, AND THE ONLY PLACE THE MOUNTAIN IS DRAWN ON THIS
-          CARD. *** `aria-hidden`, behind the figures, clipped by the card, and
-          it never carries a fact on its own -- every number it stands behind is
-          also written in the subline. Absent entirely when `peak` is, so a card
-          from an older backend is untouched.
+      {/* C1c. *** THE SILHOUETTE IS ANCHORED TO THE FIGURES, NOT TO THE CARD. ***
+          The approved mockup puts it "behind the figures, bottom-right", and on
+          the mockup's card those are the same place because the card ends just
+          below the progress bar. THE REAL CARD DOES NOT: it carries the account
+          pills, the add-account list and the contributions table underneath, so
+          anchoring to the card's own bottom edge put an Everest behind a table
+          of names -- which read as an accident rather than as a design. Found by
+          RENDERING IT AND LOOKING, which no gate here can do: the contrast walk
+          reads computed colours and never composites an SVG sitting behind text.
 
-          Opacity comes from `--peak-backdrop-opacity` rather than a literal
-          because the same alpha reads as much less over the dark surface: 11%
-          light, 17% dark. */}
-      {peak && (
-        <div
-          aria-hidden="true"
-          data-testid={`goal-peak-${goal.id}`}
-          style={{
-            position: 'absolute', right: 0, bottom: 0,
-            pointerEvents: 'none', lineHeight: 0,
-          }}
-        >
-          <MountainSilhouette
-            band={peak.band}
-            height={peakHeight}
-            scale={peak.scale}
-            unmeasured={peak.unmeasured}
-            maxPixelHeight={132}
-            decorative
-            style={{ opacity: 'var(--peak-backdrop-opacity)' } as React.CSSProperties}
-          />
-        </div>
-      )}
+          So the header and the progress bar are wrapped in their own positioning
+          context and the mountain stands on the bar's baseline.
+
+          `aria-hidden`, and it never carries a fact on its own -- every number it
+          stands behind is also written out in the subline. Absent entirely when
+          `peak` is, so a card from a pre-mountain backend is untouched. */}
+      <div style={{ position: 'relative' }}>
+        {peak && (
+          <div
+            aria-hidden="true"
+            data-testid={`goal-peak-${goal.id}`}
+            style={{
+              position: 'absolute', right: 0, bottom: 0,
+              pointerEvents: 'none', lineHeight: 0,
+            }}
+          >
+            <MountainSilhouette
+              band={peak.band}
+              height={peakHeight}
+              scale={peak.scale}
+              unmeasured={peak.unmeasured}
+              maxPixelHeight={116}
+              decorative
+              style={{ opacity: 'var(--peak-backdrop-opacity)' } as React.CSSProperties}
+            />
+          </div>
+        )}
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -249,18 +257,14 @@ const GoalRow: React.FC<GoalRowProps> = ({
               }}>
                 {peakEyebrow(peak)}
               </div>
-              <div style={{
-                ...mutedSmallStyle,
-                marginTop: 2,
-                fontStyle: peak.unmeasured ? 'italic' : undefined,
-              }}>
-                {peak.unmeasured
-                  ? UNMEASURED_SUBLINE
-                  : peakSubline(peak, (amount) => formatMoney(
-                      amount, { currency: goal.currency_code })) }
-              </div>
-              {summitLine && (
-                <div style={{ ...mutedSmallStyle, marginTop: 4,
+              {/* *** ON A CLEARED GOAL THE SUMMIT NOTE REPLACES THE SUBLINE,
+                  IT DOES NOT JOIN IT. *** Rendering both printed "Table Mountain
+                  · 1,085 m · $0.00 still to save" above the congratulation --
+                  every figure correct and the pair reading as a shrug. Nothing
+                  is lost: the subline describes what is left to do, and there is
+                  nothing left to do. */}
+              {summitLine ? (
+                <div style={{ ...mutedSmallStyle, marginTop: 2,
                               color: 'var(--text-primary)' }}>
                   {summitLine}
                   {hardestLine && (
@@ -268,6 +272,17 @@ const GoalRow: React.FC<GoalRowProps> = ({
                       {` · ${hardestLine}`}
                     </span>
                   )}
+                </div>
+              ) : (
+                <div style={{
+                  ...mutedSmallStyle,
+                  marginTop: 2,
+                  fontStyle: peak.unmeasured ? 'italic' : undefined,
+                }}>
+                  {peak.unmeasured
+                    ? UNMEASURED_SUBLINE
+                    : peakSubline(peak, (amount) => formatMoney(
+                        amount, { currency: goal.currency_code })) }
                 </div>
               )}
             </div>
@@ -327,6 +342,7 @@ const GoalRow: React.FC<GoalRowProps> = ({
           {/* The server's percentage, rounded for display and nothing else. */}
           <span>{percentLabel(goal.progress)}</span>
         </div>
+      </div>
       </div>
 
       {goal.account_id !== null && (

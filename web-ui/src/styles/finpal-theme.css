@@ -190,7 +190,7 @@
      the same alpha over a dark surface reads as less: 11% of clay on #FBFCF9 is
      visible, 11% on #16241A is very nearly nothing. Decoration, `aria-hidden`,
      and never the only thing carrying a fact. */
-  --peak-backdrop-opacity: 0.11;
+  --peak-backdrop-opacity: 0.16;
 
   /* Tooltip */
   --tooltip-bg: #ffffff;
@@ -375,7 +375,7 @@
   --peak-cost: #D98060;
   --peak-build: #5FBE7E;
   --peak-unmeasured: var(--text-muted);
-  --peak-backdrop-opacity: 0.17;
+  --peak-backdrop-opacity: 0.22;
 
   /* Tooltip */
   /* --kt-hover, not --kt-card: a tooltip floats OVER a card, so it wants the palette's

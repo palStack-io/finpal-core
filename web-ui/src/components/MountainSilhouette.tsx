@@ -117,7 +117,23 @@ export const MountainSilhouette: React.FC<MountainSilhouetteProps> = ({
     >
       {!decorative && title ? <title>{title}</title> : null}
       <path d={shape.body} fill="currentColor" />
-      {shape.snow ? (
+      {/* *** NO SNOW ON A DECORATIVE BACKDROP, AND THIS IS A MEASURED
+          ACCESSIBILITY DECISION RATHER THAN A TASTE ONE. ***
+          The snow is WHITE, so behind text on the dark card it lightens the
+          surface TOWARDS the text colour instead of away from it. Measured:
+          `--text-secondary` (#9CB3A3) over the dark card (#16241A) composited
+          with the snow at the backdrop alpha gives 3.95:1 at 22% and 4.42:1
+          even at 18% -- large-text only, so a normal-size figure sitting over
+          the summit fails AA. Keeping the snow would have meant capping the
+          backdrop at 16%, which is the too-faint value this was raised FROM.
+          Without it the worst dark case is the body itself at 4.69:1 and the
+          worst light case 4.65:1, both AA.
+          *** AND NO GATE HERE COULD HAVE CAUGHT IT: *** the contrast walk reads
+          computed colours from the DOM and never composites an SVG lying behind
+          text. Found by rendering the card and measuring the blend by hand.
+          The snow is also very nearly invisible at these opacities, so nothing
+          legible is lost -- it is the peak's OUTLINE that names the mountain. */}
+      {shape.snow && !decorative ? (
         <path d={shape.snow} fill="#ffffff" opacity={shape.snowOpacity ?? 0.85} />
       ) : null}
     </svg>
