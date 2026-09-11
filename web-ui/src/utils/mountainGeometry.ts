@@ -156,6 +156,38 @@ function scaleHeight(magnitude: number, ceiling: number, maxHeight: number): num
 }
 
 /**
+ * The height for a magnitude the SERVER has already computed.
+ *
+ * *** THIS IS THE ENTRY POINT A GOAL CARD USES, NOT `peakGeometry`. *** The split
+ * is that the server decides the mountain -- the band comes from a seeded table
+ * and the magnitude from balances and APRs, neither of which a client holds --
+ * and the client decides the pixels. So a card receives one number and needs
+ * exactly this, while `peakGeometry` exists for a caller that holds the raw
+ * accounts (the range screen, and the parity test against the server).
+ *
+ * *** A MAGNITUDE OF 0 RETURNS 0, AND THAT IS CORRECT HERE. *** An explicit 0%
+ * APR on a real balance is MEASURED and measures zero. Flooring it so the
+ * mountain stays visible is a PRESENTATION decision and lives in the component
+ * (`MIN_MEASURED_HEIGHT`), not in this module -- which is shared byte-for-byte
+ * with mobile, so a purely visual minimum here would mean changing two repos in
+ * lockstep to adjust a pixel.
+ *
+ * `null` in, `0` out: callers must branch on `unmeasured` before drawing, since
+ * the unmeasured shape is not a mountain at all.
+ */
+export function heightForMagnitude(
+  magnitude: number | null | undefined,
+  scale: PeakDirection | 'cost' | 'build',
+  ceilings: Ceilings = DEFAULT_CEILINGS,
+): number {
+  if (magnitude === null || magnitude === undefined) return 0;
+  const isCost = scale === 'cost' || scale === 'paydown';
+  return scaleHeight(magnitude,
+                     isCost ? ceilings.costCeiling : ceilings.buildCeiling,
+                     ceilings.maxHeight);
+}
+
+/**
  * One peak's geometry.
  *
  * *** KEYED OFF `direction`, NEVER `kind`. *** `Goal.kind` is presentation-only
