@@ -858,7 +858,7 @@ export const Goals: React.FC = () => {
                           onClick={handleDeleteFromPanel}
                           disabled={saving}
                           style={{
-                            ...primaryButtonStyle, background: '#ef4444',
+                            ...primaryButtonStyle, background: 'var(--danger-fill)',
                           }}
                         >
                           <Trash2 size={16} /> {saving ? 'Deleting…' : 'Yes, delete it'}
@@ -876,7 +876,7 @@ export const Goals: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(editingId)}
-                      style={{ ...secondaryButtonStyle, color: '#ef4444' }}
+                      style={{ ...secondaryButtonStyle, color: 'var(--danger-text)' }}
                     >
                       <Trash2 size={16} /> Delete this goal
                     </button>

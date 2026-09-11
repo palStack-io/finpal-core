@@ -183,6 +183,20 @@
      have shipped two AA failures on the one piece of text that states the
      design's central rule. The dark values below are lifted to 5.54:1 and
      7.03:1. */
+  /* Danger text and fill for DESTRUCTIVE controls.
+     *** MEASURED, AND `#ef4444` FAILS AA FOR BOTH USES. *** The semantic red
+     accent is 3.65:1 as text on the light card and white on it is 3.76:1 --
+     large-text only, and a delete confirm is the last control that should be
+     hard to read. `#dc2626` gives 4.69:1 as text here and white on it 4.83:1.
+     In dark mode `#dc2626` drops to 3.34:1 as TEXT, so dark takes `#f87171`
+     (5.83:1); the FILL stays `#dc2626` in both themes because white-on-fill
+     does not depend on the surface behind it.
+     *** THIS DOES NOT TOUCH THE EXISTING `#ef4444` ERROR TEXT. *** Those are
+     pre-existing and a blanket colour sweep has broken things in this project
+     before (D-129); these two variables are for new destructive controls. */
+  --danger-text: #dc2626;
+  --danger-fill: #dc2626;
+
   --peak-cost: #AB5437;
   --peak-build: #15803D;
   --peak-unmeasured: var(--text-muted);
@@ -372,6 +386,10 @@
 
   /* Peaks. Lifted off the mockup's values, which are AA-large only here --
      see the note in the light block above for the measured ratios. */
+  /* Lifted off `#dc2626`, which is 3.34:1 as text on the dark card. */
+  --danger-text: #f87171;
+  --danger-fill: #dc2626;
+
   --peak-cost: #D98060;
   --peak-build: #5FBE7E;
   --peak-unmeasured: var(--text-muted);
