@@ -16,7 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   peakGeometry, monthlyInterestCost, groundHeight, splitByScale,
-  PROPOSED_CEILINGS, type Ceilings,
+  DEFAULT_CEILINGS, type Ceilings,
 } from '../../utils/mountainGeometry';
 
 // Round numbers so the expected heights are checkable by hand.
@@ -203,16 +203,18 @@ describe('the ground', () => {
   });
 });
 
-describe('the proposed ceilings', () => {
-  it('are exported as a PROPOSAL, not baked into the function', () => {
-    // *** §18 ITEM 1 — THE BAND TABLE — IS UNANSWERED. *** These are
-    // placeholders so the arithmetic is testable; settling the real numbers
-    // must be a change at one call site, not a change to the module.
-    expect(PROPOSED_CEILINGS.costCeiling).toBeGreaterThan(0);
-    expect(PROPOSED_CEILINGS.buildCeiling).toBeGreaterThan(0);
+describe('the default ceilings', () => {
+  it('are a passable DEFAULT, not baked into the function', () => {
+    // These used to be a proposal because the band table was unanswered. It is
+    // answered now — two seeded tables — so these mirror the top band's floor,
+    // and `test_goal_mountains.py` reads this file's bytes to enforce that.
+    // They stay passable because adminPal will own the bands: the server will
+    // send the ceilings alongside them and this object becomes the fallback.
+    expect(DEFAULT_CEILINGS.costCeiling).toBe(250);
+    expect(DEFAULT_CEILINGS.buildCeiling).toBe(40000);
     const withDefaults = peakGeometry({ direction: 'accumulate', targetAmount: 1000 });
     const withExplicit = peakGeometry({ direction: 'accumulate', targetAmount: 1000 },
-                                      PROPOSED_CEILINGS);
+                                      DEFAULT_CEILINGS);
     expect(withDefaults.height).toBe(withExplicit.height);
   });
 

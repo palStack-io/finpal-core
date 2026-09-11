@@ -11,6 +11,8 @@ The thresholds themselves are §21.3 and were checked against real demo figures
 before being chosen, not picked in the abstract.
 """
 
+import os
+import re
 from datetime import datetime
 from decimal import Decimal
 
@@ -396,3 +398,87 @@ def test_the_mountain_tables_exist_even_with_learnpal_disabled(db, app, monkeypa
     monkeypatch.delenv('LEARNPAL_ENABLED', raising=False)
     from src.models import Mountain as ExportedMountain
     assert ExportedMountain is Mountain
+
+
+# ---------------------------------------------------------------------------
+# The client's height ceiling and the top band's floor are ONE number
+# ---------------------------------------------------------------------------
+
+def _client_geometry_paths():
+    """web-ui's copy, and mobile's if this checkout has it.
+
+    mobile/ lives in the OUTER repo, so CI clones finpal_core without it. The
+    web-ui copy is therefore the one that must always be found and mobile's is
+    checked only when present — a skip here would hide the web failure too.
+    """
+    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    web = os.path.join(here, 'web-ui', 'src', 'utils', 'mountainGeometry.ts')
+    mob = os.path.join(os.path.dirname(here), 'mobile', 'src', 'utils', 'mountainGeometry.ts')
+    return web, (mob if os.path.exists(mob) else None)
+
+
+def _ceilings_from_ts(path):
+    """Read the two numbers out of the TS source as TEXT.
+
+    Deliberately reads BYTES rather than importing or transpiling: the point is
+    to catch a human editing one number in one file, and every mechanism that
+    could make that invisible (a build step, a re-export, a default parameter)
+    is a mechanism this test must not use. D-45's lesson — a gate that compiles
+    nothing exits 0 forever.
+    """
+    src = open(path).read()
+    found = {}
+    for key in ('costCeiling', 'buildCeiling'):
+        m = re.search(rf'\b{key}\s*:\s*([0-9_]+)\s*,', src)
+        assert m, f'{key} not found in {path} — has the constant been renamed?'
+        found[key] = int(m.group(1).replace('_', ''))
+    return found
+
+
+def test_THE_HEIGHT_CEILING_IS_THE_TOP_BANDS_FLOOR(db):
+    """*** A PEAK MUST NOT BE NAMED ONE MOUNTAIN AND DRAWN AS ANOTHER. ***
+
+    This is the defect the test was written for, and it was real: the top build
+    band's floor was 40,000 while the client's `buildCeiling` was 20,000. Height
+    saturates at the ceiling, so EVERY build goal from £20k up drew at
+    `maxHeight` — an Aconcagua at £25k exactly as tall as an Everest at £60k.
+    Nothing rendered yet, so nobody had seen it, and the seeder's own comment
+    asserted the invariant the constant broke.
+
+    Two independent numbers always drift. Until the server sends the ceilings
+    with the bands, this gate is what keeps them equal.
+    """
+    seed_mountains()
+    web, mobile = _client_geometry_paths()
+
+    for scale, key in (('cost', 'costCeiling'), ('build', 'buildCeiling')):
+        top = (MountainBand.query
+               .filter_by(scale=scale, max_amount=None)
+               .one())
+        client = _ceilings_from_ts(web)[key]
+        assert Decimal(top.min_amount) == Decimal(client), (
+            f'{scale}: the top band starts at {top.min_amount} and the client '
+            f'saturates height at {client}. Every goal between the smaller of '
+            f'those and the larger is drawn at a height its band does not mean.'
+        )
+
+    if mobile:
+        assert _ceilings_from_ts(web) == _ceilings_from_ts(mobile), (
+            'mobile and web-ui disagree on the ceilings, so the same goal draws '
+            'at two heights on two clients.'
+        )
+
+
+def test_the_two_client_geometry_copies_are_byte_identical(db):
+    """`mountainGeometry.ts` is duplicated, not shared, and that is deliberate —
+    two git repos, two build systems. The duplication is only safe while it is
+    EXACT, so this compares bytes rather than behaviour: a divergence in a
+    comment is a divergence about to become a divergence in a number.
+    """
+    web, mobile = _client_geometry_paths()
+    if not mobile:
+        pytest.skip('mobile/ is not in this checkout (it lives in the outer repo)')
+    assert open(web, 'rb').read() == open(mobile, 'rb').read(), (
+        'web-ui/src/utils/mountainGeometry.ts and mobile/src/utils/'
+        'mountainGeometry.ts have diverged. Copy one over the other.'
+    )
