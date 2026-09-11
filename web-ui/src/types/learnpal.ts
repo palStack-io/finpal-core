@@ -106,3 +106,94 @@ export interface LessonDetail {
 }
 
 export type { PeakScale };
+
+/**
+ * `GET /api/v1/learnpal/stats` — the learnPal HOME.
+ *
+ * *** ITS OWN ENDPOINT, NOT MORE KEYS ON `/range`. *** The range payload serves
+ * four surfaces including the strip on every goal card; home-only fields would
+ * make all four carry them.
+ *
+ * *** THERE IS NO POINTS FIELD AND THAT IS A DECISION. *** Owner, 2026-09-11:
+ * learnPal has no points at all — no ledger, no column. Points are meant to
+ * come from ANSWERING and no quiz exists, so a points tile would read 0 for
+ * ever with no way to move it. A backend test pins the absence.
+ */
+
+export interface StatsMountain {
+  slug: string;
+  name: string;
+  elevation_m: number;
+  /** Seeded content a human approved. Never generated. */
+  fact: string | null;
+  summit_note: string | null;
+}
+
+export interface StatsHighest {
+  /** Index into the band ladder, 0-based. */
+  band: number;
+  band_total: number;
+  mountain: StatsMountain | null;
+  goal_id: number;
+  goal_name: string;
+  /**
+   * *** "EVER" INCLUDES AN ARCHIVED OR ACHIEVED GOAL, UNLIKE THE RANGE. *** So
+   * the client can say "on a goal you have since finished" rather than implying
+   * the climb is still under way.
+   */
+  goal_status: string;
+}
+
+export interface StatsRecent {
+  slug: string;
+  title: string;
+  gear_slug: string | null;
+  /** False for the eleven unseeded drafts and the four unwritten lessons. */
+  has_body: boolean;
+  verified_by: string;
+  /** ISO 8601, or null on a row written before the column had a default. */
+  unlocked_at: string | null;
+  /**
+   * *** NULL IS A REAL STATE, TWICE OVER. *** A predicate-gated lesson has no
+   * goal behind it, and the FK is `ondelete='SET NULL'` so a deleted goal keeps
+   * the unlock and loses the attribution. Render "unlocked", never "by None".
+   */
+  goal_id: number | null;
+  goal_name: string | null;
+}
+
+export interface StatsNext {
+  slug: string;
+  title: string;
+  gear_slug: string | null;
+  surface: string;
+  has_body: boolean;
+  unlock_at_progress: number | null;
+  applies_to_direction: string | null;
+  /** Which kind of gate holds it shut. `null` = neither; guided setup owns it. */
+  gate: 'altitude' | 'check' | null;
+  /**
+   * Why it is locked, DERIVED from the gate — a threshold for an altitude gate,
+   * `checks.check_reason` for a predicate. `null` when the server cannot say,
+   * which is fail-closed and honest rather than a plausible sentence about a
+   * condition nothing tests.
+   */
+  reason: string | null;
+  goal_id: number | null;
+  goal_name: string | null;
+  goal_progress: number | null;
+}
+
+export interface LearnStats {
+  lessons: {
+    read: number;
+    total: number;
+    /** How many have no prose yet. A reader must not be offered for those. */
+    without_body: number;
+  };
+  gear: { earned: number; total: number };
+  /** `null` when no goal has a band — not band zero. */
+  highest: StatsHighest | null;
+  recent: StatsRecent[];
+  next: StatsNext[];
+}

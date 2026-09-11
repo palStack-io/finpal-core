@@ -9,7 +9,7 @@
  */
 
 import { api } from '../../services/api';
-import type { LearnRange, LessonDetail, LessonRow } from '../../types/learnpal';
+import type { LearnRange, LearnStats, LessonDetail, LessonRow } from '../../types/learnpal';
 
 const notInstalled = (err: unknown): boolean =>
   (err as { response?: { status?: number } })?.response?.status === 404;
@@ -21,6 +21,18 @@ export const learnpalService = {
       const r = await api.get<{ success: boolean; range: LearnRange }>(
         '/api/v1/learnpal/range');
       return r.data.range;
+    } catch (err) {
+      if (notInstalled(err)) return null;
+      throw err;
+    }
+  },
+
+  /** `null` when learnPal is not installed. The home page's own payload. */
+  async getStats(): Promise<LearnStats | null> {
+    try {
+      const r = await api.get<{ success: boolean; stats: LearnStats }>(
+        '/api/v1/learnpal/stats');
+      return r.data.stats;
     } catch (err) {
       if (notInstalled(err)) return null;
       throw err;

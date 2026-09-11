@@ -15,12 +15,21 @@ const manifest: ModuleManifest = {
   description:
     'Your goals as a range of mountains, with a lesson unlocked by your own '
     + 'figures rather than by a schedule.',
+  // *** `/learnpal` IS THE HOME AND THE RANGE MOVED TO `/learnpal/range`. ***
+  // The module's landing page used to BE the range, which made the one screen
+  // that answers "what have I learned and what is next" a thing you had to know
+  // to look for. The range is a visualisation; the home is the progression.
+  //
+  // Anything linking to `/learnpal` meaning "the range" has to move with it --
+  // `RangeBanner`'s "See the whole range" was the one caller.
   navLinks: [
-    { label: 'Your range', path: '/learnpal' },
+    { label: 'learnPal',   path: '/learnpal' },
+    { label: 'Your range', path: '/learnpal/range' },
     { label: 'Lessons',    path: '/learnpal/lessons' },
   ],
   routes: [
-    { path: '/learnpal',         component: lazy(() => import('./pages/Range')) },
+    { path: '/learnpal',         component: lazy(() => import('./pages/Home')) },
+    { path: '/learnpal/range',   component: lazy(() => import('./pages/Range')) },
     { path: '/learnpal/lessons', component: lazy(() => import('./pages/Lessons')) },
   ],
 };

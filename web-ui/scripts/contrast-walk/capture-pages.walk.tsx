@@ -20,6 +20,8 @@ import { Accounts } from '../../src/pages/Accounts';
 import BudgetsMinimal from '../../src/pages/BudgetsMinimal';
 import Goals from '../../src/pages/Goals';
 import { Investments } from '../../src/pages/Investments';
+import LearnPalHome from '../../src/modules/learnpal/pages/Home';
+import LearnPalRange from '../../src/modules/learnpal/pages/Range';
 import PointsPalOverview from '../../src/modules/pointspal/pages/Overview';
 import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
 import BestCard from '../../src/modules/pointspal/pages/BestCard';
@@ -197,6 +199,87 @@ beforeEach(() => {
      * lesson title is deliberately LONG: it has to be a string that fits at
      * 1440 and can overflow at 390.
      */
+    /**
+     * *** learnPal's HOME PAYLOAD, AND EVERY STRING IN IT IS DELIBERATELY LONG.
+     * *** A name that fits at 1440 and overflows at 390 is the entire point of
+     * the responsive walk, and a short fixture cannot produce one (D-165). So
+     * the goal names and lesson titles here are as long as anything a real user
+     * would type, and `fact` carries a full sentence because the card renders it.
+     *
+     * *** THE MOUNTAIN FACT IS SEEDED CONTENT AND IS QUOTED, NOT INVENTED. ***
+     * Ben Nevis's summit observatory ran 1883-1904 and the sentence below is
+     * the approved one from `seed_mountains.py`. A fixture that makes up a fact
+     * teaches the walk to render a claim nobody checked, which is D-107's shape
+     * one layer up: an investments fixture invented three keys and the page
+     * drew `$NaN` eight times while both gates called it clean.
+     */
+    http.get('*/api/v1/learnpal/stats', () => HttpResponse.json({
+      success: true,
+      stats: {
+        lessons: { read: 3, total: 8, without_body: 5 },
+        gear: { earned: 3, total: 8 },
+        highest: {
+          band: 3, band_total: 6,
+          mountain: {
+            slug: 'mount-rainier', name: 'Mount Rainier', elevation_m: 4392,
+            fact: 'Rainier carries more glacier ice than any other peak in the '
+                + 'lower 48 states.',
+            summit_note: 'You stood on the hardest one you ever faced.',
+          },
+          goal_id: 1,
+          goal_name: 'Clear the John Lewis Partnership Mastercard before the '
+                   + 'balance transfer offer expires',
+          goal_status: 'archived',
+        },
+        recent: [
+          { slug: 'what-your-apr-costs',
+            title: 'What your APR actually costs you every single month',
+            gear_slug: 'headlamp', has_body: true, verified_by: 'read',
+            unlocked_at: '2026-09-02T08:14:00',
+            goal_id: 1,
+            goal_name: 'Clear the John Lewis Partnership Mastercard before the '
+                     + 'balance transfer offer expires' },
+          // *** NO GOAL NAME, ON PURPOSE. *** A predicate-gated lesson has none,
+          // and the FK is SET NULL, so "unlocked by None" is the string this
+          // fixture exists to make impossible to ship.
+          { slug: 'where-your-money-goes',
+            title: 'Where your money actually goes, once you look at it properly',
+            gear_slug: 'boots', has_body: false, verified_by: 'read',
+            unlocked_at: '2026-08-28T19:02:00',
+            goal_id: null, goal_name: null },
+        ],
+        next: [
+          { slug: 'avalanche-vs-snowball',
+            title: 'Avalanche or snowball, and which one clears it sooner',
+            gear_slug: 'compass', surface: 'mountain', has_body: false,
+            unlock_at_progress: 0.25, applies_to_direction: 'paydown',
+            gate: 'altitude',
+            reason: 'Reach 25% on Clear the John Lewis Partnership Mastercard '
+                  + 'before the balance transfer offer expires',
+            goal_id: 1,
+            goal_name: 'Clear the John Lewis Partnership Mastercard before the '
+                     + 'balance transfer offer expires',
+            goal_progress: 0.1812 },
+          { slug: 'utilisation-and-your-score',
+            title: 'Utilisation, and what it actually touches',
+            gear_slug: 'gloves', surface: 'mountain', has_body: false,
+            unlock_at_progress: null, applies_to_direction: null,
+            gate: 'check',
+            reason: 'Get your card utilisation below 30%',
+            goal_id: null, goal_name: null, goal_progress: null },
+          // *** `reason: null` IS A REAL STATE AND IS IN THE FIXTURE. *** The
+          // server is fail-closed for a `check_type` this build does not
+          // implement, so the page must render "we cannot say" rather than
+          // printing nothing or `null`.
+          { slug: 'what-finpal-cannot-tell-you',
+            title: 'What finPal cannot tell you, and where to ask instead',
+            gear_slug: 'guidebook', surface: 'mountain', has_body: false,
+            unlock_at_progress: null, applies_to_direction: null,
+            gate: null, reason: null,
+            goal_id: null, goal_name: null, goal_progress: null },
+        ],
+      },
+    })),
     http.get('*/api/v1/learnpal/range', () => HttpResponse.json({
       success: true,
       range: {
@@ -606,6 +689,21 @@ const cases: Case[] = [
     await userEvent.click(within(first).getByRole('button', { name: /Who contributed/ }));
     await screen.findByText('Rachel');
   }],
+  /**
+   * *** learnPal's HOME AND RANGE HAD NEVER BEEN RENDERED BY ANY WALK. *** Both
+   * are new: the range shipped in #176 and the home in this branch, and until
+   * now the only learnPal thing either walk saw was the BANNER on the goals
+   * page — which is a different component reading a different payload. A module
+   * being mocked for another page's benefit is not the same as its own pages
+   * being measured.
+   *
+   * Neither needs an interaction: every state worth measuring is on first
+   * paint, and the one thing behind a click (a lesson reader) is a `SlidePanel`
+   * that portals to `document.body` and is therefore unreachable from a walk
+   * writing `container.innerHTML` (D-165). It belongs to the MODAL walk.
+   */
+  ['learnpal-home', LearnPalHome as React.FC],
+  ['learnpal-range', LearnPalRange as React.FC],
   ['investments', Investments as React.FC],
   ['pointspal-overview', PointsPalOverview as React.FC],
   ['pointspal-caps', CapTracker as React.FC],
