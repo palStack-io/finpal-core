@@ -19,8 +19,14 @@ from src.models.budget import Budget
 from src.models.goal import Goal
 from src.modules.learnpal.checks import CHECK_REASONS, CHECKS, check_reason
 from src.modules.learnpal.models import LearnCompletion
-from src.modules.learnpal.seed import seed_milestones
-from src.modules.learnpal.stats import stats_for_user
+from src.modules.learnpal.seed import MILESTONES, seed_milestones
+from src.modules.learnpal.stats import stats_for_user, what_is_next
+
+# *** RE-DERIVED, NEVER QUOTED. *** This file asserted `total == 8` and broke
+# the moment the eleven approved drafts were seeded -- which is the count
+# going stale in the smallest possible way. The seeder is the source of truth.
+TOTAL = len(MILESTONES)
+WITH_GEAR = len([m for m in MILESTONES if m[2]])
 from tests.factories import UserFactory, AccountFactory
 
 STATS = '/api/v1/learnpal/stats'
@@ -78,7 +84,7 @@ def test_a_brand_new_user_gets_real_zeros_and_no_invented_mountain(user, app):
     for them is the molehill `mountain_for` refuses to draw."""
     stats = stats_for_user(user.id)
     assert stats['lessons']['read'] == 0
-    assert stats['lessons']['total'] == 8
+    assert stats['lessons']['total'] == TOTAL
     assert stats['gear']['earned'] == 0
     assert stats['highest'] is None, 'a mountain was invented for a user with no goals'
     assert stats['recent'] == []
@@ -201,7 +207,7 @@ def test_recent_reports_has_body_so_no_reader_is_offered_for_empty_prose(
     _db.session.commit()
     row = stats_for_user(user.id)['recent'][0]
     assert row['has_body'] is False
-    assert stats_for_user(user.id)['lessons']['without_body'] == 8
+    assert stats_for_user(user.id)['lessons']['without_body'] == TOTAL
 
 
 def test_recent_is_NEWEST_FIRST(user, app):
@@ -296,7 +302,12 @@ def test_AN_ALTITUDE_LESSON_WITH_NO_ELIGIBLE_GOAL_SAYS_START_ONE(user, app):
     _goal(user.id, account, name='Emergency fund', kind='savings',
           start_amount=Decimal('0.00'), target_amount=Decimal('16000.00'))
 
-    rows = {r['slug']: r for r in stats_for_user(user.id)['next']}
+    # *** THE WHOLE LIST, NOT THE HOME'S TOP THREE. *** With nineteen lessons
+    # seeded, a lesson no goal can reach sorts LAST by construction (its gap is
+    # not measurable, so it cannot compete with one that is) -- so asserting it
+    # appears in a three-row tile would be asserting the ranking, not the
+    # reason. This checks the thing the test is named for.
+    rows = {r['slug']: r for r in what_is_next(user.id, limit=len(MILESTONES))}
     row = rows.get('what-your-apr-costs')
     assert row is not None, list(rows)
     assert row['goal_id'] is None
@@ -392,5 +403,26 @@ def test_the_endpoint_answers_and_carries_the_same_shape(
     assert resp.status_code == 200, resp.get_json()
     stats = resp.get_json()['stats']
     assert stats['highest']['mountain']['slug'] == 'mount-fuji'
-    assert stats['lessons']['total'] == 8
+    assert stats['lessons']['total'] == TOTAL
     assert isinstance(stats['next'], list) and stats['next']
+
+
+def test_A_SETUP_LESSON_SAYS_WHERE_IT_IS_OFFERED_RATHER_THAN_SHRUGGING(
+        user, app):
+    """*** FOUND BY LOOKING AT THE RENDERED PAGE, NOT BY A GATE. ***
+
+    `what-a-goal-tracks` has neither an altitude threshold nor a `check_type`,
+    so the first version reported `reason: None` and the client rendered *"we
+    cannot say what moves it yet"*. But its `surface` is `'setup'` — finPal
+    knows exactly where it is offered, and shrugging about something the model
+    records is worse than saying nothing: it teaches the user that the reasons
+    on this tile cannot be trusted, which is the one thing the tile is for.
+
+    `None` remains the answer for a milestone with no gate AND no known
+    surface, because that genuinely cannot be explained.
+    """
+    rows = {r['slug']: r for r in what_is_next(user.id, limit=len(MILESTONES))}
+    row = rows.get('what-a-goal-tracks')
+    assert row is not None, list(rows)
+    assert row['gate'] == 'setup'
+    assert row['reason'] == 'Offered while you set a goal up', row['reason']

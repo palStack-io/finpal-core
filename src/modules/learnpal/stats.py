@@ -239,7 +239,20 @@ def what_is_next(user_id, limit=3):
             other.append(row)
             continue
 
-        # Neither gate. Guided setup surfaces these; the mountain path does not.
+        # *** NEITHER GATE IS NOT THE SAME AS "WE DO NOT KNOW", AND THE FIRST
+        # VERSION OF THIS CONFLATED THEM. *** Looking at the rendered page on
+        # real demo data showed `what-a-goal-tracks` saying *"we cannot say what
+        # moves it yet"* -- but its `surface` is 'setup', so finPal knows
+        # exactly where it is offered. Saying "we cannot say" about something
+        # the model does record is a dishonesty in the more damaging direction:
+        # it teaches the user that the reasons cannot be trusted, which is the
+        # one thing this tile is for.
+        #
+        # `None` is still the answer for a milestone with no gate AND no known
+        # surface, because that genuinely is unexplainable.
+        if m.surface == 'setup':
+            row['gate'] = 'setup'
+            row['reason'] = 'Offered while you set a goal up'
         other.append(row)
 
     altitude.sort(key=lambda pair: pair[0])

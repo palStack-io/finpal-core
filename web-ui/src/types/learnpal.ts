@@ -171,7 +171,7 @@ export interface StatsNext {
   unlock_at_progress: number | null;
   applies_to_direction: string | null;
   /** Which kind of gate holds it shut. `null` = neither; guided setup owns it. */
-  gate: 'altitude' | 'check' | null;
+  gate: 'altitude' | 'check' | 'setup' | null;
   /**
    * Why it is locked, DERIVED from the gate — a threshold for an altitude gate,
    * `checks.check_reason` for a predicate. `null` when the server cannot say,
