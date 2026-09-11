@@ -101,10 +101,10 @@ KNOWN_DEMO_GAPS = {
     # including a weekly and a yearly): the goals ground layer reads it, and with
     # nothing in it the range argued the opposite of its point. Its sibling below
     # used to say "follows recurring_expenses" and can no longer lean on that.
-    'ignored_recurring_patterns': 'a pattern the user has told the detector to stop '
-                                  'suggesting, so a row means somebody dismissed a '
-                                  'suggestion by hand; the demo seeder writes the '
-                                  'recurring expenses directly and dismisses nothing',
+    'ignored_recurring_patterns': 'the detector\'s "ignored" list demos itself empty: '
+                                  'the seeder writes recurring expenses directly and '
+                                  'dismisses nothing, so a visitor cannot see what '
+                                  'dismissing a suggestion does',
     'settlements': 'groups have expenses (D-175) but nobody has ever settled up, so '
                    'the settle-up flow shows no history',
     'category_splits': 'a transaction split across categories — the form supports it '
