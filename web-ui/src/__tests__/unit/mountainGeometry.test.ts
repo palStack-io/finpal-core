@@ -16,7 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   peakGeometry, monthlyInterestCost, groundHeight, splitByScale,
-  DEFAULT_CEILINGS, type Ceilings,
+  DEFAULT_CEILINGS, heightForMagnitude, type Ceilings,
 } from '../../utils/mountainGeometry';
 
 // Round numbers so the expected heights are checkable by hand.
@@ -71,11 +71,13 @@ describe('peakGeometry — paydown, "what\'s costing you"', () => {
     expect(g.height).toBe(0);
   });
 
-  it('scales by sqrt so a small peak stays visible against a large one', () => {
-    // 25/month against a 100 ceiling → sqrt(0.25) = 0.5 → half height.
+  it('compresses so a small peak stays visible against a large one', () => {
+    // 25/month against a 100 ceiling → cbrt(0.25) = 0.62996 → 63% of height.
+    // Was sqrt (0.5); changed by looking at the deployed demo, where real goals
+    // sit in the bottom fifth of a 40,000 ceiling and drew as slivers.
     const g = peakGeometry({ direction: 'paydown', accounts: [{ balance: -1500, apr: 20 }] }, C);
     expect(g.magnitude).toBeCloseTo(25, 6);
-    expect(g.height).toBeCloseTo(50, 6);
+    expect(g.height).toBeCloseTo(100 * Math.cbrt(0.25), 6);
     expect(g.unmeasured).toBe(false);
   });
 
@@ -101,11 +103,11 @@ describe('peakGeometry — accumulate, "what you\'re building"', () => {
   });
 
   it('measures DISTANCE REMAINING, not the target', () => {
-    // 10000 target, 7500 saved → 2500 remaining → sqrt(0.25) → half height.
+    // 10000 target, 7500 saved → 2500 remaining → cbrt(0.25) → 63% of height.
     const g = peakGeometry(
       { direction: 'accumulate', targetAmount: 10000, currentAmount: 7500 }, C);
     expect(g.magnitude).toBeCloseTo(2500, 6);
-    expect(g.height).toBeCloseTo(50, 6);
+    expect(g.height).toBeCloseTo(100 * Math.cbrt(0.25), 6);
   });
 
   it('an achieved goal is flat, never negative', () => {
@@ -223,5 +225,52 @@ describe('the default ceilings', () => {
                            { costCeiling: 0, buildCeiling: 0, maxHeight: 100 });
     expect(Number.isFinite(g.height)).toBe(true);
     expect(g.height).toBe(0);
+  });
+});
+
+describe('heightForMagnitude — the entry point a goal card uses', () => {
+  // The server decides the mountain and sends ONE number; this turns it into
+  // pixels. `peakGeometry` needs the raw accounts, which a goal payload does not
+  // carry, so a card literally cannot use it.
+  it('returns 0 for a magnitude that is null or undefined', () => {
+    expect(heightForMagnitude(null, 'cost')).toBe(0);
+    expect(heightForMagnitude(undefined, 'build')).toBe(0);
+  });
+
+  // *** 0 IN, 0 OUT, AND THAT IS CORRECT HERE. *** An explicit 0% APR is
+  // MEASURED and measures zero. Flooring it so the mountain stays visible is a
+  // presentation decision and lives in the component, not in this module --
+  // which is shared byte-for-byte with mobile.
+  it('returns 0 for a measured magnitude of 0, leaving the floor to the view', () => {
+    expect(heightForMagnitude(0, 'cost')).toBe(0);
+  });
+
+  it('reaches maxHeight exactly AT each scale ceiling', () => {
+    expect(heightForMagnitude(250, 'cost')).toBeCloseTo(DEFAULT_CEILINGS.maxHeight, 6);
+    expect(heightForMagnitude(40000, 'build')).toBeCloseTo(DEFAULT_CEILINGS.maxHeight, 6);
+  });
+
+  it('clamps above the ceiling rather than running off the canvas', () => {
+    expect(heightForMagnitude(9_999_999, 'cost')).toBeCloseTo(DEFAULT_CEILINGS.maxHeight, 6);
+  });
+
+  // The card holds `peak.scale`; `peakGeometry` holds a `direction`. Accepting
+  // both spellings is what stops a caller mapping between them by hand and
+  // getting it backwards -- which would silently measure interest against the
+  // savings ceiling.
+  it('accepts the direction spellings as well as the scale ones', () => {
+    expect(heightForMagnitude(120, 'paydown')).toBe(heightForMagnitude(120, 'cost'));
+    expect(heightForMagnitude(9000, 'accumulate')).toBe(heightForMagnitude(9000, 'build'));
+  });
+
+  it('never puts a cost magnitude on the build ceiling', () => {
+    // 250 is the whole cost scale and a rounding error on the build one.
+    expect(heightForMagnitude(250, 'cost')).toBeGreaterThan(
+      heightForMagnitude(250, 'build') * 3);
+  });
+
+  it('rises with the magnitude', () => {
+    const hs = [1, 10, 50, 120, 249].map((m) => heightForMagnitude(m, 'cost'));
+    for (let i = 1; i < hs.length; i += 1) expect(hs[i]).toBeGreaterThan(hs[i - 1]);
   });
 });

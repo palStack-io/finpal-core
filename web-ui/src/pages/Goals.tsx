@@ -1,10 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Archive, Loader2, Plus, Target, Trash2, Users } from 'lucide-react';
+import { Archive, Loader2, Pencil, Plus, Target, Trash2, Users } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney } from '../styles/money';
 import { goalFigures } from '../utils/goalFigures';
 import { goalTrackingLabel } from '../utils/goalTracking';
+import { MountainSilhouette } from '../components/MountainSilhouette';
+import { heightForMagnitude } from '../utils/mountainGeometry';
+import {
+  UNMEASURED_SUBLINE, peakColorVar, peakEyebrow, peakHardestLine,
+  peakSubline, peakSummitLine,
+} from '../utils/peakCopy';
 import { GoalAccountsControl } from '../components/goals/GoalAccountsControl';
+import { SlidePanel } from '../components/SlidePanel';
+import { pageContainerStyle } from '../styles/layoutStyles';
 import { goalService } from '../services/goalService';
 import { accountService, type Account } from '../services/accountService';
 import type { Goal, GoalContribution } from '../types/goal';
@@ -87,14 +95,34 @@ const linkButtonStyle: React.CSSProperties = {
  * a savings goal is not an error state, and colouring it like one would make the
  * page nag.
  */
-const progressBarColor = (goal: Goal): string =>
-  goal.status === 'achieved' ? '#22c55e' : goal.direction === 'paydown' ? '#3b82f6' : '#22c55e';
+/**
+ * *** THE BAR IS THE SCALE'S COLOUR, AND THE COLOUR IS THE NEVER-COMPARE RULE. ***
+ * `cost` (monthly interest) and `build` (distance remaining) share no unit, so
+ * clay and forest are what stop the two being read against each other -- which
+ * means no caption has to say so.
+ *
+ * Was blue `#3b82f6` for a paydown and `#22c55e` for everything else. The peak
+ * variables are theme-aware BECAUSE THEY HAD TO BE: measured against the dark
+ * card (#16241A) the mockup's clay is 3.12:1 and its forest 3.22:1 -- large-text
+ * only -- so shipping the mockup's literals would have put two AA failures on
+ * the eyebrow that states the rule. See `finpal-theme.css`.
+ *
+ * A goal with NO `peak` (a backend older than mountains) keeps the old colours
+ * exactly, because that card must be unchanged.
+ */
+const progressBarColor = (goal: Goal): string => {
+  if (goal.status === 'achieved') return '#22c55e';
+  if (goal.peak) return peakColorVar(goal.peak);
+  return goal.direction === 'paydown' ? '#3b82f6' : '#22c55e';
+};
 
 /** A percentage for display. The server's number, only rounded. */
 const percentLabel = (progress: number): string => `${Math.round(progress * 100)}%`;
 
 interface GoalRowProps {
   goal: Goal;
+  /** Opens the shared slide-in panel in edit mode. */
+  onEdit: (goal: Goal) => void;
   onArchive: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
   /** B12. Every account the caller can see; the server re-checks visibility. */
@@ -104,12 +132,24 @@ interface GoalRowProps {
 }
 
 const GoalRow: React.FC<GoalRowProps> = ({
-  goal, onArchive, onDelete, accounts, onAccountsChanged,
+  goal, onEdit, onArchive, onDelete, accounts, onAccountsChanged,
 }) => {
   const [contributions, setContributions] = useState<GoalContribution[] | null>(null);
   const [loadingContributions, setLoadingContributions] = useState(false);
   const barWidth = Math.min(100, Math.max(0, goal.progress * 100));
   const figures = goalFigures(goal, (amount) => formatMoney(amount, { currency: goal.currency_code }));
+
+  // C1c. `undefined` is load-bearing: see the comment beside the eyebrow.
+  const peak = goal.peak;
+  // The summit note reads the WATERMARK, never the current band -- the mountain
+  // shrinks as the goal succeeds, so a cleared goal sits on the smallest one.
+  const cleared = goal.status === 'achieved';
+  const summitLine = peak && cleared ? peakSummitLine(peak) : null;
+  const hardestLine = peak && cleared ? peakHardestLine(peak) : null;
+  // Height is the CLIENT's half of the split: the server picked the mountain,
+  // this turns its one number into pixels. `heightForMagnitude` is byte-identical
+  // in mobile and its ceilings are gated against the seeded band table (D-185).
+  const peakHeight = peak ? heightForMagnitude(peak.magnitude, peak.scale) : 0;
 
   const loadContributions = async () => {
     if (contributions !== null) {
@@ -126,8 +166,48 @@ const GoalRow: React.FC<GoalRowProps> = ({
   };
 
   return (
-    <div style={cardStyle} data-testid={`goal-${goal.id}`}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+    <div
+      style={{ ...cardStyle, position: 'relative', overflow: 'hidden' }}
+      data-testid={`goal-${goal.id}`}
+    >
+      {/* C1c. *** THE SILHOUETTE IS ANCHORED TO THE FIGURES, NOT TO THE CARD. ***
+          The approved mockup puts it "behind the figures, bottom-right", and on
+          the mockup's card those are the same place because the card ends just
+          below the progress bar. THE REAL CARD DOES NOT: it carries the account
+          pills, the add-account list and the contributions table underneath, so
+          anchoring to the card's own bottom edge put an Everest behind a table
+          of names -- which read as an accident rather than as a design. Found by
+          RENDERING IT AND LOOKING, which no gate here can do: the contrast walk
+          reads computed colours and never composites an SVG sitting behind text.
+
+          So the header and the progress bar are wrapped in their own positioning
+          context and the mountain stands on the bar's baseline.
+
+          `aria-hidden`, and it never carries a fact on its own -- every number it
+          stands behind is also written out in the subline. Absent entirely when
+          `peak` is, so a card from a pre-mountain backend is untouched. */}
+      <div style={{ position: 'relative' }}>
+        {peak && (
+          <div
+            aria-hidden="true"
+            data-testid={`goal-peak-${goal.id}`}
+            style={{
+              position: 'absolute', right: 0, bottom: 0,
+              pointerEvents: 'none', lineHeight: 0,
+            }}
+          >
+            <MountainSilhouette
+              band={peak.band}
+              height={peakHeight}
+              scale={peak.scale}
+              unmeasured={peak.unmeasured}
+              maxPixelHeight={116}
+              decorative
+              style={{ opacity: 'var(--peak-backdrop-opacity)' } as React.CSSProperties}
+            />
+          </div>
+        )}
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <strong style={{ color: 'var(--text-primary)', fontSize: 16 }}>{goal.name}</strong>
@@ -169,8 +249,67 @@ const GoalRow: React.FC<GoalRowProps> = ({
                 case tables are identical on purpose; see its header. */}
             {goalTrackingLabel(goal)}
           </div>
+          {/* C1c. *** RENDERS NOTHING WITHOUT `peak`, WHICH IS A THIRD STATE AND
+              NOT A FLAVOUR OF UNMEASURED. *** No peak means the backend predates
+              mountains, and that card must look exactly as it did before this
+              feature — not like a goal whose rate we failed to find. */}
+          {peak && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{
+                fontSize: 11.5, fontWeight: 600, letterSpacing: 0.3,
+                textTransform: 'uppercase', color: peakColorVar(peak),
+              }}>
+                {peakEyebrow(peak)}
+              </div>
+              {/* *** ON A CLEARED GOAL THE SUMMIT NOTE REPLACES THE SUBLINE,
+                  IT DOES NOT JOIN IT. *** Rendering both printed "Table Mountain
+                  · 1,085 m · $0.00 still to save" above the congratulation --
+                  every figure correct and the pair reading as a shrug. Nothing
+                  is lost: the subline describes what is left to do, and there is
+                  nothing left to do. */}
+              {summitLine ? (
+                <div style={{ ...mutedSmallStyle, marginTop: 2,
+                              color: 'var(--text-primary)' }}>
+                  {summitLine}
+                  {hardestLine && (
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {` · ${hardestLine}`}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  ...mutedSmallStyle,
+                  marginTop: 2,
+                  fontStyle: peak.unmeasured ? 'italic' : undefined,
+                }}>
+                  {peak.unmeasured
+                    ? UNMEASURED_SUBLINE
+                    : peakSubline(peak, (amount) => formatMoney(
+                        amount, { currency: goal.currency_code })) }
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          {/* *** THERE WAS NO WAY TO EDIT A GOAL AT ALL, AND IT WAS NOT A
+              MISSING ENDPOINT. *** `PUT /goals/<id>` has always existed and
+              `goalService.updateGoal` was already written -- with NO caller
+              anywhere in this client. So a goal's name, target and date were
+              unchangeable through the UI while the whole path sat there ready.
+              A dead service method is the tell: it is the shape of a feature
+              whose last step was never wired. */}
+          {goal.status !== 'archived' && (
+            <button
+              type="button"
+              onClick={() => onEdit(goal)}
+              aria-label={`Edit ${goal.name}`}
+              style={iconButtonStyle}
+            >
+              <Pencil size={16} />
+            </button>
+          )}
           {goal.status !== 'archived' && (
             <button
               type="button"
@@ -224,6 +363,7 @@ const GoalRow: React.FC<GoalRowProps> = ({
           {/* The server's percentage, rounded for display and nothing else. */}
           <span>{percentLabel(goal.progress)}</span>
         </div>
+      </div>
       </div>
 
       {goal.account_id !== null && (
@@ -293,6 +433,7 @@ export const Goals: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -326,6 +467,66 @@ export const Goals: React.FC = () => {
 
   const active = useMemo(() => goals.filter((g) => g.status !== 'archived'), [goals]);
   const archived = useMemo(() => goals.filter((g) => g.status === 'archived'), [goals]);
+
+  /**
+   * *** NULL MEANS CREATE; A NUMBER MEANS EDIT. *** One panel, two modes, so the
+   * two forms cannot drift apart the way a duplicated one would.
+   */
+  const openCreate = () => {
+    setEditingId(null);
+    setName(''); setAccountIds([]); setTargetAmount(''); setTargetDate('');
+    setScope('personal'); setFormError(null);
+    setShowForm(true);
+  };
+
+  const openEdit = (goal: Goal) => {
+    setEditingId(goal.id);
+    setName(goal.name);
+    setScope(goal.scope);
+    setTargetAmount(String(goal.target_amount));
+    // `<input type="date">` wants YYYY-MM-DD and the payload may carry a full
+    // timestamp; an unsliced value renders the field EMPTY, silently losing a
+    // date the user never touched.
+    setTargetDate(goal.target_date ? goal.target_date.slice(0, 10) : '');
+    setAccountIds([]);
+    setFormError(null);
+    setShowForm(true);
+  };
+
+  const closePanel = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormError(null);
+  };
+
+  const handleUpdate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (editingId === null) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      /*
+       * *** ONLY WHAT THE SERVER WILL ACTUALLY APPLY. *** `PUT /goals/<id>`
+       * refuses `account_ids` and silently ignores `account_id`, because either
+       * would rewrite the denominator of a percentage already shown to the user.
+       * `start_amount` is likewise the server's snapshot. Sending any of them
+       * would be a payload whose values are discarded — so they are not sent,
+       * and the panel does not offer them on an edit.
+       */
+      await goalService.updateGoal(editingId, {
+        name,
+        scope,
+        target_amount: Number(targetAmount),
+        target_date: targetDate === '' ? null : targetDate,
+      });
+      closePanel();
+      await load();
+    } catch (err) {
+      setFormError(apiErrorMessage(err, 'Could not save this goal.'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -379,7 +580,16 @@ export const Goals: React.FC = () => {
   };
 
   return (
-    <div>
+    /* *** GOALS WAS THE ONE PAGE THAT NEVER ADOPTED THE SHARED SHELL. ***
+       Every other page wraps its content in `pageContainerStyle` (24px of
+       padding) plus `.page-container` (max-width 1400px, centred). Goals used a
+       bare `<div>`, so its heading sat 24px closer to the side nav than every
+       other page's -- measured on the deployed demo at 1440px: goals 240px,
+       accounts/budgets/transactions 264px. The owner saw it as "padded to the
+       side nav weirdly", which is exactly what a missing gutter looks like when
+       only one page is missing it. */
+    <div style={pageContainerStyle}>
+      <div className="page-container">
       <div
         style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -393,13 +603,23 @@ export const Goals: React.FC = () => {
             balance, so the number is never one you typed.
           </p>
         </div>
-        <button type="button" style={primaryButtonStyle} onClick={() => setShowForm((v) => !v)}>
+        <button type="button" style={primaryButtonStyle} onClick={openCreate}>
           <Plus size={16} /> New goal
         </button>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleCreate} style={{ ...cardStyle, marginBottom: 24 }}>
+      {/* *** THE FORM COMES IN FROM THE SIDE, LIKE EVERY OTHER PAGE'S. ***
+          `SlidePanel` is already used by Accounts, Transactions, Budgets, Groups
+          and GroupDetail; Goals pushed an inline card into the page instead,
+          shoving the list down and giving the owner two different mental models
+          for "add something". One panel serves create AND edit -- the title and
+          the submit handler are what differ. */}
+      <SlidePanel
+        isOpen={showForm}
+        onClose={closePanel}
+        title={editingId === null ? 'New goal' : 'Edit goal'}
+      >
+        <form onSubmit={editingId === null ? handleCreate : handleUpdate}>
           <div style={{ display: 'grid', gap: 16 }}>
             <div>
               <label htmlFor="goal-name" style={fieldLabelStyle}>Name</label>
@@ -409,6 +629,15 @@ export const Goals: React.FC = () => {
                 placeholder="Pay off Chase Amazon"
               />
             </div>
+            {/* *** ONLY WHEN CREATING, BECAUSE `PUT /goals/<id>` DELIBERATELY
+                IGNORES ACCOUNT CHANGES. *** Moving a goal's accounts would
+                rewrite the denominator of a percentage the user has already been
+                shown, so the server refuses `account_ids` and silently drops
+                `account_id`. Offering the checkboxes on an edit would be an
+                affordance whose changes are thrown away -- D-05's class, a field
+                that looks saved and is not. The card's own
+                `GoalAccountsControl` is the real path, through its own routes. */}
+            {editingId === null && (
             <div>
               <span style={fieldLabelStyle}>Accounts</span>
               {/* *** A CHECKBOX LIST, NOT `<select multiple>`. *** The native
@@ -463,6 +692,7 @@ export const Goals: React.FC = () => {
                 goal by hand.
               </p>
             </div>
+            )}
             <div>
               <label htmlFor="goal-target" style={fieldLabelStyle}>
                 Target amount ({currency})
@@ -502,15 +732,15 @@ export const Goals: React.FC = () => {
             )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" style={primaryButtonStyle} disabled={saving}>
-                {saving ? 'Saving…' : 'Create goal'}
+                {saving ? 'Saving…' : editingId === null ? 'Create goal' : 'Save changes'}
               </button>
-              <button type="button" style={secondaryButtonStyle} onClick={() => setShowForm(false)}>
+              <button type="button" style={secondaryButtonStyle} onClick={closePanel}>
                 Cancel
               </button>
             </div>
           </div>
         </form>
-      )}
+      </SlidePanel>
 
       {loading && <Loader2 size={20} className="animate-spin" aria-label="Loading goals" />}
       {error && <div role="alert" style={{ color: '#ef4444' }}>{error}</div>}
@@ -529,6 +759,7 @@ export const Goals: React.FC = () => {
           <GoalRow
             key={goal.id}
             goal={goal}
+            onEdit={openEdit}
             onArchive={handleArchive}
             onDelete={handleDelete}
             accounts={accounts}
@@ -547,6 +778,7 @@ export const Goals: React.FC = () => {
               <GoalRow
                 key={goal.id}
                 goal={goal}
+                onEdit={openEdit}
                 onArchive={handleArchive}
                 onDelete={handleDelete}
                 accounts={accounts}
@@ -556,6 +788,7 @@ export const Goals: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

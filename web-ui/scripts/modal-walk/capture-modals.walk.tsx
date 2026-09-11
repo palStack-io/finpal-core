@@ -40,6 +40,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { Accounts } from '../../src/pages/Accounts';
 import { Transactions } from '../../src/pages/Transactions';
 import { Investments } from '../../src/pages/Investments';
+import { Goals } from '../../src/pages/Goals';
 import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
@@ -76,6 +77,39 @@ beforeEach(() => {
   server.use(
     http.post('*/api/v1/csv-import/import', () =>
       HttpResponse.json({ success: true, imported: 42, skipped: 3 })),
+    /*
+     * C1c. *** THE GOALS PANEL IS A PORTAL, SO THE PAGE CAPTURE CANNOT SEE IT
+     * (D-165). *** Goals moved its create form out of an inline card and into
+     * `SlidePanel`, and added an EDIT mode to the same panel -- so both states
+     * are new surface that only this walk can reach. The goal name is long on
+     * purpose: it has to be a string that fits at 1440 and can overflow at 390,
+     * and a short fixture cannot produce one.
+     */
+    http.get('*/api/v1/goals', () => HttpResponse.json({
+      success: true,
+      goals: [{
+        id: 1, user_id: 'alice@test.com',
+        name: 'Clear the John Lewis Partnership Mastercard',
+        kind: 'payoff', scope: 'household', account_id: 7,
+        account_name: '2 accounts',
+        accounts: [{ id: 7, name: 'Barclaycard Platinum Cashback', start_amount: -1125.41 },
+                   { id: 9, name: 'John Lewis Partnership Card', start_amount: -524.59 }],
+        target_amount: 0, start_amount: -1650, current_manual: null,
+        currency_code: 'GBP', start_date: '2026-01-01',
+        target_date: '2027-06-30T00:00:00', status: 'active', achieved_at: null,
+        current_amount: -450, direction: 'paydown', progress: 0.7272,
+        peak: { scale: 'cost', magnitude: 312.5, unmeasured: false, band: 5,
+                mountain: { slug: 'everest', name: 'Everest', elevation_m: 8849,
+                            fact: null, summit_note: null },
+                hardest_band: 5,
+                hardest_mountain: { slug: 'everest', name: 'Everest',
+                                    elevation_m: 8849, fact: null, summit_note: null },
+                apr: null },
+      }],
+    })),
+    http.get('*/api/v1/goals/1/contributions', () => HttpResponse.json({
+      success: true, contributions: [],
+    })),
     http.get('*/api/v1/transaction-rules', () => HttpResponse.json({
       success: true,
       rules: [{ id: 1, name: 'Groceries -> Food', field: 'description', operator: 'contains',
@@ -299,6 +333,38 @@ const cases: Case[] = [
      * Accounts, Transactions, Budgets, Groups and GroupDetail, so it is far more
      * surface than the import modal, and not one pixel of it has ever been walked.
      */
+    /*
+     * C1c. Goals' create panel. It was an INLINE CARD pushed into the page until
+     * this slice, so no walk has ever measured it -- and the page capture never
+     * could, because `SlidePanel` portals to `document.body` while the page
+     * capture writes `container.innerHTML` (D-165).
+     */
+    name: 'slidepanel-goal-create',
+    Page: Goals as React.FC,
+    open: async () => {
+      await screen.findByRole('button', { name: /New goal/ }, { timeout: 6000 });
+      await userEvent.click(screen.getByRole('button', { name: /New goal/ }));
+      return (await screen.findByRole('dialog')) as HTMLElement;
+    },
+  },
+  {
+    /*
+     * The SAME panel in EDIT mode, and it is a genuinely different shape rather
+     * than the same one prefilled: the account picker is absent (the server
+     * discards account changes on a PUT), so the panel is shorter and its field
+     * order differs. Opening only the create state would measure neither.
+     */
+    name: 'slidepanel-goal-edit',
+    Page: Goals as React.FC,
+    open: async () => {
+      const edit = await screen.findByRole(
+        'button', { name: /Edit Clear the John Lewis Partnership Mastercard/ },
+        { timeout: 6000 });
+      await userEvent.click(edit);
+      return (await screen.findByRole('dialog')) as HTMLElement;
+    },
+  },
+  {
     name: 'slidepanel-add-account',
     Page: Accounts as React.FC,
     open: async () => {

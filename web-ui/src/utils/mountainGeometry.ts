@@ -142,17 +142,63 @@ export function monthlyInterestCost(accounts: PeakAccount[] | undefined | null):
 }
 
 /**
- * `sqrt` compression, clamped at the ceiling.
+ * CUBE-ROOT compression, clamped at the ceiling.
  *
- * Square root rather than linear so the difference between a small peak and a
+ * Compressed rather than linear so the difference between a small peak and a
  * medium one stays visible — linear would flatten every ordinary debt into the
  * foothills of one outlier. Anything above the ceiling CLAMPS rather than
  * running off the canvas.
+ *
+ * *** THIS WAS `sqrt` AND IT WAS CHANGED BY LOOKING AT THE DEPLOYED DEMO
+ * (owner decision, 2026-09-11). *** Square root is the textbook answer and it
+ * was wrong HERE, for a reason no unit test could state: `buildCeiling` is
+ * 40,000 because D-185 requires it to equal the top band's floor, so REAL goals
+ * — £1,350, £8,000 — live in the bottom fifth of the curve. On the demo they
+ * rendered 21px and 52px against a ~116px allowance and read as slivers rather
+ * than as mountains, which defeats the whole point of drawing a recognisable
+ * silhouette. Cube root takes the same two to 37px and 68px.
+ *
+ * *** IT CHANGES THE DISTRIBUTION AND NOTHING ELSE. *** Still monotonic, still
+ * 0 at 0, still exactly `maxHeight` AT the ceiling, still clamped above it — so
+ * the band a peak is named for and the height it is drawn at stay consistent,
+ * which is the invariant D-185 exists to protect.
  */
 function scaleHeight(magnitude: number, ceiling: number, maxHeight: number): number {
   if (!(ceiling > 0)) return 0;
   const ratio = Math.min(1, Math.max(0, magnitude) / ceiling);
-  return maxHeight * Math.sqrt(ratio);
+  return maxHeight * Math.cbrt(ratio);
+}
+
+/**
+ * The height for a magnitude the SERVER has already computed.
+ *
+ * *** THIS IS THE ENTRY POINT A GOAL CARD USES, NOT `peakGeometry`. *** The split
+ * is that the server decides the mountain -- the band comes from a seeded table
+ * and the magnitude from balances and APRs, neither of which a client holds --
+ * and the client decides the pixels. So a card receives one number and needs
+ * exactly this, while `peakGeometry` exists for a caller that holds the raw
+ * accounts (the range screen, and the parity test against the server).
+ *
+ * *** A MAGNITUDE OF 0 RETURNS 0, AND THAT IS CORRECT HERE. *** An explicit 0%
+ * APR on a real balance is MEASURED and measures zero. Flooring it so the
+ * mountain stays visible is a PRESENTATION decision and lives in the component
+ * (`MIN_MEASURED_HEIGHT`), not in this module -- which is shared byte-for-byte
+ * with mobile, so a purely visual minimum here would mean changing two repos in
+ * lockstep to adjust a pixel.
+ *
+ * `null` in, `0` out: callers must branch on `unmeasured` before drawing, since
+ * the unmeasured shape is not a mountain at all.
+ */
+export function heightForMagnitude(
+  magnitude: number | null | undefined,
+  scale: PeakDirection | 'cost' | 'build',
+  ceilings: Ceilings = DEFAULT_CEILINGS,
+): number {
+  if (magnitude === null || magnitude === undefined) return 0;
+  const isCost = scale === 'cost' || scale === 'paydown';
+  return scaleHeight(magnitude,
+                     isCost ? ceilings.costCeiling : ceilings.buildCeiling,
+                     ceilings.maxHeight);
 }
 
 /**

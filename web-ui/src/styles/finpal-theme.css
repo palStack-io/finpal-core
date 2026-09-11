@@ -172,6 +172,26 @@
   /* Progress */
   --progress-track: #e9eee5;
 
+  /* Peaks — the two scales a goal can be measured on, and they are NEVER
+     compared. `cost` is monthly interest, `build` is distance remaining; they
+     share no unit, so the COLOUR carries that rule and no caption has to.
+     Clay and forest are from the approved mockup.
+     *** MEASURED, NOT MATCHED, AND THE DARK VALUES ARE DIFFERENT ON PURPOSE. ***
+     Against the light card (#FBFCF9) the mockup's clay is 5.03:1 and its forest
+     4.87:1 -- both AA. Against the DARK card (#16241A) the same two are 3.12:1
+     and 3.22:1, which is large-text only, so carrying them over unchanged would
+     have shipped two AA failures on the one piece of text that states the
+     design's central rule. The dark values below are lifted to 5.54:1 and
+     7.03:1. */
+  --peak-cost: #AB5437;
+  --peak-build: #15803D;
+  --peak-unmeasured: var(--text-muted);
+  /* The silhouette behind a goal card's figures. Higher in dark mode because
+     the same alpha over a dark surface reads as less: 11% of clay on #FBFCF9 is
+     visible, 11% on #16241A is very nearly nothing. Decoration, `aria-hidden`,
+     and never the only thing carrying a fact. */
+  --peak-backdrop-opacity: 0.16;
+
   /* Tooltip */
   --tooltip-bg: #ffffff;
   --tooltip-border: #e9eee5;
@@ -349,6 +369,13 @@
 
   /* Progress */
   --progress-track: rgba(255, 255, 255, 0.1);
+
+  /* Peaks. Lifted off the mockup's values, which are AA-large only here --
+     see the note in the light block above for the measured ratios. */
+  --peak-cost: #D98060;
+  --peak-build: #5FBE7E;
+  --peak-unmeasured: var(--text-muted);
+  --peak-backdrop-opacity: 0.22;
 
   /* Tooltip */
   /* --kt-hover, not --kt-card: a tooltip floats OVER a card, so it wants the palette's

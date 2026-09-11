@@ -83,7 +83,19 @@ beforeEach(() => {
           target_amount: 0, start_amount: -1650,
           current_manual: null, currency_code: 'USD', start_date: '2026-01-01',
           target_date: '2027-06-30', status: 'active', achieved_at: null,
-          current_amount: -450, direction: 'paydown', progress: 0.7272 },
+          current_amount: -450, direction: 'paydown', progress: 0.7272,
+          // C1c. *** COST SCALE, AND `apr` IS NULL BECAUSE IT SPANS TWO CARDS. ***
+          // The server refuses to print one rate for a goal at two rates, so
+          // this fixture carries the real multi-account shape rather than the
+          // easy one.
+          peak: { scale: 'cost', magnitude: 312.5, unmeasured: false, band: 5,
+                  mountain: { slug: 'everest', name: 'Everest', elevation_m: 8849,
+                              fact: null, summit_note: null },
+                  hardest_band: 5,
+                  hardest_mountain: { slug: 'everest', name: 'Everest',
+                                      elevation_m: 8849, fact: null,
+                                      summit_note: null },
+                  apr: null } },
         // Deliberately left single-account, so both shapes are on the page at
         // once and the walk measures the pair rather than one of them.
         { id: 2, user_id: 'demo@finpal.app', name: 'Emergency fund',
@@ -93,13 +105,58 @@ beforeEach(() => {
           target_amount: 10000, start_amount: 1000,
           current_manual: null, currency_code: 'USD', start_date: '2026-01-01',
           target_date: null, status: 'active', achieved_at: null,
-          current_amount: 4000, direction: 'accumulate', progress: 0.3333 },
+          current_amount: 4000, direction: 'accumulate', progress: 0.3333,
+          // BUILD scale, so both colours are on the page at once and the
+          // contrast walk measures the pair rather than one of them.
+          peak: { scale: 'build', magnitude: 6000, unmeasured: false, band: 3,
+                  mountain: { slug: 'mount-rainier', name: 'Mount Rainier',
+                              elevation_m: 4392, fact: null, summit_note: null },
+                  hardest_band: 3,
+                  hardest_mountain: { slug: 'mount-rainier',
+                                      name: 'Mount Rainier', elevation_m: 4392,
+                                      fact: null, summit_note: null },
+                  apr: 24.99 } },
         { id: 3, user_id: 'demo@finpal.app', name: 'New laptop', kind: 'savings',
           scope: 'personal', account_id: null, account_name: null,
           target_amount: 2000, start_amount: 0, current_manual: 2100,
           currency_code: 'USD', start_date: '2026-01-01', target_date: null,
           status: 'achieved', achieved_at: '2026-08-01T00:00:00',
-          current_amount: 2100, direction: 'accumulate', progress: 1.05 },
+          current_amount: 2100, direction: 'accumulate', progress: 1.05,
+          // *** ACHIEVED, SO THE SUMMIT NOTE RENDERS — AND IT IS THE LONGEST
+          // STRING THIS PAGE CAN PRODUCE. *** The note plus "Hardest it ever
+          // got: …" on one line is the thing that fits at 1440 and can overflow
+          // at 390, which is exactly what the responsive walk exists to catch,
+          // and a short fixture cannot make one. The watermark is deliberately
+          // FOUR bands above the current one, because the note must read the
+          // watermark and not where the goal ended.
+          peak: { scale: 'build', magnitude: 0, unmeasured: false, band: 0,
+                  mountain: { slug: 'table-mountain', name: 'Table Mountain',
+                              elevation_m: 1085, fact: null, summit_note: null },
+                  hardest_band: 4,
+                  hardest_mountain: {
+                    slug: 'aconcagua', name: 'Aconcagua', elevation_m: 6961,
+                    fact: null,
+                    summit_note: 'You started at Aconcagua, the highest mountain '
+                               + 'outside Asia. That whole climb is behind you now.',
+                  },
+                  apr: null } },
+        // *** THE UNMEASURED STATE, WHICH HAD NO FIXTURE UNTIL C1c. *** A flat
+        // grey ridge and an italic prompt, and it must be measurable in both
+        // themes: the muted colour on a card is the pair most likely to fall
+        // under 4.5:1, and "we do not know your rate" is not allowed to be the
+        // one line nobody checked.
+        { id: 4, user_id: 'demo@finpal.app',
+          name: 'Clear the John Lewis Partnership Card', kind: 'payoff',
+          scope: 'personal', account_id: 12, account_name: 'John Lewis Partnership Card',
+          accounts: [{ id: 12, name: 'John Lewis Partnership Card',
+                       start_amount: -980.5 }],
+          target_amount: 0, start_amount: -980.5, current_manual: null,
+          currency_code: 'USD', start_date: '2026-02-01', target_date: null,
+          status: 'active', achieved_at: null, current_amount: -612.25,
+          direction: 'paydown', progress: 0.3755,
+          peak: { scale: 'cost', magnitude: null, unmeasured: true, band: null,
+                  mountain: null, hardest_band: null, hardest_mountain: null,
+                  apr: null } },
       ],
     })),
     /*
@@ -121,6 +178,9 @@ beforeEach(() => {
           currency_code: 'USD', user_id: 'demo@finpal.app' },
         { id: 11, name: 'Marcus Online Savings Account', type: 'savings',
           balance: 8200, currency_code: 'USD', user_id: 'demo@finpal.app' },
+        // Goal 4's card. Long on purpose, same reason as Barclaycard above.
+        { id: 12, name: 'John Lewis Partnership Card', type: 'credit',
+          balance: -612.25, currency_code: 'USD', user_id: 'demo@finpal.app' },
       ],
     })),
     http.get('*/api/v1/goals/1/contributions', () => HttpResponse.json({

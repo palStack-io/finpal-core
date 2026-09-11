@@ -414,3 +414,340 @@ describe('Goals page — a goal that spans several accounts (B12)', () => {
     expect(screen.getByText('40%')).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// C1c — the mountain on the goal card
+// ---------------------------------------------------------------------------
+
+const BEN_NEVIS = {
+  slug: 'ben-nevis', name: 'Ben Nevis', elevation_m: 1345,
+  fact: 'The summit is the collapsed rim of an ancient volcano.',
+  summit_note: null,
+};
+const ACONCAGUA = {
+  slug: 'aconcagua', name: 'Aconcagua', elevation_m: 6961,
+  fact: 'The highest mountain outside Asia.',
+  summit_note: 'You started at Aconcagua. That is finished.',
+};
+
+const COST_PEAK = {
+  scale: 'cost' as const,
+  magnitude: 13.33,
+  unmeasured: false,
+  band: 1,
+  mountain: BEN_NEVIS,
+  hardest_band: 1,
+  hardest_mountain: BEN_NEVIS,
+  apr: 19.99,
+};
+
+const peakGoal = (peak: unknown, overrides: Record<string, unknown> = {}) => ({
+  ...PAYOFF_GOAL, peak, ...overrides,
+});
+
+/**
+ * *** THE FIRST VERSION OF THIS HELPER MATCHED A LUCIDE ICON. ***
+ * It selected `svg[aria-hidden="true"] path`, and every icon on the card is also
+ * `aria-hidden` — so it found `M5 12h14` and the "no mountain furniture" test
+ * failed while the tests asserting a mountain WAS drawn passed for the wrong
+ * reason. One failure exposed two bad assertions. Keyed to the wrapper's own
+ * testid now, so it can only ever find the silhouette.
+ */
+const silhouette = () =>
+  document.querySelector('[data-testid^="goal-peak-"] svg path');
+
+describe('Goals page — a card from a backend that predates mountains', () => {
+  /**
+   * *** THREE NULL-ISH STATES AND THIS IS THE ONE MOST EASILY COLLAPSED. ***
+   * `peak` ABSENT means the backend is older than the feature — nginx serves new
+   * assets before the backend restarts, and a self-hoster can update `web-ui`
+   * alone. That card must look EXACTLY as it did before C1c: not a flat ridge,
+   * which means "we do not know your rate", and not a molehill.
+   */
+  it('renders no mountain furniture at all, and keeps the OLD bar colour', async () => {
+    mockGoals([PAYOFF_GOAL]);            // deliberately no `peak` key
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText('Pay off Chase Amazon')).toBeInTheDocument();
+
+    expect(screen.queryByText(/What's costing you/i)).toBeNull();
+    expect(screen.queryByText(/What you're building/i)).toBeNull();
+    expect(screen.queryByText(/No rate recorded/i)).toBeNull();
+    expect(silhouette()).toBeNull();
+
+    // The pre-C1c paydown colour, not a peak variable. jsdom normalises the hex,
+    // so this asserts `rgb(59, 130, 246)` — which IS `#3b82f6`.
+    const bar = screen.getByRole('progressbar').firstElementChild as HTMLElement;
+    expect(bar.getAttribute('style')).toContain('rgb(59, 130, 246)');
+    expect(bar.getAttribute('style')).not.toContain('--peak-');
+  });
+
+  it('still shows the percentage and the phrasing it always did', async () => {
+    mockGoals([PAYOFF_GOAL]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText('60%')).toBeInTheDocument();
+  });
+});
+
+describe('Goals page — the mountain, when the server sends one', () => {
+  it('names the mountain, its elevation, the monthly interest AND the APR', async () => {
+    mockGoals([peakGoal(COST_PEAK)]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText(/What's costing you/i)).toBeInTheDocument();
+    expect(screen.getByText(
+      /Ben Nevis · 1,345 m · \$13\.33 a month in interest · 19\.99% APR/,
+    )).toBeInTheDocument();
+  });
+
+  it('paints the bar with the COST variable, which is what carries the rule', async () => {
+    mockGoals([peakGoal(COST_PEAK)]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText(/What's costing you/i);
+    const bar = screen.getByRole('progressbar').firstElementChild as HTMLElement;
+    expect(bar.getAttribute('style')).toContain('--peak-cost');
+  });
+
+  it('says "still to save" and uses the BUILD variable on the other scale', async () => {
+    mockGoals([peakGoal(
+      { ...COST_PEAK, scale: 'build', magnitude: 13000, apr: null, band: 4,
+        mountain: ACONCAGUA, hardest_band: 4, hardest_mountain: ACONCAGUA },
+      { direction: 'accumulate', name: 'House deposit' },
+    )]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText(/What you're building/i)).toBeInTheDocument();
+    expect(screen.getByText(/Aconcagua · 6,961 m · \$13,000\.00 still to save/))
+      .toBeInTheDocument();
+    const bar = screen.getByRole('progressbar').firstElementChild as HTMLElement;
+    expect(bar.getAttribute('style')).toContain('--peak-build');
+  });
+
+  it('draws the silhouette as DECORATION, invisible to assistive tech', async () => {
+    mockGoals([peakGoal(COST_PEAK)]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText(/What's costing you/i);
+    // Present, and hidden — every figure it stands behind is also in the subline.
+    expect(silhouette()).not.toBeNull();
+    expect(document.querySelector('svg[role="img"]')).toBeNull();
+  });
+
+  // *** ONE APR IS ONLY TRUE OF A ONE-ACCOUNT GOAL. *** The server sends `null`
+  // for a goal spanning several, for the same reason `account_name` answers
+  // "2 accounts" rather than naming one card out of three.
+  it('omits the APR segment entirely when the server withheld it', async () => {
+    mockGoals([peakGoal({ ...COST_PEAK, apr: null })]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText(
+      /Ben Nevis · 1,345 m · \$13\.33 a month in interest$/,
+    )).toBeInTheDocument();
+    expect(screen.queryByText(/APR/)).toBeNull();
+  });
+});
+
+describe('Goals page — unmeasured is not small, and zero is not unmeasured', () => {
+  it('asks for an APR instead of naming a mountain', async () => {
+    mockGoals([peakGoal({
+      ...COST_PEAK, magnitude: null, unmeasured: true, band: null,
+      mountain: null, apr: null,
+    })]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText(/No rate recorded/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Ben Nevis/)).toBeNull();
+    // The ridge IS drawn — it is a real shape, deliberately not a mountain.
+    expect(silhouette()).not.toBeNull();
+  });
+
+  /**
+   * *** THE PROGRESS BAR STAYS TRUTHFUL, WHICH IS A DELIBERATE DEVIATION FROM
+   * THE SPEC. *** Section 5.1 asks for "an em-dash for the percentage and no
+   * progress bar fill" on an unmeasured card. But `goal.progress` is computed
+   * from amounts and has NOTHING to do with the APR: a paydown goal with no rate
+   * recorded still knows exactly how far through it is. Blanking it would hide a
+   * correct figure because a DIFFERENT figure is missing, which is the same class
+   * of defect as D-102 — the geometry was right and the caption lied. Only the
+   * mountain is unknown, so only the mountain says so.
+   */
+  it('keeps the real percentage, because the APR is not what computes it', async () => {
+    mockGoals([peakGoal({
+      ...COST_PEAK, magnitude: null, unmeasured: true, band: null,
+      mountain: null, apr: null,
+    })]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText('60%')).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar').firstElementChild as HTMLElement;
+    expect(bar.getAttribute('style')).toContain('60.01');
+  });
+
+  it('draws a mountain for an explicit 0% APR and says it costs nothing', async () => {
+    mockGoals([peakGoal({
+      ...COST_PEAK, magnitude: 0, unmeasured: false, band: 0,
+      mountain: { slug: 'table-mountain', name: 'Table Mountain',
+                  elevation_m: 1085, fact: null, summit_note: null },
+      apr: 0,
+    })]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText(
+      /Table Mountain · 1,085 m · \$0\.00 a month in interest · 0% APR/,
+    )).toBeInTheDocument();
+    expect(screen.queryByText(/No rate recorded/i)).toBeNull();
+    expect(silhouette()).not.toBeNull();
+  });
+});
+
+describe('Goals page — a finished goal reads the WATERMARK', () => {
+  /**
+   * *** THE MOUNTAIN SHRINKS AS THE GOAL SUCCEEDS. *** The band is recomputed
+   * from the CURRENT figure, so a cleared debt sits on the smallest mountain.
+   * The summit note has to name the hardest band ever faced, or it congratulates
+   * somebody on Table Mountain for clearing an Aconcagua.
+   */
+  it('congratulates on the hardest it ever got, not on where it ended', async () => {
+    mockGoals([peakGoal(
+      { ...COST_PEAK, magnitude: 0.4, band: 0,
+        mountain: { slug: 'table-mountain', name: 'Table Mountain',
+                    elevation_m: 1085, fact: null, summit_note: null },
+        hardest_band: 4, hardest_mountain: ACONCAGUA },
+      { status: 'achieved', progress: 1 },
+    )]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText(/You started at Aconcagua\. That is finished\./))
+      .toBeInTheDocument();
+    expect(screen.getByText(/Hardest it ever got: Aconcagua/)).toBeInTheDocument();
+  });
+
+  it('says nothing rather than inventing a mountain when there is no watermark', async () => {
+    mockGoals([peakGoal(
+      { ...COST_PEAK, hardest_band: null, hardest_mountain: null },
+      { status: 'achieved', progress: 1 },
+    )]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByText('Pay off Chase Amazon')).toBeInTheDocument();
+    expect(screen.queryByText(/Hardest it ever got/)).toBeNull();
+    expect(screen.queryByText(/That is finished/)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Editing a goal — the endpoint and the service method both already existed
+// ---------------------------------------------------------------------------
+
+describe('Goals page — editing a goal', () => {
+  /**
+   * *** THERE WAS NO WAY TO EDIT A GOAL, AND IT WAS NOT A MISSING ENDPOINT. ***
+   * `PUT /goals/<id>` has always existed and `goalService.updateGoal` was
+   * already written — with no caller anywhere in this client. A dead service
+   * method is the tell: the shape of a feature whose last step was never wired.
+   */
+  it('opens the panel prefilled from the goal', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Edit goal')).toBeInTheDocument();
+    expect((screen.getByLabelText(/Name/i) as HTMLInputElement).value)
+      .toBe('Pay off Chase Amazon');
+    expect((screen.getByLabelText(/Target amount/i) as HTMLInputElement).value).toBe('0');
+  });
+
+  it('*** SENDS ONLY WHAT THE SERVER WILL APPLY, AND NO ACCOUNT KEYS ***', async () => {
+    // `PUT /goals/<id>` REFUSES `account_ids` and silently ignores `account_id`,
+    // because either would rewrite the denominator of a percentage the user has
+    // already been shown. Sending them would be a payload whose values are
+    // discarded — so the panel does not offer them and the request omits them.
+    let body: any = null;
+    let url = '';
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.put(`${BASE}/api/v1/goals/:id`, async ({ request }) => {
+        body = await request.json();
+        url = request.url;
+        return HttpResponse.json({ success: true, goal: PAYOFF_GOAL });
+      }),
+    );
+
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    const name = screen.getByLabelText(/Name/i);
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Clear the Chase card');
+    await userEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(url).toContain('/goals/1');
+    expect(body.name).toBe('Clear the Chase card');
+    expect(body).not.toHaveProperty('account_ids');
+    expect(body).not.toHaveProperty('account_id');
+    expect(body).not.toHaveProperty('start_amount');
+  });
+
+  it('offers NO account picker on an edit, because the server discards it', async () => {
+    mockGoals([PAYOFF_GOAL], [
+      { id: 7, name: 'Chase Amazon', account_type: 'credit', balance: -1125.41,
+        currency_code: 'USD', user_id: 'alice@test.com' },
+    ]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+
+    // Creating offers it...
+    await userEvent.click(await screen.findByRole('button', { name: /New goal/i }));
+    expect(screen.getByLabelText('Chase Amazon')).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText('Close panel'));
+
+    // ...editing must not, or it is an affordance whose changes are thrown away.
+    await userEvent.click(screen.getByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    expect(screen.queryByLabelText('Chase Amazon')).toBeNull();
+  });
+
+  it('surfaces the server’s refusal instead of closing as if it saved', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.put(`${BASE}/api/v1/goals/:id`, () => HttpResponse.json(
+        { success: false, error: 'Only the goal owner or a household admin can change this goal' },
+        { status: 403 })),
+    );
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/household admin/i);
+    // Still open, so the edit is not silently lost.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('*** SLICES A TIMESTAMP FOR THE DATE INPUT, OR THE FIELD RENDERS EMPTY ***', async () => {
+    // `<input type="date">` accepts only YYYY-MM-DD. Handing it a full
+    // timestamp makes the control render BLANK, and saving then clears a date
+    // the user never touched.
+    mockGoals([{ ...PAYOFF_GOAL, target_date: '2027-06-30T00:00:00' }], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    expect((screen.getByLabelText(/Target date/i) as HTMLInputElement).value)
+      .toBe('2027-06-30');
+  });
+
+  it('shows no Edit control on an archived goal', async () => {
+    mockGoals([{ ...PAYOFF_GOAL, status: 'archived' }], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+    expect(screen.queryByRole('button', { name: /Edit Pay off Chase Amazon/i })).toBeNull();
+  });
+});
+
+describe('Goals page — the shared page shell', () => {
+  /**
+   * *** GOALS WAS THE ONE PAGE THAT NEVER ADOPTED IT. *** Measured on the
+   * deployed demo at 1440px: the Goals heading sat at 240px while
+   * accounts/budgets/transactions all sat at 264px, because every other page
+   * wraps its content in `pageContainerStyle` (24px padding) plus
+   * `.page-container`. The owner saw it as "padded to the side nav weirdly",
+   * which is what a missing gutter looks like when only one page misses it.
+   */
+  it('wraps its content in the shell every other page uses', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    const { container } = render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+
+    const shell = container.querySelector('.page-container');
+    expect(shell).not.toBeNull();
+    const outer = shell!.parentElement as HTMLElement;
+    expect(outer.style.padding).toBe('24px');
+  });
+});

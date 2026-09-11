@@ -36,6 +36,58 @@ export type { GoalAccountLink } from '../utils/goalTracking';
 import type { GoalAccountLink } from '../utils/goalTracking';
 export type GoalDirection = 'accumulate' | 'paydown';
 
+/** The two scales a goal can be measured on. They are NEVER compared. */
+export type PeakScale = 'cost' | 'build';
+
+export interface PeakMountain {
+  slug: string;
+  name: string;
+  elevation_m: number;
+  /** *** A DRAFT, AND A FACT IN A PRODUCT IS A CLAIM. *** Owner-unchecked. */
+  fact: string | null;
+  summit_note: string | null;
+}
+
+/**
+ * C1c. The mountain a goal is, decided by the SERVER.
+ *
+ * *** THREE NULL-ISH STATES, ALL DIFFERENT, AND COLLAPSING ANY TWO IS THE BUG. ***
+ *
+ *   `Goal.peak` UNDEFINED   the backend predates mountains. Render the OLD card:
+ *                           no ridge, no mountain furniture, nothing.
+ *   `unmeasured: true`      nothing states a rate. Render the flat ridge, which
+ *                           is deliberately NOT a mountain, and say so.
+ *   `magnitude: 0`          MEASURED, and the answer is zero -- a 0% balance
+ *                           transfer. Render the smallest real mountain.
+ *
+ * "We do not know your rate" and "this is small" must never look alike, and
+ * neither must "this client is older than the feature".
+ */
+export interface GoalPeak {
+  scale: PeakScale;
+  /** Monthly interest for `cost`, distance remaining for `build`. */
+  magnitude: number | null;
+  unmeasured: boolean;
+  /** 0 (Table Mountain) .. 5 (Everest). `null` when unmeasured. */
+  band: number | null;
+  mountain: PeakMountain | null;
+  /**
+   * *** THE WATERMARK, AND THE SUMMIT NOTE READS FROM THIS ONE. *** `band` is
+   * recomputed from the goal's CURRENT figure, so the mountain SHRINKS as the
+   * user succeeds and finishing lands on the smallest one. Use `band` to draw
+   * the peak and `hardest_band` to say what they beat.
+   */
+  hardest_band: number | null;
+  hardest_mountain: PeakMountain | null;
+  /**
+   * Only ever set for a goal with exactly ONE account behind it. `null`
+   * otherwise, on purpose: printing one rate under a goal spanning three cards
+   * at three rates states something true of none of it -- `account_name`'s
+   * "3 accounts" rule, applied to a number that is worse to get wrong.
+   */
+  apr: number | null;
+}
+
 export interface Goal {
   id: number;
   user_id: string;
@@ -62,6 +114,13 @@ export interface Goal {
    * rather than mapping it directly.
    */
   accounts?: GoalAccountLink[];
+  /**
+   * C1c. *** OPTIONAL BECAUSE A NEW BUNDLE REACHES AN OLDER BACKEND *** -- nginx
+   * serves new assets before the backend restarts, a self-hoster can update
+   * `web-ui` alone, and an installed mobile build is never redeployed with the
+   * server. ABSENT must render the pre-mountain card, not the ridge.
+   */
+  peak?: GoalPeak;
   target_amount: number;
   /**
    * Snapshotted by the SERVER when the goal was created and never recomputed.
