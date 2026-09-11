@@ -10,6 +10,9 @@ interface SlidePanelProps {
   width?: string;
 }
 
+/** The dismiss control's accessible name, so focus can skip it. Must match
+ *  the `aria-label` on the header button below. */
+const CLOSE_LABEL = 'Close panel';
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export const SlidePanel: React.FC<SlidePanelProps> = ({
@@ -22,13 +25,32 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useRef(`panel-title-${Math.random().toString(36).slice(2)}`).current;
 
+  /**
+   * *** `onClose` IS HELD IN A REF SO ITS IDENTITY CANNOT RE-RUN THIS EFFECT. ***
+   * It used to be an effect dependency, and that turned a caller's ordinary
+   * inline `onClose={() => setOpen(false)}` into a focus bug with teeth:
+   *
+   *   1. a new function identity on every parent render re-ran this effect,
+   *   2. the re-run's `requestAnimationFrame` refocused the FIRST focusable,
+   *      which is this panel's own close button,
+   *   3. so typing a SPACE activated that button and shut the panel.
+   *
+   * Any page holding its form state in the PAGE rather than in a child form
+   * re-renders on every keystroke, so "Pay off Chase Amazon" closed the panel
+   * at its first space. Goals is the page that surfaced it; the other five
+   * callers escaped only by accident of where they keep their state, which is
+   * not a property to rely on. See AUDIT D-186.
+   */
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!isOpen) return;
 
     document.body.style.overflow = 'hidden';
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'Escape') { onCloseRef.current(); return; }
       if (e.key !== 'Tab' || !panelRef.current) return;
 
       const focusables = Array.from(
@@ -48,16 +70,49 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
 
     document.addEventListener('keydown', handleKeyDown);
 
-    requestAnimationFrame(() => {
-      const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
-      first?.focus();
-    });
-
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
+
+  /**
+   * Focus moves into the panel ONCE PER OPENING, never on a re-render. Keyed on
+   * `isOpen` alone and deliberately separate from the listener effect above: a
+   * panel that re-takes focus while somebody is typing is the bug described
+   * there, and keeping the two effects apart means a future dependency added to
+   * the listener cannot resurrect it.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+    const frame = requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      /*
+       * *** NEVER THE CLOSE BUTTON, WHICH IS THE FIRST FOCUSABLE IN THE DOM. ***
+       * This used to focus `querySelector(FOCUSABLE)`, and the header's "Close
+       * panel" button is the first match. Two things went wrong with that:
+       *
+       *   1. It is the wrong control to hand somebody who just opened a form —
+       *      a SPACE or ENTER, which they are about to type, dismisses it.
+       *   2. It runs inside `requestAnimationFrame`, so on a slow render it
+       *      landed MID-TYPING: focus jumped out of the name field and the next
+       *      space in "Pay off my cards" closed the panel.
+       *
+       * (2) is why this was a Heisenbug — the same test passed alone and failed
+       * in its file, because the frame fired before typing in one and during it
+       * in the other. Skipping the dismiss control removes both: the first
+       * FIELD gets focus, and a space there is just a space.
+       */
+      const candidates = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE))
+        .filter((el) => !el.hasAttribute('disabled')
+                     && el.getAttribute('aria-label') !== CLOSE_LABEL);
+      // The panel itself as the fallback, so an empty panel still traps focus
+      // rather than leaving it on whatever was behind the backdrop.
+      (candidates[0] ?? panel).focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -86,6 +141,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         style={{
           position: 'fixed',
           top: 0,
