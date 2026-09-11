@@ -137,7 +137,16 @@ export const TransactionRules: React.FC = () => {
        the shell while rendering a bare div. */
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      {/* *** `flexWrap` AND `gap`, BECAUSE THIS ROW OVERFLOWED AT 390px. ***
+          Found by the responsive walk on the very first run that ever rendered
+          this page: 470px of content in a 390px viewport, the two action
+          buttons overhanging by 80px with nothing to wrap them. The page had no
+          capture file at all until 2026-09-11 (D-103), so "unmeasured" had been
+          reading as "clean" for as long as the page has shipped.
+          `gap` on the outer row too: once it wraps, the heading block and the
+          buttons need the space between them that `justify-content` was
+          providing on one line. */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Zap size={24} style={{ color: 'var(--brand-accent-gold)' }} />
@@ -147,7 +156,9 @@ export const TransactionRules: React.FC = () => {
             Automatically categorize and organize transactions based on patterns
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        {/* The button pair wraps too: at 390 the two together are 285px, which
+            is wider than the viewport's content box on its own. */}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             onClick={handleBulkApply}
             disabled={applyingRules || rules.length === 0}

@@ -28,6 +28,8 @@ import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
 import { CategoryManagement } from '../../src/components/CategoryManagement';
+import { RecurringTransactions } from '../../src/components/RecurringTransactions';
+import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
 
@@ -199,6 +201,121 @@ beforeEach(() => {
      * lesson title is deliberately LONG: it has to be a string that fits at
      * 1440 and can overflow at 390.
      */
+    /**
+     * *** `recurring` AND `rules` HAD NO CAPTURE FILE AT ALL, SO NO WALK HAD
+     * EVER RENDERED EITHER OF THEM. *** Recorded under D-103. They are also the
+     * two pages the eightieth pass measured at **0px left padding** — content
+     * flush against the side nav — which is a layout defect no gate could see
+     * because neither page was in one.
+     *
+     * *** EVERY KEY BELOW WAS READ OFF THE LIVE DEMO BEFORE BEING WRITTEN. ***
+     * `curl /api/v1/recurring`, `/recurring/detect`, `/transaction-rules` and
+     * `/transaction-rules/stats` against `demo1`, and the shapes here are those
+     * responses with the strings lengthened. **D-107 is what happens when a
+     * fixture invents keys**: an investments fixture sent three the API never
+     * sent, the page rendered `$NaN` eight times, and both gates called it clean.
+     *
+     * *** `/transaction-rules` HAS NO `success` KEY AND EVERY SIBLING DOES. ***
+     * Checked, not assumed — the live response is a bare `{rules: [...]}`. A
+     * fixture that added one would still work here (nothing reads it) and would
+     * teach the next person the wrong shape.
+     */
+    http.get('*/api/v1/recurring', () => HttpResponse.json({
+      success: true,
+      recurring: [
+        // Long descriptions on purpose: a name that fits at 1440 and overflows
+        // at 390 is the entire point of the responsive walk, and a short
+        // fixture cannot produce one (D-165).
+        { id: 1, description: 'Rent for the flat, including the service charge',
+          amount: 1200, frequency: 'monthly',
+          start_date: '2026-03-15T20:43:51', end_date: null, last_created: null,
+          active: true, category_id: null, account_id: null,
+          transaction_type: 'expense', destination_account_id: null,
+          card_used: 'Primary Checking', split_method: 'none',
+          paid_by: 'alice@test.com', user_id: 'alice@test.com',
+          currency_code: 'GBP', original_amount: null,
+          category: null, account: null },
+        { id: 2, description: 'Annual professional indemnity insurance premium',
+          amount: 462.5, frequency: 'yearly',
+          start_date: '2026-01-04T09:00:00', end_date: null,
+          last_created: '2026-01-04T09:00:00',
+          active: false, category_id: null, account_id: null,
+          transaction_type: 'expense', destination_account_id: null,
+          card_used: 'John Lewis Partnership Mastercard', split_method: 'none',
+          paid_by: 'alice@test.com', user_id: 'alice@test.com',
+          currency_code: 'GBP', original_amount: null,
+          category: null, account: null },
+        // *** `weekly`, BECAUSE THE GROUND CONVERTS IT AT 52/12 AND NOT AT 4. ***
+        // A weekly 60 is 260 a month, not 240, and this page is where a user
+        // sees the frequency that figure comes from.
+        { id: 3, description: 'Weekly supermarket delivery slot', amount: 60,
+          frequency: 'weekly', start_date: '2026-02-01T00:00:00', end_date: null,
+          last_created: null, active: true, category_id: null, account_id: null,
+          transaction_type: 'expense', destination_account_id: null,
+          card_used: null, split_method: 'none', paid_by: 'alice@test.com',
+          user_id: 'alice@test.com', currency_code: 'GBP',
+          original_amount: null, category: null, account: null },
+      ],
+    })),
+    http.get('*/api/v1/recurring/detect', () => HttpResponse.json({
+      success: true,
+      patterns: [{
+        pattern_key: 'salary deposit_4500.00',
+        description: 'Salary deposit from the employer payroll run',
+        amount: 4500, currency_code: 'GBP', frequency: 'monthly',
+        account_id: 1, category_id: 1, transaction_type: 'income',
+        confidence: 0.95, occurrences: 2,
+        last_date: '2026-08-26T00:00:00', next_date: '2026-09-26T00:00:00',
+        start_date: '2026-07-27T00:00:00', avg_interval: 30,
+        transaction_ids: [1, 2],
+        transactions: [
+          { id: 1, description: 'Salary Deposit', amount: 4500,
+            date: '2026-07-27T00:00:00', currency_code: 'GBP',
+            account_id: 1, category_id: 1, transaction_type: 'income' },
+          { id: 2, description: 'Salary Deposit', amount: 4500,
+            date: '2026-08-26T00:00:00', currency_code: 'GBP',
+            account_id: 1, category_id: 1, transaction_type: 'income' },
+        ],
+      }],
+    })),
+    // No `success` key. That is the live shape.
+    http.get('*/api/v1/transaction-rules', () => HttpResponse.json({
+      rules: [
+        { id: 1, name: 'Bank fees, overdraft charges and ATM withdrawals',
+          pattern: '\\b(bank fee|service fee|monthly fee|overdraft|nsf|atm fee'
+                 + '|foreign transaction)\\b',
+          pattern_field: 'description', is_regex: true, case_sensitive: false,
+          amount_min: null, amount_max: null, transaction_type_filter: null,
+          auto_category_id: 144, auto_category: 'Bank Fees',
+          auto_account_id: null, auto_account: null,
+          auto_transaction_type: null, auto_tags: [], auto_notes: null,
+          priority: 100, active: true, match_count: 214,
+          last_matched: '2026-09-09T11:02:00',
+          created_at: '2026-09-10T19:11:13', updated_at: '2026-09-10T19:11:13' },
+        { id: 2, name: 'Groceries', pattern: 'sainsbury',
+          pattern_field: 'description', is_regex: false, case_sensitive: false,
+          amount_min: 5, amount_max: 400, transaction_type_filter: 'expense',
+          auto_category_id: 4, auto_category: 'Food, drink and the weekly shop',
+          auto_account_id: null, auto_account: null,
+          auto_transaction_type: null, auto_tags: ['household'],
+          auto_notes: 'Set automatically by a rule', priority: 50,
+          active: false, match_count: 0, last_matched: null,
+          created_at: '2026-09-10T19:11:13', updated_at: '2026-09-10T19:11:13' },
+      ],
+    })),
+    http.get('*/api/v1/transaction-rules/stats', () => HttpResponse.json({
+      success: true,
+      stats: {
+        total_rules: 52, active_rules: 51, inactive_rules: 1,
+        total_matches: 214,
+        most_used_rules: [
+          { id: 1, name: 'Bank fees, overdraft charges and ATM withdrawals',
+            match_count: 214, last_matched: '2026-09-09T11:02:00' },
+          { id: 3, name: 'Investment dividends and interest income',
+            match_count: 12, last_matched: '2026-09-01T08:00:00' },
+        ],
+      },
+    })),
     /**
      * *** learnPal's HOME PAYLOAD, AND EVERY STRING IN IT IS DELIBERATELY LONG.
      * *** A name that fits at 1440 and overflows at 390 is the entire point of
@@ -702,7 +819,39 @@ const cases: Case[] = [
    * that portals to `document.body` and is therefore unreachable from a walk
    * writing `container.innerHTML` (D-165). It belongs to the MODAL walk.
    */
+  /**
+   * *** NEITHER OF THESE HAD A CAPTURE FILE, SO NO WALK HAD EVER RENDERED
+   * THEM. *** D-103. They are also two of the three pages measured at **0px
+   * left padding** on 2026-09-11 — content flush against the side nav, a
+   * defect that lived precisely because no walk had them.
+   *
+   * Expect new failing pairs to land in the D-103 **pending** bucket: reported,
+   * not gated, and NOT added to `baseline.json`. A page's first audit finding
+   * something is the point of giving it one.
+   *
+   * *** BOTH ALSO HAVE NO `<h1>` — their titles are `<h2>`. *** Recorded on
+   * 2026-09-11 and deliberately not fixed here: promoting a heading changes how
+   * it looks as well as what it means, and doing it inside a capture change
+   * would hide a visual edit inside a test-infrastructure one.
+   */
   ['learnpal-home', LearnPalHome as React.FC],
+  /**
+   * *** DRIVEN, BECAUSE THE FIXTURE ALONE MEASURED NOTHING OF `/recurring/detect`.
+   * *** The detected-patterns section only exists after a click on "Detect
+   * Patterns" — `handleDetectPatterns` is what sets `showPatternsSection` — so
+   * the first capture here held the recurring LIST and none of the payload the
+   * detect fixture describes. Verified by grepping `captured/recurring.html`
+   * for the pattern's own description and getting **zero**, which is the check
+   * that separates "the page is in the walk" from "the walk sees what changed"
+   * (D-165).
+   */
+  ['recurring', RecurringTransactions as React.FC, async () => {
+    await userEvent.click(screen.getByRole('button', { name: /Detect Patterns/ }));
+    // Wait for a row of the detected section, not for the button to re-enable:
+    // the button re-enables whether or not anything rendered.
+    await screen.findByText(/Salary deposit from the employer payroll run/);
+  }],
+  ['rules', TransactionRules as React.FC],
   ['learnpal-range', LearnPalRange as React.FC],
   ['investments', Investments as React.FC],
   ['pointspal-overview', PointsPalOverview as React.FC],

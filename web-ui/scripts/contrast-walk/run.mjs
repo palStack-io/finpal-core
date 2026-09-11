@@ -219,6 +219,27 @@ const PENDING_AUDIT = {
   'pointspal-bestcard': 'D-103 — never contrast-audited',
   'pointspal-mycards': 'D-103 — never contrast-audited',
   'pointspal-redeem': 'D-103 — never contrast-audited',
+  // *** ADDED 2026-09-11 WHEN `recurring` AND `rules` ENTERED `captured/` FOR
+  // THE FIRST TIME. *** Neither page had a capture file, so no walk had ever
+  // rendered either of them -- the same "unmeasured is not clean" hole
+  // `categories` was in, and both are also two of the three pages measured at
+  // 0px left padding the day before.
+  //
+  // *** THE FAILING PAIRS ARE THE PAGES' OWN SHIPPED PALETTE, NOT THE
+  // FIXTURE'S. *** `#86efac`, `#fbbf24` and `#17301f on #15803d` are the
+  // semantic accents CLAUDE.md records as deliberately NOT variablized, on
+  // their washes -- the same set `categories` is listed for. Nothing in this
+  // pass touched either component's colours, and a fixture cannot invent a
+  // computed colour: the walk reads the DOM, so these are what the page renders
+  // for any data at all. Fixing them is a palette pass, not this one.
+  //
+  // *** WHAT WAS NOT LISTED HERE IS THE 390px OVERFLOW ON `rules`. *** The
+  // responsive walk found 470px of content in a 390px viewport on that same
+  // first run -- the two header buttons, 285px, with nothing to wrap them. That
+  // was FIXED rather than recorded, because this list is for what shipped
+  // before and the responsive walk has no pending bucket by design.
+  recurring: 'D-103 — never contrast-audited; entered captured/ 2026-09-11',
+  rules: 'D-103 — never contrast-audited; entered captured/ 2026-09-11',
 };
 
 {
