@@ -12,7 +12,7 @@
  * Asserted on rendered output and on the request body, never on a status code.
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
@@ -344,6 +344,12 @@ describe('Goals page — a goal that spans several accounts (B12)', () => {
                                user_id: 'alice@test.com' }]);
     render(<MemoryRouter><Goals /></MemoryRouter>);
 
+    // *** THE ACCOUNTS CONTROL MOVED INTO THE EDIT PANEL. *** It used to sit on
+    // the card, which made "edit" mean two different places. It still works
+    // through its own routes rather than the PUT, so it can live in a panel
+    // whose submit sends no account keys. Opening the panel is the new step;
+    // nothing about what is asserted below changed.
+    await userEvent.click(await screen.findByRole('button', { name: /^Edit /i }));
     await userEvent.click(await screen.findByRole('button', { name: /Add another account/i }));
     expect(screen.queryByRole('button', { name: /Remove/i })).not.toBeInTheDocument();
     // And it says WHY, rather than leaving a control silently missing.
@@ -366,6 +372,12 @@ describe('Goals page — a goal that spans several accounts (B12)', () => {
     );
 
     render(<MemoryRouter><Goals /></MemoryRouter>);
+    // *** THE ACCOUNTS CONTROL MOVED INTO THE EDIT PANEL. *** It used to sit on
+    // the card, which made "edit" mean two different places. It still works
+    // through its own routes rather than the PUT, so it can live in a panel
+    // whose submit sends no account keys. Opening the panel is the new step;
+    // nothing about what is asserted below changed.
+    await userEvent.click(await screen.findByRole('button', { name: /^Edit /i }));
     await userEvent.click(await screen.findByRole('button', { name: /Manage accounts/i }));
     await userEvent.click(screen.getByRole('button', { name: /Add Store card/i }));
 
@@ -392,6 +404,12 @@ describe('Goals page — a goal that spans several accounts (B12)', () => {
     );
 
     render(<MemoryRouter><Goals /></MemoryRouter>);
+    // *** THE ACCOUNTS CONTROL MOVED INTO THE EDIT PANEL. *** It used to sit on
+    // the card, which made "edit" mean two different places. It still works
+    // through its own routes rather than the PUT, so it can live in a panel
+    // whose submit sends no account keys. Opening the panel is the new step;
+    // nothing about what is asserted below changed.
+    await userEvent.click(await screen.findByRole('button', { name: /^Edit /i }));
     await userEvent.click(await screen.findByRole('button', { name: /Manage accounts/i }));
     await userEvent.click(screen.getByRole('button', { name: /Add Emergency fund/i }));
 
@@ -404,6 +422,12 @@ describe('Goals page — a goal that spans several accounts (B12)', () => {
     mockGoals([TWO_ACCOUNT_GOAL]);
     render(<MemoryRouter><Goals /></MemoryRouter>);
 
+    // *** THE ACCOUNTS CONTROL MOVED INTO THE EDIT PANEL. *** It used to sit on
+    // the card, which made "edit" mean two different places. It still works
+    // through its own routes rather than the PUT, so it can live in a panel
+    // whose submit sends no account keys. Opening the panel is the new step;
+    // nothing about what is asserted below changed.
+    await userEvent.click(await screen.findByRole('button', { name: /^Edit /i }));
     await userEvent.click(await screen.findByRole('button', { name: /Manage accounts/i }));
     // *** U+2212 MINUS SIGN, NOT A HYPHEN. *** `formatMoney` renders a real
     // minus and this test first looked for `-$1,000.00`, which matched nothing.
@@ -749,5 +773,126 @@ describe('Goals page — the shared page shell', () => {
     expect(shell).not.toBeNull();
     const outer = shell!.parentElement as HTMLElement;
     expect(outer.style.padding).toBe('24px');
+  });
+});
+
+describe('Goals page — the card opens the editor, and delete asks first', () => {
+  it('opens the edit panel when the card itself is clicked', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByText('Pay off Chase Amazon'));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Edit goal')).toBeInTheDocument();
+  });
+
+  /**
+   * *** THE CARD MUST NOT SWALLOW THE CONTROLS IT CONTAINS. *** It holds the
+   * archive button and the contributions toggle, and once the panel is open it
+   * would cover whatever the user was aiming at. `closest()` on the click target
+   * is what separates "clicked the card" from "clicked a thing on the card".
+   */
+  it('does NOT open the editor when a control on the card is clicked', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.get(`${BASE}/api/v1/goals/1/contributions`, () =>
+        HttpResponse.json({ success: true, contributions: [] })),
+      // *** THE ARCHIVE CALL HAS TO BE MOCKED OR THE WHOLE RUN EXITS 1. ***
+      // Clicking a real control means a real request, and MSW's
+      // `onUnhandledRequest: 'error'` raises OUTSIDE the test: every test still
+      // reports green and the process exits non-zero. That is D-95's shape --
+      // 321 tests green and one unhandled error turning CI red -- and it is why
+      // the real exit code gets captured rather than read off a summary line.
+      http.post(`${BASE}/api/v1/goals/:id/archive`, () =>
+        HttpResponse.json({ success: true, goal: { ...PAYOFF_GOAL, status: 'archived' } })),
+    );
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+
+    await userEvent.click(screen.getByRole('button', { name: /Who contributed/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /Archive Pay off Chase Amazon/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('leaves an archived card unclickable', async () => {
+    mockGoals([{ ...PAYOFF_GOAL, status: 'archived' }], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByText('Pay off Chase Amazon'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  /**
+   * *** THE CARD'S BARE TRASH ICON IS GONE, AND THAT IS A SAFETY FIX. *** It
+   * called `deleteGoal` on a single click with NO confirmation — one mis-click
+   * destroyed a goal and its whole contribution history, with nothing to undo.
+   */
+  it('offers no one-click delete anywhere on the card', async () => {
+    mockGoals([PAYOFF_GOAL], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+    expect(screen.queryByRole('button', { name: /^Delete Pay off Chase Amazon/i })).toBeNull();
+  });
+
+  it('*** TAKES TWO DELIBERATE CLICKS TO DELETE, AND NAMES WHAT IS GOING ***', async () => {
+    let deleted: string | null = null;
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.delete(`${BASE}/api/v1/goals/:id`, ({ request }) => {
+        deleted = request.url;
+        return HttpResponse.json({ success: true });
+      }),
+    );
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+
+    // First click only ARMS it — nothing has been sent.
+    await userEvent.click(screen.getByRole('button', { name: /Delete this goal/i }));
+    expect(deleted).toBeNull();
+    expect(screen.getByText(/cannot be undone/i)).toBeInTheDocument();
+    // Scoped to the dialog: the name is on the card too, so an unscoped query
+    // finds two and proves nothing about what the confirm says.
+    expect(within(screen.getByRole('dialog')).getByText('Pay off Chase Amazon'))
+      .toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Yes, delete it/i }));
+    await waitFor(() => expect(deleted).not.toBeNull());
+    expect(deleted).toContain('/goals/1');
+  });
+
+  it('backs out of the confirm without deleting', async () => {
+    let called = false;
+    mockGoals([PAYOFF_GOAL], []);
+    server.use(
+      http.delete(`${BASE}/api/v1/goals/:id`, () => {
+        called = true;
+        return HttpResponse.json({ success: true });
+      }),
+    );
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Delete this goal/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Keep it/i }));
+
+    expect(called).toBe(false);
+    expect(screen.getByRole('button', { name: /Delete this goal/i })).toBeInTheDocument();
+  });
+
+  /**
+   * The armed state holds the goal's ID rather than a boolean, so a confirm left
+   * armed on one goal cannot fire on the next one opened. A boolean would have
+   * carried over and the second panel would open already asking to delete.
+   */
+  it('does not carry an armed confirm from one goal to another', async () => {
+    mockGoals([PAYOFF_GOAL, { ...PAYOFF_GOAL, id: 2, name: 'Emergency fund' }], []);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole('button', { name: /Edit Pay off Chase Amazon/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Delete this goal/i }));
+    expect(screen.getByText(/cannot be undone/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Close panel/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Edit Emergency fund/i }));
+    expect(screen.queryByText(/cannot be undone/i)).toBeNull();
+    expect(screen.getByRole('button', { name: /Delete this goal/i })).toBeInTheDocument();
   });
 });

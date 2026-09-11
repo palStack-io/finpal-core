@@ -514,12 +514,25 @@ const cases: Case[] = [
    * this feature.
    */
   ['goals', Goals as React.FC, async () => {
-    // The FIRST goal's button, by name — two linked goals each offer one, and
-    // `getByRole` refuses an ambiguous match rather than picking. Only goal 1 has
-    // a contributions fixture, so it has to be that one.
+    /*
+     * *** THE ACCOUNTS CONTROL USED TO BE CLICKED HERE AND HAS MOVED INTO THE
+     * EDIT PANEL. *** This interaction opened it on the card; the owner asked for
+     * account changes to happen while editing, so it now lives in a `SlidePanel`
+     * — which PORTALS to `document.body` while this walk writes
+     * `container.innerHTML`, so it is unreachable from here by construction
+     * (D-165). Its coverage did not vanish: `slidepanel-goal-edit` in the MODAL
+     * walk renders that panel, accounts control included, at four widths in both
+     * themes.
+     *
+     * *** THIS WALK'S OWN INTERACTION IS WHAT CAUGHT THE MOVE, *** by failing on
+     * a button that no longer exists — which is the argument for adding the
+     * interaction and not just the fixture.
+     *
+     * The contributions table stays: it is on the card and nowhere else. The
+     * FIRST goal specifically, because `getByRole` refuses an ambiguous match
+     * rather than picking, and only goal 1 has a contributions fixture.
+     */
     const first = await screen.findByTestId('goal-1');
-    await userEvent.click(within(first).getByRole('button', { name: /Manage accounts/ }));
-    await screen.findByText(/Adding an account counts its balance from today/);
     await userEvent.click(within(first).getByRole('button', { name: /Who contributed/ }));
     await screen.findByText('Rachel');
   }],
