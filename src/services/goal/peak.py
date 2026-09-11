@@ -36,9 +36,14 @@ def _mountain_dict(mountain):
         'slug': mountain.slug,
         'name': mountain.name,
         'elevation_m': mountain.elevation_m,
-        # *** DRAFTS, AND EVERY FACT IS A CLAIM THE PRODUCT MAKES. *** These are
-        # sent as written and are not generated; the owner has not checked them
-        # yet, and this project has shipped fabricated figures before.
+        # *** APPROVED BY THE OWNER 2026-09-11, AND CHECKED BEFORE THE APPROVAL
+        # WAS RECORDED. *** Sent as written and never generated. Two of the six
+        # were corrected rather than waved through -- Fuji's summit post office
+        # is seasonal and Aconcagua's ordinary route is non-technical rather
+        # than "a walk" -- because approval and correctness are different things
+        # and this project has shipped fabricated figures before. If a fact is
+        # ever edited, `seed_mountains.py`'s corrections are keyed on the old
+        # VALUE so the edit survives every reboot.
         'fact': mountain.fact,
         'summit_note': mountain.summit_note,
     }

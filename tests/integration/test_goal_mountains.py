@@ -482,3 +482,88 @@ def test_the_two_client_geometry_copies_are_byte_identical(db):
         'web-ui/src/utils/mountainGeometry.ts and mobile/src/utils/'
         'mountainGeometry.ts have diverged. Copy one over the other.'
     )
+
+
+# ---------------------------------------------------------------------------
+# The fact corrections, and the reason they need their own test (D-178)
+# ---------------------------------------------------------------------------
+
+def test_A_CORRECTED_FACT_REACHES_AN_ALREADY_SEEDED_DATABASE(db):
+    """*** THE GAP CHECK THAT MAKES THE SEEDER SAFE IS WHAT HIDES A CHANGE. ***
+
+    `seed_mountains` inserts only what is MISSING, so every deployment that has
+    already booted keeps the OLD text and editing `MOUNTAINS` corrects nothing
+    anywhere. D-178 is that lesson and it cost three separate fixes in one day.
+
+    So this seeds, writes the superseded sentence back as an OLD deployment would
+    hold it, re-seeds, and asserts the new sentence is there.
+    """
+    seed_mountains()
+    fuji = Mountain.query.filter_by(slug='mount-fuji').one()
+    stale = ('There is a post office at the top. '
+             'You can send a postcard from 3,776 metres.')
+    fuji.fact = stale
+    _db.session.commit()
+
+    seed_mountains()
+
+    _db.session.expire_all()
+    fixed = Mountain.query.filter_by(slug='mount-fuji').one().fact
+    assert fixed != stale, 'the correction never ran on an already-seeded row'
+    assert 'during the climbing season' in fixed, (
+        "Fuji's summit post office is seasonal, and the old text stated it as "
+        'permanent'
+    )
+
+
+def test_a_correction_LEAVES_AN_EDITED_ROW_ALONE(db):
+    """*** KEYED ON THE OLD VALUE, NOT ON THE SLUG. ***
+
+    These rows become adminPal's to edit. A correction keyed on the slug would
+    overwrite somebody's edit on every restart, which is the same defect as the
+    spending-type backfill reversing a user's choice. Keyed on the exact
+    superseded sentence, an edited row simply does not match.
+    """
+    seed_mountains()
+    fuji = Mountain.query.filter_by(slug='mount-fuji').one()
+    fuji.fact = 'Something the owner wrote by hand.'
+    _db.session.commit()
+
+    seed_mountains()
+
+    _db.session.expire_all()
+    assert (Mountain.query.filter_by(slug='mount-fuji').one().fact
+            == 'Something the owner wrote by hand.')
+
+
+def test_the_corrections_name_sentences_that_are_actually_GONE(db):
+    """A correction whose `old` text still appears in `MOUNTAINS` would fight the
+    seeder: a fresh install would insert the old sentence and the correction
+    would rewrite it on the same boot. Cheap to assert, and it catches a
+    half-finished edit where only one of the two places was updated.
+    """
+    from src.data.seed_mountains import (
+        FACT_CORRECTIONS, NOTE_CORRECTIONS, MOUNTAINS,
+    )
+    facts = {slug: (fact, note) for slug, _n, _e, fact, note in
+             ((m[0], m[1], m[2], m[3], m[4]) for m in MOUNTAINS)}
+    for slug, old, new in FACT_CORRECTIONS:
+        assert facts[slug][0] != old, f'{slug}: MOUNTAINS still holds the OLD fact'
+        assert facts[slug][0] == new, f'{slug}: MOUNTAINS does not hold the NEW fact'
+    for slug, old, new in NOTE_CORRECTIONS:
+        assert facts[slug][1] != old, f'{slug}: MOUNTAINS still holds the OLD note'
+        assert facts[slug][1] == new, f'{slug}: MOUNTAINS does not hold the NEW note'
+
+
+def test_no_fact_claims_the_post_office_is_permanent(seeded):
+    """The specific overclaim that was corrected, asserted as a property.
+
+    Not a re-statement of the sentence: it asserts the CLAIM is qualified, so a
+    future rewrite that drops the qualifier fails even if the wording changes.
+    """
+    fuji = Mountain.query.filter_by(slug='mount-fuji').one()
+    assert 'post office' in fuji.fact
+    assert any(q in fuji.fact for q in ('season', 'summer', 'July', 'August')), (
+        "Fuji's summit post office is only open during the climbing season; an "
+        'unqualified claim tells a user they can post a card in February'
+    )

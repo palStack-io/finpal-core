@@ -43,7 +43,14 @@ export interface PeakMountain {
   slug: string;
   name: string;
   elevation_m: number;
-  /** *** A DRAFT, AND A FACT IN A PRODUCT IS A CLAIM. *** Owner-unchecked. */
+  /**
+   * *** OWNER-APPROVED 2026-09-11, AND EVERY FACT WAS CHECKED FIRST. *** A fact
+   * in a product is a claim, so approval alone was not treated as sufficient:
+   * two of the six were corrected (Fuji's summit post office is seasonal;
+   * Aconcagua's ordinary route is non-technical, not "a walk"). Rendered
+   * verbatim -- never reworded or truncated in a client, or the two clients
+   * would make different claims from one row.
+   */
   fact: string | null;
   summit_note: string | null;
 }
