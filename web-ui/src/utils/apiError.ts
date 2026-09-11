@@ -58,3 +58,45 @@ export const apiErrorMessage = (error: unknown, fallback: string): string => {
 
   return fallback;
 };
+
+/**
+ * The same `details` bag, kept KEYED instead of flattened into a sentence.
+ *
+ * *** THIS LIVES HERE BECAUSE `apiErrorPrecedence.test.ts` REQUIRES IT TO. ***
+ * That guard says exactly one file may read `response.data.(error|details|message)`,
+ * and it is this one -- D-53 was not one file reading the wrong key, it was every
+ * file reading `data.error` and showing the user the constant string "Validation
+ * error". A form that wanted per-field messages and reached into the body itself
+ * would be that defect coming back one site at a time, so the extraction is here
+ * and the caller gets a plain object.
+ *
+ * `apiErrorMessage` above answers "what one sentence do I show?". This answers
+ * "which FIELD was refused?", which is what a form with three numeric inputs on it
+ * needs -- a single toast saying "must be less than or equal to 999.99" does not
+ * say which of APR, credit limit and minimum payment it means.
+ *
+ * Keys are the server's own -- snake_case column names. Mapping them to a form's
+ * field names is the form's business, not this file's.
+ */
+export const apiFieldErrors = (error: unknown): Record<string, string> => {
+  const err = error as { response?: { data?: unknown } } | undefined | null;
+  const data = err?.response?.data;
+  if (!data || typeof data !== 'object') return {};
+
+  const details = (data as { details?: unknown }).details;
+  if (!details || typeof details !== 'object') return {};
+
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(details as Record<string, unknown>)) {
+    // marshmallow sends a LIST of messages per field; a hand-written 400 may send
+    // a bare string. Take the first sentence either way -- a field can only show
+    // one line under it.
+    if (Array.isArray(value)) {
+      const first = value.find((item): item is string => typeof item === 'string');
+      if (first) out[key] = first;
+    } else if (typeof value === 'string' && value) {
+      out[key] = value;
+    }
+  }
+  return out;
+};

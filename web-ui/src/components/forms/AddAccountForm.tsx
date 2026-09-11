@@ -13,6 +13,13 @@ import { ACCOUNT_COLORS, getDefaultColorForType, colorForTypeChange } from '../.
 import { getBranding } from '../../config/branding';
 import { useAuthStore } from '../../store/authStore';
 import { parseMoneyInput } from '../../styles/money';
+import {
+  CreditFieldsControl,
+  CreditFieldValues,
+  CreditFieldName,
+  creditFieldsPayload,
+  creditFieldErrors,
+} from './CreditFieldsControl';
 
 interface AddAccountFormProps {
   onSuccess: () => void;
@@ -74,8 +81,33 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
 
   const watchType = watch('type');
   const watchColor = watch('color');
+  /**
+   * Cards and LOANS both. A loan has a rate, an original amount and a monthly
+   * payment, and leaving it out would mean learnPal could draw a mountain for a
+   * Visa and not for a car loan -- which is the half of C1a that would have been
+   * missed by reading "credit fields" as "credit cards".
+   */
+  const showsCreditTerms = watchType === 'credit' || watchType === 'loan';
 
   const [apiError, setApiError] = useState<string | null>(null);
+  /**
+   * Not part of `AccountFormValues` and not registered with react-hook-form.
+   * `CreditFieldsControl` is shared with `EditAccountForm`, which uses plain
+   * `useState` -- so the control is controlled by props in both, and holding these
+   * three in ordinary state here is what lets ONE component serve both forms.
+   * A field added to only one of them is D-99's shape.
+   */
+  const [creditFields, setCreditFields] = useState<CreditFieldValues>({
+    creditLimit: '', apr: '', minPayment: '',
+  });
+  const [creditErrors, setCreditErrors] = useState<Partial<Record<CreditFieldName, string>>>({});
+  const onCreditFieldChange = (field: CreditFieldName, value: string) => {
+    setCreditFields((prev) => ({ ...prev, [field]: value }));
+    // Clear this field's server error as soon as it is edited; leaving a stale
+    // "must be <= 999.99" under a box the user has just corrected reads as a
+    // refusal that did not happen.
+    setCreditErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  };
   const [success, setSuccess] = useState(false);
   const [walletCards, setWalletCards] = useState<WalletCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<number | ''>('');
@@ -132,6 +164,9 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
         // Omitted entirely when blank, so the server applies its own default rather
         // than being handed an empty string to interpret.
         ...(data.ownerId ? { owner_id: data.ownerId } : {}),
+        // Only for the types that HAVE terms. Spread conditionally so a checking
+        // account does not post three nulls it has no business carrying.
+        ...(showsCreditTerms ? creditFieldsPayload(creditFields) : {}),
       });
 
       if (data.type === 'credit' && selectedCardId && newAccount?.id) {
@@ -162,6 +197,10 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       // `err.message` with "Request failed with status code 400" — so reading that
       // first showed the user a status code instead of what was wrong.
       const e = err as { response?: { data?: { error?: string } }; message?: string };
+      // The server keys its refusals by column, and a bare toast would send the
+      // user hunting across three numeric inputs for which one it meant. The body
+      // is read by `utils/apiError.ts` and only there -- see `creditFieldErrors`.
+      setCreditErrors(creditFieldErrors(err));
       const msg = apiErrorMessage(e, 'Failed to create account');
       setApiError(msg);
       showToast(msg, 'error');
@@ -325,6 +364,23 @@ return (
             Transactions on this account count towards whoever it belongs to.
           </p>
         </div>
+      )}
+
+      {/* Card / loan terms — APR, limit, minimum payment. C1a. */}
+      {showsCreditTerms && (
+        <CreditFieldsControl
+          values={creditFields}
+          onChange={onCreditFieldChange}
+          // The PROFILE's symbol, matching the Initial Balance label above rather
+          // than the form's own picker. `AccountFormValues.currency` is a plain
+          // `string` and `getBranding` takes the `Currency` union, and narrowing it
+          // with a cast would be asserting something the select's markup happens to
+          // guarantee and the type system does not. Same symbol as the field above it.
+          currencySymbol={getBranding(userCurrency).currencySymbol}
+          disabled={isSubmitting}
+          accountType={watchType}
+          errors={creditErrors}
+        />
       )}
 
       {/* pointsPal rewards card link (credit only) */}

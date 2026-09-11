@@ -73,6 +73,15 @@ export interface CreateAccountData {
   is_active?: boolean;
   color?: string;
   /**
+   * B1's three columns, finally collectable. The READ side (`Account`) has typed
+   * them since B1 and the WRITE side did not, so a form could not send them
+   * without a cast -- which is the shape this project treats as a claim to verify,
+   * not a fix. `null` means "not stated"; on create it is identical to omitting.
+   */
+  credit_limit?: number | null;
+  apr?: number | null;
+  min_payment?: number | null;
+  /**
    * The household member to assign this account to — a user ID, which in finPal is
    * an email address. Omit it to assign the account to the calling user.
    *
@@ -102,6 +111,10 @@ export interface UpdateAccountData {
   color?: string;
   /** Reassign the account to a different household member. See CreateAccountData. */
   owner_id?: string;
+  /** See CreditFieldsControl. `null` CLEARS; omitting the key leaves the stored value. */
+  credit_limit?: number | null;
+  apr?: number | null;
+  min_payment?: number | null;
   /** See CreateAccountData.description (#129). */
   description?: string;
 }

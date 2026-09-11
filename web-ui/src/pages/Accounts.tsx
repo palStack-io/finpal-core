@@ -77,6 +77,18 @@ export const Accounts = () => {
         // concatenation below (`${account.color}20`) only works on a hex, too.
         color: acc.color || getDefaultColorForType(acc.account_type || 'checking'),
         creditLimit: acc.credit_limit || null,
+        // C1a. Carried through so <EditAccountForm> opens showing what is stored
+        // rather than three empty boxes -- an edit form that silently forgets a
+        // field is how a value gets cleared by someone who only came to rename
+        // the account.
+        //
+        // `??`, NOT `||`, and the difference is the whole point: `0` is a real
+        // 0% intro APR and a real minimum payment, and `||` would turn both into
+        // `null`, blank the box, and then write NULL back on the next save.
+        // `creditLimit` above keeps `||` deliberately -- a 0 limit would make the
+        // card read as maxed out, which its own type comment warns about.
+        apr: acc.apr ?? null,
+        minPayment: acc.min_payment ?? null,
         // `+ balance`, NOT `- Math.abs(balance)`. Card debt is a NEGATIVE balance
         // (verified: `balances.py::_move` applies one rule for every account type),
         // so adding it subtracts what is owed and there is no special case to get

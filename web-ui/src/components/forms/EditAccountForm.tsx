@@ -10,6 +10,14 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { ACCOUNT_COLORS, getDefaultColorForType, colorForTypeChange } from '../../constants/accountColors';
 import { getBranding, type Currency } from '../../config/branding';
 import { parseMoneyInput } from '../../styles/money';
+import {
+  CreditFieldsControl,
+  CreditFieldValues,
+  CreditFieldName,
+  creditFieldsPayload,
+  creditFieldsFromAccount,
+  creditFieldErrors,
+} from './CreditFieldsControl';
 
 interface EditAccountFormProps {
   account: any;
@@ -36,6 +44,23 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
     // account on any unrelated edit.
     ownerId: account.ownerId || ''
   });
+
+  /**
+   * C1a. Held apart from `formData` because `CreditFieldsControl` is shared with
+   * `AddAccountForm`, which drives it from react-hook-form -- the control takes
+   * values and an onChange so that ONE component can serve both. Prefilled from
+   * the row, so opening this form to rename an account cannot silently blank a
+   * rate the user entered.
+   */
+  const [creditFields, setCreditFields] = useState<CreditFieldValues>(
+    () => creditFieldsFromAccount(account)
+  );
+  const [creditErrors, setCreditErrors] = useState<Partial<Record<CreditFieldName, string>>>({});
+  const onCreditFieldChange = (field: CreditFieldName, value: string) => {
+    setCreditFields((prev) => ({ ...prev, [field]: value }));
+    setCreditErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  };
+  const showsCreditTerms = formData.type === 'credit' || formData.type === 'loan';
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +114,11 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
         description: formData.description,
         // Only sent when it names someone, so an edit made while the members list is
         // still loading cannot blank the owner.
-        ...(formData.ownerId ? { owner_id: formData.ownerId } : {})
+        ...(formData.ownerId ? { owner_id: formData.ownerId } : {}),
+        // Only for the types that have terms, and `null` for an emptied box --
+        // see `creditFieldsPayload`. Omitting the key would leave the old value
+        // behind with no error, because the handler is `if 'apr' in data`.
+        ...(showsCreditTerms ? creditFieldsPayload(creditFields) : {})
       });
 
       setSuccess(true);
@@ -102,6 +131,10 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
     } catch (err: any) {
       // Server's reason first — reassigning an account to a non-member is a
       // reachable 400, and axios's own message is only ever the status code.
+      // Field-level refusals from the same 400, keyed by column. Without this the
+      // user sees one toast and three numeric boxes and has to guess. The body is
+      // read by `utils/apiError.ts` and only there -- see `creditFieldErrors`.
+      setCreditErrors(creditFieldErrors(err));
       const msg = apiErrorMessage(err, 'Failed to update account');
       setError(msg);
       showToast(msg, 'error');
@@ -247,6 +280,23 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           style={{ resize: 'vertical' }}
         />
       </div>
+
+      {/* Card / loan terms — APR, limit, minimum payment. C1a. */}
+      {showsCreditTerms && (
+        <CreditFieldsControl
+          values={creditFields}
+          onChange={onCreditFieldChange}
+          // Same narrowing as the Balance label above (line ~235): `formData` is
+          // untyped state seeded from an `any` account row, so the cast is this
+          // file's existing idiom rather than a new claim. `|| 'USD'` matches it
+          // too -- an account row with no currency would otherwise reach
+          // `getBranding(undefined)` and lose its default.
+          currencySymbol={getBranding((formData.currency as Currency) || 'USD').currencySymbol}
+          disabled={isSubmitting}
+          accountType={formData.type}
+          errors={creditErrors}
+        />
+      )}
 
       {/* Account Number */}
       <div>
