@@ -113,7 +113,21 @@ export const RecurringTransactions: React.FC = () => {
   };
 
   return (
-    <div>
+    /* *** THE SHARED PAGE SHELL, ON ONE ELEMENT. *** `pageContainerStyle` is the
+       24px gutter and `pageMaxWidthStyle` the 1400px cap. Measured on the
+       deployed demo at 1440px: this page's content began at 240px, flush against
+       the side nav, while every page using the shell began at 264px -- the owner
+       reported the padding looking wrong "on other pages too" after the same
+       omission was fixed on Goals.
+       Combined on a single div rather than nested as Dashboard does it, because
+       the two differ only in whether the gutter sits inside or outside the cap,
+       and with a 240px side nav the cap cannot bind below a 1640px viewport --
+       so the rendered result is the same and there is no extra closing tag to
+       get wrong.
+       *** THIS FILE ALREADY IMPORTED `pageContainerStyle` AND NEVER USED IT. ***
+       The import comes from a shared barrel, so a page can look like it adopted
+       the shell while rendering a bare div. */
+    <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>

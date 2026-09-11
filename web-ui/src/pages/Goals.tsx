@@ -167,8 +167,32 @@ const GoalRow: React.FC<GoalRowProps> = ({
 
   return (
     <div
-      style={{ ...cardStyle, position: 'relative', overflow: 'hidden' }}
+      style={{
+        ...cardStyle, position: 'relative', overflow: 'hidden',
+        cursor: goal.status === 'archived' ? undefined : 'pointer',
+      }}
       data-testid={`goal-${goal.id}`}
+      /*
+       * *** A PROGRESSIVE ENHANCEMENT, NOT THE ACCESSIBLE PATH. *** The pencil
+       * button is still there and is what a keyboard or screen-reader user uses;
+       * this only saves a mouse user aiming at a 16px icon. So the card is
+       * deliberately NOT given `role="button"` or a tabindex: announcing a card
+       * that contains its own buttons, links and checkboxes as one button would
+       * make the real controls inside it unreachable, which is worse than not
+       * having the shortcut.
+       *
+       * *** AND IT MUST NOT SWALLOW THE CONTROLS IT CONTAINS. *** The card holds
+       * the archive button, the contributions toggle, the account pills and their
+       * remove buttons; `closest()` is what stops a click on any of them also
+       * opening the editor. Without it, removing an account would open a panel
+       * over the thing you were using.
+       */
+      onClick={(event) => {
+        if (goal.status === 'archived') return;
+        const target = event.target as HTMLElement;
+        if (target.closest('button, a, input, select, textarea, label')) return;
+        onEdit(goal);
+      }}
     >
       {/* C1c. *** THE SILHOUETTE IS ANCHORED TO THE FIGURES, NOT TO THE CARD. ***
           The approved mockup puts it "behind the figures, bottom-right", and on
@@ -320,14 +344,13 @@ const GoalRow: React.FC<GoalRowProps> = ({
               <Archive size={16} />
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onDelete(goal)}
-            aria-label={`Delete ${goal.name}`}
-            style={iconButtonStyle}
-          >
-            <Trash2 size={16} />
-          </button>
+          {/* *** THE BARE TRASH ICON IS GONE, AND THAT IS A SAFETY FIX RATHER
+              THAN A TIDY-UP. *** It called `deleteGoal` on a single click with
+              NO confirmation of any kind — one mis-click destroyed a goal and
+              its whole contribution history, with nothing to undo it. Delete now
+              lives inside the edit panel behind a two-step confirm, which is
+              also where the owner asked for it. Archive stays here because it is
+              reversible. */}
         </div>
       </div>
 
@@ -368,17 +391,12 @@ const GoalRow: React.FC<GoalRowProps> = ({
 
       {goal.account_id !== null && (
         <div style={{ marginTop: 12 }}>
-          {/* B12. Only on an ACTIVE goal: an archived or achieved one has released
-              its accounts, and adding one back would silently make it hold them
-              again. Archiving is how a goal lets go. */}
-          {goal.status === 'active' && (
-            <GoalAccountsControl
-              goal={goal}
-              accounts={accounts}
-              onChanged={onAccountsChanged}
-            />
-          )}
-
+          {/* *** THE ACCOUNTS CONTROL MOVED INTO THE EDIT PANEL. *** The owner
+              asked to change a goal's accounts while editing it, and it belongs
+              there: it was the only editing affordance living on the card, so
+              "edit" meant two different places. It still works through its OWN
+              routes rather than the PUT, which is why it can sit in a panel
+              whose submit deliberately sends no account keys. */}
           <button type="button" onClick={loadContributions} style={linkButtonStyle}>
             {contributions === null ? 'Who contributed?' : 'Hide contributions'}
           </button>
@@ -434,6 +452,9 @@ export const Goals: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Two-step delete: this holds the id awaiting confirmation, never a boolean,
+  // so a confirm left armed on one goal cannot apply to the next one opened.
+  const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -496,7 +517,34 @@ export const Goals: React.FC = () => {
   const closePanel = () => {
     setShowForm(false);
     setEditingId(null);
+    setConfirmingDelete(null);
     setFormError(null);
+  };
+
+  /*
+   * The panel STAYS OPEN after an account change, unlike a save. Adding two
+   * cards is one task, and closing the panel between them would make it two --
+   * and the control is showing a list the reload is about to refresh, which is
+   * the reason to reload rather than patch local state.
+   */
+  const onAccountsChangedInPanel = async () => {
+    await load();
+  };
+
+  const handleDeleteFromPanel = async () => {
+    if (editingId === null) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      await goalService.deleteGoal(editingId);
+      closePanel();
+      await load();
+    } catch (err) {
+      setFormError(apiErrorMessage(err, 'Could not delete this goal.'));
+      setConfirmingDelete(null);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUpdate = async (event: React.FormEvent) => {
@@ -578,6 +626,16 @@ export const Goals: React.FC = () => {
       showToast(apiErrorMessage(err, 'Could not delete this goal.'), 'error');
     }
   };
+
+  /*
+   * DERIVED, never stored. After a save the page reloads from the server, and a
+   * copy taken when the panel opened would show the figures the goal had BEFORE
+   * the write -- so the accounts control inside the panel would be editing a
+   * stale link set.
+   */
+  const editingGoal = editingId === null
+    ? null
+    : goals.find((candidate) => candidate.id === editingId) ?? null;
 
   return (
     /* *** GOALS WAS THE ONE PAGE THAT NEVER ADOPTED THE SHARED SHELL. ***
@@ -717,6 +775,18 @@ export const Goals: React.FC = () => {
                 <option value="personal">Just me</option>
                 <option value="household">Everyone in my household</option>
               </select>
+              {/* *** SAYS WHAT THIS DOES AND, BY OMISSION, WHAT IT DOES NOT. ***
+                  The owner asked to "reassign it to others". finPal has no owner
+                  transfer -- `GoalInput` accepts name, kind, scope, accounts,
+                  target and date, and there is no `user_id` -- so sharing is the
+                  real answer and the hint has to be honest about being sharing
+                  rather than handing over. Promising a transfer here would be a
+                  field whose effect nobody built (D-05's class). */}
+              <p className="fp-hint">
+                Sharing shows this goal to everyone in your household and lets an
+                admin change it. It stays yours — finPal cannot hand a goal over
+                to somebody else.
+              </p>
             </div>
             <div>
               <label htmlFor="goal-target-date" style={fieldLabelStyle}>
@@ -727,6 +797,28 @@ export const Goals: React.FC = () => {
                 onChange={(e) => setTargetDate(e.target.value)}
               />
             </div>
+            {/* *** CHANGING ACCOUNTS GOES THROUGH ITS OWN ROUTES, NOT THE PUT. ***
+                `PUT /goals/<id>` refuses `account_ids` and ignores `account_id`,
+                because either would rewrite the denominator of a percentage the
+                user has already been shown. `GoalAccountsControl` uses
+                `POST /goals/<id>/accounts` and `DELETE .../accounts/<id>`, which
+                snapshot each account as it joins -- so it can live here beside a
+                form whose own submit sends no account keys at all.
+
+                Only on an ACTIVE goal: an archived or achieved one has released
+                its accounts, and adding one back would silently make it hold them
+                again. Archiving is how a goal lets go. */}
+            {editingGoal && editingGoal.status === 'active'
+              && editingGoal.account_id !== null && (
+              <div>
+                <span style={fieldLabelStyle}>Accounts this goal tracks</span>
+                <GoalAccountsControl
+                  goal={editingGoal}
+                  accounts={accounts}
+                  onChanged={onAccountsChangedInPanel}
+                />
+              </div>
+            )}
             {formError && (
               <div role="alert" style={{ color: '#ef4444', fontSize: 14 }}>{formError}</div>
             )}
@@ -738,6 +830,59 @@ export const Goals: React.FC = () => {
                 Cancel
               </button>
             </div>
+
+              {/* *** DELETE LIVES HERE, BEHIND TWO CLICKS, AND IT REPLACES A BARE
+                  TRASH ICON THAT HAD NO CONFIRMATION AT ALL. *** One mis-click on
+                  the card used to destroy a goal and its contribution history with
+                  nothing to undo it. Two steps rather than a `window.confirm`: a
+                  native dialog blocks the page, cannot be styled to say WHAT is
+                  being deleted, and cannot be driven by the walks.
+
+                  The armed state holds the goal's ID and not a boolean, so a
+                  confirm left armed on one goal cannot fire on the next one
+                  opened. */}
+              {editingId !== null && (
+                <div style={{
+                  marginTop: 4, paddingTop: 16,
+                  borderTop: '1px solid var(--border-light)',
+                }}>
+                  {confirmingDelete === editingId ? (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      <p style={{ ...mutedSmallStyle, color: 'var(--text-primary)' }}>
+                        Delete <strong>{name || 'this goal'}</strong> for good? Its
+                        contribution history goes with it and this cannot be undone.
+                      </p>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={handleDeleteFromPanel}
+                          disabled={saving}
+                          style={{
+                            ...primaryButtonStyle, background: 'var(--danger-fill)',
+                          }}
+                        >
+                          <Trash2 size={16} /> {saving ? 'Deleting…' : 'Yes, delete it'}
+                        </button>
+                        <button
+                          type="button"
+                          style={secondaryButtonStyle}
+                          onClick={() => setConfirmingDelete(null)}
+                        >
+                          Keep it
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(editingId)}
+                      style={{ ...secondaryButtonStyle, color: 'var(--danger-text)' }}
+                    >
+                      <Trash2 size={16} /> Delete this goal
+                    </button>
+                  )}
+                </div>
+              )}
           </div>
         </form>
       </SlidePanel>
