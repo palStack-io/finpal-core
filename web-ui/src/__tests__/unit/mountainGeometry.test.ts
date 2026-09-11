@@ -71,11 +71,13 @@ describe('peakGeometry — paydown, "what\'s costing you"', () => {
     expect(g.height).toBe(0);
   });
 
-  it('scales by sqrt so a small peak stays visible against a large one', () => {
-    // 25/month against a 100 ceiling → sqrt(0.25) = 0.5 → half height.
+  it('compresses so a small peak stays visible against a large one', () => {
+    // 25/month against a 100 ceiling → cbrt(0.25) = 0.62996 → 63% of height.
+    // Was sqrt (0.5); changed by looking at the deployed demo, where real goals
+    // sit in the bottom fifth of a 40,000 ceiling and drew as slivers.
     const g = peakGeometry({ direction: 'paydown', accounts: [{ balance: -1500, apr: 20 }] }, C);
     expect(g.magnitude).toBeCloseTo(25, 6);
-    expect(g.height).toBeCloseTo(50, 6);
+    expect(g.height).toBeCloseTo(100 * Math.cbrt(0.25), 6);
     expect(g.unmeasured).toBe(false);
   });
 
@@ -101,11 +103,11 @@ describe('peakGeometry — accumulate, "what you\'re building"', () => {
   });
 
   it('measures DISTANCE REMAINING, not the target', () => {
-    // 10000 target, 7500 saved → 2500 remaining → sqrt(0.25) → half height.
+    // 10000 target, 7500 saved → 2500 remaining → cbrt(0.25) → 63% of height.
     const g = peakGeometry(
       { direction: 'accumulate', targetAmount: 10000, currentAmount: 7500 }, C);
     expect(g.magnitude).toBeCloseTo(2500, 6);
-    expect(g.height).toBeCloseTo(50, 6);
+    expect(g.height).toBeCloseTo(100 * Math.cbrt(0.25), 6);
   });
 
   it('an achieved goal is flat, never negative', () => {
