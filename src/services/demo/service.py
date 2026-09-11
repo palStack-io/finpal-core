@@ -226,6 +226,20 @@ class DemoService:
             DemoService._create_starter_portfolio(user)
 
 
+        # *** THE GROUND WAS £35 AND THAT MADE THE RANGE ARGUE THE OPPOSITE OF
+        # ITS POINT. D-77's SHAPE AGAIN. *** Measured 2026-09-11: demo1 had ZERO
+        # active recurring expenses, so the only ground was one card minimum.
+        #
+        # The mountain range draws obligations as the terrain the peaks rise
+        # from, and the whole argument of that layout is that YOU STAND ON THE
+        # GROUND BEFORE YOU CLIMB -- so a month with nothing spare reads as the
+        # ground being expensive rather than as the user's failure. With £35 of
+        # ground under £13,000 of peaks it says the reverse: that obligations are
+        # trivial and it is all down to you.
+        #
+        # Seeded BEFORE goals so a visitor never sees a range with bare terrain.
+        DemoService._seed_demo_recurring(user, account_data)
+
         # B1/B4. Credit terms first, then goals: a payoff goal is only legible
         # beside a limit, and the Available Credit block needs the limit anyway.
         DemoService._seed_demo_credit_terms(user)
@@ -1305,6 +1319,69 @@ class DemoService:
             svc.sync_links(goal)
             db.session.add(goal)
         db.session.flush()
+
+    @staticmethod
+    def _seed_demo_recurring(user, account_data):
+        """Recurring obligations, so the range has terrain to stand on.
+
+        *** "WHAT RECURS", NOT "WHAT IS ESSENTIAL". *** finPal knows the first
+        and cannot know the second, so these are ordinary recurring expenses and
+        carry no needs/wants flag -- there is no such flag and this must not
+        invent one by implication.
+
+        Amounts are deliberately ordinary rather than dramatic: rent dominates,
+        utilities and subscriptions fill in, and the total lands near a realistic
+        household. A demo that shows £4,000 of rent teaches nothing about a
+        layout most people will see at £1,200.
+
+        Frequencies exercise more than one branch of `ground_for`'s conversion
+        on purpose -- a weekly row is the one that catches a 4-weeks-is-a-month
+        error, which would under-report the ground by 8%.
+        """
+        from src.models.recurring import RecurringExpense
+
+        if RecurringExpense.query.filter_by(user_id=user.id).first():
+            return 0
+
+        persona = account_data['persona']
+        # (description, amount, frequency, category path hint)
+        rows = [
+            ('Rent', 1200, 'monthly'),
+            ('Council tax', 148, 'monthly'),
+            ('Electricity & gas', 96, 'monthly'),
+            ('Broadband', 34, 'monthly'),
+            ('Mobile', 18, 'monthly'),
+            ('Streaming', 16, 'monthly'),
+            # *** THE WEEKLY ROW EARNS ITS PLACE. *** 52/12, not 4 -- a weekly
+            # £15 is £65 a month, and "four weeks" is a month only eight times
+            # a year.
+            ('Weekly shop top-up', 15, 'weekly'),
+            # And an annual one, which is the other conversion branch.
+            ('Contents insurance', 132, 'yearly'),
+        ]
+        if persona == 'Investor':
+            rows.append(('Gym membership', 42, 'monthly'))
+
+        made = 0
+        now = datetime.utcnow()
+        for description, amount, frequency in rows:
+            db.session.add(RecurringExpense(
+                user_id=user.id,
+                description=description,
+                amount=Decimal(str(amount)),
+                frequency=frequency,
+                start_date=now - timedelta(days=180),
+                active=True,
+                paid_by=user.id,
+                card_used='Primary Checking',
+                split_method='none',
+                currency_code=account_data.get('currency', 'USD'),
+                transaction_type='expense',
+            ))
+            made += 1
+        db.session.commit()
+        logger.info('Seeded %s recurring obligations for %s', made, user.id)
+        return made
 
     @staticmethod
     def _seed_demo_co_owners():
