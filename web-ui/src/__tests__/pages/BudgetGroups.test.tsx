@@ -336,3 +336,63 @@ describe('the pace mark', () => {
       expect(screen.queryByText(/No pace mark/)).toBeNull();
     });
 });
+
+/**
+ * The income section — D-189.
+ *
+ * *** MONEY IN AND MONEY OUT ARE ARITHMETICALLY OPPOSITE AND USED TO RENDER
+ * IDENTICALLY. *** A budget on an income category fell into `unsorted` and was
+ * summed as planned SPENDING: on the live demo `totals.planned` went from
+ * 1,400 to 5,900 and the page told the user they had £4,500 of unearned money
+ * left to spend.
+ *
+ * The column NAMES carry the design, so they are asserted: "still to come" is
+ * money that has not ARRIVED, and an expense's "remaining" is money still
+ * available to SPEND. One heading over both is D-102's shape.
+ */
+describe('the income section', () => {
+  const withIncome = (section: Record<string, unknown> | undefined) =>
+    overview(section === undefined ? {} : { income_section: section });
+
+  it('names its columns DIFFERENTLY from the expense columns', async () => {
+    mount(withIncome({
+      planned: 4500, received: 0, still_to_come: 4500,
+      budgets: [budgetRow(9, 'Salary', 4500, 0)],
+    }));
+    const section = (await heading('Income')).closest('section') as HTMLElement;
+    expect(within(section).getByText('Expected')).toBeTruthy();
+    expect(within(section).getByText('Received')).toBeTruthy();
+    expect(within(section).getByText('Still to come')).toBeTruthy();
+    // And NOT the expense wording, which would collapse the distinction.
+    expect(within(section).queryByText('Remaining')).toBeNull();
+    expect(within(section).queryByText('Planned')).toBeNull();
+  });
+
+  it('SAYS INCOME HAS NO PACE MARK, rather than leaving a gap', async () => {
+    /*
+     * *** THE PACE COLUMN MEANS THE OPPOSITE THING FOR INCOME. *** Behind the
+     * mark on an expense is GOOD — you are underspending. On income it is BAD —
+     * the money has not arrived. And income arrives in LUMPS: a salary paid on
+     * the 26th is 0% on day 11, which is not "behind", it is not due.
+     */
+    mount(withIncome({
+      planned: 4500, received: 0, still_to_come: 4500,
+      budgets: [budgetRow(9, 'Salary', 4500, 0)],
+    }));
+    expect(await screen.findByText(/Income has no pace mark/)).toBeTruthy();
+  });
+
+  it('RENDERS NOTHING when there are no income budgets', async () => {
+    // An empty income block is a heading with nothing under it — the noise
+    // D-192's guard exists to catch.
+    mount(withIncome({ planned: 0, received: 0, still_to_come: 0, budgets: [] }));
+    await heading('Flexible');
+    expect(screen.queryByRole('heading', { level: 2, name: 'Income' })).toBeNull();
+  });
+
+  it('renders nothing on a backend older than the feature', async () => {
+    mount(withIncome(undefined));
+    await heading('Flexible');
+    expect(screen.queryByRole('heading', { level: 2, name: 'Income' })).toBeNull();
+  });
+});

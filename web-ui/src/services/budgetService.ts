@@ -88,6 +88,26 @@ export interface BudgetOverview {
   /** Absent on a backend older than the pace mark — render no tick, the same
    *  discipline as `peak` being absent from a goal payload. */
   pace?: BudgetPace;
+  /**
+   * Budgets on INCOME categories, kept out of the expense totals entirely
+   * (D-189). Absent on an older backend.
+   *
+   * *** ITS COLUMNS ARE NOT THE EXPENSE COLUMNS WEARING DIFFERENT NAMES. ***
+   * `still_to_come` is money that has not ARRIVED; an expense's `remaining` is
+   * money still available to SPEND. Rendering them under one heading is the
+   * mistake D-102 records.
+   */
+  income_section?: IncomeSection;
+}
+
+export interface IncomeSection {
+  /** What the user expects to receive. Stable all month. */
+  planned: number;
+  /** What has actually landed so far. Climbs through the month. */
+  received: number;
+  /** planned − received. NOT "remaining" — this is money yet to arrive. */
+  still_to_come: number;
+  budgets: BudgetRow[];
 }
 
 export interface CreateBudgetData {

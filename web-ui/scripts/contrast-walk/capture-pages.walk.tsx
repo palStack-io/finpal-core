@@ -563,6 +563,15 @@ beforeEach(() => {
       // Day 23 of 31 — deliberately NOT today, so a client deriving its own
       // date could not produce the same mark by coincidence.
       pace: { fraction: 0.7419, day: 23, days_in_month: 31, as_of: '2026-08-23' },
+      // *** D-189's SECTION, WITH A LONG NAME ON PURPOSE. *** Income renders
+      // above the expense groups with DIFFERENT column names, and both the
+      // headings and the "no pace mark" sentence are new text with their own
+      // colour pairs. A fixture without this measures a page that has the
+      // section and never shows it (D-165).
+      income_section: {
+        planned: 4500, received: 1500, still_to_come: 3000,
+        budgets: [budgetWalkRow(9, 'Salary from the main employer, paid monthly', 4500, 1500)],
+      },
     })),
   );
 });

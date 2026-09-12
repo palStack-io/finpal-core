@@ -3,7 +3,7 @@ import { Plus, ChevronDown, ChevronUp, Edit2, Trash2, Calendar, ChevronLeft, Che
 import { useAuthStore } from '../store/authStore';
 import { formatMoney, Money } from '../styles/money';
 import { getBranding } from '../config/branding';
-import type { BudgetPace } from '../services/budgetService';
+import type { BudgetPace, IncomeSection } from '../services/budgetService';
 import { budgetService, type Budget } from '../services/budgetService';
 import { transactionsApi, type Transaction } from '../services/api/transactions';
 import { categoriesApi, type Category } from '../services/api/categories';
@@ -196,6 +196,8 @@ const BudgetsMinimal = () => {
    * timezone would disagree with the browser beside it.
    */
   const [pace, setPace] = useState<BudgetPace | null>(null);
+  /** Budgets on INCOME categories, kept out of the expense totals (D-189). */
+  const [incomeSection, setIncomeSection] = useState<IncomeSection | null>(null);
   const [unsorted, setUnsorted] = useState<UnsortedSection>(
     { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
   const [totals, setTotals] = useState<{ planned: number; actual: number; remaining: number }>(
@@ -234,6 +236,7 @@ const BudgetsMinimal = () => {
 
       setGroups(overview?.groups || []);
       setPace(overview?.pace ?? null);
+      setIncomeSection(overview?.income_section ?? null);
       setUnsorted(overview?.unsorted
         || { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
       // `?? null`, never `|| 0`: null means "nothing recorded this month" and
@@ -1010,6 +1013,90 @@ const BudgetsMinimal = () => {
               </div>
             ) : (
               <>
+                {/* *** INCOME IS ITS OWN SECTION, ABOVE THE EXPENSES, AND ITS
+                    COLUMNS ARE NAMED DIFFERENTLY ON PURPOSE — D-189. *** Money
+                    in and money out are arithmetically opposite, and they used
+                    to render identically: a budget on an income category fell
+                    into `unsorted` and was SUMMED AS PLANNED SPENDING, so the
+                    page told the user they had £4,500 of unearned money left to
+                    spend.
+
+                    "Still to come" is not "remaining" with a different label.
+                    On an expense, remaining is money you may still SPEND; on
+                    income it is money that has not ARRIVED. One heading over
+                    both is D-102's shape, the row where a caption said net
+                    worth rose 43% while the line fell.
+
+                    Rendered only when the section EXISTS and has something in
+                    it: an empty income block on an account that has never
+                    budgeted income is a heading with nothing under it, which is
+                    the noise D-192's guard exists to catch. */}
+                {incomeSection && incomeSection.budgets.length > 0 && (
+                  <section style={groupSectionStyle}>
+                    <div style={{ ...groupHeaderStyle, cursor: 'default' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h2 style={groupTitleStyle}>Income</h2>
+                        <span className="fp-hint">
+                          {incomeSection.budgets.length}{' '}
+                          {incomeSection.budgets.length === 1 ? 'source' : 'sources'}
+                        </span>
+                      </span>
+                      <span style={{ display: 'flex', gap: '24px', alignItems: 'baseline' }}>
+                        <span style={groupFigureStyle}>
+                          <span className="fp-hint">Expected</span>
+                          <Money amount={incomeSection.planned} currency={currency} />
+                        </span>
+                        <span style={groupFigureStyle}>
+                          <span className="fp-hint">Received</span>
+                          <Money amount={incomeSection.received} currency={currency} />
+                        </span>
+                        <span style={groupFigureStyle}>
+                          <span className="fp-hint">Still to come</span>
+                          <Money amount={incomeSection.still_to_come} currency={currency} />
+                        </span>
+                      </span>
+                    </div>
+                    {/* *** THE SOURCES ARE NAMED. *** A section reading "1
+                        source" with nothing saying WHICH is D-192's shape —
+                        four anonymous budgets — one section up. Deliberately a
+                        plain list rather than the expense card: an income row
+                        has no progress bar, no pace and no overspend, so
+                        reusing that card would draw three things that mean
+                        nothing here. */}
+                    <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
+                      {incomeSection.budgets.map((row) => (
+                        <li
+                          key={row.id}
+                          style={{
+                            display: 'flex', justifyContent: 'space-between',
+                            gap: '12px', padding: '8px 4px',
+                            borderTop: '1px solid var(--border-light)',
+                          }}
+                        >
+                          <span style={{ color: 'var(--text-primary)' }}>
+                            {budgetTitle(row)}
+                          </span>
+                          <span className="fp-hint">
+                            <Money amount={row.spent} currency={currency} /> of{' '}
+                            <Money amount={row.amount} currency={currency} /> received
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="fp-hint" style={{ padding: '8px 4px 0' }}>
+                      {/* *** NO PACE MARK ON INCOME, AND SAYING SO IS THE POINT.
+                          *** For an expense, behind the mark is GOOD — you are
+                          underspending. For income it is BAD — the money has not
+                          arrived. The same phrase would reassure on one row and
+                          alarm on the other. And income arrives in LUMPS: a
+                          salary paid on the 26th is 0% on day 11 and that is not
+                          "behind", it is not due. */}
+                      Income has no pace mark — it arrives in lumps, not evenly
+                      through the month.
+                    </p>
+                  </section>
+                )}
+
                 {/* *** ALL THREE GROUPS ALWAYS RENDER, EVEN EMPTY. *** A section
                     that vanishes when it has nothing in it makes the page jump
                     around between months, and an absent group reads as "you have
