@@ -3,6 +3,7 @@ import { pointspalService, RecommendationResult } from '../service';
 import RecommendTable from '../components/RecommendTable';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
+import { useMoney } from '../../../hooks/useMoney';
 
 const CATEGORIES = [
   { label: '✈️ Travel',        value: 'travel' },
@@ -16,6 +17,7 @@ const CATEGORIES = [
 ];
 
 const BestCard: React.FC = () => {
+  const { money } = useMoney();
   const [category, setCategory] = useState('groceries');
   const [merchant, setMerchant] = useState('');
   // Empty, not a pre-filled figure. '84.50' looked like the user's own data and
@@ -186,7 +188,7 @@ const BestCard: React.FC = () => {
                 {/* Glow orb */}
                 <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
                 <div style={{ fontSize: 11, color: '#fff', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600, marginBottom: 6 }}>
-                  Best card for ${parseFloat(amount).toFixed(2)} · {catLabel}
+                  Best card for {money(parseFloat(amount))} · {catLabel}
                 </div>
                 <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff', marginBottom: 6 }}>
                   {result.winner.card_name}

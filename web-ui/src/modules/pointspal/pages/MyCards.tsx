@@ -4,6 +4,7 @@ import { pointspalService, WalletCard, CardTransaction, Program } from '../servi
 import CardFace from '../components/CardFace';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
+import { useMoney } from '../../../hooks/useMoney';
 
 // ── Common category slugs shown for manual earn-rate entry ───────────────────
 
@@ -31,6 +32,7 @@ interface CardEditModalProps {
 }
 
 const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel }) => {
+  const { money } = useMoney();
   const [programQuery, setProgramQuery] = useState('');
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
@@ -304,7 +306,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         {p.tpg_cpp != null && <div style={{ fontSize: 11, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, color: 'var(--g-ink)' }}>{p.tpg_cpp}¢/pt</div>}
-                        {p.annual_fee != null && <div style={microTextStyle}>${p.annual_fee}/yr</div>}
+                        {p.annual_fee != null && <div style={microTextStyle}>{money(p.annual_fee)}/yr</div>}
                       </div>
                     </button>
                   ))}
@@ -520,6 +522,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
 // ── MyCards page ──────────────────────────────────────────────────────────────
 
 const MyCards: React.FC = () => {
+  const { money } = useMoney();
   const [cards, setCards] = useState<WalletCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -705,7 +708,7 @@ const MyCards: React.FC = () => {
                         <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--ink)' }}>
                           {cap.rate}×{' '}
                           {cap.cap_amount
-                            ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>to ${cap.cap_amount.toLocaleString()}/{cap.cap_period}</span>
+                            ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>to {money(cap.cap_amount)}/{cap.cap_period}</span>
                             : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>no cap</span>
                           }
                         </span>
@@ -793,7 +796,7 @@ const MyCards: React.FC = () => {
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
                               <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--g-ink)' }}>+{txn.pts_earned.toLocaleString()} pts</div>
-                              <div style={microTextStyle}>${txn.amount.toFixed(2)}</div>
+                              <div style={microTextStyle}>{money(txn.amount)}</div>
                             </div>
                           </div>
                         ))
