@@ -3,8 +3,211 @@ import { Repeat, Plus, X, Check, AlertCircle, Sparkles, Eye, EyeOff, Trash2, Edi
 import { recurringService, RecurringExpense, RecurringPattern } from '../services/recurringService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { Modal } from './Modal';
+import { formActionsStyle, labelStyle } from '../styles/formStyles';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
+
+/**
+ * What amount to send for a typed string.
+ *
+ * *** A TYPED MINUS IS A USER SAYING "OUT", NOT INVALID INPUT. *** Direction
+ * lives in `transaction_type`, so `-1200` is somebody expressing it the other
+ * way round; refusing it teaches a rule they cannot see, and normalising costs
+ * nothing. One convention for direction, not two — the importer stores
+ * `abs(amount)` for the same reason, and the transfer matcher pairs equal
+ * amounts with opposite TYPES, so a negative stored here would stop it finding
+ * them.
+ *
+ * Exported and unit-tested rather than exercised through the form: driving a
+ * modal to assert one arithmetic rule was flaky across tests and proved less.
+ */
+export const recurringAmount = (typed: string): number => {
+  const n = Number(typed);
+  return Number.isFinite(n) ? Math.abs(n) : NaN;
+};
+
+/**
+ * Create a recurring transaction by hand — D-193.
+ *
+ * *** THE TYPE SELECTOR IS THE POINT, NOT A FIELD AMONG FIELDS. *** The API has
+ * accepted `transaction_type: 'income'` since #133 -- `POST /recurring` answers
+ * 201 and stores it, verified against the live demo -- and no client has ever
+ * offered the choice, so every recurring row on every instance is an expense.
+ * The budget redesign's planned income is defined as *"the sum of ACTIVE
+ * recurring rows with `transaction_type = 'income'`"*, which nobody could
+ * produce. D-99's shape: an affordance missing from a client is not a
+ * capability missing from the API.
+ *
+ * Deliberately SMALL. Category and account pickers are not here: the endpoint
+ * takes them as optional, the detected-pattern path already fills them in, and
+ * a form that asks for everything is a form people abandon. They can be added
+ * when somebody asks.
+ */
+const AddRecurringModal: React.FC<{
+  onClose: () => void;
+  onCreated: () => void;
+  onError: (message: string) => void;
+}> = ({ onClose, onCreated, onError }) => {
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [frequency, setFrequency] =
+    useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [transactionType, setTransactionType] =
+    useState<'expense' | 'income'>('expense');
+  // Defaults to today rather than empty: `start_date` decides when the first
+  // instance is written, and an empty date is not a question most people want.
+  const [startDate, setStartDate] = useState(
+    () => new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+
+  const amountValue = recurringAmount(amount);
+  const valid = description.trim().length > 0
+    && Number.isFinite(amountValue) && amountValue > 0;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid || saving) return;
+    setSaving(true);
+    try {
+      await recurringService.createRecurringExpense({
+        description: description.trim(),
+        // *** THE AMOUNT IS ALWAYS POSITIVE AND THE DIRECTION IS THE TYPE. ***
+        // The importer stores `abs(amount)` with the direction in
+        // `transaction_type`, so a negative typed here would be a second
+        // convention for the same fact.
+        amount: amountValue,
+        frequency,
+        transaction_type: transactionType,
+        start_date: startDate,
+      });
+      onCreated();
+    } catch (err) {
+      onError(apiErrorMessage(err, 'Could not create this recurring transaction.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title="New recurring transaction">
+      <form onSubmit={submit} style={flexColGap16}>
+        <div>
+          <label style={labelStyle} htmlFor="rec-desc">Description</label>
+          <input
+            id="rec-desc"
+            aria-label="Description"
+            className="fp-input"
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Rent, salary, insurance…"
+            autoFocus
+          />
+        </div>
+
+        <div style={flexRowGap12}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle} htmlFor="rec-amount">Amount</label>
+            <input
+              id="rec-amount"
+            aria-label="Amount"
+              className="fp-input"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle} htmlFor="rec-type">Money in or out</label>
+            {/* *** THE CONTROL D-193 EXISTS FOR. *** Without it every recurring
+                row is an expense, and planned income has no source. */}
+            <select
+              id="rec-type"
+            aria-label="Money in or out"
+              className="fp-input"
+              value={transactionType}
+              onChange={(e) =>
+                setTransactionType(e.target.value as 'expense' | 'income')}
+            >
+              <option value="expense">Money out — an expense</option>
+              <option value="income">Money in — income</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={flexRowGap12}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle} htmlFor="rec-freq">How often</label>
+            <select
+              id="rec-freq"
+            aria-label="How often"
+              className="fp-input"
+              value={frequency}
+              onChange={(e) => setFrequency(
+                e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly')}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle} htmlFor="rec-start">Starts</label>
+            <input
+              id="rec-start"
+            aria-label="Starts"
+              className="fp-input"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div style={formActionsStyle}>
+          {/* *** AN INLINE STYLE, NOT A CLASS NAME. *** My first version used
+              `fp-btn-secondary`, which does not exist in any stylesheet — and a
+              class with no rule renders silently unstyled, which is D-60.
+              `cssClassesAreDefined.test.ts` caught it by name. */}
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '10px 20px',
+              background: 'transparent',
+              border: '1px solid var(--border-light)',
+              borderRadius: '8px',
+              color: 'var(--text-secondary)',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!valid || saving}
+            style={{
+              padding: '10px 20px',
+              background: valid && !saving
+                ? 'var(--brand-main-green)' : 'var(--surface-hover)',
+              border: 'none',
+              borderRadius: '8px',
+              color: valid && !saving ? 'white' : 'var(--text-secondary)',
+              fontWeight: 600,
+              cursor: valid && !saving ? 'pointer' : 'not-allowed',
+            }}
+          >
+            {saving ? 'Saving…' : 'Create'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
 
 export const RecurringTransactions: React.FC = () => {
   const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
@@ -128,7 +331,7 @@ export const RecurringTransactions: React.FC = () => {
        The import comes from a shared barrel, so a page can look like it adopted
        the shell while rendering a bare div. */
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' , flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
             Recurring Transactions
@@ -158,7 +361,41 @@ export const RecurringTransactions: React.FC = () => {
           <Sparkles size={16} />
           {detectingPatterns ? 'Detecting...' : 'Detect Patterns'}
         </button>
+        {/* *** D-193: THIS SCREEN COULD NOT CREATE THE THING IT LISTS. *** Its
+            only route in was "Detect Patterns", which finds a recurrence in
+            transactions you ALREADY have — so a salary not yet imported, an
+            irregular bill, or anything on a fresh instance could not be
+            recorded. `showAddModal` had been declared since the file was
+            written and appeared exactly once: the fossil of a form nobody
+            finished. */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          style={{
+            padding: '12px 20px',
+            background: 'var(--brand-main-green)',
+            border: 'none',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <Plus size={16} />
+          New Recurring
+        </button>
       </div>
+
+      {showAddModal && (
+        <AddRecurringModal
+          onClose={() => setShowAddModal(false)}
+          onCreated={() => { setShowAddModal(false); loadRecurring(); }}
+          onError={setError}
+        />
+      )}
 
       {/* Error Message */}
       {error && (
