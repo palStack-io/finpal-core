@@ -32,6 +32,26 @@ class Category(db.Model):
     # The defaults are applied ONCE, at seed time or by the boot backfill, and
     # read from the column thereafter -- see services/category/spending_type.py.
     spending_type = db.Column(db.String(12), nullable=True)
+
+    # *** IS THIS CATEGORY MONEY IN OR MONEY OUT? D-189. ***
+    # finPal could not tell, because it has never had a column for it: income
+    # and expense live on the TRANSACTION (`transaction_type`), and the seeded
+    # "Income" tree is a naming convention a user can rename. So a budget on
+    # *Salary* was accepted, bucketed as `unsorted` and SUMMED AS PLANNED
+    # SPENDING -- measured on the live demo, `totals.planned` went 1,400 to
+    # 5,900 and `remaining` to 5,554.46, telling the user they had £4,500 of
+    # unearned money left to spend. `left_to_budget` then subtracts the same row
+    # from income, corrupting it in both directions at once.
+    #
+    #   'income'   money arriving. Drives PLANNED INCOME, never planned spending.
+    #   'expense'  money leaving.
+    #   NULL       NOT STATED -- and that is a real state, not a missing value.
+    #
+    # *** NULL IS COUNTED AS AN EXPENSE IN THE TOTALS AND IS NEVER LABELLED ONE.
+    # *** Owner decision, 2026-09-12. The totals have to put it somewhere and
+    # expense is the safe default; calling it one on screen would be a claim
+    # nobody made. The user can set it, and once set it is never overwritten.
+    kind = db.Column(db.String(10), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
