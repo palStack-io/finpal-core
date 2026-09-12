@@ -481,6 +481,31 @@ Knowing where a map stops being accurate is part of reading it.
 }
 
 
+#: *** TWO SENTENCES WERE REWORDED, NOT JUST STRIPPED, AND THE DEPLOY IS WHAT
+#: SAID SO. *** `strip_currency_symbols` correctly refused them: it only writes
+#: back when stripping lands EXACTLY on `BODIES`, and for these two it could not,
+#: because the new text also changed words. The live demo went 10 symbolic bodies
+#: -> 2, and these are the 2.
+#:
+#: `what-inflation-does-to-cash` is the one that explains why a strip alone was
+#: never going to be enough: the old text said *"does not lose any pounds ... what
+#: those pounds buy"*, and **"pounds" is a currency in WORDS**. No symbol rule
+#: reaches that.
+#:
+#: Keyed on the exact superseded sentence, `FACT_CORRECTIONS` style -- so it can
+#: only ever replace the specific wrong text, and a row somebody edited does not
+#: match. The result still has to equal `BODIES` afterwards, which is what stops
+#: a half-applied correction writing prose that exists nowhere.
+_PHRASE_CORRECTIONS = [
+    ('sinking-funds',
+     '600 of car tax is 50 a month you',
+     'A 600 car-tax bill is 50 a month you'),
+    ('what-inflation-does-to-cash',
+     'Money kept as cash does not lose any pounds. It loses what those pounds buy.',
+     'Money kept as cash keeps its number. What changes is what that number buys.'),
+]
+
+
 _SYMBOL_BEFORE_A_DIGIT = re.compile(r'[£$€](?=\d)')
 
 
@@ -508,7 +533,14 @@ def strip_currency_symbols():
         wanted = BODIES.get(row.slug)
         if wanted is None or row.body_md == wanted:
             continue
-        if _SYMBOL_BEFORE_A_DIGIT.sub('', row.body_md) == wanted:
+        candidate = _SYMBOL_BEFORE_A_DIGIT.sub('', row.body_md)
+        for slug, old, new in _PHRASE_CORRECTIONS:
+            if slug == row.slug and old in candidate:
+                candidate = candidate.replace(old, new, 1)
+        # The safety check is unchanged and does all the work: write back ONLY
+        # if the transformation lands exactly on the approved text. A partially
+        # applied correction would otherwise store prose that exists nowhere.
+        if candidate == wanted:
             row.body_md = wanted
             changed += 1
     if changed:

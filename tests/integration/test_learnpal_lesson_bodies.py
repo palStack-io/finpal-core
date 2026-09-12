@@ -190,3 +190,90 @@ def test_a_second_boot_strips_nothing(db):
     seed_milestones()
 
     assert strip_currency_symbols() == 0
+
+
+# *** THE TWO BODIES THE 2026-09-12 DEPLOY LEFT BEHIND, VERBATIM FROM THE LIVE
+# DEMO DATABASE. *** Not written by hand: `strip_currency_symbols` took the demo
+# from 10 symbolic bodies to 2, and these are the 2 it refused. They are here so
+# the fix is tested against what production actually held, rather than against a
+# reconstruction of it.
+_LIVE_SINKING_FUNDS = """### Leaving supplies along the route
+
+Some costs are certain and simply not monthly: car tax, insurance renewals, a boiler
+service, Christmas. They are not emergencies — you know they are coming and roughly what
+they cost — but they arrive as a lump and land like a shock.
+
+A sinking fund is the unglamorous fix: divide the yearly cost by twelve and set that aside
+each month, so the bill is already paid when it arrives. £600 of car tax is £50 a month you
+barely notice instead of £600 you did not have in March.
+
+**This is what finPal's Non-Monthly spending group is for.** A cost marked Non-Monthly is
+one the app knows will not appear every month, so a month without it is not you doing well
+and a month with it is not you overspending.
+
+The honest limitation: this only works if the money is somewhere you will not spend it.
+A sinking fund in your current account is a number in your head."""
+
+_LIVE_INFLATION = """### The slow change you do not feel
+
+Money kept as cash does not lose any pounds. It loses what those pounds buy. At 3% a year,
+£10,000 still says £10,000 in twelve months and buys roughly what £9,700 buys today.
+
+Nothing dramatic happens over one year. Over ten it is the difference between a buffer that
+still covers three months and one that covers two.
+
+**What this does not mean is that cash is a mistake.** A buffer's job is being there on the
+day you need it, and that job requires it to be boring and instantly available. Paying a
+little for that is the cost of the guarantee, not a failure to optimise.
+
+**What it does mean is that a large pile of cash with no job is losing quietly.** Once the
+buffer covers the gap it is for, money beyond it has somewhere better to be — against debt,
+or invested — and leaving it in cash is a decision rather than a default.
+
+This is also why a savings goal set years out and never revisited drifts: the target was
+priced in today's money and the thing you are saving for will not be.
+
+> **finPal does not track an inflation rate** and does not adjust any figure for one. Every
+> number in the app is in today's money."""
+
+
+# *** THE TRAILING NEWLINE IS PART OF THE STORED VALUE. *** `psql -tA` drops it
+# and the first version of this fixture lost it, so the correction refused on a
+# one-character difference and the test read as a real failure. The rows were
+# written from `BODIES`, whose entries end in a newline, so it is restored here
+# rather than the correction being loosened to ignore whitespace -- an exact
+# comparison is the whole safety property.
+@pytest.mark.parametrize('slug,stored', [
+    ('sinking-funds', _LIVE_SINKING_FUNDS + '\n'),
+    ('what-inflation-does-to-cash', _LIVE_INFLATION + '\n'),
+])
+def test_it_fixes_the_two_bodies_a_symbol_strip_could_not(db, slug, stored):
+    """*** A STRIP ALONE CANNOT REACH A CURRENCY WRITTEN IN WORDS. ***
+
+    The inflation lesson said *"does not lose any pounds ... what those pounds
+    buy"*. No symbol rule reaches that, which is why these two needed an explicit
+    phrase correction and why the deploy found them rather than the suite.
+    """
+    seed_milestones()
+    _db.session.execute(
+        text('UPDATE learn_milestones SET body_md = :b WHERE slug = :s'),
+        {'b': stored, 's': slug})
+    _db.session.commit()
+    assert _body_in_db(slug) != BODIES[slug], 'fixture already matches — proves nothing'
+
+    assert strip_currency_symbols() == 1
+    assert _body_in_db(slug) == BODIES[slug]
+
+
+def test_a_phrase_correction_still_refuses_an_edited_body(db):
+    """The safety check survives the new path: land on BODIES or do nothing."""
+    seed_milestones()
+    theirs = (_LIVE_INFLATION + '\n').replace('The slow change you do not feel',
+                                              'Our own heading for this one')
+    _db.session.execute(
+        text('UPDATE learn_milestones SET body_md = :b WHERE slug = :s'),
+        {'b': theirs, 's': 'what-inflation-does-to-cash'})
+    _db.session.commit()
+
+    assert strip_currency_symbols() == 0
+    assert _body_in_db('what-inflation-does-to-cash') == theirs
