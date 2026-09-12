@@ -51,6 +51,25 @@ export interface UnsortedSection {
   budgets: BudgetRow[];
 }
 
+/**
+ * Today's position in the month — the pace mark.
+ *
+ * *** SENT ONCE FOR THE WHOLE PAYLOAD, NOT PER BUDGET. *** Every row shares it,
+ * so per-row would repeat one number N times and invite a client to derive its
+ * own. Two clients working out "today" independently is D-101's rule, and worse
+ * than for money: a phone in another timezone would draw the mark in a different
+ * place from the browser beside it.
+ */
+export interface BudgetPace {
+  /** 0..1, INCLUSIVE of today — day 1 of 30 is 1/30, not 0. A budget on the 1st
+   *  has had a day to be spent in, and a mark at zero would say a single coffee
+   *  puts you ahead. */
+  fraction: number;
+  day: number;
+  days_in_month: number;
+  as_of: string;
+}
+
 export interface BudgetOverview {
   total_budget: number;
   total_spent: number;
@@ -66,6 +85,9 @@ export interface BudgetOverview {
   income: number | null;
   /** null whenever `income` is null. Negative when over-committed. */
   left_to_budget: number | null;
+  /** Absent on a backend older than the pace mark — render no tick, the same
+   *  discipline as `peak` being absent from a goal payload. */
+  pace?: BudgetPace;
 }
 
 export interface CreateBudgetData {

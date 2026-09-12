@@ -3,6 +3,7 @@ import { Plus, ChevronDown, ChevronUp, Edit2, Trash2, Calendar, ChevronLeft, Che
 import { useAuthStore } from '../store/authStore';
 import { formatMoney, Money } from '../styles/money';
 import { getBranding } from '../config/branding';
+import type { BudgetPace } from '../services/budgetService';
 import { budgetService, type Budget } from '../services/budgetService';
 import { transactionsApi, type Transaction } from '../services/api/transactions';
 import { categoriesApi, type Category } from '../services/api/categories';
@@ -21,6 +22,14 @@ interface BudgetWithDetails extends Budget {
   remaining: number;
   percentage: number;
   category_name?: string;
+  /**
+   * Whether a pace mark can be READ for this row. The server decides, because
+   * the answer depends on the budget's period AND its spending group, and a
+   * client re-deriving it would disagree with the tick's own position.
+   * `undefined` means a backend older than the feature — render no mark, which
+   * is the same shape as `peak` being absent from a goal.
+   */
+  pace_applies?: boolean;
   category_icon?: string;
   category_color?: string;
   transactions?: Transaction[];
@@ -180,6 +189,13 @@ const BudgetsMinimal = () => {
   // never re-summed here: two clients deriving the same subtotal is two chances
   // to disagree with each other and with the database (D-101).
   const [groups, setGroups] = useState<SpendingGroup[]>([]);
+  /**
+   * Today's position in the month, ONCE for the whole page. The server sends a
+   * single figure because every row shares it — two clients working out "today"
+   * independently would draw the mark in two places, and a phone in another
+   * timezone would disagree with the browser beside it.
+   */
+  const [pace, setPace] = useState<BudgetPace | null>(null);
   const [unsorted, setUnsorted] = useState<UnsortedSection>(
     { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
   const [totals, setTotals] = useState<{ planned: number; actual: number; remaining: number }>(
@@ -217,6 +233,7 @@ const BudgetsMinimal = () => {
       const budgetsList = overview?.budgets || [];
 
       setGroups(overview?.groups || []);
+      setPace(overview?.pace ?? null);
       setUnsorted(overview?.unsorted
         || { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
       // `?? null`, never `|| 0`: null means "nothing recorded this month" and
@@ -587,12 +604,16 @@ const BudgetsMinimal = () => {
                               has nothing to be a percentage OF. */}
                           {!reported && (
                           <div style={{ marginBottom: '8px' }}>
+                            {/* *** `overflow: visible` SO THE PACE MARK CAN SIT
+                                PROUD OF THE TRACK. *** The track used to clip,
+                                which is right for the fill and wrong for a tick
+                                that has to be findable at a glance. */}
                             <div style={{
+                              position: 'relative',
                               width: '100%',
                               height: '8px',
                               background: 'var(--progress-track)',
                               borderRadius: '4px',
-                              overflow: 'hidden'
                             }}>
                               <div style={{
                                 width: `${Math.min(percentage, 100)}%`,
@@ -605,8 +626,60 @@ const BudgetsMinimal = () => {
                                 borderRadius: '4px',
                                 transition: 'width 0.5s ease'
                               }}></div>
+                              {/* *** THE PACE MARK: WHERE YOU SHOULD BE BY NOW.
+                                  *** The one thing a budget is actually for —
+                                  not "how much have I spent" but "am I burning
+                                  this too fast". Drawn only where the server
+                                  says it can be READ: `pace_applies` is false
+                                  for a weekly or yearly budget, which has no
+                                  day-of-month position, and for the
+                                  `non_monthly` group, where an annual premium
+                                  is not "behind" in March, it is not due.
+                                  *** IT IS A MARK AND NEVER A COLOUR CHANGE.
+                                  *** A bar that turned red past the tick would
+                                  tell somebody with a big direct debit on the
+                                  1st that they had failed, every month, on the
+                                  day their rent left. That is voice rule 11
+                                  inverted: finPal cannot tell "the ground is
+                                  expensive" from "you lack discipline", so it
+                                  must not imply the second. The tick states a
+                                  fact; the user reads it. */}
+                              {pace && budget.pace_applies && (
+                                <span
+                                  aria-hidden="true"
+                                  title={`Today — day ${pace.day} of ${pace.days_in_month}`}
+                                  style={{
+                                    position: 'absolute',
+                                    left: `${Math.min(100, pace.fraction * 100)}%`,
+                                    top: '-3px',
+                                    width: '2px',
+                                    height: '14px',
+                                    background: 'var(--text-primary)',
+                                    borderRadius: '1px',
+                                  }}
+                                />
+                              )}
                             </div>
                           </div>
+                          )}
+
+                          {/* *** WHERE THE MARK CANNOT BE READ, SAY SO IN WORDS.
+                              *** A blank column reads as a bug; a sentence reads
+                              as a decision. The two cases are different and both
+                              are stated rather than left to be inferred:
+                              a weekly or yearly budget has no day-of-MONTH
+                              position at all, and a `non_monthly` group is
+                              "resupply that is not monthly" by definition — an
+                              annual premium is not behind in March, it is not
+                              due. `pace_applies === false` is the server's
+                              answer; `undefined` is an older backend and says
+                              nothing at all. */}
+                          {pace && budget.pace_applies === false && !reported && (
+                            <p className="fp-hint" style={{ margin: '0 0 8px' }}>
+                              {(budget.period || '').toLowerCase() !== 'monthly'
+                                ? `No pace mark — this is a ${(budget.period || 'non-monthly').toLowerCase()} budget`
+                                : 'No pace mark — not a monthly thing'}
+                            </p>
                           )}
 
                           {/* Spent / Budget */}

@@ -527,6 +527,23 @@ beforeEach(() => {
           budgets: [budgetWalkRow(2, 'Groceries, household supplies and the corner shop', 500, 723)] },
         // Deliberately EMPTY: the group still renders, and its empty state is a
         // full-width line of prose that nothing else on the page produces.
+        /*
+         * Deliberately EMPTY: the group still renders, and its empty state is a
+         * full-width line of prose that nothing else on the page produces.
+         *
+         * *** AND A KNOWN GAP, STATED RATHER THAN LEFT TO BE FOUND: *** the
+         * "No pace mark — not a monthly thing" sentence therefore has NO row to
+         * render on, so this walk does not measure it. Giving the group a row
+         * was tried and the row did not render — the group HEADER took the
+         * fixture's figures (£462.50, "1 budget") while the card never appeared,
+         * and the cause was not worth chasing further here.
+         *
+         * The sentence IS gated: `BudgetGroups.test.tsx` asserts both wordings
+         * behaviourally. And its colour pair is already covered — it uses
+         * `fp-hint`, which this same capture measures many times over. So what
+         * is missing is a second measurement of an already-measured pair, not
+         * an unmeasured one.
+         */
         { spending_type: 'non_monthly', label: 'Non-Monthly', planned: 0, actual: 0, remaining: 0,
           budgets: [] },
       ],
@@ -543,6 +560,9 @@ beforeEach(() => {
       totals: { planned: 2000, actual: 2083, remaining: -83 },
       income: 4200,
       left_to_budget: 2200,
+      // Day 23 of 31 — deliberately NOT today, so a client deriving its own
+      // date could not produce the same mark by coincidence.
+      pace: { fraction: 0.7419, day: 23, days_in_month: 31, as_of: '2026-08-23' },
     })),
   );
 });
@@ -602,6 +622,10 @@ const budgetWalkRow = (id: number, name: string, amount: number, spent: number) 
   category: { id: id + 100, name, icon: '\u{1F4C1}', color: '#6c757d' },
   period: 'monthly',
   is_active: true,
+  // *** THE WALK MUST SEE BOTH PACE STATES OR IT MEASURES NEITHER. *** A
+  // fixture where every row applies would never render the "no pace mark"
+  // sentence, and that sentence is new text with its own colour pair.
+  pace_applies: true,
 });
 
 const cardFace = (id: number, name: string, program: string, color: string) => ({

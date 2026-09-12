@@ -241,3 +241,98 @@ describe('Budgets page groups', () => {
     expect(within(section).getByText('No non-monthly budgets yet.')).toBeTruthy();
   });
 });
+
+/**
+ * The pace mark — where you should be by now.
+ *
+ * *** THIS IS THE ONE MISSING CAPABILITY ON THIS PAGE. *** Everything else on
+ * the Monarch gap list is layout over figures finPal already had; a budget's
+ * whole job is to answer "am I burning this too fast", and until now the page
+ * could not.
+ *
+ * The REFUSALS carry the design, so they are asserted harder than the mark
+ * itself: a tick drawn on a yearly premium in March says "behind" about
+ * something that is not due, and that is the false alarm which teaches people
+ * to ignore the indicator that matters.
+ */
+describe('the pace mark', () => {
+  /**
+   * *** THESE NUMBERS MUST NOT MATCH TODAY'S REAL DATE, AND THE FIRST VERSION
+   * DID. *** It used `day: 12 of 30` -> 40%, on a day that really was the 12th
+   * of a 30-day month, so a sabotage replacing the server's fraction with
+   * `new Date().getDate() / 30` produced the IDENTICAL 40% and the test passed.
+   * The fixture could not tell the two apart.
+   *
+   * Day 23 of 31 is 74.19% and cannot collide with a client-derived figure on
+   * any day of any month — which is what makes "the client did not derive this"
+   * an assertion rather than a coincidence.
+   */
+  const PACE = { fraction: 0.7419, day: 23, days_in_month: 31, as_of: '2026-08-23' };
+
+  const withPace = (rowExtra: Record<string, unknown>) => overview({
+    pace: PACE,
+    groups: [
+      {
+        spending_type: 'flexible', label: 'Flexible',
+        planned: 400, actual: 100, remaining: 300,
+        budgets: [{ ...budgetRow(1, 'Groceries', 400, 100), ...rowExtra }],
+      },
+    ],
+  });
+
+  const ticks = (c: HTMLElement) =>
+    c.querySelectorAll('[title^="Today — day"]');
+
+  it('draws the mark at the server\'s fraction, not one the client derived', async () => {
+    const { container } = mount(withPace({ pace_applies: true }));
+    await heading('Flexible');
+    const mark = ticks(container)[0] as HTMLElement;
+    expect(mark).toBeTruthy();
+    // 0.4 -> 40%. If the client recomputed "today" it would drift from the
+    // server's figure, which is the whole reason pace is sent and not derived.
+    expect(mark.style.left).toBe('74.19%');
+    expect(mark.getAttribute('title')).toContain('day 23 of 31');
+    // And it is NOT what a client would compute from the real calendar today.
+    const derived = `${(new Date().getDate() / 31) * 100}%`;
+    expect(mark.style.left).not.toBe(derived);
+  });
+
+  it('DRAWS NOTHING when the server says the mark cannot be read', async () => {
+    const { container } = mount(withPace({ pace_applies: false }));
+    await heading('Flexible');
+    expect(ticks(container).length).toBe(0);
+  });
+
+  it('SAYS WHY instead of leaving the row blank — a yearly budget', async () => {
+    // *** A BLANK COLUMN READS AS A BUG; A SENTENCE READS AS A DECISION. ***
+    mount(withPace({ pace_applies: false, period: 'yearly' }));
+    expect(await screen.findByText(/No pace mark — this is a yearly budget/))
+      .toBeTruthy();
+  });
+
+  it('SAYS WHY for a monthly budget in the non-monthly group', async () => {
+    // The case a period check alone would miss: the period IS monthly, and the
+    // group still means "resupply that is not monthly".
+    mount(withPace({ pace_applies: false, period: 'monthly' }));
+    expect(await screen.findByText(/No pace mark — not a monthly thing/))
+      .toBeTruthy();
+  });
+
+  it('draws nothing and says nothing on a backend older than the feature',
+    async () => {
+      // `pace` absent entirely. Same discipline as `peak` missing from a goal:
+      // render the old thing, never an "unmeasured" state that was not reported.
+      const body = overview({
+        groups: [{
+          spending_type: 'flexible', label: 'Flexible',
+          planned: 400, actual: 100, remaining: 300,
+          budgets: [budgetRow(1, 'Groceries', 400, 100)],
+        }],
+      });
+      delete (body as Record<string, unknown>).pace;
+      const { container } = mount(body);
+      await heading('Flexible');
+      expect(ticks(container).length).toBe(0);
+      expect(screen.queryByText(/No pace mark/)).toBeNull();
+    });
+});
