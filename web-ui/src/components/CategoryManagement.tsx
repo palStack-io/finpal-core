@@ -287,7 +287,11 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
             background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
             border: 'none',
             borderRadius: '8px',
-            color: 'var(--text-primary)',
+            /* White, not `--text-primary`: a filled green button's label sits on
+               the brand green in BOTH themes while `--text-primary` flips with the
+               page, so one theme always loses -- 2.83:1 light, 4.32:1 dark, against
+               4.5. White is 5.02:1 on the gradient's first stop. D-103. */
+            color: 'white',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -469,7 +473,20 @@ export const CategoryManagement: React.FC = () => {
             background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
             border: 'none',
             borderRadius: '8px',
-            color: 'var(--text-primary)',
+            /* *** WHITE, NOT `--text-primary`. *** A filled green button's label
+               sits on the brand green in BOTH themes while `--text-primary`
+               flips with the page, so one of the two always loses: measured
+               2.83:1 in light (#17301f on #15803d) and 4.32:1 in dark (#e9f0e6),
+               against a 4.5 requirement. White measures 5.02:1 on the gradient's
+               first stop.
+
+               *** THIS EXACT FIX ALREADY EXISTED IN `Investments.tsx`, WITH THE
+               SAME RATIOS WRITTEN OUT, AND THIS BUTTON DID NOT HAVE IT. *** A
+               convention recorded in one file and in CLAUDE.md ("do NOT use
+               `var(--text-primary)` on coloured buttons") is not adoption --
+               which is D-106's shape, one layer over. The contrast walk is what
+               found the second site. D-103. */
+            color: 'white',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -576,7 +593,8 @@ export const CategoryManagement: React.FC = () => {
                 background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                 border: 'none',
                 borderRadius: '8px',
-                color: 'var(--text-primary)',
+                /* White, not `--text-primary` — see the Add Category button above. D-103. */
+                color: 'white',
                 fontSize: '14px',
                 fontWeight: '600',
                 cursor: 'pointer',

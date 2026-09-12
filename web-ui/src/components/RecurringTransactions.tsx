@@ -528,7 +528,11 @@ export const RecurringTransactions: React.FC = () => {
                     background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                     border: '1px solid rgba(21, 128, 61, 0.5)',
                     borderRadius: '8px',
-                    color: 'var(--text-primary)',
+                    /* White, not `--text-primary`: a filled green button's label sits on
+                       the brand green in BOTH themes while `--text-primary` flips with the
+                       page, so one theme always loses -- 2.83:1 light, 4.32:1 dark, against
+                       4.5. White is 5.02:1 on the gradient's first stop. D-103. */
+                    color: 'white',
                     fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer'
