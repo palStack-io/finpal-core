@@ -404,6 +404,78 @@ def test_the_mountain_tables_exist_even_with_learnpal_disabled(db, app, monkeypa
 # The client's height ceiling and the top band's floor are ONE number
 # ---------------------------------------------------------------------------
 
+def _client_shared_file_paths(name):
+    """web-ui's copy of a shared client file, and mobile's if present.
+
+    *** TWO CLIENTS, TWO GIT REPOS, ONE FILE — AND NOTHING BUT THIS KEEPS THEM
+    THE SAME. *** `mountainGeometry.ts` and `mountainSilhouettes.ts` are copied
+    byte-for-byte rather than published as a package, so the only thing standing
+    between them and a silent divergence is a test that reads both as BYTES.
+    A peak drawn from one file and measured against another is D-185's class.
+
+    mobile/ lives in the OUTER repo, so CI clones finpal_core without it. The
+    web-ui copy must always be found; mobile's is checked only when present,
+    because a skip would hide the web failure too.
+    """
+    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    web = os.path.join(here, 'web-ui', 'src', 'utils', name)
+    mob = os.path.join(os.path.dirname(here), 'mobile', 'src', 'utils', name)
+    return web, (mob if os.path.exists(mob) else None)
+
+
+SHARED_CLIENT_FILES = ('mountainSilhouettes.ts', 'peakCopy.ts')
+
+
+@pytest.mark.parametrize('filename', SHARED_CLIENT_FILES)
+def test_THE_SHARED_CLIENT_FILES_ARE_BYTE_IDENTICAL(db, filename):
+    """*** PARAMETRISED SO ADDING A SHARED FILE MEANS ADDING A NAME, NOT A TEST.
+    *** A guard that has to be remembered is a guard that goes blind -- and this
+    project has the row for it: a gate's coverage is a lower bound on the shapes
+    it can see. `peakCopy.ts` says in its own header that it is meant to be
+    duplicated "byte-for-byte rather than merely equivalently"; nothing enforced
+    that until now.
+    """
+    web, mob = _client_shared_file_paths(filename)
+    assert os.path.exists(web), web
+    if mob is None:
+        pytest.skip('mobile/ is not in this checkout (CI clones finpal_core alone)')
+    with open(web, 'rb') as fh:
+        web_bytes = fh.read()
+    with open(mob, 'rb') as fh:
+        mob_bytes = fh.read()
+    assert web_bytes == mob_bytes, (
+        f'web-ui/src/utils/{filename} and mobile/src/utils/{filename} have '
+        'diverged. They are copied by hand between two git repos and this test '
+        'is the only thing that keeps them the same -- diff them.')
+
+
+def test_THE_SILHOUETTE_TABLE_IS_BYTE_IDENTICAL_ON_BOTH_CLIENTS(db):
+    """*** THE SHAPES THEMSELVES, NOT JUST THE ARITHMETIC. ***
+
+    `mountainGeometry.ts` was already pinned; `mountainSilhouettes.ts` carries
+    the six band outlines and their box heights, and it crossed to mobile on
+    2026-09-12. One client drawing Everest with a different ridge from the other
+    is the same failure as one computing a different height, and it is the
+    easier of the two to introduce by hand.
+
+    Compares BYTES. Not an import, not a transpile, not a parsed AST -- every
+    mechanism that could make a human edit invisible is one this test must not
+    use (D-45: a gate that compiles nothing exits 0 for ever).
+    """
+    web, mob = _client_shared_file_paths('mountainSilhouettes.ts')
+    assert os.path.exists(web), web
+    if mob is None:
+        pytest.skip('mobile/ is not in this checkout (CI clones finpal_core alone)')
+    with open(web, 'rb') as fh:
+        web_bytes = fh.read()
+    with open(mob, 'rb') as fh:
+        mob_bytes = fh.read()
+    assert web_bytes == mob_bytes, (
+        'web-ui/src/utils/mountainSilhouettes.ts and mobile/src/utils/'
+        'mountainSilhouettes.ts have diverged. They are copied by hand and this '
+        'is the only thing that keeps them the same -- diff them.')
+
+
 def _client_geometry_paths():
     """web-ui's copy, and mobile's if this checkout has it.
 

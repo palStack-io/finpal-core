@@ -35,6 +35,26 @@ class Expense(db.Model):
     transaction_type = db.Column(db.String(20), server_default='expense')  # 'expense', 'income', 'transfer'
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.id', name='fk_expense_account'), nullable=True)
     external_id = db.Column(db.String(200), nullable=True)  # For tracking external transaction IDs
+
+    # *** THE TWO LEGS OF ONE TRANSFER, LINKED — AND DELIBERATELY NOT MERGED. ***
+    # Money moved between two of the user's own accounts arrives as two rows: a
+    # debit on one and a credit on the other. Both become `transaction_type =
+    # 'transfer'` and share this id.
+    #
+    # They are NOT collapsed into a single row. An import is a record of what the
+    # bank said, and merging two statement lines into one breaks reconciliation
+    # against that statement and cannot be undone faithfully. Budgets already
+    # exclude `transfer` (D-183), so the exclusion costs nothing extra.
+    #
+    # NULL means "not part of a matched pair", which is the ordinary case and
+    # also the honest answer for a one-sided transfer finPal cannot see the other
+    # half of.
+    transfer_group_id = db.Column(db.String(36), nullable=True, index=True)
+
+    # Where `transaction_type` came from, so a later sync cannot undo a person.
+    # 'user' is set by an explicit correction and is NEVER overwritten by an
+    # import or by the matcher; NULL means the importer's own reading.
+    type_source = db.Column(db.String(10), nullable=True)
     import_source = db.Column(db.String(50), nullable=True)  # 'csv', 'simplefin', 'manual'
     notes = db.Column(db.Text, nullable=True)
     import_batch_id = db.Column(

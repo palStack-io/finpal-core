@@ -126,6 +126,35 @@ const toIsoDate = (date: Date): string => {
   return `${date.getFullYear()}-${month}-${day}`;
 };
 
+/**
+ * What to call a budget — D-192.
+ *
+ * *** THIS PAGE HAS TWO RENDERING PATHS AND THE KEY EXISTED ON ONLY ONE. ***
+ * The flat list goes through `enrichedBudgets`, which BUILDS `category_name`.
+ * The grouped view is handed `overview.groups` straight from the API, where the
+ * name lives NESTED at `category.name` and `category_name` does not exist at
+ * all. The heading printed `budget.category_name`, so every grouped budget
+ * rendered an EMPTY `<h2>` — four anonymous budgets, and nothing on the page
+ * saying which was which.
+ *
+ * It read as empty rather than as "Uncategorized" precisely because the mapper
+ * never ran; that is what proved there were two paths rather than one broken
+ * lookup.
+ *
+ * One helper, used by both, so a third convention cannot appear. `budget.name`
+ * is the budget's OWN optional label and is checked first because a user who
+ * named a budget meant it.
+ */
+export const budgetTitle = (budget: {
+  name?: string | null;
+  category_name?: string | null;
+  category?: { name?: string | null } | null;
+}): string =>
+  budget.name?.trim()
+  || budget.category_name?.trim()
+  || budget.category?.name?.trim()
+  || 'Uncategorized';
+
 const BudgetsMinimal = () => {
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');
@@ -493,7 +522,7 @@ const BudgetsMinimal = () => {
                                 so h3 skipped one. Size is inline; nothing moves
                                 on screen. Caught by the E2E heading check. */}
                             <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                              {budget.category_name}
+                              {budgetTitle(budget)}
                             </h2>
                             {/* Edited in place, on the screen that shows the
                                 classification -- spec §4: a default the user

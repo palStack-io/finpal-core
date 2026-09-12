@@ -22,6 +22,54 @@ import { apiErrorMessage } from '../utils/apiError';
 const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
 const actionBtnStyle: React.CSSProperties = { padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' };
 
+/**
+ * How long since this account last pulled anything, and how worried to look.
+ *
+ * *** THE ACCOUNTS PAGE ALREADY RENDERED A SYNC LINE AND IT ALWAYS SAID
+ * "Never". *** `Account.last_sync` has existed and been maintained since the
+ * SimpleFin integration shipped; it was simply never serialized (D-191 §4). So
+ * this is not new information, it is information that was always there.
+ *
+ * *** THE COLOURS ARE THE THEME'S OWN TOKENS, NOT LITERALS, AND WERE MEASURED
+ * IN BOTH THEMES. *** `--au-ink` is 4.88:1 light and 9.67:1 dark; `--re-ink` is
+ * 6.28 and 5.83. A hardcoded amber that passes on the light card fails on the
+ * dark one -- that exact pair failed at 3.12:1 on the goal card in September.
+ */
+const DAY = 86400000;
+
+const syncAgeDays = (iso: string | null): number | null => {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? null : Math.floor((Date.now() - t) / DAY);
+};
+
+/** A connected account that has NEVER synced is the worrying case, not a quiet
+ *  one: it is linked and has pulled nothing. Manual accounts never reach here. */
+export const syncLabel = (iso: string | null): string => {
+  const days = syncAgeDays(iso);
+  if (days === null) return 'Connected, but never synced';
+  if (days <= 0) return 'Synced today';
+  if (days === 1) return 'Synced yesterday';
+  if (days <= 7) return `Synced ${days} days ago`;
+  return `Not synced for ${days} days`;
+};
+
+export const syncTone = (iso: string | null): string => {
+  const days = syncAgeDays(iso);
+  if (days === null) return 'var(--re-ink)';
+  // Seven days, because a daily sync missing one day is a blip and missing a
+  // week is a broken connection. Below the threshold this must look like
+  // ordinary metadata -- a page where everything is amber says nothing.
+  return days > 7 ? 'var(--au-ink)' : 'var(--text-muted)';
+};
+
+/* Matches the link-buttons elsewhere in the app. Deliberately an inline style:
+   a Tailwind-shaped class resolves to no rule at all here (D-60). */
+const linkButtonStyle: React.CSSProperties = {
+  padding: 0, background: 'none', border: 'none', color: 'var(--g-ink)',
+  cursor: 'pointer', fontSize: '12px', textDecoration: 'underline',
+};
+
 export const Accounts = () => {
   const { showToast } = useToast();
   const { user } = useAuthStore();
@@ -54,7 +102,16 @@ export const Accounts = () => {
         type: acc.account_type || 'checking',
         balance: acc.balance || 0,
         currency: acc.currency_code || 'USD',
+        // *** THIS LINE WAS ALWAYS CORRECT AND ALWAYS READ 'Never'. *** The
+        // column has existed and been maintained by `SimpleFinService` since the
+        // integration shipped; it was simply never SERIALIZED, so the client had
+        // been ready for this data the whole time and had nothing to render
+        // (D-191 §4). The schema now carries it.
         lastSync: acc.last_sync ? new Date(acc.last_sync).toLocaleDateString() : 'Never',
+        lastSyncAt: acc.last_sync || null,
+        importSource: acc.import_source || null,
+        // Whether `type` was a decision or a default. See `Account.type_source`.
+        typeSource: acc.type_source || null,
         // No `trend` here any more. It was `{ value: 2.3, direction: 'up' }` for
         // every account on every load, rendered as a green upward 2.3% beside
         // each balance. There is no balance history to derive one from.
@@ -361,9 +418,33 @@ export const Accounts = () => {
                           <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
                             {account.institution} • {account.accountNumber}
                           </p>
-                          <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
-                            Last synced: {account.lastSync}
-                          </p>
+                          {/* *** ONLY CONNECTED ACCOUNTS HAVE ANYTHING TO BE
+                              STALE ABOUT. *** A "never synced" note on an
+                              account somebody types by hand is noise, and noise
+                              teaches people to ignore the notice that matters. */}
+                          {account.importSource && (
+                            <p style={{
+                              color: syncTone(account.lastSyncAt),
+                              fontSize: '12px', margin: 0,
+                            }}>
+                              {syncLabel(account.lastSyncAt)}
+                            </p>
+                          )}
+                          {/* A guess must read as a question, never as a fact
+                              (D-191). `user` says nothing — the person chose it. */}
+                          {account.typeSource && account.typeSource !== 'user' && (
+                            <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
+                              {account.typeSource === 'inferred'
+                                ? <>we think this is a <strong>{account.type}</strong> account — <button
+                                    type="button"
+                                    onClick={() => setEditingAccount(account)}
+                                    style={linkButtonStyle}>change it</button></>
+                                : <>type not set — <button
+                                    type="button"
+                                    onClick={() => setEditingAccount(account)}
+                                    style={linkButtonStyle}>set it</button></>}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -393,9 +474,7 @@ export const Accounts = () => {
                             balance history to compute a trend from, so the row
                             shows the balance and nothing more. */}
                         <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
-                          {account.lastSync === 'Never'
-                            ? account.institution
-                            : `Synced ${account.lastSync}`}
+                          {account.institution}
                         </p>
                       </div>
 
