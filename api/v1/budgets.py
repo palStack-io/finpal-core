@@ -8,6 +8,7 @@ from schemas import budget_schema, budgets_schema
 from schemas.input_schemas import budget_input
 from src.utils.validation import validate_request, validation_error_response
 from src.services.budget.service import BudgetService
+from src.services.budget.pace import pace_applies, pace_for
 from datetime import datetime
 import logging
 from src.models.personal_access_token import SCOPE_READ
@@ -319,6 +320,12 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
     groups = []
     for value in VALID_SPENDING_TYPES:
         rows = buckets[value]
+        # Whether a pace mark can be read for this group at all. A
+        # `non_monthly` group is *resupply that is not monthly* by definition:
+        # an annual premium is not "behind" in March, it is not due, and
+        # colouring it as behind invents an urgency the data does not support.
+        for row in rows:
+            row['pace_applies'] = pace_applies(row.get('period'), value)
         planned = round(sum(_f(r['amount']) for r in rows), 2)
         actual = round(sum(_f(r['spent']) for r in rows), 2)
         groups.append({
@@ -460,6 +467,16 @@ class BudgetOverview(Resource):
                 'totals': group_totals,
                 'income': income,
                 'left_to_budget': left_to_budget,
+                # *** ONE PACE FIGURE FOR THE WHOLE PAYLOAD, NOT ONE PER ROW. ***
+                # Every budget shares today's position in the month, so per-row
+                # would repeat the same number N times and invite a client to
+                # derive its own — and two clients working out "today"
+                # independently is worse than for money: a phone in another
+                # timezone would draw the mark in a different place from the
+                # browser beside it. `pace_applies` decides PER ROW whether the
+                # mark means anything, and the client says why in words when it
+                # does not.
+                'pace': pace_for(),
             }, 200
 
         except Exception as e:
