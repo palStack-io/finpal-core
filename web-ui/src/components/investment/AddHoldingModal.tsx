@@ -9,6 +9,7 @@ import { investmentService } from '../../services/api/investments';
 import { useToast } from '../../contexts/ToastContext';
 import { labelStyle } from '../../styles/formStyles';
 import { apiErrorMessage } from '../../utils/apiError';
+import { useMoney } from '../../hooks/useMoney';
 
 interface Portfolio {
   id: number;
@@ -32,6 +33,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
   const { showToast } = useToast();
   const [step, setStep] = useState<'search' | 'details'>('search');
   const [symbol, setSymbol] = useState('');
+  const { money } = useMoney();
   const [stockData, setStockData] = useState<any>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -326,7 +328,13 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                 </div>
                 {stockData.price && (
                   <div style={{ color: 'var(--brand-light-green)', fontSize: '24px', fontWeight: '700' }}>
-                    ${stockData.price.toFixed(2)}
+                    {/* *** A STOCK PRICE IS NOT ALWAYS IN DOLLARS. *** `yfinance.py`
+                        supports London (GBP), Toronto (CAD), Paris and Amsterdam
+                        (EUR) among others, and the quote carries `currency_code`
+                        for exactly that reason -- so a hardcoded `$` here showed
+                        a London-listed holding's £142.50 as $142.50. The quote's
+                        own currency wins; the profile default is the fallback. */}
+                    {money(stockData.price, stockData.currency_code)}
                   </div>
                 )}
               </div>

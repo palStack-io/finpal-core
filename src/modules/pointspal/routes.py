@@ -13,6 +13,9 @@ from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from src.utils.household import default_currency_for, number_locale_for
+from src.utils.money import format_money
+
 # ---------------------------------------------------------------------------
 # Namespaces
 # ---------------------------------------------------------------------------
@@ -647,6 +650,12 @@ class OverviewView(Resource):
 
         # Recent activity from spend totals
         recent_activity = []
+        # Read once for the whole loop below rather than per row. `number_locale`
+        # is nullable and `format_money` takes None for "the app default", so no
+        # fallback string is invented here.
+        currency = default_currency_for(user_id)
+        locale = number_locale_for(user_id)
+
         all_totals = (
             SpendPeriodTotal.query
             .filter(SpendPeriodTotal.user_card_id.in_([c.id for c in cards]))
@@ -660,7 +669,17 @@ class OverviewView(Resource):
                 'card_name': card_name,
                 'dot_color': _DOT_COLORS[idx % len(_DOT_COLORS)],
                 'description': f'{t.category.title()} spend',
-                'subtitle': f'${t.total_spent:.0f} this month',
+                # *** THE SERVER BUILDS THIS STRING, SO NO CLIENT CAN FIX IT. ***
+                # It was `f'${t.total_spent:.0f} this month'` -- a hardcoded
+                # dollar sign on a figure rendered straight into the pointsPal
+                # overview (`Overview.tsx` prints `{act.card_name} ·
+                # {act.subtitle}`), so a user whose currency is GBP read "$450
+                # this month" beside amounts the client had correctly drawn in
+                # pounds. `format_money` is a deliberate mirror of
+                # `web-ui/src/styles/money.tsx`, so this now reads identically
+                # to every other figure on the page rather than merely being
+                # in the right unit.
+                'subtitle': f'{format_money(t.total_spent, currency, locale, whole_units=True)} this month',
                 'pts_earned': int(t.total_pts_earned or 0),
                 'pts_missed': int(t.total_pts_missed or 0),
             })

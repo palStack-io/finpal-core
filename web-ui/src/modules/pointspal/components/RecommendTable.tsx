@@ -1,6 +1,7 @@
 import React from 'react';
 import type { RecommendCard, DisplacedWinner } from '../service';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../../../styles/layoutStyles';
+import { useMoney } from '../../../hooks/useMoney';
 
 interface RecommendTableProps {
   cards: RecommendCard[];
@@ -29,6 +30,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
   category,
   amount,
 }) => {
+  const { money } = useMoney();
   return (
     <div>
       {/* Sub-header */}
@@ -41,7 +43,7 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
             marginBottom: 10,
           }}
         >
-          ${amount.toFixed(2)} · {category} · cap-aware
+          {money(amount)} · {category} · cap-aware
         </div>
       )}
 

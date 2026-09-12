@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { CapCard } from '../service';
+import { useMoney } from '../../../hooks/useMoney';
 
 interface CapProgressCardProps extends CapCard {
   isOpen: boolean;
@@ -59,6 +60,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
   isOpen,
   onToggle,
 }) => {
+  const { money } = useMoney();
   const cfg = statusConfig[status];
   const noCap = cap_amount === null;
 
@@ -176,7 +178,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
           color: 'var(--ink3)',
         }}
       >
-        <span>${spent.toLocaleString()} spent</span>
+        <span>{money(spent)} spent</span>
         <b style={{ color: status === 'capped' ? 'var(--re-ink)' : 'var(--ink3)' }}>
           {noCap
             ? 'No cap — no action needed'

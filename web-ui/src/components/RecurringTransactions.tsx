@@ -5,6 +5,8 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../utils/apiError';
 import { Modal } from './Modal';
 import { formActionsStyle, labelStyle } from '../styles/formStyles';
+import { useAuthStore } from '../store/authStore';
+import { formatMoney } from '../styles/money';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 
@@ -218,6 +220,36 @@ export const RecurringTransactions: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPatternsSection, setShowPatternsSection] = useState(false);
+
+  /**
+   * *** THIS SCREEN PRINTED A LITERAL `$` AND NOTHING ELSE ON IT DID. ***
+   *
+   * Both amount rows were JSX text of the form `Amount: <strong>${'$'}{x.toFixed(2)}
+   * </strong>`, where the dollar is a plain character and only the braces
+   * interpolate -- so it read as a template literal and was not one. A user set
+   * to GBP saw `$450.00` here while every other figure in the app rendered in
+   * pounds, which is the worst version of the bug: not obviously broken, just
+   * quietly wrong about the unit.
+   *
+   * `formatMoney` rather than a local `toFixed`: it is the single formatter
+   * (D-145 -- `formatCurrency` was once defined five times and the copies
+   * disagreed on both the unit AND the number of decimals), and it already
+   * follows the user's number locale.
+   *
+   * A SAVED recurring row carries its own `currency_code`, so that wins where it
+   * is set -- a standing order in another currency is a real thing -- and the
+   * profile default is the fallback.
+   *
+   * A DETECTED pattern does not, and the typecheck is what said so: it is derived
+   * from transactions and has never been saved, and neither the detect endpoint
+   * nor its model carries a currency. So detected rows take the profile default,
+   * and that asymmetry is deliberate rather than an oversight. Checked against
+   * the API, not just the interface -- the TypeScript here has disagreed with
+   * what the server sends five times.
+   */
+  const user = useAuthStore((state) => state.user);
+  const money = (amount: number, currencyCode?: string) =>
+    formatMoney(amount, { currency: currencyCode || user?.default_currency_code || 'USD' });
 
   useEffect(() => {
     loadRecurring();
@@ -468,7 +500,12 @@ export const RecurringTransactions: React.FC = () => {
                   </h4>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     <span style={metaTextStyle}>
-                      Amount: <strong style={{ color: 'var(--brand-light-green)' }}>${pattern.amount.toFixed(2)}</strong>
+                      {/* *** THE `$` HERE WAS A LITERAL CHARACTER IN JSX TEXT, NOT A
+                          TEMPLATE. *** `${'{'}x{'}'}` reads like an interpolation and is not one:
+                          the dollar was printed verbatim, so every detected pattern
+                          showed `$450.00` to a user whose currency is anything else --
+                          beside amounts the rest of the app had drawn correctly. */}
+                      Amount: <strong style={{ color: 'var(--brand-light-green)' }}>{money(pattern.amount)}</strong>
                     </span>
                     <span style={metaTextStyle}>
                       Frequency: <strong style={{ color: 'var(--brand-light-green)' }}>{getFrequencyLabel(pattern.frequency)}</strong>
@@ -580,7 +617,7 @@ export const RecurringTransactions: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                   <span style={metaTextStyle}>
-                    Amount: <strong style={{ color: 'var(--brand-light-green)' }}>${item.amount.toFixed(2)}</strong>
+                    Amount: <strong style={{ color: 'var(--brand-light-green)' }}>{money(item.amount, item.currency_code)}</strong>
                   </span>
                   <span style={metaTextStyle}>
                     Frequency: <strong style={{ color: 'var(--brand-light-green)' }}>{getFrequencyLabel(item.frequency)}</strong>

@@ -369,6 +369,22 @@ def default_currency_for(user_id, fallback='USD'):
     return getattr(user, 'default_currency_code', None) or fallback
 
 
+def number_locale_for(user_id):
+    """The user's BCP-47 number-format tag, or `None` for the app default.
+
+    Beside `default_currency_for` for the reason that one gives: a server-rendered
+    figure needs BOTH — the unit and the grouping — and a caller that reached for
+    `User` itself would be a second place for the pair to drift. `None` is a real
+    answer here and is NOT replaced with a fallback string: `format_money` reads it
+    as "use the app default", and inventing `'en-US'` at this layer would make a
+    user who never chose one indistinguishable from a user who chose American.
+    """
+    from src.models.user import User
+
+    user = User.query.filter_by(id=user_id).first()
+    return getattr(user, 'number_locale', None) if user else None
+
+
 def display_name(user_id, name=None):
     """Something printable for a user, **never `None`** (D-154).
 

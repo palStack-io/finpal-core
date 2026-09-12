@@ -5,8 +5,10 @@ import CardFace from '../components/CardFace';
 import StaleCardBanner from '../components/StaleCardBanner';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
+import { useMoney } from '../../../hooks/useMoney';
 
 const PointsPalOverview: React.FC = () => {
+  const { money } = useMoney();
   const navigate = useNavigate();
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,7 +200,7 @@ const PointsPalOverview: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--muted)' }}>
                       <span>≈ <b style={{ color: 'var(--ink3)' }}>${card.est_value_usd.toLocaleString()}</b></span>
-                      <span>Fee: <b>${card.annual_fee}/yr</b></span>
+                      <span>Fee: <b>{money(card.annual_fee)}/yr</b></span>
                     </div>
                     {card.expiry_alert && (
                       <div style={{ fontSize: 10, color: 'var(--au-ink)', marginTop: 4, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600 }}>
