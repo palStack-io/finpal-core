@@ -166,8 +166,17 @@
   }
 
   const mr = modal.getBoundingClientRect();
+  /**
+   * *** A SECOND STUB SIGNAL, BECAUSE PROSE IS FEW ELEMENTS AND LOTS OF TEXT.
+   * *** `total` alone reads a fully-rendered lesson reader -- a heading, four
+   * paragraphs and an aside, 1,374 characters of approved copy -- as a stub at
+   * 17 elements, while a form half that long passes at 30. Element count
+   * answers "how much structure is there", not "did the content render", and
+   * the panel this walk exists to measure is the case where those two diverge.
+   */
+  const chars = (modal.textContent || '').replace(/\s+/g, ' ').trim().length;
   window.__MODAL = {
-    total, vw,
+    total, chars, vw,
     name: modal.getAttribute('data-fp-modal'),
     root: { left: Math.round(mr.left), right: Math.round(mr.right), width: Math.round(mr.width) },
     offenders, scrollers, tables,

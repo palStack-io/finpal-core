@@ -197,17 +197,30 @@ def test_A_PREDICATE_UNLOCK_HAS_NO_GOAL_AND_SAYS_SO_RATHER_THAN_None_NAMED(
 
 def test_recent_reports_has_body_so_no_reader_is_offered_for_empty_prose(
         user, app):
-    """C1b seeds the ROWS and C1d fills the bodies, so an unlocked lesson with
-    nothing to read is an expected state — eleven approved drafts are unseeded
-    and four are deliberately unwritten. A client that opens a reader on one
-    shows a blank page."""
+    """A lesson with nothing to read must not be offered a reader.
+
+    *** THIS USED TO ASSERT `without_body == TOTAL` AND THAT WAS AN ERA, NOT A
+    RULE. *** It was true for exactly as long as C1d had not happened: the
+    seeder now fills all nineteen bodies, so pinning "every lesson is empty"
+    made the test fail on the change it was supposed to survive. What it is
+    actually about is that the field tells the truth about the column, so the
+    body is emptied here deliberately — in RAW SQL, because a Python-side
+    `default=` fills in for `None` at INSERT and an ORM-built NULL asserts
+    nothing (D-155).
+    """
+    from sqlalchemy import text
+    _db.session.execute(
+        text("UPDATE learn_milestones SET body_md = NULL WHERE slug = :s"),
+        {'s': 'what-your-apr-costs'})
     _db.session.add(LearnCompletion(user_id=user.id,
                                     milestone_slug='what-your-apr-costs',
                                     verified_by='read'))
     _db.session.commit()
     row = stats_for_user(user.id)['recent'][0]
     assert row['has_body'] is False
-    assert stats_for_user(user.id)['lessons']['without_body'] == TOTAL
+    # exactly the one that was emptied, so the count is discriminating rather
+    # than a restatement of the seeder
+    assert stats_for_user(user.id)['lessons']['without_body'] == 1
 
 
 def test_recent_is_NEWEST_FIRST(user, app):

@@ -1,11 +1,11 @@
-"""Seed the milestone ROWS so the engine is demonstrable before the prose lands.
+"""Seed the milestone ROWS, and fill the prose C1d moved into the database.
 
-*** THE ROWS ARE C1b; THE PROSE IS C1d. *** A milestone with `body_md = NULL` is
-unlockable and simply has nothing to read yet, which is a better state than a
-lesson that exists only in a design document. The eight below are the ones the
-owner READ AND APPROVED on 2026-09-10
-(`docs/superpowers/specs/2026-09-10-learnpal-lesson-drafts.md`); their bodies
-are filled in by C1d.
+*** THE ROWS WERE C1b; THE PROSE IS C1d AND IT HAS LANDED. *** All nineteen
+milestones now carry their approved body -- see `lesson_bodies.py`, which holds
+the text and the condition-keyed correction that reaches a deployment already
+holding the rows. A milestone with `body_md = NULL` remains a legitimate state
+for any lesson whose prose is not written; it is no longer the state of all of
+them.
 
 Idempotent and CONDITION-KEYED, never version-keyed (D-178): it inserts a row
 only when that slug is absent, so it can run at every boot and cannot undo an
@@ -17,6 +17,7 @@ reversing a user's choice.
 import logging
 
 from src.extensions import db
+from src.modules.learnpal.lesson_bodies import BODIES, apply_bodies
 from src.modules.learnpal.models import LearnMilestone
 
 logger = logging.getLogger(__name__)
@@ -60,10 +61,12 @@ MILESTONES = [
     # unlocked for nobody on a stack with no scheduler. learnPal's `on_startup`
     # catch-up is what actually hands them out.
     #
-    # `body_md` is not in this tuple and is NULL for every row here AND for the
-    # eight above -- the prose lives in the draft docs and reaching the database
-    # is C1d. `has_body: false` is a real state the clients render as "no
-    # write-up yet" rather than offering a reader onto blank space.
+    # `body_md` is not in this tuple because it is not per-row data: C1d moved
+    # all nineteen approved bodies into `lesson_bodies.BODIES`, keyed by slug,
+    # and both the insert below and `apply_bodies()` read them from there.
+    # `has_body: false` is still a real state -- a milestone whose prose has not
+    # been written gets no entry in `BODIES` and the clients render "no write-up
+    # yet" rather than offering a reader onto blank space.
     #
     # The eight new `check_type`s are defined in `checks.py`; each names a rule
     # the draft did NOT specify, so each carries the decision in its docstring.
@@ -101,7 +104,16 @@ MILESTONES = [
 
 
 def seed_milestones():
-    """Insert any missing milestone. Returns how many were created."""
+    """Insert any missing milestone, then fill any body never written.
+
+    *** TWO PATHS, BECAUSE A FILL IS NOT AN INSERT (D-178). *** A fresh
+    deployment gets its prose from the `body_md=` below, at insert. Every
+    deployment that booted during C1b and C1c already holds all nineteen rows
+    with `body_md` NULL and never enters that loop at all, so `apply_bodies()`
+    runs UNCONDITIONALLY afterwards and is the only thing those stacks see.
+    Gating it behind `if created` would make it a no-op on exactly the
+    deployments it exists for.
+    """
     existing = {row[0] for row in db.session.query(LearnMilestone.slug).all()}
     created = 0
     for order, (slug, title, gear, at, check, args, direction, surface) in \
@@ -113,9 +125,14 @@ def seed_milestones():
             unlock_at_progress=at, check_type=check, check_args=args,
             applies_to_direction=direction, surface=surface,
             sort_order=order,
+            # `.get`, not `[]`: a milestone may legitimately ship before its
+            # prose does -- that is the `has_body: false` state the clients
+            # already render, and four lessons are deliberately unwritten.
+            body_md=BODIES.get(slug),
         ))
         created += 1
     if created:
         db.session.commit()
         logger.info('learnPal: seeded %s milestone(s)', created)
+    apply_bodies()
     return created

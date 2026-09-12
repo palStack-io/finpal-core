@@ -187,8 +187,17 @@ for (const file0 of MODALS) {
        * The capture now drives that modal to its form (36 elements), and the smallest
        * HONEST state in the set is `csvimport-complete` at 29 — a tick and two lines,
        * fully rendered. 25 sits below that and above the stub.
+       *
+       * *** AND 25 ELEMENTS IS THE WRONG QUESTION FOR A PANEL OF PROSE. *** The
+       * lesson reader renders a heading, four paragraphs and an aside — 17
+       * elements and 1,374 characters — and the count alone called it a stub
+       * while a shorter form passed at 30. So a dialog clears the guard on
+       * EITHER signal: enough structure, or enough text. A modal captured
+       * before it opened has neither; there is no state that has one because it
+       * failed to render. The 400 floor is a third of the shortest real body
+       * and roughly ten times what a backdrop plus a close button carries.
        */
-      if (out.total < 25) {
+      if (out.total < 25 && (out.chars ?? 0) < 400) {
         console.error(`[${name}/${theme}/${width}] only ${out.total} laid-out elements in the modal — walking a stub, not a dialog`);
         hardErrors += 1;
         continue;
