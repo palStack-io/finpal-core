@@ -9,6 +9,13 @@ reached from the goal write path and the nightly task, and it stays that way:
 nothing here unlocks anything. These are read endpoints over state the engine
 produced, plus one explicit "I read it" write.
 
+*** AND "THE GOAL WRITE PATH" WAS FICTION UNTIL D-187. *** The sentence above
+was written before anything called `evaluate_for_goal`, so for the whole of
+C1b and C1c the nightly cron was the only entry point in existence — and the
+llm demo has no scheduler, so every read endpoint here truthfully reported
+`read: 0 of 8` to a user with a finished goal. **A route is not evidence that
+the thing behind it has ever run.**
+
 *** EVERY ROUTE HERE VANISHES WHEN THE MODULE IS OFF, *** because the namespace
 is only registered through the manifest. A client must therefore treat a 404 on
 these paths as "learnPal is not installed" and render nothing, NOT as an error --
@@ -21,6 +28,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.extensions import db
 from src.modules.learnpal.models import LearnCompletion, LearnMilestone
 from src.modules.learnpal.range import range_for_user
+from src.modules.learnpal.stats import stats_for_user
 
 learnpal_ns = Namespace('learnpal', description='learnPal lessons, gear and the range')
 
@@ -36,6 +44,22 @@ class LearnRange(Resource):
         """
         user_id = get_jwt_identity()
         return {'success': True, 'range': range_for_user(user_id)}, 200
+
+
+@learnpal_ns.route('/stats')
+class LearnStats(Resource):
+    @jwt_required()
+    def get(self):
+        """The learnPal HOME: progress, the hardest climb, and what is next.
+
+        *** NOT MORE KEYS ON `/range`. *** `range.py` serves four surfaces off
+        one payload, including the strip that draws on every goal card; adding
+        home-only fields would make all four carry them. See `stats.py`'s header
+        for the rest of the reasoning, and for why there is no points figure
+        anywhere in it.
+        """
+        user_id = get_jwt_identity()
+        return {'success': True, 'stats': stats_for_user(user_id)}, 200
 
 
 @learnpal_ns.route('/lessons')

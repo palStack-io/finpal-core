@@ -144,6 +144,16 @@ def seed_mountains():
     # every row would otherwise return early-ish and never reach them.
     corrected = _apply_corrections()
     if corrected:
+        # *** COMMITTED HERE, BY THE FUNCTION THAT MADE THE CHANGE — D-188. ***
+        # This used to fall through to the `if made_m or made_b` commit at the
+        # bottom, which is False on exactly the deployments the corrections
+        # exist for: one that already holds every mountain has nothing to
+        # CREATE. So a bulk UPDATE sat uncommitted in the session and survived
+        # only because some later, unrelated boot step happened to commit the
+        # transaction. A change whose durability depends on a stranger is not
+        # delivered, and D-178 is the row that says a correction not delivered
+        # is a correction that never happened.
+        db.session.commit()
         logger.info('mountain fact corrections applied to %d row(s)', corrected)
     made_m = 0
     for order, (slug, name, elev, fact, note) in enumerate(MOUNTAINS):

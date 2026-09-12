@@ -20,12 +20,16 @@ import { Accounts } from '../../src/pages/Accounts';
 import BudgetsMinimal from '../../src/pages/BudgetsMinimal';
 import Goals from '../../src/pages/Goals';
 import { Investments } from '../../src/pages/Investments';
+import LearnPalHome from '../../src/modules/learnpal/pages/Home';
+import LearnPalRange from '../../src/modules/learnpal/pages/Range';
 import PointsPalOverview from '../../src/modules/pointspal/pages/Overview';
 import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
 import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
 import { CategoryManagement } from '../../src/components/CategoryManagement';
+import { RecurringTransactions } from '../../src/components/RecurringTransactions';
+import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
 
@@ -197,6 +201,202 @@ beforeEach(() => {
      * lesson title is deliberately LONG: it has to be a string that fits at
      * 1440 and can overflow at 390.
      */
+    /**
+     * *** `recurring` AND `rules` HAD NO CAPTURE FILE AT ALL, SO NO WALK HAD
+     * EVER RENDERED EITHER OF THEM. *** Recorded under D-103. They are also the
+     * two pages the eightieth pass measured at **0px left padding** — content
+     * flush against the side nav — which is a layout defect no gate could see
+     * because neither page was in one.
+     *
+     * *** EVERY KEY BELOW WAS READ OFF THE LIVE DEMO BEFORE BEING WRITTEN. ***
+     * `curl /api/v1/recurring`, `/recurring/detect`, `/transaction-rules` and
+     * `/transaction-rules/stats` against `demo1`, and the shapes here are those
+     * responses with the strings lengthened. **D-107 is what happens when a
+     * fixture invents keys**: an investments fixture sent three the API never
+     * sent, the page rendered `$NaN` eight times, and both gates called it clean.
+     *
+     * *** `/transaction-rules` HAS NO `success` KEY AND EVERY SIBLING DOES. ***
+     * Checked, not assumed — the live response is a bare `{rules: [...]}`. A
+     * fixture that added one would still work here (nothing reads it) and would
+     * teach the next person the wrong shape.
+     */
+    http.get('*/api/v1/recurring', () => HttpResponse.json({
+      success: true,
+      recurring: [
+        // Long descriptions on purpose: a name that fits at 1440 and overflows
+        // at 390 is the entire point of the responsive walk, and a short
+        // fixture cannot produce one (D-165).
+        { id: 1, description: 'Rent for the flat, including the service charge',
+          amount: 1200, frequency: 'monthly',
+          start_date: '2026-03-15T20:43:51', end_date: null, last_created: null,
+          active: true, category_id: null, account_id: null,
+          transaction_type: 'expense', destination_account_id: null,
+          card_used: 'Primary Checking', split_method: 'none',
+          paid_by: 'alice@test.com', user_id: 'alice@test.com',
+          currency_code: 'GBP', original_amount: null,
+          category: null, account: null },
+        { id: 2, description: 'Annual professional indemnity insurance premium',
+          amount: 462.5, frequency: 'yearly',
+          start_date: '2026-01-04T09:00:00', end_date: null,
+          last_created: '2026-01-04T09:00:00',
+          active: false, category_id: null, account_id: null,
+          transaction_type: 'expense', destination_account_id: null,
+          card_used: 'John Lewis Partnership Mastercard', split_method: 'none',
+          paid_by: 'alice@test.com', user_id: 'alice@test.com',
+          currency_code: 'GBP', original_amount: null,
+          category: null, account: null },
+        // *** `weekly`, BECAUSE THE GROUND CONVERTS IT AT 52/12 AND NOT AT 4. ***
+        // A weekly 60 is 260 a month, not 240, and this page is where a user
+        // sees the frequency that figure comes from.
+        { id: 3, description: 'Weekly supermarket delivery slot', amount: 60,
+          frequency: 'weekly', start_date: '2026-02-01T00:00:00', end_date: null,
+          last_created: null, active: true, category_id: null, account_id: null,
+          transaction_type: 'expense', destination_account_id: null,
+          card_used: null, split_method: 'none', paid_by: 'alice@test.com',
+          user_id: 'alice@test.com', currency_code: 'GBP',
+          original_amount: null, category: null, account: null },
+      ],
+    })),
+    http.get('*/api/v1/recurring/detect', () => HttpResponse.json({
+      success: true,
+      patterns: [{
+        pattern_key: 'salary deposit_4500.00',
+        description: 'Salary deposit from the employer payroll run',
+        amount: 4500, currency_code: 'GBP', frequency: 'monthly',
+        account_id: 1, category_id: 1, transaction_type: 'income',
+        confidence: 0.95, occurrences: 2,
+        last_date: '2026-08-26T00:00:00', next_date: '2026-09-26T00:00:00',
+        start_date: '2026-07-27T00:00:00', avg_interval: 30,
+        transaction_ids: [1, 2],
+        transactions: [
+          { id: 1, description: 'Salary Deposit', amount: 4500,
+            date: '2026-07-27T00:00:00', currency_code: 'GBP',
+            account_id: 1, category_id: 1, transaction_type: 'income' },
+          { id: 2, description: 'Salary Deposit', amount: 4500,
+            date: '2026-08-26T00:00:00', currency_code: 'GBP',
+            account_id: 1, category_id: 1, transaction_type: 'income' },
+        ],
+      }],
+    })),
+    // No `success` key. That is the live shape.
+    http.get('*/api/v1/transaction-rules', () => HttpResponse.json({
+      rules: [
+        { id: 1, name: 'Bank fees, overdraft charges and ATM withdrawals',
+          pattern: '\\b(bank fee|service fee|monthly fee|overdraft|nsf|atm fee'
+                 + '|foreign transaction)\\b',
+          pattern_field: 'description', is_regex: true, case_sensitive: false,
+          amount_min: null, amount_max: null, transaction_type_filter: null,
+          auto_category_id: 144, auto_category: 'Bank Fees',
+          auto_account_id: null, auto_account: null,
+          auto_transaction_type: null, auto_tags: [], auto_notes: null,
+          priority: 100, active: true, match_count: 214,
+          last_matched: '2026-09-09T11:02:00',
+          created_at: '2026-09-10T19:11:13', updated_at: '2026-09-10T19:11:13' },
+        { id: 2, name: 'Groceries', pattern: 'sainsbury',
+          pattern_field: 'description', is_regex: false, case_sensitive: false,
+          amount_min: 5, amount_max: 400, transaction_type_filter: 'expense',
+          auto_category_id: 4, auto_category: 'Food, drink and the weekly shop',
+          auto_account_id: null, auto_account: null,
+          auto_transaction_type: null, auto_tags: ['household'],
+          auto_notes: 'Set automatically by a rule', priority: 50,
+          active: false, match_count: 0, last_matched: null,
+          created_at: '2026-09-10T19:11:13', updated_at: '2026-09-10T19:11:13' },
+      ],
+    })),
+    http.get('*/api/v1/transaction-rules/stats', () => HttpResponse.json({
+      success: true,
+      stats: {
+        total_rules: 52, active_rules: 51, inactive_rules: 1,
+        total_matches: 214,
+        most_used_rules: [
+          { id: 1, name: 'Bank fees, overdraft charges and ATM withdrawals',
+            match_count: 214, last_matched: '2026-09-09T11:02:00' },
+          { id: 3, name: 'Investment dividends and interest income',
+            match_count: 12, last_matched: '2026-09-01T08:00:00' },
+        ],
+      },
+    })),
+    /**
+     * *** learnPal's HOME PAYLOAD, AND EVERY STRING IN IT IS DELIBERATELY LONG.
+     * *** A name that fits at 1440 and overflows at 390 is the entire point of
+     * the responsive walk, and a short fixture cannot produce one (D-165). So
+     * the goal names and lesson titles here are as long as anything a real user
+     * would type, and `fact` carries a full sentence because the card renders it.
+     *
+     * *** THE MOUNTAIN FACT IS SEEDED CONTENT AND IS QUOTED, NOT INVENTED. ***
+     * Ben Nevis's summit observatory ran 1883-1904 and the sentence below is
+     * the approved one from `seed_mountains.py`. A fixture that makes up a fact
+     * teaches the walk to render a claim nobody checked, which is D-107's shape
+     * one layer up: an investments fixture invented three keys and the page
+     * drew `$NaN` eight times while both gates called it clean.
+     */
+    http.get('*/api/v1/learnpal/stats', () => HttpResponse.json({
+      success: true,
+      stats: {
+        lessons: { read: 3, total: 8, without_body: 5 },
+        gear: { earned: 3, total: 8 },
+        highest: {
+          band: 3, band_total: 6,
+          mountain: {
+            slug: 'mount-rainier', name: 'Mount Rainier', elevation_m: 4392,
+            fact: 'Rainier carries more glacier ice than any other peak in the '
+                + 'lower 48 states.',
+            summit_note: 'You stood on the hardest one you ever faced.',
+          },
+          goal_id: 1,
+          goal_name: 'Clear the John Lewis Partnership Mastercard before the '
+                   + 'balance transfer offer expires',
+          goal_status: 'archived',
+        },
+        recent: [
+          { slug: 'what-your-apr-costs',
+            title: 'What your APR actually costs you every single month',
+            gear_slug: 'headlamp', has_body: true, verified_by: 'read',
+            unlocked_at: '2026-09-02T08:14:00',
+            goal_id: 1,
+            goal_name: 'Clear the John Lewis Partnership Mastercard before the '
+                     + 'balance transfer offer expires' },
+          // *** NO GOAL NAME, ON PURPOSE. *** A predicate-gated lesson has none,
+          // and the FK is SET NULL, so "unlocked by None" is the string this
+          // fixture exists to make impossible to ship.
+          { slug: 'where-your-money-goes',
+            title: 'Where your money actually goes, once you look at it properly',
+            gear_slug: 'boots', has_body: false, verified_by: 'read',
+            unlocked_at: '2026-08-28T19:02:00',
+            goal_id: null, goal_name: null },
+        ],
+        next: [
+          { slug: 'avalanche-vs-snowball',
+            title: 'Avalanche or snowball, and which one clears it sooner',
+            gear_slug: 'compass', surface: 'mountain', has_body: false,
+            unlock_at_progress: 0.25, applies_to_direction: 'paydown',
+            gate: 'altitude',
+            reason: 'Reach 25% on Clear the John Lewis Partnership Mastercard '
+                  + 'before the balance transfer offer expires',
+            goal_id: 1,
+            goal_name: 'Clear the John Lewis Partnership Mastercard before the '
+                     + 'balance transfer offer expires',
+            goal_progress: 0.1812 },
+          { slug: 'utilisation-and-your-score',
+            title: 'Utilisation, and what it actually touches',
+            gear_slug: 'gloves', surface: 'mountain', has_body: false,
+            unlock_at_progress: null, applies_to_direction: null,
+            gate: 'check',
+            reason: 'Get your card utilisation below 30%',
+            goal_id: null, goal_name: null, goal_progress: null },
+          // *** `reason: null` IS A REAL STATE AND IS IN THE FIXTURE. *** The
+          // server is fail-closed for a `check_type` this build does not
+          // implement, so the page must render "we cannot say" rather than
+          // printing nothing or `null`.
+          { slug: 'what-finpal-cannot-tell-you',
+            title: 'What finPal cannot tell you, and where to ask instead',
+            gear_slug: 'guidebook', surface: 'mountain', has_body: false,
+            unlock_at_progress: null, applies_to_direction: null,
+            gate: null, reason: null,
+            goal_id: null, goal_name: null, goal_progress: null },
+        ],
+      },
+    })),
     http.get('*/api/v1/learnpal/range', () => HttpResponse.json({
       success: true,
       range: {
@@ -606,6 +806,53 @@ const cases: Case[] = [
     await userEvent.click(within(first).getByRole('button', { name: /Who contributed/ }));
     await screen.findByText('Rachel');
   }],
+  /**
+   * *** learnPal's HOME AND RANGE HAD NEVER BEEN RENDERED BY ANY WALK. *** Both
+   * are new: the range shipped in #176 and the home in this branch, and until
+   * now the only learnPal thing either walk saw was the BANNER on the goals
+   * page — which is a different component reading a different payload. A module
+   * being mocked for another page's benefit is not the same as its own pages
+   * being measured.
+   *
+   * Neither needs an interaction: every state worth measuring is on first
+   * paint, and the one thing behind a click (a lesson reader) is a `SlidePanel`
+   * that portals to `document.body` and is therefore unreachable from a walk
+   * writing `container.innerHTML` (D-165). It belongs to the MODAL walk.
+   */
+  /**
+   * *** NEITHER OF THESE HAD A CAPTURE FILE, SO NO WALK HAD EVER RENDERED
+   * THEM. *** D-103. They are also two of the three pages measured at **0px
+   * left padding** on 2026-09-11 — content flush against the side nav, a
+   * defect that lived precisely because no walk had them.
+   *
+   * Expect new failing pairs to land in the D-103 **pending** bucket: reported,
+   * not gated, and NOT added to `baseline.json`. A page's first audit finding
+   * something is the point of giving it one.
+   *
+   * *** BOTH ALSO HAVE NO `<h1>` — their titles are `<h2>`. *** Recorded on
+   * 2026-09-11 and deliberately not fixed here: promoting a heading changes how
+   * it looks as well as what it means, and doing it inside a capture change
+   * would hide a visual edit inside a test-infrastructure one.
+   */
+  ['learnpal-home', LearnPalHome as React.FC],
+  /**
+   * *** DRIVEN, BECAUSE THE FIXTURE ALONE MEASURED NOTHING OF `/recurring/detect`.
+   * *** The detected-patterns section only exists after a click on "Detect
+   * Patterns" — `handleDetectPatterns` is what sets `showPatternsSection` — so
+   * the first capture here held the recurring LIST and none of the payload the
+   * detect fixture describes. Verified by grepping `captured/recurring.html`
+   * for the pattern's own description and getting **zero**, which is the check
+   * that separates "the page is in the walk" from "the walk sees what changed"
+   * (D-165).
+   */
+  ['recurring', RecurringTransactions as React.FC, async () => {
+    await userEvent.click(screen.getByRole('button', { name: /Detect Patterns/ }));
+    // Wait for a row of the detected section, not for the button to re-enable:
+    // the button re-enables whether or not anything rendered.
+    await screen.findByText(/Salary deposit from the employer payroll run/);
+  }],
+  ['rules', TransactionRules as React.FC],
+  ['learnpal-range', LearnPalRange as React.FC],
   ['investments', Investments as React.FC],
   ['pointspal-overview', PointsPalOverview as React.FC],
   ['pointspal-caps', CapTracker as React.FC],

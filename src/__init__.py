@@ -400,6 +400,28 @@ def create_app(config_name=None):
                     'mountain seed could not run; goals will render without a '
                     'peak until it succeeds')
 
+            # D-187: `Goal.highest_progress` and `Goal.hardest_band` had no
+            # writer that anything actually called -- `evaluate_for_goal` was
+            # dead code outside the tests, so the only entry point was
+            # learnPal's 04:15 cron. With learnPal off, or on a stack with no
+            # scheduler service (the llm demo), the two columns stayed NULL for
+            # ever and the summit note on a FINISHED goal could not render.
+            #
+            # The write path is wired now, and this is the other half: a create
+            # path alone reaches nobody who already has goals (D-178). Runs in
+            # CORE and not in the module's `on_startup`, because `hardest_band`
+            # is a core column read by a core payload field.
+            try:
+                from src.services.goal.watermark import backfill_goal_watermarks
+                stamped = backfill_goal_watermarks()
+                if stamped:
+                    app.logger.info(
+                        'goal watermarks stamped on %s goal(s)', stamped)
+            except Exception:
+                app.logger.exception(
+                    'goal watermark backfill could not run; existing goals will '
+                    'show no summit note until it succeeds')
+
             # Budget spending groups: every category seeded before this shipped
             # has `spending_type` NULL, and a seed change is not shipped until a
             # correction exists for the rows the old version wrote (D-178).

@@ -42,6 +42,61 @@ MILESTONES = [
     ('fixed-vs-flexible', 'Fixed, flexible, and the ones that are neither',
      'trekking-poles',
      None, 'categories_classified_at_least', {'n': 5}, None, 'setup'),
+
+    # -----------------------------------------------------------------------
+    # Lessons 9-19. *** APPROVED BY THE OWNER 2026-09-11 AND IN NO DATABASE
+    # UNTIL NOW *** -- they had existed only in
+    # `docs/superpowers/specs/2026-09-10-learnpal-lesson-drafts-2.md`, and
+    # nothing has a lesson until a `MILESTONES` row exists.
+    #
+    # *** ADDING A SLUG WORKS AT THE NEXT BOOT; CHANGING ONE DOES NOT. *** This
+    # block is all NEW slugs, so `seed_milestones`'s insert-what-is-missing
+    # rule delivers them and no condition-keyed correction is needed. **Editing
+    # any row above would need one** (D-178, and `FACT_CORRECTIONS` in
+    # `src/data/seed_mountains.py` is the worked example).
+    #
+    # *** AND SEEDING IS NOT DELIVERING. *** Until D-187 the only evaluator was
+    # the 04:15 cron, so these eleven would have appeared in the table and
+    # unlocked for nobody on a stack with no scheduler. learnPal's `on_startup`
+    # catch-up is what actually hands them out.
+    #
+    # `body_md` is not in this tuple and is NULL for every row here AND for the
+    # eight above -- the prose lives in the draft docs and reaching the database
+    # is C1d. `has_body: false` is a real state the clients render as "no
+    # write-up yet" rather than offering a reader onto blank space.
+    #
+    # The eight new `check_type`s are defined in `checks.py`; each names a rule
+    # the draft did NOT specify, so each carries the decision in its docstring.
+    ('income-vs-what-lands', 'Income vs what lands', 'pack-scale',
+     None, 'has_two_months_of_income', None, None, 'mountain'),
+    ('debt-to-income', 'Debt to income', 'slope-gauge',
+     None, 'has_debt_account_and_income', None, None, 'mountain'),
+    ('when-consolidating-helps-and-when-it-doesnt',
+     "When consolidating helps, and when it doesn't", 'carabiner',
+     None, 'has_two_or_more_debt_accounts', None, None, 'mountain'),
+    ('why-a-buffer-comes-first', 'Why a buffer comes first', 'bivvy',
+     None, 'has_debt_and_no_savings_goal', None, None, 'mountain'),
+    # *** THE THREE ALTITUDE-GATED ONES CARRY `applies_to_direction` AND THE
+    # DRAFT'S "on a savings goal" IS WHAT MAKES THAT NECESSARY. *** Without it,
+    # "how much is enough" opens at 50% of paying off a credit card, which is
+    # the wrong question entirely.
+    ('how-much-is-enough', 'How much is enough', 'water-bottle',
+     '0.500', None, None, 'accumulate', 'mountain'),
+    ('sinking-funds', 'Sinking funds', 'cache',
+     None, 'has_non_monthly_spending', None, None, 'mountain'),
+    ('paying-yourself-first', 'Paying yourself first', 'alpine-start',
+     None, 'has_recurring_income', None, None, 'mountain'),
+    ('what-inflation-does-to-cash', 'What inflation does to cash', 'thermometer',
+     '0.750', None, None, 'accumulate', 'mountain'),
+    ('when-to-stop-saving-and-start-paying-down',
+     'When to stop saving and start paying down', 'signpost',
+     None, 'has_buffer_and_debt', None, None, 'mountain'),
+    # "on ANY goal" in the draft, so no direction filter -- reaching 90% of
+    # anything is the moment insurance is worth reading about.
+    ('insurance-as-risk-transfer', 'Insurance as risk transfer', 'helmet',
+     '0.900', None, None, None, 'mountain'),
+    ('what-finpal-cannot-tell-you', 'What finPal cannot tell you', 'guidebook',
+     None, 'has_completed_three_lessons', {'n': 3}, None, 'mountain'),
 ]
 
 
