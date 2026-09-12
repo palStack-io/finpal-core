@@ -21,6 +21,7 @@ import BudgetsMinimal from '../../src/pages/BudgetsMinimal';
 import Goals from '../../src/pages/Goals';
 import { Investments } from '../../src/pages/Investments';
 import LearnPalHome from '../../src/modules/learnpal/pages/Home';
+import LearnPalLessons from '../../src/modules/learnpal/pages/Lessons';
 import LearnPalRange from '../../src/modules/learnpal/pages/Range';
 import PointsPalOverview from '../../src/modules/pointspal/pages/Overview';
 import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
@@ -32,6 +33,39 @@ import { RecurringTransactions } from '../../src/components/RecurringTransaction
 import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
+
+/**
+ * `a-starter-buffer`'s approved body, copied from `lesson_bodies.py`. Kept here
+ * as the literal text rather than imported: the walk renders the CLIENT, and a
+ * capture that reached into the Python package would couple a browser fixture
+ * to the backend's import graph.
+ */
+const LESSON_BODY = [
+    '### The rope you tie on first',
+    '',
+    'There\'s a common piece of advice that you want three to six months of expenses saved before',
+    'anything else. It\'s a reasonable target and it is completely out of reach for a lot of people,',
+    'which makes it easy to hear as "don\'t bother starting".',
+    '',
+    'Here\'s the part that gets left out: **most of the protection comes from the first small bit.**',
+    'The gap between nothing and a few hundred is the difference between a flat tyre being annoying',
+    'and a flat tyre going on the credit card at 22%. The gap between four months and six months is',
+    'real, but it is nothing like as sharp.',
+    '',
+    'So the number to aim at first isn\'t three months. It\'s whatever covers the next thing that',
+    'breaks.',
+    '',
+    'If money is tight enough that even that feels far away, that isn\'t a failure of yours. Rent,',
+    'food and borrowing have all outrun wages in most places for years, and "save more" is advice',
+    'written for a world with more slack in it than this one has. Saying so isn\'t giving up — it\'s',
+    'the reason the target here is the next thing that breaks rather than three months of expenses.',
+    'What\'s still yours is where anything spare goes, and this is the highest-value place to send',
+    'the first of it.',
+    '',
+    '> **Where the 3–6 months figure comes from:** it\'s a widely repeated rule of thumb in personal',
+    '> finance guidance, not a rule finPal applies and not a threshold anyone checks you against.',
+    '',
+].join('\n');
 
 const OUT = join(__dirname, 'captured');
 
@@ -351,9 +385,109 @@ beforeEach(() => {
      * one layer up: an investments fixture invented three keys and the page
      * drew `$NaN` eight times while both gates called it clean.
      */
+    /**
+     * *** THE WHOLE POINT OF THIS CAPTURE IS THE PANEL, NOT THE LIST. *** The
+     * lesson reader is a `SlidePanel`, so a fixture alone measures nineteen
+     * rows and none of `LessonBody` -- D-165 exactly, and the same miss the
+     * `recurring` case above records. The drive below opens one.
+     *
+     * *** THE ROWS AND THE PROSE ARE THE REAL ONES. *** Titles come from
+     * `seed.py` and the body is `a-starter-buffer`'s approved draft, verbatim,
+     * because this walk exists to measure a paragraph of real length wrapping
+     * at 390px and a fixture sentence cannot make one (D-107's inverse: a
+     * fixture kinder than the data hides what the data does). The longest title
+     * in the list, "When consolidating helps, and when it doesn't", is likewise
+     * the seeded one rather than a padded string.
+     *
+     * Six of nineteen are `earned` so both states are on screen: the rows that
+     * offer a Read button and the rows that show an unlock caption.
+     */
+    http.get('*/api/v1/learnpal/lessons', () => HttpResponse.json({
+      success: true,
+      read: 6,
+      total: 19,
+      lessons: [
+      { slug: 'what-a-goal-tracks', title: 'What a goal tracks', gear_slug: 'map',
+        surface: 'setup', applies_to_direction: null,
+        unlock_at_progress: null, earned: true, has_body: true },
+      { slug: 'where-your-money-goes', title: 'Where your money goes', gear_slug: 'boots',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: true, has_body: true },
+      { slug: 'a-starter-buffer', title: 'The rope you tie on first', gear_slug: 'rope',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: 0.1, earned: true, has_body: true },
+      { slug: 'what-your-apr-costs', title: 'What your APR actually costs', gear_slug: 'headlamp',
+        surface: 'mountain', applies_to_direction: 'paydown',
+        unlock_at_progress: 0.0, earned: true, has_body: true },
+      { slug: 'why-minimums-barely-move-it', title: 'Why the minimum barely moves it', gear_slug: 'ice-axe',
+        surface: 'mountain', applies_to_direction: 'paydown',
+        unlock_at_progress: 0.15, earned: true, has_body: true },
+      { slug: 'utilisation-and-your-score', title: 'Utilisation, and what it touches', gear_slug: 'gloves',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: true, has_body: true },
+      { slug: 'avalanche-vs-snowball', title: 'Avalanche or snowball', gear_slug: 'compass',
+        surface: 'mountain', applies_to_direction: 'paydown',
+        unlock_at_progress: 0.25, earned: false, has_body: true },
+      { slug: 'fixed-vs-flexible', title: 'Fixed, flexible, and the ones that are neither', gear_slug: 'trekking-poles',
+        surface: 'setup', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'income-vs-what-lands', title: 'Income vs what lands', gear_slug: 'pack-scale',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'debt-to-income', title: 'Debt to income', gear_slug: 'slope-gauge',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'when-consolidating-helps-and-when-it-doesnt', title: 'When consolidating helps, and when it doesn\'t', gear_slug: 'carabiner',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'why-a-buffer-comes-first', title: 'Why a buffer comes first', gear_slug: 'bivvy',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'how-much-is-enough', title: 'How much is enough', gear_slug: 'water-bottle',
+        surface: 'mountain', applies_to_direction: 'accumulate',
+        unlock_at_progress: 0.5, earned: false, has_body: true },
+      { slug: 'sinking-funds', title: 'Sinking funds', gear_slug: 'cache',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'paying-yourself-first', title: 'Paying yourself first', gear_slug: 'alpine-start',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'what-inflation-does-to-cash', title: 'What inflation does to cash', gear_slug: 'thermometer',
+        surface: 'mountain', applies_to_direction: 'accumulate',
+        unlock_at_progress: 0.75, earned: false, has_body: true },
+      { slug: 'when-to-stop-saving-and-start-paying-down', title: 'When to stop saving and start paying down', gear_slug: 'signpost',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      { slug: 'insurance-as-risk-transfer', title: 'Insurance as risk transfer', gear_slug: 'helmet',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: 0.9, earned: false, has_body: true },
+      { slug: 'what-finpal-cannot-tell-you', title: 'What finPal cannot tell you', gear_slug: 'guidebook',
+        surface: 'mountain', applies_to_direction: null,
+        unlock_at_progress: null, earned: false, has_body: true },
+      ],
+    })),
+    http.get('*/api/v1/learnpal/lessons/:slug', ({ params }) => HttpResponse.json({
+      success: true,
+      lesson: {
+        slug: params.slug, title: 'The rope you tie on first',
+        gear_slug: 'rope', surface: 'mountain', earned: true, locked: false,
+        body_md: LESSON_BODY,
+      },
+    })),
     http.get('*/api/v1/learnpal/stats', () => HttpResponse.json({
       success: true,
       stats: {
+        /*
+         * *** `without_body: 5` IS NO LONGER WHAT A SEEDED STACK REPORTS, AND
+         * IS KEPT DELIBERATELY. *** C1d filled all nineteen bodies, so a fresh
+         * install answers 0 and Home's "N have no write-up yet" note does not
+         * render at all. The note is still reachable — a milestone can ship
+         * ahead of its write-up, and four lessons are deliberately unwritten —
+         * and a walk that only ever captured the zero case would measure a
+         * string this page can still draw at no width. `total: 8` is likewise
+         * a smaller set than the seeder holds; this fixture measures the
+         * LAYOUT of the tile, and `learnpal-lessons` captures the real rows.
+         */
         lessons: { read: 3, total: 8, without_body: 5 },
         gear: { earned: 3, total: 8 },
         highest: {
@@ -890,6 +1024,17 @@ const cases: Case[] = [
   }],
   ['rules', TransactionRules as React.FC],
   ['learnpal-range', LearnPalRange as React.FC],
+  /**
+   * DRIVEN: see the handler's own note. Waits on a sentence from inside the
+   * body, not on the panel appearing -- the panel opens whether or not
+   * `LessonBody` rendered anything, which is the same trap the `recurring`
+   * case above records.
+   */
+  ['learnpal-lessons', LearnPalLessons as React.FC, async () => {
+    const reads = await screen.findAllByRole('button', { name: /^Read$/ });
+    await userEvent.click(reads[2]);
+    await screen.findByText(/whatever covers the next thing that breaks/);
+  }],
   ['investments', Investments as React.FC],
   ['pointspal-overview', PointsPalOverview as React.FC],
   ['pointspal-caps', CapTracker as React.FC],
