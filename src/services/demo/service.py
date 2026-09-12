@@ -69,6 +69,22 @@ DEMO_ACCOUNTS = [
 ]
 
 
+def _learnpal_reset(user_id):
+    """Delete a demo user's lesson unlocks, if learnPal is installed at all.
+
+    *** IMPORTED INSIDE THE FUNCTION, BECAUSE THE MODULE IS OPTIONAL. *** A
+    deployment with `LEARNPAL_ENABLED` unset does not register the namespace,
+    and a self-hoster who has never enabled it should not have a demo reset
+    fail on an import. Missing is a normal state, not an error.
+    """
+    try:
+        from src.modules.learnpal.models import LearnCompletion
+    except Exception:
+        return 0
+    return LearnCompletion.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+
+
 class DemoService:
     """Service for managing demo mode functionality"""
 
@@ -1593,6 +1609,25 @@ class DemoService:
                 GoalAccount.query.filter(
                     GoalAccount.goal_id.in_(goal_ids)).delete(
                         synchronize_session=False)
+            # *** learnPal PROGRESS, AND THE FK GUARD CANNOT SEE THIS ONE. ***
+            # `learn_completions.unlocked_by_goal_id` is `ON DELETE SET NULL`
+            # -- deliberately, so an optional learning module can never refuse
+            # to let a goal be deleted -- so it is excluded from
+            # `test_demo_reset_fk_order`'s closure and always will be. That
+            # guard asks "can this delete FAIL?"; it does not ask "is the reset
+            # COMPLETE?", and nothing did.
+            #
+            # Measured on the public demo 2026-09-12: demo1 had **16
+            # completions before a reset and 16 after**, so a visitor met
+            # learnPal with 16 of 19 lessons already read and the gear already
+            # earned. Unlocks being permanent is right for a real user and
+            # wrong for a reset, whose entire purpose is to restore the
+            # first-run state.
+            # NOT inside `if goal_ids:` -- several milestones unlock from DATA
+            # rather than goal progress (`categorised_transactions_at_least`,
+            # `has_active_budget`), so a user with no goals still has unlocks.
+            # The first version was nested there and the sweep caught it.
+            _learnpal_reset(user_id)
             if investment_ids:
                 InvestmentTransaction.query.filter(
                     InvestmentTransaction.investment_id.in_(
