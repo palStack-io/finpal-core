@@ -10,6 +10,26 @@ class Account(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(50), nullable=False)  # checking, savings, credit, etc.
+
+    # *** WHERE `type` CAME FROM, BECAUSE A GUESS AND A FACT MUST NOT LOOK ALIKE
+    # (D-191). *** SimpleFin sends NO account type -- measured against the live
+    # bridge, 0 of 25 real accounts carried a `type` key -- so every imported
+    # account was written `checking`, and a Visa carrying 5,544.12 of debt was
+    # invisible to every feature that filters on this column.
+    #
+    #   'user'      the person chose it. NEVER overwritten by an import.
+    #   'inferred'  finPal guessed, from evidence (holdings -> investment,
+    #               negative balance at import -> credit).
+    #   'default'   nothing was known and something had to be written.
+    #
+    # The clients render the second and third as a question rather than a fact:
+    # *"we think this is a credit card -- change it"*. Rendering a guess as a
+    # fact is D-77 and D-108, and the mountain design refuses the same thing in
+    # another form -- *"a missing APR must never draw a molehill"*.
+    #
+    # NULL means "written before this column existed" and is treated as
+    # `default` by readers; the boot backfill resolves it.
+    type_source = db.Column(db.String(10), nullable=True)
     institution = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id', name='fk_account_user'), nullable=False)
     balance = db.Column(db.Numeric(18, 2), default=0)

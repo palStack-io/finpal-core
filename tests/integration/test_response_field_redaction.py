@@ -73,6 +73,24 @@ ACCOUNT_KEYS = {
     # mistaken for an account number. A credit limit is less identifying than the
     # balance beside it. `scrub.ts` needs no new entry.
     'credit_limit', 'apr', 'min_payment',
+    # D-191. Where `account_type` came from, and when this account last pulled.
+    #
+    # THE MCP QUESTION, ASKED AND NOT WAVED THROUGH — and this file had already
+    # half-answered it. Line 59 above says `import_source` is deliberately NOT
+    # forbidden, *"institution-linkage metadata, not a credential or an
+    # identifier"*, and even anticipates the exact use: *"a legitimate 'synced
+    # from SimpleFin' badge may want it"*. That badge is what shipped here.
+    #
+    # `last_sync` is a timestamp about the caller's own account, in the same
+    # class as `balance`. `type_source` is a three-value enum -- 'user',
+    # 'inferred', 'default' -- describing finPal's own confidence, and it
+    # discloses nothing about the person at all.
+    #
+    # *** NONE OF THE THREE IS IN `FORBIDDEN`, AND THE CONTRAST IS THE POINT: ***
+    # that set holds `external_id`, `last_four` and the token/hash family --
+    # values that identify an ACCOUNT AT AN INSTITUTION. These three say a sync
+    # happened and how sure we are about a type. `scrub.ts` needs no new entry.
+    'last_sync', 'import_source', 'type_source',
     # B3. Co-owners, `[{id, name, color, emoji}]`, in the same shape as `owner`
     # below and empty for an account nobody shares.
     #

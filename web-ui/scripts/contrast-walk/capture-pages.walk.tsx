@@ -173,18 +173,39 @@ beforeEach(() => {
      * overflows at 390 is exactly what the responsive walk exists to catch, and
      * a fixture of short names cannot produce one.
      */
+    /*
+     * *** D-191: EVERY PROVENANCE STATE IS REPRESENTED HERE, OR THE WALK WOULD
+     * MEASURE A PAGE THAT HAS THE NEW UI AND NEVER SHOWS IT. *** A page being in
+     * the walk is not the walk seeing what changed (D-165) -- the accounts page
+     * has been captured for months and would have rendered none of this, because
+     * a fixture without `last_sync` / `type_source` / `import_source` produces
+     * exactly the screen that shipped before.
+     *
+     * The four rows are the four states a real user can be in, and the amber and
+     * red ones are the pairs worth measuring in both themes:
+     *   7   connected, synced today          quiet
+     *   9   connected, 23 days ago           AMBER, past the 7-day threshold
+     *   11  connected, NEVER synced          RED, the worrying case
+     *   12  manual                           silent — nothing to be stale about
+     */
     http.get('*/api/v1/accounts', () => HttpResponse.json({
       success: true,
       accounts: [
         { id: 7, name: 'Chase Amazon', type: 'credit', balance: -1125.41,
-          currency_code: 'USD', user_id: 'demo@finpal.app' },
+          currency_code: 'USD', user_id: 'demo@finpal.app',
+          import_source: 'simplefin', type_source: 'user',
+          last_sync: new Date(Date.now() - 3 * 86400000).toISOString() },
         { id: 9, name: 'Barclaycard Rewards', type: 'credit', balance: -524.59,
-          currency_code: 'USD', user_id: 'demo@finpal.app' },
+          currency_code: 'USD', user_id: 'demo@finpal.app',
+          import_source: 'simplefin', type_source: 'inferred',
+          last_sync: new Date(Date.now() - 23 * 86400000).toISOString() },
         { id: 11, name: 'Marcus Online Savings Account', type: 'savings',
-          balance: 8200, currency_code: 'USD', user_id: 'demo@finpal.app' },
+          balance: 8200, currency_code: 'USD', user_id: 'demo@finpal.app',
+          import_source: 'simplefin', type_source: 'default', last_sync: null },
         // Goal 4's card. Long on purpose, same reason as Barclaycard above.
         { id: 12, name: 'John Lewis Partnership Card', type: 'credit',
-          balance: -612.25, currency_code: 'USD', user_id: 'demo@finpal.app' },
+          balance: -612.25, currency_code: 'USD', user_id: 'demo@finpal.app',
+          import_source: null, type_source: 'user', last_sync: null },
       ],
     })),
     /*

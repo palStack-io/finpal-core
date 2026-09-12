@@ -124,6 +124,24 @@ class AccountSchema(Schema):
     apr = fields.Float(allow_none=True)
     min_payment = fields.Float(allow_none=True)
 
+    # *** D-191: WHERE `account_type` CAME FROM. *** SimpleFin sends no type, so
+    # every imported account was written `checking` and the clients had no way to
+    # know whether that was a decision or a default. `user` was chosen by a
+    # person; `inferred` is finPal's guess from evidence; `default` means nothing
+    # was known. The clients render the last two as a QUESTION, never a fact --
+    # rendering a guess as a fact is D-77 and D-108.
+    type_source = fields.Str(allow_none=True)
+
+    # *** D-191 §4: STALENESS. *** `last_sync` has existed and been maintained by
+    # `SimpleFinService` since the integration shipped, and is already read to
+    # compute a lookback window -- it was simply never serialized, which is the
+    # entire reason the accounts page could not show "synced 3 days ago". NULL
+    # means never synced, which for a connected account is a real and worrying
+    # state and for a manual one is meaningless; `import_source` is what lets the
+    # client tell those apart.
+    last_sync = fields.DateTime(allow_none=True)
+    import_source = fields.Str(allow_none=True)
+
     # Calculated balance
     current_balance = fields.Method('get_current_balance', dump_only=True)
 

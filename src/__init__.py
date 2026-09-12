@@ -422,6 +422,23 @@ def create_app(config_name=None):
                     'goal watermark backfill could not run; existing goals will '
                     'show no summit note until it succeeds')
 
+            # D-191: SimpleFin sends no account type, so every imported account
+            # was written `checking` and a Visa carrying 5,544.12 of debt was
+            # invisible to every feature that filters on `Account.type`. The
+            # importer infers now; this is the other half (D-178), stamping the
+            # rows every previous version wrote.
+            try:
+                from src.services.account.type_inference import (
+                    backfill_account_type_source)
+                stamped = backfill_account_type_source()
+                if stamped:
+                    app.logger.info(
+                        'account type_source stamped on %s row(s)', stamped)
+            except Exception:
+                app.logger.exception(
+                    'account type_source backfill could not run; imported '
+                    'accounts keep their `checking` default until it succeeds')
+
             # Budget spending groups: every category seeded before this shipped
             # has `spending_type` NULL, and a seed change is not shipped until a
             # correction exists for the rows the old version wrote (D-178).

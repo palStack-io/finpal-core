@@ -641,6 +641,7 @@ class SimpleFinService:
         account afterwards is `PUT /accounts/<id>` with `owner_id`.
         """
         from integrations.simplefin.client import SimpleFin as SimpleFinClient
+        from src.services.account.type_inference import infer_account_type
 
         owner = owner_id or user_id
         if owner != user_id:
@@ -662,6 +663,10 @@ class SimpleFinService:
                 return False, 'Failed to fetch accounts from SimpleFin', []
 
             processed = sf_client.process_raw_accounts(raw_data)
+            # *** THE INFERENCE NEEDS THE RAW ACCOUNT, NOT THE PROCESSED ONE. ***
+            # `process_raw_accounts` drops `holdings`, which is the single
+            # unambiguous signal in the payload (3 of 25 real accounts had it).
+            raw_by_id = {a.get('id'): a for a in (raw_data.get('accounts') or [])}
             results = []
 
             for acc in processed:
@@ -683,9 +688,17 @@ class SimpleFinService:
                         'status': 'updated'
                     })
                 else:
+                    # D-191: `acc['type']` is whatever `process_raw_accounts`
+                    # decided, and until today that was ALWAYS 'checking'
+                    # because SimpleFin sends no type. The inference now runs on
+                    # the RAW account -- it needs `holdings`, which the
+                    # processed dict drops -- and records its own confidence.
+                    inferred_type, type_source = infer_account_type(
+                        raw_by_id.get(acc['id'], {}))
                     account = Account(
                         name=acc['name'],
-                        type=acc['type'],
+                        type=inferred_type,
+                        type_source=type_source,
                         institution=acc['institution'],
                         balance=acc['balance'],
                         currency_code=acc['currency_code'],
@@ -841,6 +854,27 @@ class SimpleFinService:
                 )
                 db.session.add(expense)
                 imported_count += 1
+
+            # *** TRANSFERS ARE MATCHED AFTER THE BATCH, NOT PER-TRANSACTION. ***
+            # A transfer has two legs and they arrive in the same sync, so a
+            # per-row check would look at the first one before the second
+            # exists. The matcher also reaches BEYOND this batch on purpose --
+            # the other leg can have landed in an earlier sync of a different
+            # account, and a matcher confined to one batch would miss every pair
+            # that straddles two.
+            #
+            # Runs inside the caller's transaction, so a failed sync takes its
+            # matches with it. And it must never be the reason a sync fails: the
+            # transactions are the point, and an unmatched transfer is a wrong
+            # LABEL, while a lost sync is missing DATA.
+            try:
+                from src.services.transaction.transfer_match import match_transfers
+                db.session.flush()
+                match_transfers(user_id)
+            except Exception:
+                current_app.logger.exception(
+                    'transfer matching failed after sync; transactions are '
+                    'imported and some transfers may read as income')
 
             # Update balance from latest SimpleFin data
             if account_data.get('balance') is not None:
