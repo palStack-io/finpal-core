@@ -17,7 +17,8 @@ reversing a user's choice.
 import logging
 
 from src.extensions import db
-from src.modules.learnpal.lesson_bodies import BODIES, apply_bodies
+from src.modules.learnpal.lesson_bodies import (
+    BODIES, apply_bodies, strip_currency_symbols)
 from src.modules.learnpal.models import LearnMilestone
 
 logger = logging.getLogger(__name__)
@@ -135,4 +136,5 @@ def seed_milestones():
         db.session.commit()
         logger.info('learnPal: seeded %s milestone(s)', created)
     apply_bodies()
+    strip_currency_symbols()
     return created

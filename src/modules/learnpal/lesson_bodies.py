@@ -22,13 +22,24 @@ a body somebody has since edited exactly alone. `FACT_CORRECTIONS` in
 is CALLED -- first and unconditionally, because a deployment already holding all
 nineteen rows never reaches the insert path at all.
 
-The `£` figures are the drafts' own illustrations and are left as written: they
-are approved prose, and rewriting an approved sentence to suit a reader's
-currency is an editorial change this file is not entitled to make. It is
-recorded in ROADMAP.md as an open question rather than taken here.
+*** THE ILLUSTRATIVE FIGURES CARRY NO CURRENCY SYMBOL, BY OWNER DECISION
+(2026-09-12). *** The drafts wrote them as `£4,200` and `$300`; nineteen symbols
+across seven lessons were stripped, and nothing else changed -- every figure,
+percentage and sentence is the approved one. They are hypotheticals, not the
+reader's own money, so the unit was never doing any teaching: *"On 4,200 at
+22.9% that's about 80 a month"* says exactly what it said before to a reader
+whose currency is anything at all. Substituting the READER's symbol was
+considered and rejected -- there is no exchange rate here, so it would state a
+conversion that never happened.
+
+*** AND STRIPPING THEM IS A CHANGE, SO IT NEEDED ITS OWN CORRECTION (D-178).
+*** The bodies were already live on both stacks when this was decided, and
+`apply_bodies()` only ever fills a NULL. `strip_currency_symbols()` below is the
+condition-keyed half.
 """
 
 import logging
+import re
 
 from src.extensions import db
 from src.modules.learnpal.models import LearnMilestone
@@ -109,7 +120,7 @@ the first of it.
 APR is the yearly interest rate on what you owe. The useful move is to stop reading it as a
 percentage and start reading it as a monthly bill, because that's how it arrives.
 
-Take the balance, multiply by the rate, divide by twelve. On $4,200 at 22.9% that's about **$80
+Take the balance, multiply by the rate, divide by twelve. On 4,200 at 22.9% that's about **80
 a month** — before you've bought anything. It's rent on money you already spent.
 
 Two things follow from that, and they're the reason this lesson comes first.
@@ -119,7 +130,7 @@ every month than a small one at 25%. When there's a choice about where a spare p
 that's the number to look at.
 
 The second is that **every payment above the minimum reduces the bill permanently**, not just
-this month. Pay $300 off that card and the monthly interest drops by about $6 — for good, and
+this month. Pay 300 off that card and the monthly interest drops by about 6 — for good, and
 then again next time.
 
 Rates on cards have risen sharply in recent years, so a balance that was manageable at one
@@ -148,15 +159,15 @@ stalemate by construction. If it has felt like running to stand still, that's th
 doing what it does, not a measure of your effort.
 
 Anything above the minimum goes **straight** at the balance, because the interest is already
-covered. That's why a small consistent extra does more than it looks like it should — $20 a
+covered. That's why a small consistent extra does more than it looks like it should — 20 a
 month is not a rounding error here, it's the entire part that moves.
 """,
 
     'utilisation-and-your-score': """\
 ### Utilisation, and what it's actually measuring
 
-Utilisation is how much of your available credit you're currently using. A $4,200 balance
-against a $12,000 limit is 35%.
+Utilisation is how much of your available credit you're currently using. A 4,200 balance
+against a 12,000 limit is 35%.
 
 The thing that surprises people: it moves the moment a balance moves. You don't have to miss
 anything, or do anything wrong. It's a snapshot, not a record — which also means it recovers
@@ -238,8 +249,8 @@ is left, how long a goal takes — is built from money that actually arrived in 
 can see. That is deliberate: a budget built on the headline number is a budget that is short
 every month and cannot say why.
 
-The practical use of knowing the gap is comparing offers. A raise of £3,000 does not put
-£3,000 in your account, and two jobs quoting the same salary can land differently depending
+The practical use of knowing the gap is comparing offers. A raise of 3,000 does not put
+3,000 in your account, and two jobs quoting the same salary can land differently depending
 on what each takes at source.
 
 > **What finPal does not know:** it sees deposits, not payslips. It cannot tell you what was
@@ -250,8 +261,8 @@ on what each takes at source.
 ### How steep the ground is
 
 Debt-to-income is one number: what you pay towards debts each month, divided by what lands
-each month. Owing £10,000 means something completely different on £1,500 a month than on
-£5,000 a month, and this is the ratio that says which situation you are in.
+each month. Owing 10,000 means something completely different on 1,500 a month than on
+5,000 a month, and this is the ratio that says which situation you are in.
 
 It is the figure lenders lean on most, and it is useful to you for a different reason: it is
 the one number that moves when *either* side moves. Paying down a balance lowers it. So does
@@ -270,7 +281,7 @@ arithmetic you can do yourself, and it is worth doing before anyone sells you an
 
 **It helps when the new rate is genuinely lower than what you are paying now**, weighted by
 how much sits at each rate — and when any arrangement fee is smaller than the interest you
-avoid. Paying 24% on £4,000 and 8% on £1,000, a single 12% loan is cheaper. A single 22% one
+avoid. Paying 24% on 4,000 and 8% on 1,000, a single 12% loan is cheaper. A single 22% one
 is not, however much simpler it looks.
 
 **The part that catches people is the term.** A lower monthly payment over a longer period
@@ -336,8 +347,8 @@ service, Christmas. They are not emergencies — you know they are coming and ro
 they cost — but they arrive as a lump and land like a shock.
 
 A sinking fund is the unglamorous fix: divide the yearly cost by twelve and set that aside
-each month, so the bill is already paid when it arrives. £600 of car tax is £50 a month you
-barely notice instead of £600 you did not have in March.
+each month, so the bill is already paid when it arrives. A 600 car-tax bill is 50 a month you
+barely notice instead of 600 you did not have in March.
 
 **This is what finPal's Non-Monthly spending group is for.** A cost marked Non-Monthly is
 one the app knows will not appear every month, so a month without it is not you doing well
@@ -354,13 +365,13 @@ Saving what is left at the end of the month mostly means saving nothing, and not
 weak will — whatever is available gets spent because there is always something that needs
 it. Moving the money on payday, before the month starts, is the whole of this idea.
 
-It works because it changes what the month looks like from the inside. £150 moved on payday
-is a month with £150 less in it, which is a thing you can plan around. £150 hoped for at the
+It works because it changes what the month looks like from the inside. 150 moved on payday
+is a month with 150 less in it, which is a thing you can plan around. 150 hoped for at the
 end is a month with no constraint and then a disappointment.
 
 **A caution worth stating plainly:** this only helps if the amount is one the month can
-actually survive. Moving £400 on payday and pulling £300 back on the 20th is worse than
-moving £100 and leaving it — it costs you the habit and teaches you the system does not
+actually survive. Moving 400 on payday and pulling 300 back on the 20th is worse than
+moving 100 and leaving it — it costs you the habit and teaches you the system does not
 work. Starting smaller than feels impressive is the version that lasts.
 
 And if there is genuinely nothing spare after the essentials, that is not a discipline
@@ -372,8 +383,8 @@ first rather than last.
     'what-inflation-does-to-cash': """\
 ### The slow change you do not feel
 
-Money kept as cash does not lose any pounds. It loses what those pounds buy. At 3% a year,
-£10,000 still says £10,000 in twelve months and buys roughly what £9,700 buys today.
+Money kept as cash keeps its number. What changes is what that number buys. At 3% a year,
+10,000 still says 10,000 in twelve months and buys roughly what 9,700 buys today.
 
 Nothing dramatic happens over one year. Over ten it is the difference between a buffer that
 still covers three months and one that covers two.
@@ -421,7 +432,7 @@ month, and somebody else takes on a large, unlikely one. You are meant to "lose"
 years. That is what working looks like.
 
 Which makes the useful question not *"will I get my money back?"* but **"could I absorb this
-if it happened?"** A £200 phone repair is unpleasant and survivable, so insuring it is
+if it happened?"** A 200 phone repair is unpleasant and survivable, so insuring it is
 usually paying a premium to avoid an inconvenience. A house burning down, or the income of
 the person the household depends on stopping, is not survivable by most people — and that is
 the shape worth transferring.
@@ -468,6 +479,45 @@ Knowing where a map stops being accurate is part of reading it.
 """,
 
 }
+
+
+_SYMBOL_BEFORE_A_DIGIT = re.compile(r'[£$€](?=\d)')
+
+
+def strip_currency_symbols():
+    """Remove the unit from illustrative figures in bodies already stored.
+
+    *** KEYED ON THE OLD VALUE, WITHOUT STORING NINETEEN COPIES OF IT. *** The
+    obvious shape -- a `(slug, old_body, new_body)` table like
+    `FACT_CORRECTIONS` -- would duplicate seven thousand characters of approved
+    prose into this file, and a second copy of prose is a second thing to get
+    wrong. So the condition is expressed as a TRANSFORMATION instead: strip the
+    symbols from what is stored, and write it back ONLY if the result is exactly
+    what `BODIES` now says.
+
+    That is condition-keyed in the way that matters. It cannot invent text, it
+    cannot touch a row that already has no symbols, and a body somebody edited
+    into something else will not match `BODIES` after stripping -- so their
+    edit survives, which is the same refusal `apply_bodies` makes.
+
+    Returns how many rows changed.
+    """
+    changed = 0
+    rows = LearnMilestone.query.filter(LearnMilestone.body_md.isnot(None)).all()
+    for row in rows:
+        wanted = BODIES.get(row.slug)
+        if wanted is None or row.body_md == wanted:
+            continue
+        if _SYMBOL_BEFORE_A_DIGIT.sub('', row.body_md) == wanted:
+            row.body_md = wanted
+            changed += 1
+    if changed:
+        # Committed by the function that made the change (D-188); its caller
+        # commits only when it inserted something, which is False here.
+        db.session.commit()
+        logger.info('learnPal: removed currency symbols from %d lesson body/ies',
+                    changed)
+    return changed
 
 
 def apply_bodies():

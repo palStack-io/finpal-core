@@ -17,7 +17,8 @@ import pytest
 from sqlalchemy import text
 
 from src.extensions import db as _db
-from src.modules.learnpal.lesson_bodies import BODIES, apply_bodies
+from src.modules.learnpal.lesson_bodies import (
+    BODIES, apply_bodies, strip_currency_symbols)
 from src.modules.learnpal.models import LearnMilestone
 from src.modules.learnpal.seed import MILESTONES, seed_milestones
 
@@ -137,3 +138,55 @@ def test_no_body_carries_an_unrenderable_construct(slug):
                           ('bullet list', r'^[-*+] '), ('numbered list', r'^\d+\. '),
                           ('h1/h2', r'^#{1,2} ')):
         assert not re.search(pattern, body, re.M), f'{slug} uses a {name}'
+
+
+def test_no_body_shows_a_currency_symbol(db):
+    """*** THE FIGURES ARE HYPOTHETICALS AND CARRY NO UNIT (owner, 2026-09-12).
+
+    *** A symbol here is read by someone whose own money is in something else,
+    and there is no exchange rate in a lesson, so the unit could only ever be
+    wrong for most readers. The figures and percentages are untouched.
+    """
+    for slug, body in BODIES.items():
+        for sym in ('£', '$', '€'):
+            assert sym not in body, f'{slug} shows {sym}'
+
+
+def test_it_strips_symbols_from_a_body_already_stored(db):
+    """*** THE BODIES WERE LIVE BEFORE THIS WAS DECIDED. ***
+
+    `apply_bodies` only ever fills a NULL, so on every deployment that already
+    had the prose this correction is the ONLY thing that runs — D-178 again, one
+    layer on from the change that introduced it.
+    """
+    seed_milestones()
+    old = BODIES['what-your-apr-costs'].replace('4,200', '£4,200').replace('80 a month', '£80 a month')
+    _db.session.execute(
+        text('UPDATE learn_milestones SET body_md = :b WHERE slug = :s'),
+        {'b': old, 's': 'what-your-apr-costs'})
+    _db.session.commit()
+    assert '£' in _body_in_db('what-your-apr-costs'), 'fixture did not make a symbol'
+
+    changed = strip_currency_symbols()
+
+    assert changed == 1
+    assert _body_in_db('what-your-apr-costs') == BODIES['what-your-apr-costs']
+
+
+def test_it_refuses_a_body_somebody_edited(db):
+    """*** THE SABOTAGE. *** Stripping blindly would overwrite a real edit."""
+    seed_milestones()
+    theirs = 'Our own words about APR, with a £4,200 figure we chose.'
+    _db.session.execute(
+        text('UPDATE learn_milestones SET body_md = :b WHERE slug = :s'),
+        {'b': theirs, 's': 'what-your-apr-costs'})
+    _db.session.commit()
+
+    assert strip_currency_symbols() == 0
+    assert _body_in_db('what-your-apr-costs') == theirs
+
+
+def test_a_second_boot_strips_nothing(db):
+    seed_milestones()
+
+    assert strip_currency_symbols() == 0
