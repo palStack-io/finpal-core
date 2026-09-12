@@ -312,9 +312,28 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
 
     buckets = {value: [] for value in VALID_SPENDING_TYPES}
     unsorted_budgets = []
+    income_budgets = []
 
     for budget, detail in zip(budgets, budget_details):
-        group = _effective_spending_type(by_id.get(budget.category_id), by_id)
+        category = by_id.get(budget.category_id)
+        # *** AN INCOME BUDGET IS NOT SPENDING AND MUST LEAVE THE EXPENSE SUMS
+        # ENTIRELY — D-189. *** Before the `kind` column existed this fell into
+        # `unsorted` and was summed as PLANNED SPENDING: on the live demo a
+        # £4,500 budget on *Salary* took `totals.planned` from 1,400 to 5,900
+        # and `remaining` to 5,554.46, telling the user they had money to spend
+        # that they had not earned. `left_to_budget` (income − planned) then
+        # subtracted the same row from income, so one row was wrong twice in
+        # opposite directions.
+        #
+        # NULL `kind` is NOT income. It means "not stated", and the totals have
+        # to put it somewhere — so it stays with the expenses, which is the safe
+        # direction, and nothing on screen calls it an expense.
+        if category is not None and category.kind == 'income':
+            detail['kind'] = 'income'
+            income_budgets.append(detail)
+            continue
+        detail['kind'] = (category.kind if category is not None else None) or 'expense'
+        group = _effective_spending_type(category, by_id)
         (buckets[group] if group else unsorted_budgets).append(detail)
 
     groups = []
@@ -349,7 +368,21 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
                         + unsorted['actual'], 2),
     }
     totals['remaining'] = round(totals['planned'] - totals['actual'], 2)
-    return groups, unsorted, totals
+
+    # *** PLANNED INCOME IS ITS OWN SECTION WITH ITS OWN TOTALS, BECAUSE THE
+    # COLUMNS MEAN DIFFERENT THINGS. *** "Remaining" on an expense is *still
+    # available to spend*; on income it is *still to arrive*. Owner decision,
+    # 2026-09-12: show both, labelled -- one figure answering two questions is
+    # D-102's shape, the row where a caption said net worth rose 43% while the
+    # line fell.
+    income_section = {
+        'planned': round(sum(_f(r['amount']) for r in income_budgets), 2),
+        'received': round(sum(_f(r['spent']) for r in income_budgets), 2),
+        'budgets': income_budgets,
+    }
+    income_section['still_to_come'] = round(
+        income_section['planned'] - income_section['received'], 2)
+    return groups, unsorted, totals, income_section
 
 
 def _unsorted_section(all_categories, by_id, scope_ids, unsorted_budgets):
@@ -443,7 +476,7 @@ class BudgetOverview(Resource):
 
             total_remaining = total_budget - total_spent
 
-            groups, unsorted, group_totals = _group_by_spending_type(
+            groups, unsorted, group_totals, income_section = _group_by_spending_type(
                 budgets, budget_details, visible_user_ids(current_user_id))
 
             # *** None, NEVER 0. *** Zero is a claim that the user earned
@@ -467,6 +500,9 @@ class BudgetOverview(Resource):
                 'totals': group_totals,
                 'income': income,
                 'left_to_budget': left_to_budget,
+                # D-189. Its own section: an income budget is not spending, and
+                # its columns mean different things from an expense's.
+                'income_section': income_section,
                 # *** ONE PACE FIGURE FOR THE WHOLE PAYLOAD, NOT ONE PER ROW. ***
                 # Every budget shares today's position in the month, so per-row
                 # would repeat the same number N times and invite a client to

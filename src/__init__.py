@@ -456,6 +456,20 @@ def create_app(config_name=None):
                     'spending_type backfill could not run; the budget page will '
                     'show every category under Unsorted until it succeeds')
 
+            # D-189: a budget on an income category was summed as planned
+            # SPENDING, because finPal had no column saying which categories are
+            # money in. The column exists now; this is the other half (D-178),
+            # stamping the rows every previous version wrote.
+            try:
+                from src.services.category.kind import backfill_category_kind
+                stamped = backfill_category_kind()
+                if stamped:
+                    app.logger.info('category kind stamped on %s row(s)', stamped)
+            except Exception:
+                app.logger.exception(
+                    'category kind backfill could not run; income categories '
+                    'will keep counting as planned spending until it succeeds')
+
             # D-182: the demo seeder used to flag ALL 147 of its categories
             # `is_system`, which made every one of them uneditable. Fixing the
             # seeder fixes nothing already in a database -- `seed_demo_accounts`

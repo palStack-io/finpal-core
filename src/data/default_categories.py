@@ -6,6 +6,12 @@ Comprehensive category structure loaded on fresh install
 DEFAULT_CATEGORIES = {
     # Income Categories
     'Income': {
+        # *** THE ONE GROUP THAT IS MONEY IN. *** Read by `Category.kind`'s
+        # backfill, which keys on THIS TABLE rather than on a string match --
+        # the same reason the SimpleFin account-type inference refuses to look
+        # at an account's name (D-191). A name is user-editable; this table is
+        # finPal's own record of what it seeded.
+        'kind': 'income',
         'icon': '💵',
         'color': '#10b981',  # Green
         'subcategories': [
