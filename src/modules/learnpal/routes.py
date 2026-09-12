@@ -71,9 +71,12 @@ class LearnLessons(Resource):
         *** THE BODY IS NOT SENT HERE. *** A list of twenty lessons with their
         prose is a large payload almost none of which gets read, and the reader
         fetches one at a time. `has_body` says whether there is anything to open,
-        so the client does not offer a reader for a lesson that has no text yet
-        -- eleven approved drafts are not seeded and four are deliberately
-        unwritten, so "no body" is a real and expected state.
+        so the client does not offer a reader for a lesson that has no text yet.
+        Since C1d all nineteen seeded lessons carry their prose, so on a booted
+        stack this is `true` throughout -- but it stays in the payload because a
+        milestone may legitimately ship ahead of its write-up, and because a row
+        whose body an operator cleared must not offer a reader onto blank
+        space.
         """
         user_id = get_jwt_identity()
         earned = {row[0] for row in

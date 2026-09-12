@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { GearIcon } from '../../../components/GearIcon';
 import { SlidePanel } from '../../../components/SlidePanel';
+import LessonBody from '../LessonBody';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
 import { learnpalService } from '../service';
 import { apiErrorMessage } from '../../../utils/apiError';
@@ -15,10 +16,12 @@ import type { LessonDetail, LessonRow } from '../../../types/learnpal';
  * answers 200 with no body for a locked one rather than 403, so the title is
  * always available and only the prose is withheld.
  *
- * *** "NO BODY YET" IS A REAL STATE AND IS SAID PLAINLY. *** Eleven approved
- * lessons are not seeded and four are deliberately unwritten (they are
- * jurisdiction-bound), so a lesson can be earned and still have nothing to
- * read. Offering a reader that opens onto blank space would look broken.
+ * *** "NO BODY YET" IS A REAL STATE AND IS SAID PLAINLY. *** Since C1d all
+ * nineteen seeded lessons carry their approved prose, so on a booted stack
+ * every earned row offers a reader -- but the state stays, because a milestone
+ * can ship ahead of its write-up and four lessons remain deliberately unwritten
+ * (they are jurisdiction-bound). Offering a reader onto blank space would look
+ * broken, so `has_body` still decides whether the button appears.
  */
 
 const rowStyle: React.CSSProperties = {
@@ -145,16 +148,14 @@ export const Lessons: React.FC = () => {
         onClose={() => setOpen(null)}
         title={open?.title ?? 'Lesson'}
       >
-        {/* Rendered as pre-wrapped text rather than parsed markdown: adding a
-            markdown renderer is its own decision with its own sanitisation
-            question, and the drafts are prose with paragraphs rather than
-            tables or embeds. Recorded rather than done in passing. */}
-        <div style={{
-          whiteSpace: 'pre-wrap', color: 'var(--text-primary)',
-          fontSize: 14, lineHeight: 1.6,
-        }}>
-          {open?.body_md ?? 'Nothing written for this one yet.'}
-        </div>
+        {/* *** THIS WAS A `pre-wrap` DIV AND THE DEFERRED DECISION IS TAKEN.
+            *** The comment here recorded markdown rendering as postponed on a
+            sanitisation question, which the C1d bodies then made urgent:
+            nineteen lessons of `###` and `**` render as literal syntax in a
+            pre-wrap div. `LessonBody` answers the question by not raising it —
+            it builds React elements and never produces HTML, so there is
+            nothing to sanitise. Its header carries the rest. */}
+        <LessonBody markdown={open?.body_md ?? null} />
       </SlidePanel>
     </div>
   );
