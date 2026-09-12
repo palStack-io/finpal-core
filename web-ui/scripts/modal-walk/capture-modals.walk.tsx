@@ -386,6 +386,44 @@ const CSV = [
  * `Blob.prototype`, so nothing else in the run sees an environment the browser and
  * jsdom disagree about.
  */
+/**
+ * *** THE FIVE-COLUMN FIXTURE BELOW IS WHY THIS WALK REPORTED THE IMPORT MODAL
+ * CLEAN, AND ITS OWN COMMENT SAID SO: "a plausible export, not an adversarial
+ * one." *** Issue #146 reports the mapping table "out of bounds" and could not
+ * be reproduced -- the reporter's screenshot was redacted because it held real
+ * transactions. A real bank export is routinely 12-20 columns; ours was 5, so a
+ * green gate proved nothing about their case. That is a fixture gentler than
+ * reality hiding the defect it exists to find.
+ *
+ * *** AND THE WIDE ONE DOES NOT OVERFLOW EITHER, WHICH IS THE FINDING. *** The
+ * preview table is `width: 100%` inside a container set to `overflow-x: auto`.
+ * A table told to be 100% wide SQUEEZES to fit rather than overflowing, so it
+ * never triggers the scroll its container exists to provide. At a 390 viewport
+ * the modal measures 390px, so fourteen columns get about 28px each and every
+ * cell wraps into a stack of broken text. No overflow gate can see this,
+ * because the defect is the OPPOSITE of overflow -- which is why this case is
+ * kept even though it passes: it is the fixture a future `min-width` fix has to
+ * be measured against.
+ *
+ * Fourteen columns, all names real exports actually use.
+ */
+const CSV_WIDE = [
+  'Transaction Date,Posted Date,Description,Original Description,Merchant Category Code,'
+  + 'Amount,Currency,Running Balance,Category,Subcategory,Account Name,Reference,Type,Notes',
+  '2026-08-12,2026-08-13,WHOLE FOODS MARKET #10382 LONDON GB,WHOLE FOODS MARKET #10382 '
+  + 'LONDON GB CARD ENDING 4471,5411,-107.02,GBP,1104.55,Groceries,Supermarket,'
+  + 'Everyday Current Account,REF88213904,Debit,Weekly shop',
+  '2026-08-11,2026-08-12,DELTA AIR LINES TICKET 0062193847561,DELTA AIR LINES TICKET '
+  + '0062193847561 ATLANTA GA,3058,-620.00,GBP,1211.57,Travel,Flights,'
+  + 'Everyday Current Account,REF88213905,Debit,Return to Atlanta',
+].join('\n');
+
+const csvWideFile = () => {
+  const f = new File([CSV_WIDE], 'wide-export-august-2026.csv', { type: 'text/csv' });
+  Object.defineProperty(f, 'text', { value: () => Promise.resolve(CSV_WIDE) });
+  return f;
+};
+
 const csvFile = () => {
   const f = new File([CSV], 'monzo-august-2026.csv', { type: 'text/csv' });
   Object.defineProperty(f, 'text', { value: () => Promise.resolve(CSV) });
@@ -458,6 +496,27 @@ const cases: Case[] = [
     name: 'csvimport-upload',
     Page: Accounts as React.FC,
     open: openImportModal,
+  },
+  {
+    /*
+     * *** #146 ("the table is out of bounds"), WITH A CSV THE WIDTH REAL ONES
+     * ARE. *** Same step as `csvimport-mapping`, fourteen columns instead of
+     * five. It PASSES, and the fixture's own header says why that is the
+     * finding rather than the absence of one.
+     */
+    name: 'csvimport-mapping-wide',
+    Page: Accounts as React.FC,
+    open: async () => {
+      await openImportModal();
+      const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+      if (!input) throw new Error('no file input on the upload step');
+      await userEvent.upload(input, csvWideFile());
+      // Returns the PREVIEW CELL, not a dialog -- `CSVImportModal` sets no
+      // `role="dialog"`, which is what the two cases below do and what this
+      // file's header records about deriving the root from the app.
+      return screen.findByText('WHOLE FOODS MARKET #10382 LONDON GB', undefined,
+                               { timeout: 6000 });
+    },
   },
   {
     /**
