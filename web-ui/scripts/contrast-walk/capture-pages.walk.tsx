@@ -575,15 +575,31 @@ const WALK_CATEGORIES = [
     color: '#95a5a6', parent_id: null, is_system: true, spending_type: null },
 ];
 
+/*
+ * *** THIS FIXTURE USED TO BE MORE GENEROUS THAN THE API, AND THAT IS WHY THE
+ * WALK NEVER CAUGHT D-192. *** It sent `name`, `category_name` AND
+ * `category.name` all populated with the same string, so a heading reading ANY
+ * of the three rendered fine. The real `GET /budgets/overview` sends
+ * `name: null` and the category name NESTED — there is no `category_name` key
+ * on a grouped row at all — so on the live demo all four budgets rendered an
+ * EMPTY `<h2>` while this capture showed them correctly named.
+ *
+ * A fixture that invents keys is D-107 (an investments fixture sent three the
+ * API never sent and the page drew `$NaN` eight times); a fixture that sends
+ * MORE than the API is the same mistake pointing the other way, and it hides
+ * bugs instead of inventing them. The keys below were read off the live demo.
+ */
 const budgetWalkRow = (id: number, name: string, amount: number, spent: number) => ({
-  id, name, amount, spent,
+  id,
+  // `null`, as the API sends for a budget nobody has separately labelled.
+  name: null,
+  amount, spent,
   remaining: amount - spent,
   percentage: amount > 0 ? (spent / amount) * 100 : 0,
   category_id: id + 100,
-  category_name: name,
-  category_icon: '\u{1F3F7}\u{FE0F}',
-  category_color: '#6c757d',
-  category: { name },
+  // NO `category_name`. The API does not send one on a grouped row; the flat
+  // list's enricher BUILDS it, which is exactly the asymmetry D-192 lived in.
+  category: { id: id + 100, name, icon: '\u{1F4C1}', color: '#6c757d' },
   period: 'monthly',
   is_active: true,
 });
@@ -939,6 +955,28 @@ it.each(cases)('captures %s', async (name, Page, drive) => {
 
   const painted = container.querySelectorAll('*').length;
   if (painted < 50) throw new Error(`${name}: only ${painted} elements — captured a stub`);
+
+  /*
+   * *** AN EMPTY HEADING IS A NAME THAT DID NOT RESOLVE, AND NOTHING ELSE FAILS
+   * ON ONE. *** D-192: every budget on the live page rendered an empty `<h2>`,
+   * so four budgets were anonymous and nothing said which was which. The page
+   * rendered, the endpoint answered 200, the figures were all correct, the
+   * layout held — an empty string breaks nothing, it just leaves a gap.
+   * `e2e/standards.spec.ts` checks heading STRUCTURE, not CONTENT, so four
+   * empty `<h2>`s are a perfectly valid document.
+   *
+   * The contrast walk measures colours and the responsive walk measures
+   * overflow; neither can see this. So it is asserted here, generically, for
+   * every captured page — a heading with no text is always a bug, whatever page
+   * it is on.
+   */
+  const blankHeadings = [...container.querySelectorAll('h1, h2, h3')]
+    .filter((h) => !(h.textContent || '').trim());
+  if (blankHeadings.length) {
+    throw new Error(
+      `${name}: ${blankHeadings.length} empty heading(s) — a name did not `
+      + `resolve. Tags: ${blankHeadings.map((h) => h.tagName).join(', ')}`);
+  }
 
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, `${name}.html`), container.innerHTML, 'utf8');
