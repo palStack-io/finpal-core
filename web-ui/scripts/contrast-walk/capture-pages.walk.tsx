@@ -977,11 +977,21 @@ beforeEach(() => {
         uncategorised: {
           action: 'choose',
           rows: [
+            /*
+             * *** FULL ISO TIMESTAMPS, BECAUSE THAT IS WHAT THE SERVER SENDS. ***
+             * Captured from the live demo: `"2026-09-01T07:46:39.847799"`.
+             * This fixture first carried bare `'2026-09-09'` dates, which is the
+             * fixture being more comfortable than reality — and it hid the page
+             * rendering the raw timestamp, microseconds and all, through a whole
+             * deploy. A fixture that cannot produce the real case cannot catch
+             * the real defect (D-165).
+             */
             { id: 501, description: 'SAINSBURYS S/MKTS 0123 LONDON GB',
-              amount: 82.14, currency_code: 'GBP', date: '2026-09-09',
+              amount: 82.14, currency_code: 'GBP',
+              date: '2026-09-09T18:42:11.104233',
               transaction_type: 'expense' },
             { id: 502, description: 'TFL TRAVEL CHARGE', amount: 6.8,
-              currency_code: 'GBP', date: '2026-09-08',
+              currency_code: 'GBP', date: '2026-09-08T07:03:59.771820',
               transaction_type: 'expense' },
           ],
         },

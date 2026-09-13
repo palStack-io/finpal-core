@@ -37,8 +37,29 @@ import { GROUP_LABELS, GROUP_ORDER, UNSORTED_LABEL } from '../utils/spendingGrou
 import { formatMoney } from '../styles/money';
 import { pageContainerStyle } from '../styles/layoutStyles';
 
-/** The account types the API accepts, in the order the edit form offers them. */
-const ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'cash', 'investment', 'loan'] as const;
+/**
+ * The account types the API actually accepts.
+ *
+ * *** MEASURED AGAINST THE SERVER, NOT COPIED FROM THE EDIT FORM. *** This list
+ * first read `[... 'cash', 'investment', 'loan']`, lifted from what
+ * `EditAccountForm` offers — and `loan` is **not** a value the API takes.
+ * Proven on the deployed demo rather than inferred:
+ *
+ *     POST /api/v1/accounts  {"account_type": "loan"}  -> 400
+ *       "Must be one of: checking, savings, credit, investment, cash, other."
+ *     POST /api/v1/accounts  {"account_type": "cash"}  -> 201
+ *
+ * So both account forms have always offered an option the server refuses — a
+ * pre-existing defect this page uncovered rather than caused, recorded as
+ * **D-203** and left for the owner, because "add `loan` to the server" and
+ * "drop it from the forms" are materially different products and three separate
+ * client files implement loan-specific behaviour.
+ *
+ * This page offers only what is known to work. When D-203 is settled, the fix is
+ * ONE list both the forms and this page read — an offered option that 400s is
+ * D-46's shape, a control that exists and does nothing.
+ */
+const ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'investment', 'cash', 'other'] as const;
 
 /*
  * *** `var(--brand-main-green)`, NOT THE RAW `#22c55e` ACCENT — AND THE WALK IS
@@ -72,6 +93,32 @@ const confirmButtonStyle: React.CSSProperties = {
 const inlineLinkStyle: React.CSSProperties = {
   color: 'var(--text-primary)', textDecoration: 'underline',
 };
+
+/**
+ * A transaction's date, as a person writes one.
+ *
+ * *** `Expense.date` IS A DateTime AND THE API SENDS THE WHOLE TIMESTAMP. ***
+ * Captured from the live demo, not assumed:
+ *
+ *     "date": "2026-09-01T07:46:39.847799"
+ *
+ * This page rendered that string RAW for its first deploy — seven digits of
+ * microsecond precision on a row asking "what did you spend this on?". The
+ * seconds are an artefact of when the seeder or the importer happened to write
+ * the row; they are not information about the purchase, and every other screen
+ * in the app formats this column.
+ *
+ * Returns the ISO string unchanged if it will not parse, rather than rendering
+ * `Invalid Date` over a real value.
+ */
+export function formatRowDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+}
 
 const selectStyle: React.CSSProperties = {
   padding: '7px 10px', borderRadius: 8,
@@ -383,7 +430,7 @@ export default function Review() {
                       {row.description || 'No description'}
                     </div>
                     <p className="fp-hint" style={{ margin: '2px 0 0' }}>
-                      {row.date} · {row.amount !== null ? formatMoney(row.amount) : '—'}
+                      {formatRowDate(row.date)} · {row.amount !== null ? formatMoney(row.amount) : '—'}
                     </p>
                     {rowErrors[key] && <RowError message={rowErrors[key]} />}
                   </div>
