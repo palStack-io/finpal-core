@@ -148,10 +148,15 @@ export const TransactionRules: React.FC = () => {
           providing on one line. */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* h1, not h2 — this is the PAGE's own title and everything under it is
+              a section, so the document outline started at level 2 with no h1
+              at all. Size stays inline; nothing moves on screen. Found by
+              `every-page.spec.ts`, which walks all 21 routes — the older h1
+              check walked six and this page was not one of them. */}
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Zap size={24} style={{ color: 'var(--au-ink)' }} />
             Transaction Rules
-          </h2>
+          </h1>
           <p className="fp-hint">
             Automatically categorize and organize transactions based on patterns
           </p>

@@ -196,10 +196,18 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
           Icon
         </label>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+          {/* *** AN EMOJI IS NOT AN ACCESSIBLE NAME. *** axe reported the whole
+              grid as `button-name`: a screen reader announced every swatch as
+              "button". The label uses the icon's NAME rather than the glyph,
+              because "Use the Groceries icon" is a thing somebody can act on and
+              a read-aloud emoji is not. `aria-pressed` carries the selected
+              state, which until now the coloured border said only visually. */}
           {Object.entries(categoryIcons).slice(0, 12).map(([name, icon]) => (
             <button
               key={icon}
               type="button"
+              aria-label={`Use the ${name} icon`}
+              aria-pressed={formData.icon === icon}
               onClick={() => setFormData(prev => ({ ...prev, icon }))}
               style={{
                 width: '48px',
@@ -463,7 +471,12 @@ export const CategoryManagement: React.FC = () => {
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Categories</h2>
+          {/* h1, not h2 — this is the PAGE's own title and everything under it is
+              a section, so the document outline started at level 2 with no h1
+              at all. Size stays inline; nothing moves on screen. Found by
+              `every-page.spec.ts`, which walks all 21 routes — the older h1
+              check walked six and this page was not one of them. */}
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Categories</h1>
           <p style={bodyTextStyle}>Organize your transactions with categories and subcategories</p>
         </div>
         <button
@@ -668,7 +681,11 @@ export const CategoryManagement: React.FC = () => {
                     </div>
                   </div>
                   <div style={flexRowGap8}>
+                    {/* Named per row, never a bare "Edit": a list of identical
+                        "Edit" buttons tells a screen-reader user nothing about
+                        which category they are on. */}
                     <button
+                      aria-label={`Edit ${category.name}`}
                       onClick={() => handleEdit(category)}
                       style={{
                         padding: '10px',
@@ -686,6 +703,7 @@ export const CategoryManagement: React.FC = () => {
                       <Edit2 size={16} />
                     </button>
                     <button
+                      aria-label={`Delete ${category.name}`}
                       onClick={() => handleDelete(category.id)}
                       style={{
                         padding: '10px',
@@ -766,6 +784,7 @@ export const CategoryManagement: React.FC = () => {
                         </div>
                         <div style={flexRowGap8}>
                           <button
+                            aria-label={`Edit ${sub.name}`}
                             onClick={() => handleEdit(sub)}
                             style={{
                               padding: '8px',
@@ -782,6 +801,7 @@ export const CategoryManagement: React.FC = () => {
                             <Edit2 size={14} />
                           </button>
                           <button
+                            aria-label={`Delete ${sub.name}`}
                             onClick={() => handleDelete(sub.id)}
                             style={{
                               padding: '8px',
@@ -806,6 +826,7 @@ export const CategoryManagement: React.FC = () => {
                 {/* Add Subcategory Button */}
                 <div style={{ paddingLeft: '76px' }}>
                   <button
+                    aria-label={`Add a subcategory to ${category.name}`}
                     onClick={() => handleAddSubcategory(category.id)}
                     style={{
                       padding: '10px 16px',
