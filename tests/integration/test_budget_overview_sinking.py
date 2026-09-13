@@ -12,7 +12,7 @@ higher, which is D-102's shape -- a caption saying net worth rose 43% above a
 line that fell.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -20,6 +20,7 @@ import pytest
 from src.extensions import db as _db
 from src.models.budget import Budget
 from src.models.category import Category
+from src.models.transaction import Expense
 from tests.factories import UserFactory
 
 ENDPOINT = '/api/v1/budgets/overview'
@@ -39,7 +40,18 @@ def _budget(user, name, amount, period, spending_type):
                start_date=datetime.utcnow())
     _db.session.add(b)
     _db.session.commit()
-    return b
+    return b, cat
+
+
+def _spend(user, category, amount, when):
+    """One real expense, because a fixture with none cannot tell two spans apart."""
+    e = Expense(description='car tax', amount=Decimal(amount), date=when,
+                card_used='card', split_method='equal', paid_by=user.id,
+                user_id=user.id, category_id=category.id,
+                transaction_type='expense')
+    _db.session.add(e)
+    _db.session.commit()
+    return e
 
 
 def _overview(client, auth_headers, user):
@@ -111,3 +123,76 @@ def test_A_YEARLY_FLEXIBLE_BUDGET_IS_NOT_A_SINKING_FUND(
 
     assert row['is_sinking_fund'] is False
     assert float(_group(data, 'flexible')['planned']) == 600.0
+
+
+# ---------------------------------------------------------------------------
+# The two spans, and the only test that can tell them apart
+# ---------------------------------------------------------------------------
+
+def _earlier_this_year_but_not_this_month(today):
+    """A date in this calendar year that is NOT in this calendar month.
+
+    January has no earlier month, so it borrows a LATER one instead — still this
+    year, still outside this month, which is all the test needs. A fixture that
+    quietly fell back to "this month" in January would make the whole file
+    vacuous for one month a year, and nobody would be looking in January.
+    """
+    if today.month == 1:
+        return today.replace(month=2, day=15)
+    return today.replace(month=today.month - 1, day=15)
+
+
+def test_THE_ROW_IS_THE_YEAR_AND_THE_GROUP_IS_THE_MONTH_AND_BOTH_SAY_SO(
+        client, auth_headers, user):
+    """*** THE FIGURES HAVE TO AGREE WITHIN EACH SPAN, NOT ACROSS THEM. ***
+
+    `spent` on a yearly budget is the CALENDAR YEAR TO DATE — that is
+    `get_current_period_dates`, not a choice made here — so the row reads
+    "£X of £600 for the year" and `remaining` and `percentage` follow from it.
+
+    The GROUP is a month: planned is one twelfth. Summing the YEAR's spending
+    into that group would subtract a year from a month and call the difference
+    "remaining", which is D-102's shape — a number and a caption describing
+    different things.
+
+    The earlier fixture here had no transactions at all, so `spent` was 0
+    everywhere and every figure agreed trivially. That is the inverse of D-107:
+    a fixture gentler than reality hides the defect rather than inventing one.
+    """
+    budget, cat = _budget(user, 'Car tax', '600.00', 'yearly', 'non_monthly')
+    today = datetime.utcnow()
+    _spend(user, cat, '400.00', _earlier_this_year_but_not_this_month(today))
+    _spend(user, cat, '30.00', today)
+
+    data = _overview(client, auth_headers, user)
+    row = _group(data, 'non_monthly')['budgets'][0]
+    group = _group(data, 'non_monthly')
+
+    # THE ROW — every figure on it is the year's.
+    assert float(row['spent']) == 430.0
+    assert float(row['amount']) == 600.0
+    assert float(row['remaining']) == 170.0
+    assert round(float(row['percentage'])) == 72       # 430/600
+
+    # THE GROUP — every figure on it is this month's.
+    assert float(group['planned']) == 50.0
+    assert float(group['actual']) == 30.0
+    assert float(group['remaining']) == 20.0
+    # and the page-level total is built from the same month, not from the year
+    assert float(data['totals']['planned']) == 50.0
+    assert float(data['totals']['actual']) == 30.0
+
+
+def test_AN_ORDINARY_ROW_STILL_CONTRIBUTES_ITS_OWN_SPENT(client, auth_headers, user):
+    """*** THE SABOTAGE GUARD. *** Reading `month_spent` for every row, rather
+    than only for a sinking fund, would pass the test above and break every
+    monthly budget on the page — the failure would land on the common case while
+    the special case stayed green."""
+    budget, cat = _budget(user, 'Groceries', '500.00', 'monthly', 'flexible')
+    today = datetime.utcnow()
+    _spend(user, cat, '120.00', today)
+
+    group = _group(_overview(client, auth_headers, user), 'flexible')
+
+    assert float(group['actual']) == 120.0
+    assert 'month_spent' not in group['budgets'][0]
