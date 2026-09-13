@@ -234,6 +234,17 @@ def register_oidc_routes(app, User, db):
             nonce = secrets.token_urlsafe(16)
             set_oidc_session('nonce', nonce)
 
+            # *** D-161: WHY THIS ROUND TRIP WAS STARTED. *** An SSO user has a
+            # password they can never know, so the ordinary change-password
+            # flow -- which proves identity by asking for the current one --
+            # cannot work for them. The answer is to send them back to the IdP
+            # and accept a new password only on a FRESH assertion.
+            #
+            # Stored server-side rather than read back off the callback URL: a
+            # value the caller can set is not evidence of anything.
+            if request.args.get('intent') == 'set_password':
+                set_oidc_session('intent', 'set_password')
+
             # Store the original URL to redirect after authentication
             redirect_to = request.args.get('next', '/')
             set_oidc_session('redirect_to', redirect_to)
@@ -339,6 +350,21 @@ def register_oidc_routes(app, User, db):
 
                 # Save the ID token for logout
                 set_oidc_session('id_token', tokens['id_token'])
+
+                # *** `auth_time` IS THE PROVIDER STATING WHEN THE USER ACTUALLY
+                # AUTHENTICATED, AND IT IS THE ONLY REAL EVIDENCE HERE. ***
+                # `prompt=login` is a REQUEST and a provider is free to ignore
+                # it -- many return an existing session immediately -- so "we
+                # asked for a fresh login" proves nothing on its own. A provider
+                # that omits the claim is refused rather than assumed recent:
+                # a missing claim is an unknown, not a young one.
+                try:
+                    import jwt as _pyjwt
+                    _claims = _pyjwt.decode(
+                        tokens['id_token'], options={'verify_signature': False})
+                    set_oidc_session('auth_time', _claims.get('auth_time'))
+                except Exception:
+                    set_oidc_session('auth_time', None)
             else:
                 # No ID token means nothing binds this response to our nonce.
                 # PKCE and state still held, so this is logged rather than fatal —
@@ -381,9 +407,21 @@ def register_oidc_routes(app, User, db):
                 # Mobile flow: pass tokens via URL fragment (#), not query params (?).
                 # Fragment is never sent to servers or logged by proxies.
                 from flask_jwt_extended import create_access_token, create_refresh_token
+            # *** THE FRESHNESS RIDES IN THE SIGNED TOKEN (D-161). *** Nothing
+            # has to be trusted across the redirect: the claim is stamped only
+            # when the PROVIDER's own `auth_time` said the user authenticated
+            # just now, and `set-password` re-checks the age rather than
+            # trusting the claim's presence, so a replay expires with it.
+            _extra = {'email': user.id}
+            if get_oidc_session('intent', delete=True) == 'set_password':
+                from src.services.auth.reauth import REAUTH_CLAIM, is_fresh_assertion
+                _auth_time = get_oidc_session('auth_time', delete=True)
+                if is_fresh_assertion(_auth_time):
+                    _extra[REAUTH_CLAIM] = float(_auth_time)
+
                 access_token = create_access_token(
                     identity=user.id,
-                    additional_claims={'email': user.id}
+                    additional_claims=_extra
                 )
                 refresh_token = create_refresh_token(identity=user.id)
                 deep_link = (
@@ -395,9 +433,21 @@ def register_oidc_routes(app, User, db):
 
             # Web flow: generate JWT tokens and pass to React SPA via URL fragment
             from flask_jwt_extended import create_access_token, create_refresh_token
+            # *** THE FRESHNESS RIDES IN THE SIGNED TOKEN (D-161). *** Nothing
+            # has to be trusted across the redirect: the claim is stamped only
+            # when the PROVIDER's own `auth_time` said the user authenticated
+            # just now, and `set-password` re-checks the age rather than
+            # trusting the claim's presence, so a replay expires with it.
+            _extra = {'email': user.id}
+            if get_oidc_session('intent', delete=True) == 'set_password':
+                from src.services.auth.reauth import REAUTH_CLAIM, is_fresh_assertion
+                _auth_time = get_oidc_session('auth_time', delete=True)
+                if is_fresh_assertion(_auth_time):
+                    _extra[REAUTH_CLAIM] = float(_auth_time)
+
             access_token = create_access_token(
                 identity=user.id,
-                additional_claims={'email': user.id}
+                additional_claims=_extra
             )
             refresh_token = create_refresh_token(identity=user.id)
             app_url = current_app.config.get('OIDC_REDIRECT_URI', '').rsplit('/oidc/callback', 1)[0]
