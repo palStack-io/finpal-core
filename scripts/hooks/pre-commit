@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+#
+# Gate the code BEFORE it becomes a commit — and, critically, before any network
+# connection exists to be held open.
+#
+# *** THIS EXISTS BECAUSE `pre-push` COULD NOT WORK, AND THAT WAS PROVEN RATHER
+# THAN ASSUMED (D-190). *** A pre-push hook runs while git already holds the SSH
+# transport to GitHub. The full preflight takes ~12 minutes, GitHub closes an
+# idle connection long before that, and the push then dies with SIGPIPE — AFTER
+# the gate has printed "ALL GREEN — safe to push".
+#
+# The discriminating experiment: the same branch, same credentials, same refs.
+# With the hook it failed twice (exit 128, exit 141) and `git ls-remote` showed
+# the branch never arrived. With `SKIP_PREFLIGHT=1` it took **3.1 seconds** and
+# exited 0. The only variable was how long the hook held the connection.
+#
+# *** THE FAILURE MODE IS THE WORST SHAPE AVAILABLE: the gate passes and the push
+# does not, and the two facts are twelve minutes apart in the same output. *** A
+# reader who greps for `ALL GREEN` concludes the push worked.
+#
+# A commit holds no connection. Nothing here can time out a transport.
+#
+# INSTALL (once per clone; hooks are not tracked by git):
+#     ./scripts/install-hooks.sh
+#
+# SKIP IT DELIBERATELY, when you know why:
+#     SKIP_PREFLIGHT=1 git commit ...
+set -uo pipefail
+
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd "$HERE/../.." && pwd)
+
+# *** THE PRIVACY GUARD RUNS EVEN UNDER SKIP_PREFLIGHT. *** It takes 0.38s, and a
+# leak cannot be taken back: it stays in the history, in every clone and every
+# fork. On 2026-09-09 a branch reached this PUBLIC repo carrying 980
+# Chrome-profile files with absolute /Users/<name>/... paths (D-169).
+#
+# *** AND IT BELONGS HERE MORE THAN IT BELONGED IN pre-push. *** The guard reads
+# `git ls-files`, so it can only see a file once it is TRACKED. Running at commit
+# time is the first moment it can see what is about to enter history — at push
+# time the file is already in a commit and removing it means a rewrite.
+run_privacy_guard() {
+  local py="$ROOT/venv/bin/python"
+  [[ -x "$py" ]] || py=python3
+  if "$py" -m pytest "$ROOT/tests/unit/test_no_private_data_in_tracked_files.py" -q >/dev/null 2>&1; then
+    return 0
+  fi
+  printf '\n\033[31m✗ pre-commit: COMMIT REFUSED — private data in staged files.\033[0m\n'
+  printf '  This runs even under SKIP_PREFLIGHT, because a leak cannot be taken back.\n\n'
+  "$py" -m pytest "$ROOT/tests/unit/test_no_private_data_in_tracked_files.py" -q 2>&1 | tail -25
+  return 1
+}
+
+if [[ "${SKIP_PREFLIGHT:-}" == "1" ]]; then
+  printf '\033[33m! pre-commit: SKIP_PREFLIGHT=1 — committing without the local gate.\033[0m\n'
+  run_privacy_guard || exit 1
+  printf '\033[32m  (the privacy guard still ran, and it is clean)\033[0m\n'
+  exit 0
+fi
+
+run_privacy_guard || exit 1
+
+# What is actually staged, so the gate can be scoped to it.
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+[[ -z "$STAGED" ]] && exit 0
+
+# *** SCOPED TO WHAT CHANGED, AND THAT IS NOT A WEAKENING — IT IS WHAT MAKES A
+# COMMIT-TIME GATE SURVIVABLE. ***
+#
+# The full preflight is ~12 minutes. Run on EVERY commit that is unusable: a
+# fifteen-commit session would spend three hours gating. And this file's
+# predecessor already recorded where that leads — "a 20-minute hook gets
+# bypassed routinely, and a gate that is routinely bypassed is worse than no
+# gate, because it manufactures confidence nobody has earned."
+#
+# So: a commit touching only web-ui does not run pytest, and a commit touching
+# only Python does not run the browser walks. Nothing is skipped that could have
+# been affected; the union across a branch is still the full gate, and the push
+# itself is now unblocked so CI remains the backstop.
+WANT_BACKEND=0
+WANT_WEB=0
+while IFS= read -r f; do
+  case "$f" in
+    web-ui/*)            WANT_WEB=1 ;;
+    *.py|tests/*|api/*|src/*|integrations/*|scripts/*.py)  WANT_BACKEND=1 ;;
+    # Anything else — a compose file, a workflow, a doc — could affect either,
+    # and guessing which is how a gate goes blind. Run both.
+    *.md|*.txt)          ;;
+    *)                   WANT_BACKEND=1; WANT_WEB=1 ;;
+  esac
+done <<< "$STAGED"
+
+if [[ "$WANT_BACKEND" -eq 0 && "$WANT_WEB" -eq 0 ]]; then
+  printf '\033[32m✓ pre-commit: docs only — nothing to gate.\033[0m\n'
+  exit 0
+fi
+
+TARGET=""
+if [[ "$WANT_BACKEND" -eq 1 && "$WANT_WEB" -eq 1 ]]; then TARGET=""
+elif [[ "$WANT_BACKEND" -eq 1 ]];                   then TARGET="backend"
+else                                                     TARGET="web"
+fi
+
+printf '\n\033[1m▶ pre-commit: ./scripts/preflight.sh %s\033[0m\n' "${TARGET:-(full)}"
+printf '  Scoped to what is staged. SKIP_PREFLIGHT=1 to bypass deliberately —\n'
+printf '  the privacy guard runs either way.\n\n'
+
+if "$ROOT/scripts/preflight.sh" $TARGET; then
+  printf '\n\033[32m✓ pre-commit: local gate green — committing.\033[0m\n'
+  exit 0
+fi
+
+printf '\n\033[31m✗ pre-commit: COMMIT REFUSED — the local gate is red.\033[0m\n'
+printf '  Fix it, or commit with SKIP_PREFLIGHT=1 if you have a reason.\n'
+printf '  Reminder: CI does NOT run pytest on this repo, and the docker-build\n'
+printf '  workflow republishes :latest regardless of tests — so a red commit that\n'
+printf '  reaches main reaches self-hosters pulling latest.\n'
+exit 1

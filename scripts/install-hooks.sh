@@ -41,15 +41,31 @@ if [[ "$installed" -eq 0 ]]; then
 fi
 
 printf '\n%s hook(s) installed.\n' "$installed"
-printf 'pre-push now runs ./scripts/preflight.sh and refuses a red push.\n'
+printf 'pre-commit runs ./scripts/preflight.sh, SCOPED to what is staged, and refuses\n'
+printf 'a red commit. pre-push now runs only the privacy guard.\n'
+printf '\n'
+printf 'The gate moved from pre-push to pre-commit on 2026-09-13 (D-190): a pre-push hook\n'
+printf 'holds the SSH transport open for the whole ~12-minute preflight, GitHub closes the\n'
+printf 'idle connection, and the push dies AFTER the gate prints "ALL GREEN". A commit\n'
+printf 'holds no connection, so nothing can time out.\n'
 printf 'Bypass deliberately with: SKIP_PREFLIGHT=1 git push\n'
 
 # Prove it is live rather than asserting it — `make a check fail before believing it
 # passes` is the house rule, and a hook that is present but not executable is the
 # classic silent no-op.
-if [[ -x "$HOOK_DST/pre-push" ]]; then
-  printf '\n\033[32mVerified: .git/hooks/pre-push is present and executable.\033[0m\n'
-else
-  printf '\n\033[31mWARNING: .git/hooks/pre-push is NOT executable — it will not run.\033[0m\n'
+# *** BOTH HOOKS, NOT JUST ONE. *** This checked only `pre-push` until 2026-09-13,
+# which was fine while pre-push carried the gate. It now carries only the privacy
+# guard and `pre-commit` carries everything else -- so verifying pre-push alone
+# would report success on a clone where the real gate is not installed at all.
+ok=1
+for h in pre-commit pre-push; do
+  if [[ -x "$HOOK_DST/$h" ]]; then
+    printf '\033[32m  ✓ .git/hooks/%s is present and executable\033[0m\n' "$h"
+  else
+    printf '\033[31m  ✗ .git/hooks/%s is NOT executable — it will not run\033[0m\n' "$h"
+    ok=0
+  fi
+done
+if [[ "$ok" -ne 1 ]]; then
   exit 1
 fi
