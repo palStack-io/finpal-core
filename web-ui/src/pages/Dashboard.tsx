@@ -704,9 +704,9 @@ export const Dashboard = () => {
                                 <div key={cat.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
                                   <span style={{
                                     fontSize: '13px', fontWeight: '500', padding: '4px 10px', borderRadius: '6px',
-                                    background: cat.color ? `${cat.color}20` : 'rgba(107,114,128,0.2)',
+                                    background: cat.color ? `color-mix(in srgb, ${cat.color} 12.5%, transparent)` : 'rgba(107,114,128,0.2)',
                                     color: cat.color || 'var(--text-secondary)',
-                                    border: `1px solid ${cat.color || 'var(--text-secondary)'}40`,
+                                    border: `1px solid color-mix(in srgb, ${cat.color || 'var(--text-secondary)'} 25%, transparent)`,
                                     display: 'inline-block'
                                   }}>{cat.name}</span>
                                   <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(cat.total)}</span>
@@ -720,9 +720,9 @@ export const Dashboard = () => {
                                 <div key={acc.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
                                   <span style={{
                                     fontSize: '13px', fontWeight: '500', padding: '4px 10px', borderRadius: '6px',
-                                    background: acc.color ? `${acc.color}20` : 'rgba(107,114,128,0.2)',
+                                    background: acc.color ? `color-mix(in srgb, ${acc.color} 12.5%, transparent)` : 'rgba(107,114,128,0.2)',
                                     color: acc.color || 'var(--text-secondary)',
-                                    border: `1px solid ${acc.color || 'var(--text-secondary)'}40`,
+                                    border: `1px solid color-mix(in srgb, ${acc.color || 'var(--text-secondary)'} 25%, transparent)`,
                                     display: 'inline-block'
                                   }}>{acc.name}</span>
                                   <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(acc.total)}</span>

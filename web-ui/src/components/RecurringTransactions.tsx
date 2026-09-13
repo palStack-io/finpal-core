@@ -608,8 +608,12 @@ export const RecurringTransactions: React.FC = () => {
                   {!item.active && (
                     <span style={{
                       padding: '2px 8px',
-                      background: 'rgba(100, 116, 139, 0.3)',
-                      border: '1px solid rgba(100, 116, 139, 0.5)',
+                      /* 0.3 -> 0.16: `--text-secondary` on the thicker
+                         wash measured 3.77:1 (#56685d on #c8cfd2). The same
+                         word on the page's own wash measures 4.51, so it was
+                         the TINT that failed, not the token. D-103. */
+                      background: 'rgba(100, 116, 139, 0.16)',
+                      border: '1px solid rgba(100, 116, 139, 0.4)',
                       borderRadius: '4px',
                       color: 'var(--text-secondary)',
                       fontSize: '11px',
@@ -636,7 +640,12 @@ export const RecurringTransactions: React.FC = () => {
                   onClick={() => handleToggleActive(item.id)}
                   style={{
                     padding: '8px 12px',
-                    background: item.active ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                    /* 0.2 -> 0.13. `--re-ink` on the 20% red wash measured
+                       4.41:1 in dark (#f87171 on #453127) — nine hundredths
+                       short of AA on a 13px bold label. Both halves move
+                       together so the button does not change depth when it
+                       toggles. */
+                    background: item.active ? 'rgba(239, 68, 68, 0.13)' : 'rgba(34, 197, 94, 0.13)',
                     border: `1px solid ${item.active ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`,
                     borderRadius: '8px',
                     color: item.active ? 'var(--re-ink)' : 'var(--g-ink)',
@@ -655,7 +664,8 @@ export const RecurringTransactions: React.FC = () => {
                   onClick={() => handleDelete(item.id)}
                   style={{
                     padding: '8px',
-                    background: 'rgba(239, 68, 68, 0.2)',
+                    /* Matches the Pause button beside it — see above. */
+                    background: 'rgba(239, 68, 68, 0.13)',
                     border: '1px solid rgba(239, 68, 68, 0.5)',
                     borderRadius: '8px',
                     color: 'var(--re-ink)',

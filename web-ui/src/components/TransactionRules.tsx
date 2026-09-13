@@ -350,8 +350,12 @@ export const TransactionRules: React.FC = () => {
 
                   {/* Actions Applied */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                    {/* 0.2 -> 0.12 on the chip below: `--au-ink` on the 20% gold
+                        wash measured 4.41:1 (#b45309 on #fbf0ce), just under AA.
+                        Thinning the wash moves it toward the card in BOTH themes,
+                        which is why the ink itself is untouched. D-103. */}
                     {rule.auto_category && (
-                      <span style={{ padding: '6px 12px', background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '6px', fontSize: '13px', color: 'var(--au-ink)' }}>
+                      <span style={{ padding: '6px 12px', background: 'rgba(251, 191, 36, 0.12)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '6px', fontSize: '13px', color: 'var(--au-ink)' }}>
                         → Category: {rule.auto_category}
                       </span>
                     )}

@@ -196,60 +196,37 @@ const baseline = existsSync(baselinePath)
  * That is the mechanism working: a page cannot be quietly left "pending" once it
  * is clean. The other four are still above zero and stay.
  */
+/**
+ * *** EMPTY, AND THAT IS THE POINT: D-103 IS CLOSED. ***
+ *
+ * This map held pages that had entered `captured/` without ever having been
+ * contrast-audited -- the "unmeasured is not clean" hole. A page listed here was
+ * REPORTED and not GATED, and the staleness check below exits 1 the moment a
+ * listed page reaches zero failing pairs, so nothing can sit here after it is
+ * fixed. All of them have now graduated:
+ *
+ *   pointspal-bestcard, pointspal-mycards, pointspal-redeem   2026-09-12
+ *   categories, investments, recurring, rules                 2026-09-13
+ *
+ * *** THE LAST SIX PAIRS CAME OUT AS TWO ROOT CAUSES, NOT SIX COLOURS. ***
+ *
+ *   1. **An accent used as INK.** `#22c55e`, `#3b82f6` and `#15803d` are SURFACE
+ *      values -- they paint buttons -- and as a mark on a near-white card or on
+ *      a 20% wash of themselves they measured 2.21, 2.84 and 2.63 against a 3:1
+ *      non-text floor. `--g-ink` / `--bl-ink` are the tokens that exist for
+ *      exactly this and they THEME, which a brand hex cannot: a token cannot be
+ *      both the ink and the surface and change for only one of them.
+ *
+ *   2. **A wash one step too thick.** `INACTIVE` (3.77), `Pause` (4.41) and the
+ *      rule chip (4.41) all had the right ink on too much tint. Thinning the
+ *      wash moves it toward the CARD, which is lighter on light and darker on
+ *      dark -- so one edit raises contrast in BOTH themes, where darkening the
+ *      ink would have had to be done twice, in opposite directions.
+ *
+ * Adding a page back here is a deliberate act and needs a reason beside it. The
+ * default for a new page is the real gate.
+ */
 const PENDING_AUDIT = {
-  // *** ADDED 2026-09-10 WHEN THE CATEGORY SCREEN ENTERED `captured/` FOR THE
-  // FIRST TIME. *** It has shipped for as long as the app has and had never
-  // been captured by either walk -- "unmeasured is not clean", the same hole
-  // the six pages below were sitting in. The spending-group control landing
-  // there (spec §1 decision 3) is what surfaced it.
-  //
-  // *** THE SIX PAIRS ARE PRE-EXISTING AND THAT WAS MEASURED, NOT ASSUMED. ***
-  // The page was captured A/B, with the new control and without it, and the
-  // failing set is IDENTICAL both ways. They are the page's shipped icon
-  // buttons and its green primary -- #22c55e, #3b82f6 and #ef4444 on their
-  // washes, and #17301f on #15803d -- i.e. the semantic accents that are
-  // deliberately not variablized. Fixing them is a palette pass, not this one.
-  //
-  // The A/B also caught something that WAS mine: the control overflowed the
-  // subcategory row at 390px, 466 against a 390 viewport. That was fixed, not
-  // listed here -- this list is for what shipped before, never for a
-  // regression.
-  categories: 'D-103 — never contrast-audited; entered captured/ 2026-09-10, pairs verified pre-existing A/B',
-  investments: 'D-103 — never contrast-audited; added to captured/ by the responsive pass',
-  // *** pointspal-bestcard AND pointspal-mycards GRADUATED 2026-09-12, ZERO
-  // FAILING PAIRS EACH. *** Out of this list and into the real gate. Both were
-  // cleared by the same root-cause fix rather than by tuning their colours:
-  // `--brand-light-green` and `--brand-accent-gold` are SURFACE tokens declared
-  // once and never themed, so as text they measured 1.10-1.62:1; the ink tokens
-  // flip and measure 4.41-8.21:1. `--muted` darkening from #64748b to #5a6a80
-  // took the last of theirs.
-  // *** pointspal-redeem GRADUATED 2026-09-12: ZERO FAILING PAIRS. *** It is
-  // out of this list and into the real gate, which is the point of the
-  // staleness check that flagged it -- a page left in PENDING after it is
-  // clean is a page whose next regression nobody catches.
-  // Its last two were `--au300` (a 40%% amber over the card's green,
-  // compositing to #71a143 at 1.65:1) and the `+$-501.15` figure beside it.
-  // *** ADDED 2026-09-11 WHEN `recurring` AND `rules` ENTERED `captured/` FOR
-  // THE FIRST TIME. *** Neither page had a capture file, so no walk had ever
-  // rendered either of them -- the same "unmeasured is not clean" hole
-  // `categories` was in, and both are also two of the three pages measured at
-  // 0px left padding the day before.
-  //
-  // *** THE FAILING PAIRS ARE THE PAGES' OWN SHIPPED PALETTE, NOT THE
-  // FIXTURE'S. *** `#86efac`, `#fbbf24` and `#17301f on #15803d` are the
-  // semantic accents CLAUDE.md records as deliberately NOT variablized, on
-  // their washes -- the same set `categories` is listed for. Nothing in this
-  // pass touched either component's colours, and a fixture cannot invent a
-  // computed colour: the walk reads the DOM, so these are what the page renders
-  // for any data at all. Fixing them is a palette pass, not this one.
-  //
-  // *** WHAT WAS NOT LISTED HERE IS THE 390px OVERFLOW ON `rules`. *** The
-  // responsive walk found 470px of content in a 390px viewport on that same
-  // first run -- the two header buttons, 285px, with nothing to wrap them. That
-  // was FIXED rather than recorded, because this list is for what shipped
-  // before and the responsive walk has no pending bucket by design.
-  recurring: 'D-103 — never contrast-audited; entered captured/ 2026-09-11',
-  rules: 'D-103 — never contrast-audited; entered captured/ 2026-09-11',
 };
 
 {

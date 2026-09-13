@@ -1091,7 +1091,7 @@ const MetricCard: React.FC<{
           width: '48px',
           height: '48px',
           borderRadius: '50%',
-          background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+          background: `linear-gradient(135deg, ${color} 0%, color-mix(in srgb, ${color} 86.7%, transparent) 100%)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

@@ -781,7 +781,7 @@ const BudgetsMinimal = () => {
                                 }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.background = 'var(--border-light)';
-                                  e.currentTarget.style.borderColor = `${budget.category_color}60`;
+                                  e.currentTarget.style.borderColor = `color-mix(in srgb, ${budget.category_color} 37.6%, transparent)`;
                                 }}
                                 onMouseLeave={(e) => {
                                   e.currentTarget.style.background = 'var(--surface-hover)';

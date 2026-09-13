@@ -527,7 +527,13 @@ export const CategoryManagement: React.FC = () => {
           label="Total Items"
           value={String(categories.length)}
           accentColor="var(--brand-green-glow)"
-          icon={<Search size={24} style={{ color: 'var(--brand-green-glow)' }} />}
+          /* *** THE INK, NOT THE BRAND VALUE. *** `--brand-green-glow`
+             measured 2.21:1 here against the 3:1 non-text floor: it is a
+             SURFACE colour that reads as a glow on dark and vanishes on the
+             near-white card. `--g-ink` is the token that exists so an accent
+             can move as a mark without dragging the surfaces it paints with
+             it (D-103). */
+          icon={<Search size={24} style={{ color: 'var(--g-ink)' }} />}
         />
       </div>
 
@@ -634,7 +640,7 @@ export const CategoryManagement: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: `${category.color}20`,
+                      background: `color-mix(in srgb, ${category.color} 12.5%, transparent)`,
                       borderRadius: '12px'
                     }}>
                       {categoryIcon(category.icon)}
@@ -739,7 +745,7 @@ export const CategoryManagement: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: `${sub.color}20`,
+                            background: `color-mix(in srgb, ${sub.color} 12.5%, transparent)`,
                             borderRadius: '8px'
                           }}>
                             {categoryIcon(sub.icon)}
