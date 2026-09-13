@@ -16,6 +16,7 @@ import { pageContainerStyle } from '../styles/layoutStyles';
 import { learnpalService } from '../modules/learnpal/service';
 import { RangeBanner } from '../modules/learnpal/RangeBanner';
 import { GoalStrip } from '../modules/learnpal/GoalStrip';
+import { RangeHiddenNote, rangeIsHiddenByChoice } from '../modules/learnpal/RangeHiddenNote';
 import type { LearnRange, RangeStrip } from '../types/learnpal';
 import { goalService } from '../services/goalService';
 import { accountService, type Account } from '../services/accountService';
@@ -929,6 +930,13 @@ export const Goals: React.FC = () => {
 
       {/* learnPal only, and absent entirely when the module is off. */}
       {range && <RangeBanner range={range} />}
+      {/* *** THE GAP EXPLAINS ITSELF, BUT ONLY WHEN THE USER OWNS THE SWITCH.
+          *** `rangeIsHiddenByChoice` is true for exactly one state: learnPal is
+          granted to this user AND they hid it in Settings. A deployment that
+          does not run learnPal, or a user never entitled to it, gets nothing —
+          see the note in `RangeHiddenNote.tsx` for why a prompt there would be
+          the same mistake `service.ts` already refuses to make. */}
+      {!range && rangeIsHiddenByChoice(user) && <RangeHiddenNote />}
 
       {loading && <Loader2 size={20} className="animate-spin" aria-label="Loading goals" />}
       {error && <div role="alert" style={{ color: '#ef4444' }}>{error}</div>}
