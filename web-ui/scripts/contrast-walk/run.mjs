@@ -218,7 +218,12 @@ const PENDING_AUDIT = {
   investments: 'D-103 — never contrast-audited; added to captured/ by the responsive pass',
   'pointspal-bestcard': 'D-103 — never contrast-audited',
   'pointspal-mycards': 'D-103 — never contrast-audited',
-  'pointspal-redeem': 'D-103 — never contrast-audited',
+  // *** pointspal-redeem GRADUATED 2026-09-12: ZERO FAILING PAIRS. *** It is
+  // out of this list and into the real gate, which is the point of the
+  // staleness check that flagged it -- a page left in PENDING after it is
+  // clean is a page whose next regression nobody catches.
+  // Its last two were `--au300` (a 40%% amber over the card's green,
+  // compositing to #71a143 at 1.65:1) and the `+$-501.15` figure beside it.
   // *** ADDED 2026-09-11 WHEN `recurring` AND `rules` ENTERED `captured/` FOR
   // THE FIRST TIME. *** Neither page had a capture file, so no walk had ever
   // rendered either of them -- the same "unmeasured is not clean" hole

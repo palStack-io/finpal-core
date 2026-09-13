@@ -69,6 +69,15 @@ const Redeem: React.FC = () => {
   const left = data.programs.filter((_, i) => i % 2 === 0);
   const right = data.programs.filter((_, i) => i % 2 !== 0);
 
+  /**
+   * What transfers would add over face value — and it can be NEGATIVE.
+   *
+   * Derived once here rather than inline, because the JSX has to ask about its
+   * sign twice: to decide the figure AND to decide the label. Computing it in
+   * two places is how the two come to disagree.
+   */
+  const uplift = data.max_redeemable_usd - data.total_value_usd;
+
   return (
     <div style={{ padding: '24px 28px', background: 'var(--bg)', minHeight: '100%' }}>
       <PageHeader />
@@ -106,11 +115,39 @@ const Redeem: React.FC = () => {
             </div>
             <div style={{ fontSize: 11, color: '#fff' }}>Current estimated value</div>
           </div>
+          {/* *** THIS RENDERED "+$-501.15" ON THE LIVE PAGE. ***
+              A `+` was glued in front of a difference that can be NEGATIVE, so a
+              user whose cards are worth more at face value than via transfers
+              was shown a malformed figure under the word "uplift" -- an uplift
+              that is negative is not an uplift, and the sentence and the number
+              disagreed. `money.tsx` already records this exact lesson: "Sign was
+              a +/- glued onto the formatted string".
+
+              *** A STATIC GATE FOR THIS WAS WRITTEN AND THEN DELETED. *** It
+              cannot tell a CHECKED sign from an unchecked one: `+{pts}` on
+              points earned is always right, and six of the seven sites it found
+              were legitimate -- including the guarded form used below. A guard
+              that cries wolf gets weakened, so this comment carries the lesson
+              instead of a test.
+
+              The sign now comes from the VALUE. When there is no uplift the
+              label says so rather than printing a negative one, because the
+              honest answer to "potential uplift" here is "none", not "-501.15".
+
+              `--au300` is `rgba(252, 211, 77, 0.4)` -- a 40% amber over the
+              card's green, which composites to #71a143 and measured **1.65:1**
+              against white text beside it. On a green card the readable accent
+              is white; the amber was decoration that cost the figure its
+              legibility. D-103 / D-102's family. */}
           <div>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--au300)' }}>
-              +${(data.max_redeemable_usd - data.total_value_usd).toLocaleString()}
+            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff' }}>
+              {uplift > 0
+                ? `+$${uplift.toLocaleString()}`
+                : '—'}
             </div>
-            <div style={{ fontSize: 11, color: '#fff' }}>Potential uplift via transfers</div>
+            <div style={{ fontSize: 11, color: '#fff' }}>
+              {uplift > 0 ? 'Potential uplift via transfers' : 'No uplift from transfers right now'}
+            </div>
           </div>
         </div>
       </div>
