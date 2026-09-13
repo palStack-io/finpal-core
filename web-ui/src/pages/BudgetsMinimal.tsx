@@ -30,6 +30,19 @@ interface BudgetWithDetails extends Budget {
    * is the same shape as `peak` being absent from a goal.
    */
   pace_applies?: boolean;
+  /**
+   * A Non-Monthly budget carrying a YEARLY period is a sinking fund: the amount
+   * is the whole bill and `monthly_set_aside` is the twelfth of it that this
+   * month's totals actually count.
+   *
+   * *** BOTH FIGURES COME FROM THE SERVER AND NEITHER IS DERIVED HERE. *** The
+   * group total already sums the set-aside, so a client dividing `amount` by
+   * twelve for the caption would be two places computing one number — D-101,
+   * where two clients deriving independently disagreed. `undefined` means a
+   * backend older than the feature and the row renders as it always did.
+   */
+  is_sinking_fund?: boolean;
+  monthly_set_aside?: number;
   category_icon?: string;
   category_color?: string;
   transactions?: Transaction[];
@@ -685,13 +698,38 @@ const BudgetsMinimal = () => {
                             </p>
                           )}
 
+                          {/* *** A SINKING FUND SAYS WHAT TO PUT BY, NOT WHAT
+                              YOU OWE TODAY. *** A £600 car tax compared against
+                              one month always reads as an overspend; finPal
+                              already ships a lesson (`sinking-funds`) telling
+                              people to divide the yearly cost by twelve, and
+                              teaching one thing while computing another is
+                              worse than doing neither.
+
+                              The figure is the SERVER'S — it is the same number
+                              the group's Planned total is built from, so the
+                              caption and the total cannot drift apart. */}
+                          {budget.is_sinking_fund && budget.monthly_set_aside != null && (
+                            <p className="fp-hint" style={{ margin: '0 0 8px' }}>
+                              Set aside {formatCurrency(budget.monthly_set_aside)} a month
+                              {' — that is what this month counts, not the whole bill.'}
+                            </p>
+                          )}
+
                           {/* Spent / Budget */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <p style={secondaryBodyStyle}>
                               <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
                                 {formatCurrency(budget.spent)}
                               </span>
-                              {reported ? ' committed' : ` of ${formatCurrency(budget.amount)}`}
+                              {reported
+                                ? ' committed'
+                                /* The whole bill, said to BE the whole bill. Left
+                                   bare it reads as a monthly target the user is
+                                   nowhere near. */
+                                : budget.is_sinking_fund
+                                  ? ` of ${formatCurrency(budget.amount)} for the year`
+                                  : ` of ${formatCurrency(budget.amount)}`}
                             </p>
                             <p style={{
                               color: isOver ? 'var(--status-over)' : 'var(--status-ok)',

@@ -396,3 +396,76 @@ describe('the income section', () => {
     expect(screen.queryByRole('heading', { level: 2, name: 'Income' })).toBeNull();
   });
 });
+
+/**
+ * The sinking fund — a Non-Monthly budget whose period is yearly.
+ *
+ * *** A £600 CAR TAX COMPARED AGAINST ONE MONTH ALWAYS READS AS AN OVERSPEND.
+ * *** Owner decision 2026-09-13: the budget carries the ANNUAL amount and the
+ * row shows the monthly set-aside, which is what the group's Planned total is
+ * built from. That makes the page agree with `sinking-funds`, a lesson finPal
+ * already ships — teaching one thing and computing another is worse than doing
+ * neither.
+ *
+ * The assertion that carries the design is that the caption's number came from
+ * the SERVER. Two places computing one figure is D-101, where two clients
+ * deriving a total independently disagreed about it.
+ */
+describe('a sinking fund row', () => {
+  /**
+   * *** 30 IS DELIBERATELY NOT 450/12, WHICH IS 37.50. *** With a fixture whose
+   * set-aside really was a twelfth of its amount, a client that divided
+   * `amount` itself would print the identical string and this test could not
+   * tell the two apart — the hole the pace fixture had in its first version,
+   * where `day 12 of 30` matched the real calendar date.
+   *
+   * The figures are not meant to be realistic. They are meant to be
+   * DISTINGUISHABLE, which is the only property a fixture has to have here.
+   */
+  const SET_ASIDE = 30;
+  const ANNUAL = 450;
+
+  const withSinking = (rowExtra: Record<string, unknown>) => overview({
+    groups: [
+      {
+        spending_type: 'non_monthly', label: 'Non-Monthly',
+        planned: SET_ASIDE, actual: 0, remaining: SET_ASIDE,
+        budgets: [{
+          ...budgetRow(7, 'Car tax', ANNUAL, 0),
+          period: 'yearly',
+          ...rowExtra,
+        }],
+      },
+    ],
+  });
+
+  it("shows the SERVER's set-aside, never a twelfth it worked out itself", async () => {
+    mount(withSinking({ is_sinking_fund: true, monthly_set_aside: SET_ASIDE }));
+    expect(await screen.findByText(/Set aside \$30\.00 a month/)).toBeTruthy();
+    // And NOT the twelfth a client would have worked out for itself.
+    expect(screen.queryByText(/Set aside \$37\.50 a month/)).toBeNull();
+  });
+
+  it('says the amount is the WHOLE YEAR, so it does not read as a monthly target',
+    async () => {
+      mount(withSinking({ is_sinking_fund: true, monthly_set_aside: SET_ASIDE }));
+      expect(await screen.findByText(/of \$450\.00 for the year/)).toBeTruthy();
+    });
+
+  it('says NEITHER thing on an ordinary row', async () => {
+    mount(withSinking({ period: 'monthly' }));
+    await heading('Non-Monthly');
+    expect(screen.queryByText(/Set aside/)).toBeNull();
+    expect(screen.queryByText(/for the year/)).toBeNull();
+  });
+
+  it('renders the row as it always did on a backend older than the feature',
+    async () => {
+      // Both fields absent — the same discipline as `pace` missing: render the
+      // old thing, never an "unmeasured" state the server never reported.
+      mount(withSinking({}));
+      await heading('Non-Monthly');
+      expect(screen.queryByText(/Set aside/)).toBeNull();
+      expect(await screen.findByText(/of \$450\.00$/)).toBeTruthy();
+    });
+});
