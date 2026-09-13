@@ -19,10 +19,15 @@ from src.utils.household import visible_user_ids, can_manage_owned
 from src.repositories.account import AccountRepository
 
 
-def categorize_imported_transaction(description, user_id, amount=None,
-                                    transaction_type=None):
+def rules_for_imported_transaction(description, user_id, amount=None,
+                                   transaction_type=None):
     """
-    Pick a category for a transaction arriving from an import (CSV or SimpleFin).
+    Apply the user's transaction rules to a row arriving from an import.
+
+    Returns `{'category_id': ..., 'transaction_type': ...}` — **a dict, not a
+    category**. It was `categorize_imported_transaction` returning a bare id, and
+    the rename is the point: a function named for one field is how the other four
+    got dropped silently for as long as this code has existed.
 
     *** THE USER'S TRANSACTION RULES COME FIRST, AND THAT IS THE FIX. ***
     finPal has two categorisers. `apply_transaction_rules` reads `transaction_rules`,
@@ -55,7 +60,28 @@ def categorize_imported_transaction(description, user_id, amount=None,
         current_app.logger.exception('Rule engine failed while importing; falling back')
         matched = {}
 
-    return matched.get('category_id') or auto_categorize_transaction(description, user_id)
+    return {
+        'category_id': (matched.get('category_id')
+                        or auto_categorize_transaction(description, user_id)),
+        # *** THE TYPE WAS COMPUTED AND THROWN AWAY, ON BOTH IMPORT PATHS. ***
+        # This function used to `return matched.get('category_id') or ...`, so
+        # `TransactionRule.apply()` built the whole dict — category, account,
+        # type, tags, notes — and the caller kept one key of it. A rule saying
+        # "treat PAYPAL TRANSFER as a transfer" matched, showed a match count in
+        # the Rules screen, and changed nothing about the row.
+        #
+        # That matters beyond tidiness because **budgets exclude transfers**
+        # (D-183), so a row that should have been a transfer and stayed `income`
+        # inflates the user's income — which is the whole reason the transfers
+        # work exists. It is also the prerequisite for the transfers spec §3,
+        # whose entire offer is *"treat X as a transfer from now on?"*: without
+        # this the offer writes a rule that cannot keep its promise.
+        #
+        # *** `None` WHEN NO RULE MATCHED, NEVER A DEFAULT. *** The caller keeps
+        # whatever the import itself said. Returning `'expense'` here would
+        # restamp every uncategorised row in every file.
+        'transaction_type': matched.get('transaction_type'),
+    }
 
 
 class AccountService:
@@ -448,9 +474,15 @@ class AccountService:
         # CSV still wins — this only fills a blank, exactly as transaction creation
         # applies rules only when `category_id` is absent.
         if not category_id and transaction_type != 'transfer':
-            category_id = categorize_imported_transaction(
+            matched = rules_for_imported_transaction(
                 description, user_id, amount=amount,
                 transaction_type=transaction_type)
+            category_id = matched['category_id']
+            # A rule that names a type overrules the one the CSV implied from the
+            # sign. `or transaction_type` keeps the file's own answer when no rule
+            # matched — the rules engine is a fallback for what the import did not
+            # say, never a restamp of what it did.
+            transaction_type = matched['transaction_type'] or transaction_type
 
         # Get currency
         user = db.session.get(User, user_id)
@@ -829,11 +861,17 @@ class SimpleFinService:
                     continue
 
                 # The user's transaction rules first, then the legacy categoriser.
-                category_id = categorize_imported_transaction(
+                feed_type = trans.get('transaction_type', 'expense')
+                matched = rules_for_imported_transaction(
                     trans.get('description', ''), user_id,
                     amount=trans.get('amount'),
-                    transaction_type=trans.get('transaction_type', 'expense'),
+                    transaction_type=feed_type,
                 )
+                category_id = matched['category_id']
+                # The user's explicit rule beats the feed's guess. SimpleFin sends
+                # no type at all for most rows (D-191 is the same fact about the
+                # ACCOUNT type), so `feed_type` is frequently just the sign.
+                row_type = matched['transaction_type'] or feed_type
 
                 expense = Expense(
                     description=trans.get('description', 'SimpleFin Transaction'),
@@ -842,7 +880,7 @@ class SimpleFinService:
                     currency_code=account.currency_code or 'USD',
                     date=trans['date'],
                     card_used=account.name,
-                    transaction_type=trans.get('transaction_type', 'expense'),
+                    transaction_type=row_type,
                     split_method='equal',
                     split_value=0,
                     paid_by=user_id,
