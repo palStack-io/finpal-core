@@ -320,6 +320,29 @@ def build_transaction(payload, user_id):
         user_id=user_id,
     )
 
+    # *** A TYPE THE CALLER TYPED IS THE CALLER'S, AND THE MATCHER HAS TO KNOW.
+    # *** Without this, `match_transfers` — which every SimpleFin sync runs as a
+    # FULL SWEEP over the user's rows, not over the batch — will merge any two
+    # hand-entered rows with equal amounts, opposite types, different accounts
+    # and dates within three days. Proven: "Paid a friend back" (500 expense) and
+    # "Sold the bike" (500 income) became one `transfer`, and budgets EXCLUDE
+    # transfers (D-183), so both vanished from the user's budget. Neither row had
+    # anything to do with the other and neither came from a bank.
+    #
+    # *** ONLY WHEN THE PAYLOAD ITSELF CARRIES IT. *** A caller who omits the key
+    # gets the model's `expense` default, which finPal chose and they did not —
+    # marking that `'user'` would be recording a statement nobody made. A type
+    # arriving from the RULE ENGINE (`transaction_data`) is deliberately excluded
+    # for the same reason: a rule is finPal acting on a policy, not the person
+    # speaking, and the column's whole job is to say a person decided.
+    #
+    # *** AND IT LIVES HERE RATHER THAN IN THE ROUTE *** so the agent-approval
+    # path gets it too, while the CSV and SimpleFin importers — which build their
+    # rows directly and never call this — correctly do not. Stamping every
+    # imported row `'user'` would switch the matcher off entirely.
+    if 'transaction_type' in payload:
+        expense.type_source = 'user'
+
     # Appended to the relationship rather than constructed with an `expense_id`,
     # because `build_transaction` deliberately returns an *unsaved* row and has no id
     # to give them. SQLAlchemy fills it in when the caller flushes, and the backref's
