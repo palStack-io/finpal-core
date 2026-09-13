@@ -106,11 +106,18 @@ the release notes will say so explicitly when it ever happens.
 **The problem:** "where did all my money go this month?"
 
 - Track expenses with auto-categorization and transaction rules that learn your patterns
-- Budgets with real-time tracking and alerts before you overspend
+- Budgets grouped into **Fixed / Flexible / Non-Monthly**, so the page can tell *the ground
+  is expensive* from *you overspent* — with a pace mark showing where you should be by now
+- **Sinking funds**: give a Non-Monthly budget a yearly period and finPal shows what to set
+  aside each month, instead of calling a £600 car tax an overspend every March
+- **Goals** for savings targets and debt payoffs, tracked against real account balances —
+  one goal can span several accounts
 - Split shared costs with your household and see who owes whom
 - Investments across portfolios, with automatic price updates
 - Bank sync via [SimpleFin](docs/simplefin.md), or drop CSVs in a
   [watched folder](docs/csv-import.md) and let them import themselves
+- Optional modules you can switch off: **pointsPal** (card rewards) and **learnPal**
+  (short lessons unlocked by your own figures, not by a schedule)
 - Multi-currency, multi-account, dark mode
 - No tracking, no data selling, no subscriptions
 
@@ -125,7 +132,8 @@ the release notes will say so explicitly when it ever happens.
   <p><em>Analytics</em></p>
 </div>
 
-Or try the [live demo](https://palstack.io/finpal) without installing anything.
+Or try the [live demo](https://findemo.palstack.io) without installing anything —
+four pre-seeded personas, no account needed.
 
 ---
 
@@ -140,6 +148,7 @@ Or try the [live demo](https://palstack.io/finpal) without installing anything.
 | **[CSV folder import](docs/csv-import.md)** | Drop statements in a folder and have them imported |
 | **[SimpleFin](docs/simplefin.md)** | Connecting bank accounts |
 | **[pointsPal](docs/pointspal.md)** | The optional credit-card rewards module |
+| **[Full documentation](https://palstack.io/finpal/docs)** | The same material on the web, if you would rather not read it in a clone |
 | **[Testing](docs/testing.md)** | Running the suites |
 | **[Contributing](CONTRIBUTING.md)** | How to propose a change |
 | **[About & roadmap](docs/about.md)** | Why this exists, where it's going, who builds it |
@@ -154,8 +163,14 @@ Or try the [live demo](https://palstack.io/finpal) without installing anything.
 **Managed hosting** — coming soon, for people who would rather not run servers. Updates,
 backups and support handled for a subscription. Watch [palstack.io](https://palstack.io).
 
-**Mobile** — a React Native app (iOS and Android) is in active development, with biometric
-login and offline sync. The backend and web UI are ready today.
+**Mobile & tablet** — iPhone, iPad, Android phones and tablets, with biometric login. In
+active development, and it will be a **one-time purchase** rather than a subscription: buy
+it once and point it at the finPal you already self-host. **The web app stays free and open
+source either way** — the app is a way to fund the core, not a gate in front of it. The
+backend and web UI are ready today.
+
+*Nothing in this repository is time-limited, feature-gated or phones home. If the mobile
+app never ships, everything here still works.*
 
 ---
 
