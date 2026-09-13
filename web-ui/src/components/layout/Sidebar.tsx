@@ -13,6 +13,7 @@ import {
   Tags,
   Filter,
   Flag,
+  ListChecks,
   Sun,
   Moon,
   LogOut,
@@ -21,6 +22,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../store/authStore';
 import { moduleRegistry } from '../../modules';
+import { useReviewStore } from '../../store/reviewStore';
 import type { ModuleManifest } from '../../modules/registry';
 
 /**
@@ -52,6 +54,12 @@ const navGroups = [
       { name: 'Recurring', path: '/recurring', icon: Repeat },
       { name: 'Categories', path: '/categories', icon: Tags },
       { name: 'Rules', path: '/rules', icon: Filter },
+      // Carries the only badge in the rail — see the render. It sits in Plan
+      // rather than in a heading of its own because NAV_GROUP_HEADINGS is
+      // mirrored by mobile and compared by a test: a sixth heading here would
+      // be a silent parity break, and "keep your setup straight" is what this
+      // group already is.
+      { name: 'Review', path: '/review', icon: ListChecks },
     ],
   },
   { heading: 'Insight', items: [{ name: 'Analytics', path: '/analytics', icon: TrendingUp }] },
@@ -202,6 +210,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
   const { theme, toggleTheme } = useTheme();
   const { user, logout, features } = useAuthStore();
   const navigate = useNavigate();
+  // *** THE BADGE IS THE ONLY WAY ANYBODY FINDS THIS PAGE. *** A review list
+  // nobody is told about is a page that never gets opened, and the count has to
+  // come from the server or it is one more figure two views can disagree about
+  // (D-101). Asked once per app load; every confirm hands back a fresh total.
+  const reviewTotal = useReviewStore((s) => s.total);
+  const refreshReview = useReviewStore((s) => s.refresh);
 
   // Re-render when a module's nav section is expanded/collapsed elsewhere.
   //
@@ -224,7 +238,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     return () => window.removeEventListener('storage', handler);
   }, []);
 
+  useEffect(() => {
+    // Only for a signed-in household member. A demo visitor has a review list
+    // too (their own sandbox rows), so this is keyed on being logged in rather
+    // than on not being a demo.
+    if (user) void refreshReview();
+  }, [user, refreshReview]);
+
   const handleLogout = () => {
+    // Or the next account signs in to the last one's badge.
+    useReviewStore.getState().clear();
     logout();
     navigate('/login');
   };
@@ -242,6 +265,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         >
           <Icon className="nav-icon" size={20} strokeWidth={2} />
           <span>{item.name}</span>
+          {/* *** A COUNT, NEVER A FRACTION, AND ABSENT AT ZERO. *** "3" is
+              momentum; "3 of 47" is a report card, and a permanent "0" badge
+              would nag about a job already done. `null` means "not asked yet"
+              and must not render as 0 — claiming an all-clear the app has not
+              earned. */}
+          {item.path === '/review' && reviewTotal !== null && reviewTotal > 0 && (
+            <span
+              aria-label={`${reviewTotal} to review`}
+              style={{
+                marginLeft: 'auto', minWidth: 20, padding: '1px 7px',
+                borderRadius: 999, fontSize: 12, fontWeight: 700,
+                textAlign: 'center',
+                background: '#3b82f6', color: 'white',
+              }}
+            >
+              {reviewTotal}
+            </span>
+          )}
         </NavLink>
       );
     });

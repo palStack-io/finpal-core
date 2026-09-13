@@ -351,6 +351,30 @@ const importHandlers = [
   ),
 ];
 
+// ── Review ───────────────────────────────────────────────────────────────────
+// The Sidebar asks for this on every render, so it reaches every test that mounts
+// the app shell — none of which is about the review page. An empty list is the
+// right default: the badge is then absent, which is what these tests already
+// expect to see.
+//
+// *** IT CARRIES NO `limit`, DELIBERATELY, AND NEITHER DOES THE SERVER. *** A
+// mock that invents a field the API does not send is how a client grows a
+// dependency on one — and the field in question is the page size, which would
+// let a client reconstruct the "3 of 47" denominator this page exists without.
+const reviewHandlers = [
+  http.get(`${BASE}/api/v1/review`, () =>
+    HttpResponse.json({
+      total: 0,
+      counts: { categories: 0, accounts: 0, uncategorised: 0 },
+      sections: {
+        categories: { action: 'confirm', rows: [] },
+        accounts: { action: 'confirm', rows: [] },
+        uncategorised: { action: 'choose', rows: [] },
+      },
+    })
+  ),
+];
+
 // ── Combined ──────────────────────────────────────────────────────────────────
 export const handlers = [
   ...authHandlers,
@@ -360,4 +384,5 @@ export const handlers = [
   ...categoryHandlers,
   ...pointspalHandlers,
   ...importHandlers,
+  ...reviewHandlers,
 ];

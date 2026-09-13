@@ -183,6 +183,17 @@ class CategoryService:
                     "spending_type must be 'fixed', 'flexible', 'non_monthly', "
                     "or null.")
             category.spending_type = spending_type
+            # The user has stated the group, so it is no longer finPal's guess.
+            # `UNSET` above already means "not in the payload", so this is
+            # keyed on presence rather than on the value — re-sending the same
+            # group is a person confirming it, and null ("back to unsorted") is
+            # just as much their choice as 'fixed' is.
+            #
+            # Without this, correcting a guess on the Categories page leaves
+            # `spending_type_source='inferred'` and the Review page keeps
+            # asking. See `api/v1/accounts.py` for the sibling, and D-197 for
+            # where the rule came from.
+            category.spending_type_source = 'user'
 
         if name:
             category.name = name
