@@ -1176,6 +1176,22 @@ const BudgetsMinimal = () => {
                         </span>
                       </button>
 
+                      {/* *** THE HEADER'S FIGURES AND THE ROW'S ARE DIFFERENT
+                          SPANS, SO THE HEADER SAYS WHICH ONE IT IS. *** A
+                          sinking fund's row is the YEAR ("£430 of £600 for the
+                          year") and the group is the MONTH — planned is one
+                          twelfth and actual is this month's spending. Both are
+                          right and neither is obvious sitting one above the
+                          other, which is D-102's shape: two correct numbers
+                          reading as one claim. Shown only when a sinking fund is
+                          actually present, so it never appears as furniture on
+                          the other two groups. */}
+                      {group.budgets.some((b) => (b as BudgetWithDetails).is_sinking_fund) && (
+                        <p className="fp-hint" style={{ margin: '8px 4px 0' }}>
+                          These figures are this month's — a yearly budget counts one twelfth here.
+                        </p>
+                      )}
+
                       {!collapsed && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
                           {group.budgets.length === 0 ? (

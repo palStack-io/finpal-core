@@ -469,3 +469,43 @@ describe('a sinking fund row', () => {
       expect(await screen.findByText(/of \$450\.00$/)).toBeTruthy();
     });
 });
+
+describe("the sinking-fund group header says which span it is", () => {
+  const SET_ASIDE = 30;
+  const ANNUAL = 450;
+
+  const withGroup = (rowExtra: Record<string, unknown>) => overview({
+    groups: [
+      {
+        spending_type: 'non_monthly', label: 'Non-Monthly',
+        planned: SET_ASIDE, actual: 0, remaining: SET_ASIDE,
+        budgets: [{ ...budgetRow(7, 'Car tax', ANNUAL, 0), period: 'yearly', ...rowExtra }],
+      },
+      {
+        spending_type: 'flexible', label: 'Flexible',
+        planned: 400, actual: 100, remaining: 300,
+        budgets: [budgetRow(1, 'Groceries', 400, 100)],
+      },
+    ],
+  });
+
+  it('says so when a sinking fund is present', async () => {
+    /*
+     * The header reads "Planned £30" while the row under it reads "£0.00 of
+     * £450.00 for the year". Both are correct and neither is obvious sitting one
+     * above the other — D-102's shape, two right numbers reading as one claim.
+     */
+    mount(withGroup({ is_sinking_fund: true, monthly_set_aside: SET_ASIDE }));
+    expect(await screen.findByText(/These figures are this month's/)).toBeTruthy();
+  });
+
+  it('*** SAYS NOTHING ON A GROUP WITH NO SINKING FUND ***', async () => {
+    // Otherwise it is furniture on every budget page in the app, and a sentence
+    // that is always there stops being read — the same reason the review page
+    // is not a set of badges.
+    mount(withGroup({}));
+    const flexible = (await heading('Flexible')).closest('section') as HTMLElement;
+    expect(within(flexible).queryByText(/These figures are this month's/)).toBeNull();
+    expect(screen.queryByText(/These figures are this month's/)).toBeNull();
+  });
+});
