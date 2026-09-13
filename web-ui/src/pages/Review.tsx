@@ -1,0 +1,427 @@
+/**
+ * Everything finPal guessed, in one place, so it can be confirmed or corrected.
+ *
+ * *** THE POINT IS THAT THE LIST CAN BE FINISHED. *** Every row here has a
+ * button that removes it, the counts come from the server after every action,
+ * and when there is nothing left the page says so rather than rendering three
+ * empty headings. A chore list that never empties is worse than no chore list.
+ *
+ * *** NO DENOMINATOR, ANYWHERE. *** "3 to review", never "3 of 47" and never a
+ * progress bar. The first is momentum; the second is a report card about your
+ * own mistakes, and not making people feel worse about their money is a stated
+ * purpose of this app (voice rule 11). The server does not send a page size for
+ * the same reason, so there is nothing here to accidentally divide by.
+ *
+ * *** THE THIRD SECTION IS A DIFFERENT QUESTION AND LOOKS DIFFERENT. *** The
+ * first two say "finPal decided X — was it right?" and offer Confirm. The third
+ * says finPal has no opinion, so it offers a picker and no Confirm button: there
+ * is nothing to agree with, and a Confirm there would be a control that cannot
+ * mean anything.
+ *
+ * *** A 403 ON AN ACCOUNT IS EXPECTED, NOT AN ERROR. *** The page shows every
+ * household account on purpose — narrowing the read would put a row in the list
+ * that its viewer cannot open (D-43) — but only the owner or an admin may write
+ * one. So the refusal is rendered on the row, in the server's own words, rather
+ * than as a failed request.
+ */
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertCircle, Check, Loader2, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+import { categoriesApi } from '../services/api/categories';
+import { transactionsApi } from '../services/api/transactions';
+import { accountService } from '../services/accountService';
+import { reviewApi, type ReviewPayload } from '../services/api/review';
+import { useReviewStore } from '../store/reviewStore';
+import { GROUP_LABELS, GROUP_ORDER, UNSORTED_LABEL } from '../utils/spendingGroups';
+import { formatMoney } from '../styles/money';
+import { pageContainerStyle } from '../styles/layoutStyles';
+
+/** The account types the API accepts, in the order the edit form offers them. */
+const ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'cash', 'investment', 'loan'] as const;
+
+/*
+ * *** `var(--brand-main-green)`, NOT THE RAW `#22c55e` ACCENT — AND THE WALK IS
+ * WHAT TAUGHT ME THE DIFFERENCE. *** This button shipped as `#22c55e` with white
+ * text, which the contrast walk measured at **2.28:1** against the 4.5 it needs,
+ * and again at 2.28 against the 3:1 its icon needs. `#22c55e` is the semantic
+ * accent this project uses for ICONS, chart fills and trend arrows, where the
+ * threshold is 3:1 or nothing at all; it has never been a surface for text.
+ * `--brand-main-green` is `#15803d` and measures **5.02:1** with white on it,
+ * which is why every other primary button in the app is built from it.
+ *
+ * `color: 'white'` stays literal on purpose — owner decision, and NOT to be
+ * replaced with `var(--text-primary)`, which would invert on the dark theme and
+ * put dark text on a green fill.
+ */
+const confirmButtonStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  padding: '8px 14px', borderRadius: 8, border: 'none',
+  background: 'var(--brand-main-green)', color: 'white', cursor: 'pointer',
+  fontSize: 14, fontWeight: 600,
+};
+
+/*
+ * *** AN UNSTYLED `<Link>` IS NOT NEUTRAL — IT IS `#0000ee`. *** The three links
+ * in the footer line carried no colour, so they rendered in the browser's default
+ * link blue, which the walk measured at **1.94:1** on the dark card. The token
+ * pair below is the one the body text already uses on that surface, so it is
+ * measured everywhere else in the app, and the underline is what carries the
+ * "this is a link" affordance once the colour no longer does.
+ */
+const inlineLinkStyle: React.CSSProperties = {
+  color: 'var(--text-primary)', textDecoration: 'underline',
+};
+
+const selectStyle: React.CSSProperties = {
+  padding: '7px 10px', borderRadius: 8,
+  border: '1px solid var(--border-medium)',
+  background: 'var(--bg-input)', color: 'var(--text-primary)',
+  fontSize: 14,
+};
+
+const rowStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  gap: 16, flexWrap: 'wrap',
+  padding: '14px 16px',
+  borderTop: '1px solid var(--border-light)',
+};
+
+const sectionCardStyle: React.CSSProperties = {
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border-light)',
+  borderRadius: 12,
+  boxShadow: 'var(--card-shadow)',
+  marginBottom: 20,
+  overflow: 'hidden',
+};
+
+/** Reads "3 to review". Never a fraction — see the file docstring. */
+function SectionHeader({ title, blurb, count }: {
+  title: string; blurb: string; count: number;
+}) {
+  return (
+    <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+      <div>
+        <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0,
+                     color: 'var(--text-primary)' }}>{title}</h2>
+        <p className="fp-hint" style={{ margin: '4px 0 0' }}>{blurb}</p>
+      </div>
+      <span style={{
+        flexShrink: 0, fontSize: 13, fontWeight: 600,
+        padding: '4px 10px', borderRadius: 999,
+        background: 'var(--nav-hover)', color: 'var(--text-secondary)',
+      }}>
+        {count} to review
+      </span>
+    </div>
+  );
+}
+
+function RowError({ message }: { message: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
+                  fontSize: 13, color: '#ef4444' }}>
+      <AlertCircle size={14} /> <span>{message}</span>
+    </div>
+  );
+}
+
+export default function Review() {
+  const [payload, setPayload] = useState<ReviewPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Keyed `kind:id`, so two rows acting at once cannot overwrite each other's
+   *  state — one shared `busy` flag would grey out the whole page. */
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+
+  const setFromPayload = useReviewStore((s) => s.setFromPayload);
+
+  const load = useCallback(async () => {
+    try {
+      const next = await reviewApi.get();
+      setPayload(next);
+      setFromPayload(next);
+      setLoadError(null);
+    } catch {
+      setLoadError('Could not load your review list. Try again in a moment.');
+    } finally {
+      setLoading(false);
+    }
+  }, [setFromPayload]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    // Only needed for the third section's picker, and it is fine for it to
+    // arrive late — the rest of the page does not wait on it.
+    categoriesApi.getAll()
+      .then((res) => setCategories(res.categories ?? []))
+      .catch(() => setCategories([]));
+  }, []);
+
+  /**
+   * Run one row's action, then take the server's answer as the new truth.
+   *
+   * *** THE COUNTS ARE NEVER DECREMENTED LOCALLY. *** Every confirm answers with
+   * the whole refreshed page; an edit through another endpoint is followed by a
+   * reload. Subtracting one here is how the badge and the list drift apart
+   * (D-101), and how two open tabs end up disagreeing.
+   */
+  const act = useCallback(async (
+    key: string,
+    run: () => Promise<ReviewPayload | void>,
+  ) => {
+    setBusy((b) => ({ ...b, [key]: true }));
+    setRowErrors((e) => { const next = { ...e }; delete next[key]; return next; });
+    try {
+      const result = await run();
+      if (result) {
+        setPayload(result);
+        setFromPayload(result);
+      } else {
+        await load();
+      }
+    } catch (err: unknown) {
+      const response = (err as { response?: { data?: { error?: string } } })?.response;
+      setRowErrors((e) => ({
+        ...e,
+        // The server's own words. A 403 here means "ask the person who owns it",
+        // which is a different instruction from "something went wrong".
+        [key]: response?.data?.error ?? 'That did not go through. Try again.',
+      }));
+    } finally {
+      setBusy((b) => ({ ...b, [key]: false }));
+    }
+  }, [load, setFromPayload]);
+
+  const isEmpty = useMemo(() => payload !== null && payload.total === 0, [payload]);
+
+  if (loading) {
+    return (
+      <div style={pageContainerStyle}>
+        <div className="page-container" style={{ display: 'flex', alignItems: 'center',
+                                                 gap: 8, color: 'var(--text-secondary)' }}>
+          <Loader2 className="animate-spin" size={18} /> Loading your review list…
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={pageContainerStyle}>
+      <div className="page-container">
+        <div style={{ marginBottom: 24 }}>
+          <h1 className="page-title">Review</h1>
+          <p className="fp-hint">
+            finPal filled some of this in for you. Nothing here is wrong — it is
+            just a guess, and you are the one who knows.
+          </p>
+        </div>
+
+        {loadError && (
+          <div style={{ ...sectionCardStyle, padding: 16, color: '#ef4444' }}>
+            {loadError}
+          </div>
+        )}
+
+        {isEmpty && !loadError && (
+          /* *** NOT THREE EMPTY HEADINGS. *** A page that renders its own
+             scaffolding when there is nothing to do reads as broken, and this
+             one is supposed to be finishable. */
+          <div style={{ ...sectionCardStyle, padding: '40px 24px', textAlign: 'center' }}>
+            <Sparkles size={28} style={{ color: '#22c55e' }} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '12px 0 4px',
+                         color: 'var(--text-primary)' }}>
+              Nothing to review
+            </h2>
+            <p className="fp-hint" style={{ margin: 0 }}>
+              Everything finPal guessed, you have already answered.
+            </p>
+          </div>
+        )}
+
+        {payload && payload.counts.categories > 0 && (
+          <section style={sectionCardStyle}>
+            <SectionHeader
+              title="Spending groups finPal guessed"
+              blurb="Fixed means committed by contract, not essential. Groceries are flexible — you must eat, and you still choose weekly."
+              count={payload.counts.categories}
+            />
+            {payload.sections.categories.rows.map((row) => {
+              const key = `category:${row.id}`;
+              return (
+                <div key={key} style={rowStyle}>
+                  <div style={{ minWidth: 220, flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {row.parent_name ? `${row.parent_name} › ${row.name}` : row.name}
+                    </div>
+                    <p className="fp-hint" style={{ margin: '2px 0 0' }}>{row.reason}</p>
+                    {rowErrors[key] && <RowError message={rowErrors[key]} />}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <select
+                      aria-label={`Spending group for ${row.name}`}
+                      style={selectStyle}
+                      value={row.spending_type ?? ''}
+                      disabled={busy[key]}
+                      /* Correcting goes through the ordinary category endpoint,
+                         which now marks the group as the user's — so a
+                         correction clears the row exactly like a confirmation
+                         does. Two ways off this page, and no way to be stuck
+                         on it. */
+                      onChange={(e) => {
+                        // Narrowed through GROUP_ORDER rather than cast: the
+                        // list the options are BUILT from is the list the value
+                        // is checked against, so the two cannot drift, and an
+                        // unexpected value falls to null ("unsorted") instead of
+                        // reaching the API as junk. A cast here would be a claim
+                        // rather than a check.
+                        const raw = e.target.value;
+                        const value = GROUP_ORDER.find((g) => g === raw) ?? null;
+                        void act(key, async () => {
+                          await categoriesApi.update(row.id, { spending_type: value });
+                        });
+                      }}
+                    >
+                      <option value="">{UNSORTED_LABEL}</option>
+                      {GROUP_ORDER.map((g) => (
+                        <option key={g} value={g}>{GROUP_LABELS[g]}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      style={confirmButtonStyle}
+                      disabled={busy[key]}
+                      onClick={() => void act(key, () => reviewApi.confirmCategory(row.id))}
+                    >
+                      {busy[key] ? <Loader2 className="animate-spin" size={15} />
+                                 : <Check size={15} />}
+                      Looks right
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
+
+        {payload && payload.counts.accounts > 0 && (
+          <section style={sectionCardStyle}>
+            <SectionHeader
+              title="Account types finPal worked out"
+              blurb="Your bank did not say what kind of account these are, so finPal read it from the balance and the name."
+              count={payload.counts.accounts}
+            />
+            {payload.sections.accounts.rows.map((row) => {
+              const key = `account:${row.id}`;
+              return (
+                <div key={key} style={rowStyle}>
+                  <div style={{ minWidth: 220, flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {row.name}
+                    </div>
+                    <p className="fp-hint" style={{ margin: '2px 0 0' }}>
+                      {row.balance !== null
+                        ? `Balance ${formatMoney(row.balance)}`
+                        : row.reason}
+                    </p>
+                    {rowErrors[key] && <RowError message={rowErrors[key]} />}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <select
+                      aria-label={`Account type for ${row.name}`}
+                      style={selectStyle}
+                      value={row.type ?? ''}
+                      disabled={busy[key]}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        void act(key, async () => {
+                          await accountService.updateAccount(row.id, { account_type: value });
+                        });
+                      }}
+                    >
+                      {ACCOUNT_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t.charAt(0).toUpperCase() + t.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      style={confirmButtonStyle}
+                      disabled={busy[key]}
+                      onClick={() => void act(key, () => reviewApi.confirmAccount(row.id))}
+                    >
+                      {busy[key] ? <Loader2 className="animate-spin" size={15} />
+                                 : <Check size={15} />}
+                      Looks right
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
+
+        {payload && payload.counts.uncategorised > 0 && (
+          <section style={sectionCardStyle}>
+            <SectionHeader
+              title="Transactions with no category"
+              blurb="finPal has no opinion about these — transfers between your own accounts are left out, because there is nothing to categorise there."
+              count={payload.counts.uncategorised}
+            />
+            {payload.sections.uncategorised.rows.map((row) => {
+              const key = `transaction:${row.id}`;
+              return (
+                <div key={key} style={rowStyle}>
+                  <div style={{ minWidth: 220, flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {row.description || 'No description'}
+                    </div>
+                    <p className="fp-hint" style={{ margin: '2px 0 0' }}>
+                      {row.date} · {row.amount !== null ? formatMoney(row.amount) : '—'}
+                    </p>
+                    {rowErrors[key] && <RowError message={rowErrors[key]} />}
+                  </div>
+                  {/* *** NO CONFIRM BUTTON HERE, DELIBERATELY. *** finPal never
+                      guessed, so there is nothing to agree with. */}
+                  <select
+                    aria-label={`Category for ${row.description || 'this transaction'}`}
+                    style={selectStyle}
+                    value=""
+                    disabled={busy[key]}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (!value) return;
+                      void act(key, async () => {
+                        await transactionsApi.update(row.id, { category_id: value });
+                      });
+                    }}
+                  >
+                    <option value="">Choose a category…</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </section>
+        )}
+
+        {payload && !isEmpty && (
+          <p className="fp-hint" style={{ marginTop: 8 }}>
+            Changed your mind later? Everything here is editable from{' '}
+            <Link to="/categories" style={inlineLinkStyle}>Categories</Link>,{' '}
+            <Link to="/accounts" style={inlineLinkStyle}>Accounts</Link> and{' '}
+            <Link to="/transactions" style={inlineLinkStyle}>Transactions</Link> as usual.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

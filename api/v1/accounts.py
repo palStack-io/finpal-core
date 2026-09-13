@@ -255,6 +255,25 @@ class AccountDetail(Resource):
                 account.name = data['name']
             if 'account_type' in data:
                 account.type = data['account_type']
+                # *** A USER WHO SETS THE TYPE HAS OVERRULED THE GUESS, AND
+                # NOTHING RECORDED THAT. *** `type_source` stayed `'inferred'`
+                # after a hand edit, so the Review page would go on asking about
+                # a row its owner had already answered — a chore that cannot be
+                # cleared from the screen built to clear it. Worse, it reads as
+                # a guess to anything else that trusts the column.
+                #
+                # Keyed on the field being PRESENT, not on its value: sending
+                # the SAME type back is still a person stating it, and an
+                # omitted key is not. That is D-197's rule, which fixed this
+                # exact shape for `transaction.type_source`; this is the second
+                # place it was missing and `spending_type_source` was the third.
+                #
+                # *** THE LIVE EDIT PATH IS HERE, NOT IN
+                # `AccountService.update_account`. *** That method has zero
+                # callers (D-187's shape) and also sets `account.type`, so it
+                # looks like the place to fix and is not — a change made there
+                # would ship nothing.
+                account.type_source = 'user'
             if 'balance' in data:
                 account.balance = data['balance']
             if 'currency_code' in data:

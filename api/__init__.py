@@ -120,7 +120,7 @@ def handle_http_exception(error):
     }, (error.code or 500)
 
 # Import and register namespaces (will be created next)
-from api.v1 import auth, analytics, transactions, accounts, goals, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources, agent_actions, access_tokens
+from api.v1 import auth, analytics, transactions, accounts, goals, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources, agent_actions, access_tokens, review
 
 # Register namespaces
 api.add_namespace(auth.ns, path='/auth')
@@ -146,6 +146,7 @@ api.add_namespace(import_sources.batches_ns, path='/import-batches')
 api.add_namespace(import_sources.profiles_ns, path='/import-profiles')
 api.add_namespace(agent_actions.ns, path='/agent-actions')
 api.add_namespace(access_tokens.ns, path='/access-tokens')
+api.add_namespace(review.ns, path='/review')
 
 # Module namespaces — self-registering via ModuleRegistry
 try:

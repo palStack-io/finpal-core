@@ -20,6 +20,7 @@ import { Accounts } from '../../src/pages/Accounts';
 import BudgetsMinimal from '../../src/pages/BudgetsMinimal';
 import Goals from '../../src/pages/Goals';
 import { Investments } from '../../src/pages/Investments';
+import Review from '../../src/pages/Review';
 import LearnPalHome from '../../src/modules/learnpal/pages/Home';
 import LearnPalLessons from '../../src/modules/learnpal/pages/Lessons';
 import LearnPalRange from '../../src/modules/learnpal/pages/Range';
@@ -929,6 +930,63 @@ beforeEach(() => {
           gain_loss: 1993.2, gain_loss_percentage: 27.4, portfolio_id: 1 },
       ],
     })),
+    /*
+     * *** THE REVIEW PAGE, WITH DELIBERATELY LONG STRINGS. ***
+     *
+     * A row here is a long name, a sentence of reasoning, a `<select>` and a
+     * green button, all on one line — the widest row this app produces outside a
+     * table, and the only place a green button sits directly beside a form
+     * control. Short fixtures cannot make one: a name that fits at 1440 and
+     * overflows at 390 is the entire point of the responsive half of this walk,
+     * and D-165 is what happens when the fixture is comfortable.
+     *
+     * Every section is non-empty on purpose. The page renders NOTHING for a
+     * section whose count is zero — that is deliberate, so the empty state is a
+     * single card rather than three bare headings — which means a fixture with
+     * one populated section would silently capture two thirds less page than
+     * ships.
+     */
+    http.get('*/api/v1/review', () => HttpResponse.json({
+      total: 5,
+      counts: { categories: 2, accounts: 1, uncategorised: 2 },
+      sections: {
+        categories: {
+          action: 'confirm',
+          rows: [
+            { id: 31, name: 'Gym, swimming and other fitness memberships',
+              parent_name: 'Health & Wellbeing', spending_type: 'fixed',
+              reason: 'finPal sorted this by its name. Whether it is fixed or '
+                    + 'flexible depends on you — a gym contract is fixed, '
+                    + 'pay-as-you-go is not.' },
+            { id: 32, name: 'Subscriptions', parent_name: null,
+              spending_type: 'flexible',
+              reason: 'finPal sorted this by its name. Whether it is fixed or '
+                    + 'flexible depends on you — a gym contract is fixed, '
+                    + 'pay-as-you-go is not.' },
+          ],
+        },
+        accounts: {
+          action: 'confirm',
+          rows: [
+            { id: 9, name: 'Barclaycard Rewards Platinum Everyday', type: 'credit',
+              balance: -524.59,
+              reason: 'Your bank did not say what kind of account this is, so '
+                    + 'finPal read it from the balance and the name.' },
+          ],
+        },
+        uncategorised: {
+          action: 'choose',
+          rows: [
+            { id: 501, description: 'SAINSBURYS S/MKTS 0123 LONDON GB',
+              amount: 82.14, currency_code: 'GBP', date: '2026-09-09',
+              transaction_type: 'expense' },
+            { id: 502, description: 'TFL TRAVEL CHARGE', amount: 6.8,
+              currency_code: 'GBP', date: '2026-09-08',
+              transaction_type: 'expense' },
+          ],
+        },
+      },
+    })),
   );
 });
 
@@ -974,6 +1032,17 @@ const cases: Case[] = [
   // and the sweep dutifully walked three stale copies of the same page. The
   // capture now clears the directory, and the page is here as itself.
   ['accounts', Accounts as React.FC],
+  /**
+   * Captured with a category `<select>` FOCUSED, for the reason budgets and
+   * categories are: a focused control is the only state in which its own border
+   * and text are measurable against the card behind it, and this page puts one
+   * immediately beside a green confirm button — a pairing that exists nowhere
+   * else, and exactly the kind of adjacency the ink tokens were introduced for.
+   */
+  ['review', Review as React.FC, async () => {
+    const controls = await screen.findAllByLabelText(/^Spending group for /);
+    controls[0].focus();
+  }],
   /**
    * Captured with its contributions row EXPANDED, not as it first paints: the
    * breakdown is the only part of this page with a two-column money layout, and
