@@ -471,7 +471,11 @@ export const Settings: React.FC = () => {
             <span>Back</span>
           </button>
           <div style={{ marginTop: '16px', paddingLeft: '8px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Settings</div>
+            {/* *** THIS WAS A BARE <div>, SO SETTINGS HAD NO HEADING AT ALL ***
+                while its sections were <h2>s underneath nothing. A screen reader
+                reading the outline found five level-2 sections and no page.
+                Styling is unchanged. */}
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Settings</h1>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Account & preferences</div>
           </div>
         </div>
@@ -530,10 +534,11 @@ export const Settings: React.FC = () => {
                   )}
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={fieldLabelStyle}>
+                    <label style={fieldLabelStyle} htmlFor="settings-name">
                       Full Name
                     </label>
                     <input
+                      id="settings-name"
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({...profileData, name: e.target.value})}
@@ -542,10 +547,11 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={fieldLabelStyle}>
+                    <label style={fieldLabelStyle} htmlFor="settings-email">
                       Email Address
                     </label>
                     <input
+                      id="settings-email"
                       type="email"
                       value={profileData.email}
                       disabled
@@ -615,10 +621,18 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <label style={fieldLabelStyle}>
+                    {/* *** A <label> THAT NAMES NOTHING IS DECORATIVE TEXT. ***
+                        These three read correctly on screen and were invisible to
+                        the accessibility tree: no `htmlFor`, no `id`, and the
+                        control not nested inside the label, so axe reported
+                        `select-name` and a screen reader announced an unnamed
+                        combo box. Associating them costs one attribute each and
+                        changes nothing visually. */}
+                    <label style={fieldLabelStyle} htmlFor="settings-currency">
                       Default Currency
                     </label>
                     <select
+                      id="settings-currency"
                       value={profileData.currency}
                       onChange={(e) => setProfileData({...profileData, currency: e.target.value as Currency})}
                       className="fp-input"
@@ -631,10 +645,11 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '32px' }}>
-                    <label style={fieldLabelStyle}>
+                    <label style={fieldLabelStyle} htmlFor="settings-timezone">
                       Timezone
                     </label>
                     <select
+                      id="settings-timezone"
                       value={profileData.timezone}
                       onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
                       className="fp-input"
@@ -650,10 +665,11 @@ export const Settings: React.FC = () => {
                       onboarding, because the person who asked for it is already
                       onboarded and would otherwise have no way to use it. */}
                   <div style={{ marginBottom: '32px' }}>
-                    <label style={fieldLabelStyle}>
+                    <label style={fieldLabelStyle} htmlFor="settings-number-format">
                       Number format
                     </label>
                     <select
+                      id="settings-number-format"
                       value={profileData.numberLocale ?? ''}
                       onChange={(e) => setProfileData({
                         ...profileData,
@@ -1006,9 +1022,17 @@ export const Settings: React.FC = () => {
                           {key === 'email' && 'Import reviews and your weekly and monthly spending report'}
                         </p>
                       </div>
+                      {/* *** A LABEL WRAPPING ONLY A SWITCH NAMES NOTHING. ***
+                          The visible text sits in a sibling <p>, so the toggle
+                          itself reached the accessibility tree unnamed and axe
+                          reported `label`. The name is the notification's own
+                          label rather than "toggle", because a row of five
+                          switches all called "toggle" is the same problem in a
+                          different shape. */}
                       <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '24px' }}>
                         <input
                           type="checkbox"
+                          aria-label={NOTIFICATION_LABELS[key as keyof typeof NOTIFICATION_LABELS]}
                           checked={value}
                           onChange={(e) => setNotificationSettings({...notificationSettings, [key]: e.target.checked})}
                           style={{ opacity: 0, width: 0, height: 0 }}

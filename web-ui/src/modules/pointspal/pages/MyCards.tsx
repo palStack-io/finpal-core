@@ -195,8 +195,13 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
             <h2 style={modalTitleStyle}>
               Card saved ✓
             </h2>
-            <button onClick={onSave} style={iconBtnStyle}>
-              <X size={18} />
+            {/* *** AN ICON-ONLY BUTTON WITH NO ACCESSIBLE NAME IS A WCAG 2 AA
+                FAILURE, AND axe CALLS IT `button-name`. *** A screen reader
+                announces "button" and nothing else. The glyph is decorative once
+                the label is on the control, so it is hidden rather than read as
+                a stray "X". */}
+            <button onClick={onSave} style={iconBtnStyle} aria-label="Close">
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
@@ -246,8 +251,8 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
           <h2 style={modalTitleStyle}>
             {card ? 'Edit Card' : 'Add Card to Wallet'}
           </h2>
-          <button onClick={onCancel} style={iconBtnStyle}>
-            <X size={18} />
+          <button onClick={onCancel} style={iconBtnStyle} aria-label="Cancel">
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -734,12 +739,17 @@ const MyCards: React.FC = () => {
                       <Pencil size={12} /> Edit
                     </button>
                   )}
+                  {/* Named PER CARD rather than a bare "Delete": a list of
+                      identical "Delete" buttons tells a screen-reader user
+                      nothing about which one they are on. Same convention the
+                      Goals cards already use. */}
                   <button
                     onClick={() => handleDelete(card.id)}
                     disabled={deletingId === card.id}
+                    aria-label={`Delete ${card.card_name || 'card'}`}
                     style={{ padding: '8px 10px', borderRadius: 'var(--rs)', background: 'var(--re50)', color: 'var(--re-ink)', border: '1px solid var(--re100)', cursor: 'pointer' }}
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={13} aria-hidden="true" />
                   </button>
                 </div>
 

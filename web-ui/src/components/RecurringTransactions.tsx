@@ -365,9 +365,14 @@ export const RecurringTransactions: React.FC = () => {
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' , flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
+          {/* h1, not h2 — this is the PAGE's own title and everything under it is
+              a section, so the document outline started at level 2 with no h1
+              at all. Size stays inline; nothing moves on screen. Found by
+              `every-page.spec.ts`, which walks all 21 routes — the older h1
+              check walked six and this page was not one of them. */}
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
             Recurring Transactions
-          </h2>
+          </h1>
           <p className="fp-hint">
             Manage automatic recurring transactions and detect patterns
           </p>
@@ -660,7 +665,13 @@ export const RecurringTransactions: React.FC = () => {
                   {item.active ? <EyeOff size={14} /> : <Eye size={14} />}
                   {item.active ? 'Pause' : 'Activate'}
                 </button>
+                {/* *** THE ONLY ICON-ONLY CONTROL IN THIS LIST, AND axe COUNTED
+                    ONE PER ROW. *** Every sibling carries visible text ("Pause",
+                    "Activate"); this one is a bare trash glyph, so a screen
+                    reader announced eight buttons called "button". Named per
+                    item, because eight identical "Delete"s are barely better. */}
                 <button
+                  aria-label={`Delete ${item.description}`}
                   onClick={() => handleDelete(item.id)}
                   style={{
                     padding: '8px',
@@ -674,7 +685,7 @@ export const RecurringTransactions: React.FC = () => {
                     alignItems: 'center'
                   }}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
               </div>
             </div>

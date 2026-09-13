@@ -112,10 +112,75 @@ test('creating a goal persists it and it survives a reload', async ({
   await expect(page.getByText(name), 'the goal did not survive a reload').toBeVisible();
 
   // Clean up, so the suite can run twice — and so the next run's counts hold.
+  //
+  // *** THIS ASKED FOR A `Delete <name>` BUTTON ON THE CARD UNTIL 2026-09-13, AND
+  // THAT BUTTON WAS DELIBERATELY REMOVED. *** It was a bare trash icon that called
+  // `deleteGoal` on a single click with no confirmation of any kind, so one
+  // mis-click destroyed a goal and its whole contribution history with nothing to
+  // undo it. Delete moved into the edit panel behind a two-step confirm — and the
+  // spec was never updated, so this test had been red ever since, unnoticed
+  // because the E2E suite is deliberately outside `preflight.sh`.
+  //
+  // Driving the REAL path rather than restoring the old label also buys the
+  // confirm flow its only coverage: that the first click ARMS rather than
+  // deletes, which is the entire point of the safety fix.
   const created = page.locator('[data-testid^="goal-"]', {
     has: page.getByText(name),
   });
-  await created.getByRole('button', { name: `Delete ${name}` }).click();
+  await created.getByRole('button', { name: `Edit ${name}` }).click();
+  await page.getByRole('button', { name: /Delete this goal/ }).click();
+
+  // Armed, not gone. If the first click deleted, the safety fix has been undone.
+  //
+  // *** SCOPED TO THE CARD, BECAUSE THE NAME IS NOW ON SCREEN TWICE. *** The armed
+  // confirm reads "Delete <name> for good?", so an unscoped `getByText(name)`
+  // matches both and Playwright refuses it. That duplication is the FEATURE —
+  // it is the stated reason the panel does not use `window.confirm`, which
+  // "cannot be styled to say WHAT is being deleted" — so it is asserted rather
+  // than worked around.
+  await expect(created, 'the first click deleted instead of arming').toBeVisible();
+  await expect(
+    page.getByRole('dialog').getByText(name),
+    'the confirm did not name the goal it is about to destroy',
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: /Yes, delete it/ }).click();
+  await expect(page.getByText(name)).toHaveCount(0);
+});
+
+test('a goal delete can be called off, and calling it off keeps the goal', async ({
+  page,
+}) => {
+  // *** THE OTHER HALF OF A TWO-STEP CONFIRM IS THAT STEP TWO CAN BE REFUSED. ***
+  // A confirm nobody can back out of is a slower single click.
+  const name = `E2E keepme ${Date.now()}`;
+  await page.goto('/goals');
+  await pageIsLoaded(page, /Goals/);
+
+  await page.getByRole('button', { name: /New goal/ }).click();
+  await page.getByLabel('Name').fill(name);
+  await page.getByLabel(/Target amount/).fill('900');
+  await page.getByRole('button', { name: /Create goal/ }).click();
+  await expect(page.getByText(name)).toBeVisible();
+
+  const created = page.locator('[data-testid^="goal-"]', {
+    has: page.getByText(name),
+  });
+  await created.getByRole('button', { name: `Edit ${name}` }).click();
+  await page.getByRole('button', { name: /Delete this goal/ }).click();
+  await page.getByRole('button', { name: /Keep it/ }).click();
+
+  // *** ASSERTED ACROSS A RELOAD, NEVER ON THE RENDERED CARD ALONE. *** Backing
+  // out leaves the card on screen whether or not the row survived, so only a
+  // round trip distinguishes "kept" from "deleted and still drawn".
+  await page.reload();
+  await pageIsLoaded(page, /Goals/);
+  await expect(page.getByText(name), 'Keep it deleted the goal anyway').toBeVisible();
+
+  // and now really remove it, so the suite can run twice
+  await created.getByRole('button', { name: `Edit ${name}` }).click();
+  await page.getByRole('button', { name: /Delete this goal/ }).click();
+  await page.getByRole('button', { name: /Yes, delete it/ }).click();
   await expect(page.getByText(name)).toHaveCount(0);
 });
 

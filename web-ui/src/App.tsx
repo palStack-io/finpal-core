@@ -297,8 +297,20 @@ function App() {
               )
             }
 
-            {/* Catch-all redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* *** A SIGNED-IN USER MUST NOT BE DROPPED ON THE MARKETING PAGE.
+                *** This sent everything unmatched to `/`, which is `Landing` —
+                "Your Money, Your Rules", "Get Started Today", a Sign-up button.
+                So a logged-in user who followed a stale `/learnpal` link, or who
+                hid a module and then used a bookmark to one of its pages, was
+                shown the signed-out pitch for the product they are already
+                inside. Found by `every-page.spec.ts`, which walks the module
+                routes; the older smoke sweep called the same behaviour a SKIP
+                ("route likely absent from this build"), which is the reading
+                that hid it.
+
+                Signed in -> the dashboard, which is where they were going.
+                Signed out -> the landing page, unchanged. */}
+            <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
           </Routes>
 
           {/* Toast Notifications */}

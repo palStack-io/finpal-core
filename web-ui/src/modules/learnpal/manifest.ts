@@ -8,8 +8,11 @@ import type { ModuleManifest } from '../registry';
  * sidebar section nor the routes — matching the API, where the namespace is not
  * registered at all and every path 404s.
  */
+/** The one spelling of the slug. Two spellings of one slug is how a guard goes blind. */
+export const MODULE_SLUG = 'learnpal';
+
 const manifest: ModuleManifest = {
-  slug: 'learnpal',
+  slug: MODULE_SLUG,
   label: 'learnPal',
   icon: '⛰',
   description:
