@@ -422,7 +422,13 @@
   --au100: rgba(217, 119, 6, 0.25);
   --au300: rgba(252, 211, 77, 0.4);
   --re50: rgba(220, 38, 38, 0.15);
-  --re100: rgba(220, 38, 38, 0.25);
+  /* 0.25 -> 0.18. *** THE CAPPED TAG PAINTS `--re100` AND PUTS `--re-ink`
+     (#f87171) ON IT, WHICH MEASURED 4.32:1 — THE ONLY DARK SURFACE THAT INK
+     FAILS ON. *** It clears 4.5 on every other one (5.32 on the page, 5.83 on a
+     card, 4.69 on a row), so the ink is right and the tint was too strong.
+     Lowering the alpha darkens the composite, which is the same lever as
+     darkening a solid background and leaves the text untouched. D-103. */
+  --re100: rgba(220, 38, 38, 0.18);
 
   /* ── THE ACCENT *INK* TOKENS, WHICH THIS BLOCK USED TO LEAVE BEHIND (D-103).
      The eight tints above are overridden so a badge's BACKGROUND goes dark. The

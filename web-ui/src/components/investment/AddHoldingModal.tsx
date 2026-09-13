@@ -327,7 +327,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
                   </div>
                 </div>
                 {stockData.price && (
-                  <div style={{ color: 'var(--brand-light-green)', fontSize: '24px', fontWeight: '700' }}>
+                  <div style={{ color: 'var(--g-ink)', fontSize: '24px', fontWeight: '700' }}>
                     {/* *** A STOCK PRICE IS NOT ALWAYS IN DOLLARS. *** `yfinance.py`
                         supports London (GBP), Toronto (CAD), Paris and Amsterdam
                         (EUR) among others, and the quote carries `currency_code`

@@ -335,7 +335,7 @@ export const Investments: React.FC = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(251, 191, 36, 0.2)', borderRadius: '8px' }}>
-                  <Package size={20} style={{ color: 'var(--brand-accent-gold)' }} />
+                  <Package size={20} style={{ color: 'var(--au-ink)' }} />
                 </div>
                 <span style={bodyTextStyle}>Total Cost</span>
                 <ScopeTag scope="household" />

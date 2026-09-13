@@ -149,7 +149,7 @@ export const TransactionRules: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Zap size={24} style={{ color: 'var(--brand-accent-gold)' }} />
+            <Zap size={24} style={{ color: 'var(--au-ink)' }} />
             Transaction Rules
           </h2>
           <p className="fp-hint">
@@ -170,7 +170,18 @@ export const TransactionRules: React.FC = () => {
               background: applyingRules ? 'rgba(251, 191, 36, 0.3)' : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
               border: '1px solid rgba(251, 191, 36, 0.5)',
               borderRadius: '8px',
-              color: 'var(--text-primary)',
+              /* *** AMBER IS A LIGHT SURFACE, SO THIS IS THE ONE FILLED BUTTON
+                 THAT MUST NOT USE WHITE. *** Measured: white on #fbbf24 is
+                 **1.67:1**, and darkening the amber far enough to carry white
+                 (#a56900) stops it being amber at all. Dark ink on it is
+                 **8.51:1**.
+
+                 `--text-primary` was wrong for the mirror-image reason to the
+                 green buttons: it flips, and on amber it is the DARK value that
+                 works and the light one that fails — 8.51:1 in light, **1.44:1
+                 in dark**. So the ink is pinned, not themed: the button's amber
+                 does not flip, so its label must not either. D-103. */
+              color: '#17301f',
               fontSize: '14px',
               fontWeight: '600',
               cursor: applyingRules || rules.length === 0 ? 'not-allowed' : 'pointer',
@@ -229,8 +240,8 @@ export const TransactionRules: React.FC = () => {
       {/* Success Message */}
       {successMessage && (
         <div style={{ padding: '16px', background: 'rgba(134, 239, 172, 0.1)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
-          <p style={{ color: 'var(--brand-light-green)', margin: 0 }}>{successMessage}</p>
+          <Check size={20} style={{ color: 'var(--g-ink)' }} />
+          <p style={{ color: 'var(--g-ink)', margin: 0 }}>{successMessage}</p>
         </div>
       )}
 
@@ -252,13 +263,13 @@ export const TransactionRules: React.FC = () => {
             label="Total Rules"
             value={String(stats.total_rules)}
             accentColor="var(--brand-light-green)"
-            icon={<BarChart3 size={24} style={{ color: 'var(--brand-light-green)' }} />}
+            icon={<BarChart3 size={24} style={{ color: 'var(--g-ink)' }} />}
           />
           <StatCard
             label="Active Rules"
             value={String(stats.active_rules)}
             accentColor="var(--brand-accent-gold)"
-            icon={<Zap size={24} style={{ color: 'var(--brand-accent-gold)' }} />}
+            icon={<Zap size={24} style={{ color: 'var(--au-ink)' }} />}
           />
           <StatCard
             label="Total Matches"
@@ -299,7 +310,7 @@ export const TransactionRules: React.FC = () => {
                       {rule.name}
                     </h3>
                     {rule.active ? (
-                      <span style={{ padding: '4px 12px', background: 'rgba(134, 239, 172, 0.2)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--brand-light-green)', fontWeight: '600' }}>
+                      <span style={{ padding: '4px 12px', background: 'rgba(134, 239, 172, 0.2)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--g-ink)', fontWeight: '600' }}>
                         Active
                       </span>
                     ) : (
@@ -340,7 +351,7 @@ export const TransactionRules: React.FC = () => {
                   {/* Actions Applied */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                     {rule.auto_category && (
-                      <span style={{ padding: '6px 12px', background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '6px', fontSize: '13px', color: 'var(--brand-accent-gold)' }}>
+                      <span style={{ padding: '6px 12px', background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '6px', fontSize: '13px', color: 'var(--au-ink)' }}>
                         → Category: {rule.auto_category}
                       </span>
                     )}
@@ -373,7 +384,7 @@ export const TransactionRules: React.FC = () => {
                       background: rule.active ? 'rgba(239, 68, 68, 0.1)' : 'rgba(134, 239, 172, 0.1)',
                       border: rule.active ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(134, 239, 172, 0.3)',
                       borderRadius: '6px',
-                      color: rule.active ? 'var(--accent-red)' : 'var(--brand-light-green)',
+                      color: rule.active ? 'var(--accent-red)' : 'var(--g-ink)',
                       cursor: 'pointer',
                       transition: 'all 0.3s',
                       display: 'flex',
@@ -391,7 +402,7 @@ export const TransactionRules: React.FC = () => {
                       background: 'rgba(251, 191, 36, 0.1)',
                       border: '1px solid rgba(251, 191, 36, 0.3)',
                       borderRadius: '6px',
-                      color: 'var(--brand-accent-gold)',
+                      color: 'var(--au-ink)',
                       cursor: 'pointer',
                       transition: 'all 0.3s',
                       display: 'flex',
@@ -539,8 +550,8 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
     <form onSubmit={handleSubmit} style={flexColGap20}>
       {success && (
         <div style={{ padding: '16px', background: 'rgba(134, 239, 172, 0.1)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
-          <p style={{ color: 'var(--brand-light-green)', margin: 0 }}>Rule saved successfully!</p>
+          <Check size={20} style={{ color: 'var(--g-ink)' }} />
+          <p style={{ color: 'var(--g-ink)', margin: 0 }}>Rule saved successfully!</p>
         </div>
       )}
 
@@ -776,7 +787,12 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
             background: isSubmitting ? 'rgba(21, 128, 61, 0.5)' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
             border: '1px solid rgba(21, 128, 61, 0.5)',
             borderRadius: '8px',
-            color: 'var(--text-primary)',
+            /* White on the brand green: 5.02:1 either theme. `--text-primary`
+               flips and measures 2.83:1 in light. *** THE NARROW GATE COULD NOT
+               SEE THIS ONE *** -- the background is a TERNARY, and the first
+               detector required a quote straight after the colon. Widened, it
+               found this on its first run. D-103. */
+            color: 'white',
             fontSize: '15px',
             fontWeight: '600',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',

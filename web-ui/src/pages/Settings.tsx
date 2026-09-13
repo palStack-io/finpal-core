@@ -1127,7 +1127,7 @@ export const Settings: React.FC = () => {
 
                   <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
                     <h3 style={{ color: 'var(--accent-red)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Delete Account</h3>
-                    <p style={{ color: '#fca5a5', fontSize: '14px', marginBottom: '12px' }}>Permanently delete your account and all associated data</p>
+                    <p style={{ color: 'var(--re-ink)', fontSize: '14px', marginBottom: '12px' }}>Permanently delete your account and all associated data</p>
                     <button
                       onClick={() => setShowDeleteModal(true)}
                       style={{
@@ -1293,7 +1293,7 @@ export const Settings: React.FC = () => {
               borderRadius: '8px',
               marginBottom: '24px'
             }}>
-              <p style={{ color: '#fca5a5', fontSize: '14px', margin: 0, lineHeight: '1.6' }}>
+              <p style={{ color: 'var(--re-ink)', fontSize: '14px', margin: 0, lineHeight: '1.6' }}>
                 <strong>Warning:</strong> This action is permanent and cannot be undone. All your data including
                 transactions, accounts, budgets, and settings will be permanently deleted.
               </p>

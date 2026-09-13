@@ -161,9 +161,9 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
           }}
         >
           <div style={{ background: 'rgba(134, 239, 172, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
+            <Check size={20} style={{ color: 'var(--g-ink)' }} />
           </div>
-          <p style={{ color: 'var(--brand-light-green)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
+          <p style={{ color: 'var(--g-ink)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
             Account updated successfully!
           </p>
         </div>

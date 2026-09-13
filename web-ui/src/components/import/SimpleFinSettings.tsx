@@ -129,9 +129,9 @@ export const SimpleFinSettings: React.FC = () => {
         borderRadius: '8px'
       }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <AlertCircle size={20} style={{ color: 'var(--brand-accent-gold)' }} />
+          <AlertCircle size={20} style={{ color: 'var(--au-ink)' }} />
           <div>
-            <p style={{ color: 'var(--brand-accent-gold)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+            <p style={{ color: 'var(--au-ink)', fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
               SimpleFin Not Available
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>

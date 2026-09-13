@@ -871,7 +871,7 @@ const BudgetsMinimal = () => {
                     background: 'rgba(134, 239, 172, 0.1)',
                     border: '1px solid rgba(134, 239, 172, 0.3)',
                     borderRadius: '6px',
-                    color: 'var(--brand-light-green)',
+                    color: 'var(--g-ink)',
                     fontSize: '12px',
                     cursor: 'pointer',
                     transition: 'all 0.3s',

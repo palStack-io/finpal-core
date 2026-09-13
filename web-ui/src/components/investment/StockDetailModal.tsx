@@ -351,7 +351,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <DollarSign size={16} style={{ color: 'var(--brand-accent-gold)' }} />
+                <DollarSign size={16} style={{ color: 'var(--au-ink)' }} />
                 <span style={bodyTextStyle}>Current Price</span>
               </div>
               <div style={bigStatStyle}>
@@ -463,7 +463,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
             }}
           >
             <h3 style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={20} style={{ color: 'var(--brand-accent-gold)' }} />
+              <Activity size={20} style={{ color: 'var(--au-ink)' }} />
               Position Summary
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
