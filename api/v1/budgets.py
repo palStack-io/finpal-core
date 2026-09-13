@@ -9,6 +9,7 @@ from schemas.input_schemas import budget_input
 from src.utils.validation import validate_request, validation_error_response
 from src.services.budget.service import BudgetService
 from src.services.budget.pace import pace_applies, pace_for
+from src.services.budget.sinking import is_sinking_fund, monthly_set_aside
 from datetime import datetime
 import logging
 from src.models.personal_access_token import SCOPE_READ
@@ -345,7 +346,29 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
         # colouring it as behind invents an urgency the data does not support.
         for row in rows:
             row['pace_applies'] = pace_applies(row.get('period'), value)
-        planned = round(sum(_f(r['amount']) for r in rows), 2)
+            # *** A YEARLY Non-Monthly BUDGET IS A SINKING FUND, AND ITS PLANNED
+            # FIGURE FOR THIS MONTH IS THE SET-ASIDE, NOT THE WHOLE BILL. ***
+            # Owner decision 2026-09-13 (design §10 item 3): a £600 car tax
+            # compared against one month always reads as an overspend, and
+            # `sinking-funds` — a lesson finPal already ships — tells the user to
+            # divide it by twelve. Teaching one thing and computing another is
+            # worse than doing neither.
+            #
+            # `period='yearly'` is the carrier, NOT a reinterpretation of
+            # `amount`: nothing in the data distinguishes an annual figure from
+            # a monthly one, so silently dividing a user's own number would be
+            # D-178's failure with real money attached.
+            row['is_sinking_fund'] = is_sinking_fund(value, row.get('period'))
+            if row['is_sinking_fund']:
+                row['monthly_set_aside'] = monthly_set_aside(
+                    row.get('amount'), row.get('period'))
+        # A sinking fund contributes its MONTHLY share to the group's planned
+        # total, so `planned` and `actual` describe the same span of time. The
+        # annual figure stays on the row for the page to show beside it.
+        planned = round(sum(
+            (r.get('monthly_set_aside') if r.get('is_sinking_fund')
+             and r.get('monthly_set_aside') is not None else _f(r['amount']))
+            for r in rows), 2)
         actual = round(sum(_f(r['spent']) for r in rows), 2)
         groups.append({
             'spending_type': value,
