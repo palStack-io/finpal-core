@@ -142,4 +142,29 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
 AGPL-3.0 - See [LICENSE](../LICENSE) file for details.
 
-For comprehensive documentation, visit [finpal.palstack.io/docs](https://finpal.palstack.io/docs)
+<!-- *** THIS LINE POINTED AT `finpal.palstack.io/docs`, WHICH DOES NOT RESOLVE. ***
+     That subdomain is reserved for a future premium hosted edition (owner,
+     2026-09-13) and the record is not coming. The site lives at a PATH on the
+     apex instead. Measured before it was written here:
+
+         https://palstack.io/finpal/docs   -> 200  ("Documentation - finPal")
+         https://palstack.io/finpal/docs/  -> 404   <- the trailing slash matters
+
+     Sending a stranger to an NXDOMAIN from the install guide — the first thing
+     they read — is worse than sending them nowhere. -->
+
+For comprehensive documentation, visit
+[palstack.io/finpal/docs](https://palstack.io/finpal/docs).
+
+The same material ships with the source, in the [`docs/`](.) directory — which is
+what to read if you are working offline or from a clone:
+
+| | |
+|---|---|
+| [`about.md`](about.md) | what finPal is |
+| [`architecture.md`](architecture.md) | how it fits together |
+| [`ENV_REFERENCE.md`](ENV_REFERENCE.md) | every environment variable |
+| [`csv-import.md`](csv-import.md) · [`simplefin.md`](simplefin.md) | getting your data in |
+| [`api-tokens.md`](api-tokens.md) | programmatic access |
+| [`testing.md`](testing.md) | running the suites |
+| [`licensing.md`](licensing.md) | AGPL-3.0, and what it means for you |

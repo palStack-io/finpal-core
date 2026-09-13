@@ -28,6 +28,7 @@
  *    Measured, not eyeballed. Pinned by authPagesUseBrandColours.test.ts.
  */
 import React, { useState } from 'react';
+import { FINPAL_PRIVACY, FINPAL_TERMS } from '../constants/links';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
@@ -569,12 +570,31 @@ export const Register: React.FC = () => {
               )}
             </div>
 
-            {/* Terms */}
+            {/* *** BOTH OF THESE WERE RELATIVE PATHS AND NEITHER IS A ROUTE. ***
+                `/terms` and `/privacy` fell through to the catch-all, so a user
+                on the one screen where they are asked to AGREE to something
+                clicked "Terms of Service" and was bounced off the form they were
+                filling in. They are external pages and are now linked as such,
+                from `constants/links.ts` so the URL is spelled once. D-201. */}
             <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
               By creating an account, you agree to our{' '}
-              <a href="/terms" style={{ color: '#15803d', textDecoration: 'none' }}>Terms of Service</a>
+              <a
+                href={FINPAL_TERMS}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#15803d', textDecoration: 'none' }}
+              >
+                Terms of Service
+              </a>
               {' '}and{' '}
-              <a href="/privacy" style={{ color: '#15803d', textDecoration: 'none' }}>Privacy Policy</a>.
+              <a
+                href={FINPAL_PRIVACY}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#15803d', textDecoration: 'none' }}
+              >
+                Privacy Policy
+              </a>.
             </p>
 
             {/* Create Account Button */}

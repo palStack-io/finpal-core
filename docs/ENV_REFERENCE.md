@@ -65,7 +65,7 @@ Leave blank to disable email features. Only needed if you want password reset em
 | `SIMPLEFIN_ENABLED` | `true` (prod compose) / `false` (local) | Enable SimpleFin bank account sync |
 | `INVESTMENT_TRACKING_ENABLED` | `true` | Enable investment portfolio tracking |
 | `FMP_API_KEY` | _(none)_ | Financial Modeling Prep API key (for stock data) |
-| `POINTSPAL_ENABLED` | `false` | Enable the pointsPal card-rewards module |
+| `POINTSPAL_ENABLED` | **`true`** | pointsPal ships as part of core and is **on unless you turn it off**. Set `false` to opt out. *This row said `false` until 2026-09-13, which was the opposite of what a fresh install actually does.* |
 | `POINTSPAL_SYNC_INTERVAL_HOURS` | `1` | How often to auto-sync the pointsPal card database |
 
 ---
