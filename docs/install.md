@@ -143,12 +143,21 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 AGPL-3.0 - See [LICENSE](../LICENSE) file for details.
 
 <!-- *** THIS LINE POINTED AT `finpal.palstack.io/docs`, WHICH DOES NOT RESOLVE. ***
-     Owner decision 2026-09-13: that host is for a FUTURE premium hosted edition;
-     for now finPal Core is all there is, and a self-hoster's documentation is
-     this directory. Sending a stranger to an NXDOMAIN from the install guide —
-     the first thing they read — is worse than sending them nowhere. -->
+     That subdomain is reserved for a future premium hosted edition (owner,
+     2026-09-13) and the record is not coming. The site lives at a PATH on the
+     apex instead. Measured before it was written here:
 
-For more documentation, see the [`docs/`](.) directory in this repository:
+         https://palstack.io/finpal/docs   -> 200  ("Documentation - finPal")
+         https://palstack.io/finpal/docs/  -> 404   <- the trailing slash matters
+
+     Sending a stranger to an NXDOMAIN from the install guide — the first thing
+     they read — is worse than sending them nowhere. -->
+
+For comprehensive documentation, visit
+[palstack.io/finpal/docs](https://palstack.io/finpal/docs).
+
+The same material ships with the source, in the [`docs/`](.) directory — which is
+what to read if you are working offline or from a clone:
 
 | | |
 |---|---|
