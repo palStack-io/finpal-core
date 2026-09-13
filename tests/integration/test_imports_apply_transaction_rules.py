@@ -161,3 +161,121 @@ def test_an_explicit_category_in_the_import_still_wins(db):
     row = Expense.query.filter_by(import_source='csv').one()
     assert str(row.category_id) == str(other.id), (
         'the rule overwrote a category the CSV specified explicitly')
+
+
+# ===========================================================================
+# THE TYPE HALF — fixed for `category_id` above, never for anything else
+# ===========================================================================
+#
+# *** THE FIX ABOVE REACHED ONE FIELD OUT OF FIVE, AND THAT IS D-99's SHAPE. ***
+# `TransactionRule.apply()` builds a full dict — `category_id`, `account_id`,
+# `transaction_type`, tags and notes — and `categorize_imported_transaction`
+# ends with:
+#
+#     return matched.get('category_id') or auto_categorize_transaction(...)
+#
+# So the engine computes the type correctly and the caller throws it away, on
+# BOTH import paths. A rule that says "treat PAYPAL TRANSFER as a transfer"
+# matches, is visible in the Rules screen, reports a match count — and changes
+# nothing about the row.
+#
+# That is a prerequisite for the transfers spec §3, whose whole offer is
+# *"treat X as a transfer from now on?"*. Without it §3 writes a rule that
+# cannot keep its promise, which is worse than not offering it.
+
+
+def _user_with_a_type_rule():
+    """A user who has asked for a description to be treated as a transfer."""
+    user = UserFactory()
+    db.session.add(TransactionRule(
+        user_id=user.id,
+        name='PayPal transfers are transfers',
+        pattern='PAYPAL TRANSFER',
+        pattern_field='description',
+        auto_transaction_type='transfer',
+        priority=10,
+        active=True,
+    ))
+    db.session.commit()
+    return user
+
+
+def test_the_engine_computes_the_type_even_though_the_importers_drop_it(db):
+    """A control, so the two tests below measure adoption and not a broken engine."""
+    from src.utils.rule_engine import apply_transaction_rules
+
+    user = _user_with_a_type_rule()
+    matched = apply_transaction_rules(
+        {'description': 'PAYPAL TRANSFER 12345', 'amount': 500.0,
+         'transaction_type': 'income'},
+        user.id) or {}
+
+    assert matched.get('transaction_type') == 'transfer', (
+        'the rule engine itself does not apply auto_transaction_type — fix that '
+        'before reading anything into the two tests below')
+
+
+def test_a_csv_import_honours_a_type_rule(db):
+    """*** THE PROMISE §3 MAKES, ON THE PATH THAT MATTERS. ***
+
+    Budgets exclude transfers (D-183), so a row that should have been a transfer
+    and stayed `income` inflates the user's income — which is the whole reason
+    the transfers work exists.
+    """
+    user = _user_with_a_type_rule()
+
+    csv_text = (
+        'Date,Description,Amount\n'
+        '2026-08-01,PAYPAL TRANSFER 12345,500.00\n'
+    )
+    ok, message, _count, _skipped = AccountService().import_csv(
+        user.id, io.BytesIO(csv_text.encode()))
+    assert ok, message
+
+    rows = Expense.query.filter_by(user_id=user.id, import_source='csv').all()
+    assert rows, f'nothing imported: {message}'
+    assert [r.transaction_type for r in rows] == ['transfer'], (
+        'the rule matched and the importer kept the CSV\'s own type — '
+        'a rule the user can see, that reports matches, and does nothing')
+
+
+def test_a_simplefin_sync_honours_a_type_rule(db):
+    """The same gap on the other import path — and the one users actually hit,
+    since SimpleFin is where an unexplained `income` row comes from."""
+    user = _user_with_a_type_rule()
+    db.session.add(SimpleFin(user_id=user.id, access_url='https://d:d@x/simplefin'))
+    account = Account(name='Checking', type='checking', institution='X', balance=0,
+                      currency_code='USD', import_source='simplefin',
+                      external_id='acct-1', user_id=user.id)
+    db.session.add(account)
+    db.session.commit()
+
+    with patch('integrations.simplefin.client.SimpleFin.get_accounts_with_transactions',
+               return_value=_simplefin_payload('PAYPAL TRANSFER 12345', n=1)):
+        ok, message, _count = SimpleFinService().sync_account(account.id, user.id)
+    assert ok, message
+
+    rows = Expense.query.filter_by(user_id=user.id, import_source='simplefin').all()
+    assert rows, f'nothing synced: {message}'
+    assert [r.transaction_type for r in rows] == ['transfer'], (
+        'the feed\'s own type won over the user\'s explicit rule')
+
+
+def test_a_row_no_rule_matches_keeps_its_own_type(db):
+    """*** THE REFUSAL HALF. *** Without it, a fix that stamped every imported
+    row as a transfer would pass both tests above and destroy every budget."""
+    user = _user_with_a_type_rule()
+
+    csv_text = (
+        'Date,Description,Amount\n'
+        '2026-08-01,TESCO SUPERSTORE,-42.00\n'
+    )
+    ok, message, _count, _skipped = AccountService().import_csv(
+        user.id, io.BytesIO(csv_text.encode()))
+    assert ok, message
+
+    rows = Expense.query.filter_by(user_id=user.id, import_source='csv').all()
+    # A negative amount, so the CSV itself implies an expense. The assertion that
+    # matters is that it is NOT 'transfer'; the exact value is pinned too, so a
+    # fix that mangled every type would not slip through on the negative alone.
+    assert [r.transaction_type for r in rows] == ['expense']
