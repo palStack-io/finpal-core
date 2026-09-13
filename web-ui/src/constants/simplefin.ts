@@ -1,3 +1,5 @@
+import { FINPAL_DOCS } from './links';
+
 /**
  * The outbound links and the setup steps for SimpleFin, in one place.
  *
@@ -14,8 +16,15 @@
 /** Where a user signs up and generates a setup token. */
 export const SIMPLEFIN_BRIDGE_URL = 'https://bridge.simplefin.org/simplefin/create';
 
-/** finPal's own setup guide, anchored at the SimpleFin section. */
-export const SIMPLEFIN_DOCS_URL = 'https://palstack.io/finpal/docs.html#simplefin';
+/**
+ * finPal's own setup guide, anchored at the SimpleFin section.
+ *
+ * *** BUILT FROM `FINPAL_DOCS` RATHER THAN SPELLED OUT. *** This held
+ * `/finpal/docs.html#simplefin`, which does resolve — and it was a second
+ * independent spelling of a host that has already moved once and took a month
+ * to notice (D-109). The same line in `mobile/` was a third.
+ */
+export const SIMPLEFIN_DOCS_URL = `${FINPAL_DOCS}#simplefin`;
 
 /**
  * The steps, in the order a user does them.
