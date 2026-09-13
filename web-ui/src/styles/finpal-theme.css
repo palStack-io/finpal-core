@@ -252,7 +252,18 @@
      not theme, and it measures 1.86:1 on the dark wash. */
   --g-ink: #166534; --au-ink: #b45309; --re-ink: #b91c1c;
   --ink: #0f172a; --ink2: #1e293b; --ink3: #334155;
-  --muted: #64748b; --light: #94a3b8; --border: #e2e8f0;
+  /* `--muted` was #64748b and failed AA on two of the four surfaces it lands
+     on: **4.16:1** on the page wash (#edf1ea, 12 elements — the × close
+     buttons) and **4.35:1** on the red tint. #5a6a80 is the smallest shift that
+     clears all four (4.82 wash / 5.04 tint / 5.51 white / 5.27 bg) while still
+     reading as a muted grey beside `--ink3`.
+
+     *** SAFE TO DARKEN BECAUSE IT IS TEXT-ONLY. *** Checked, not assumed: every
+     use is a `color:`. The theme file's own warning four blocks down is what
+     made that worth checking — lightening `--g700`, which paints BOTH ink and
+     surface, fixed its text and broke every white-on-green button in dark mode.
+     A token cannot be both and change for only one. D-103. */
+  --muted: #5a6a80; --light: #94a3b8; --border: #e2e8f0;
   --bg: #f8fafc; --white: #ffffff;
   --grad: linear-gradient(135deg, #15803d, #16a34a 50%, #22c55e);
   --grad-gold: linear-gradient(135deg, #f59e0b, #fbbf24 60%, #fcd34d);

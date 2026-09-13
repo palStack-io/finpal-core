@@ -216,8 +216,13 @@ const PENDING_AUDIT = {
   // regression.
   categories: 'D-103 — never contrast-audited; entered captured/ 2026-09-10, pairs verified pre-existing A/B',
   investments: 'D-103 — never contrast-audited; added to captured/ by the responsive pass',
-  'pointspal-bestcard': 'D-103 — never contrast-audited',
-  'pointspal-mycards': 'D-103 — never contrast-audited',
+  // *** pointspal-bestcard AND pointspal-mycards GRADUATED 2026-09-12, ZERO
+  // FAILING PAIRS EACH. *** Out of this list and into the real gate. Both were
+  // cleared by the same root-cause fix rather than by tuning their colours:
+  // `--brand-light-green` and `--brand-accent-gold` are SURFACE tokens declared
+  // once and never themed, so as text they measured 1.10-1.62:1; the ink tokens
+  // flip and measure 4.41-8.21:1. `--muted` darkening from #64748b to #5a6a80
+  // took the last of theirs.
   // *** pointspal-redeem GRADUATED 2026-09-12: ZERO FAILING PAIRS. *** It is
   // out of this list and into the real gate, which is the point of the
   // staleness check that flagged it -- a page left in PENDING after it is
