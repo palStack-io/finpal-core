@@ -350,7 +350,7 @@ export const SimpleFinSettings: React.FC = () => {
                 background: 'rgba(59, 130, 246, 0.1)',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
                 borderRadius: '8px',
-                color: 'var(--accent-blue)',
+                color: 'var(--bl-ink)',
                 fontSize: '13px',
                 fontWeight: 600,
                 textDecoration: 'none'

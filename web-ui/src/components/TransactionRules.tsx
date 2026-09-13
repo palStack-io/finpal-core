@@ -420,7 +420,7 @@ export const TransactionRules: React.FC = () => {
                       background: 'rgba(239, 68, 68, 0.1)',
                       border: '1px solid rgba(239, 68, 68, 0.3)',
                       borderRadius: '6px',
-                      color: 'var(--accent-red)',
+                      color: 'var(--re-ink)',
                       cursor: 'pointer',
                       transition: 'all 0.3s',
                       display: 'flex',
