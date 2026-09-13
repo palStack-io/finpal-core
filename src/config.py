@@ -68,7 +68,19 @@ class Config:
     MAX_CONCURRENT_DEMO_SESSIONS = int(os.getenv('MAX_CONCURRENT_DEMO_SESSIONS', 10))
     
     # pointsPal
-    POINTSPAL_ENABLED = os.getenv('POINTSPAL_ENABLED', 'False').lower() == 'true'
+    #
+    # *** THIS SETTING IS GONE, AND ITS ABSENCE IS THE POINT. *** It read
+    # `getenv('POINTSPAL_ENABLED', 'False')` — the OPPOSITE default from
+    # `PointsPalModule.default_enabled = True`, which is what actually decides
+    # whether the module loads. Nothing consumed it (grepped repo-wide), so it
+    # was a wrong answer sitting in `app.config` waiting for somebody to read it.
+    #
+    # This project has already paid for that shape twice: D-120, and the fallback
+    # branch in `api/v1/auth.py` that used to re-read the env var and answered the
+    # opposite of the registry. **One reader, one default** — ask
+    # `module_registry` / `ModuleBase.is_enabled()`, never `app.config`.
+    #
+    # `POINTSPAL_ENABLED` as an ENV VAR still works, as an operator's opt-OUT.
     # `or` rather than a getenv default: docker-compose forwards an unset variable
     # as the empty string, and an empty URL would fail every catalogue fetch.
     POINTSPAL_SYNC_URL = os.getenv('POINTSPAL_SYNC_URL') or (

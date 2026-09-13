@@ -270,3 +270,44 @@ def test_pointspal_is_on_when_the_variable_is_absent(tmp_path):
     """
     result = _probe_readers(tmp_path, None)
     assert result == {'routes_enabled': True, 'models_imported': True}
+
+
+# ── One reader, one default ───────────────────────────────────────────────────
+
+def test_NOTHING_ELSE_DECLARES_A_DEFAULT_FOR_A_MODULE_FLAG():
+    """*** A SECOND READER WITH THE OPPOSITE DEFAULT IS HOW D-120 HAPPENED. ***
+
+    `src/config.py` used to carry
+    `POINTSPAL_ENABLED = getenv('POINTSPAL_ENABLED', 'False')` — the opposite of
+    `PointsPalModule.default_enabled = True`, which is what actually decides
+    whether the module loads. Nothing consumed it, so it sat in `app.config` as a
+    wrong answer waiting to be read, and `api/v1/auth.py`'s fallback branch DID
+    read an equivalent one and answered the opposite of the registry.
+
+    So: the module registry owns this question. A `getenv` for a module's flag
+    anywhere outside `ModuleBase` is the defect, not a convenience.
+    """
+    config = (REPO_ROOT / 'src' / 'config.py').read_text()
+    # Comments are allowed to discuss it — that is where the history lives.
+    code = re.sub(r'#.*', '', config)
+    offenders = [m.group(0) for m in re.finditer(r"getenv\(\s*'[A-Z_]*_ENABLED'", code)
+                 if 'POINTSPAL' in m.group(0) or 'LEARNPAL' in m.group(0)]
+    assert offenders == [], (
+        'a module flag grew a second reader in config.py: %s' % offenders)
+
+
+def test_THE_ENV_REFERENCE_DOCUMENTS_THE_DEFAULT_THE_CODE_ACTUALLY_HAS():
+    """*** THE DOC SAID `false` WHILE A FRESH INSTALL GOT IT ON. ***
+
+    A self-hoster reads `ENV_REFERENCE.md` to decide whether to set a variable at
+    all. Telling them the default is off, when it is on, is how somebody ends up
+    surprised by a module they never enabled — and it is the same class of defect
+    as the code contradiction above, one layer out.
+    """
+    ref = (REPO_ROOT / 'docs' / 'ENV_REFERENCE.md').read_text()
+    row = next((ln for ln in ref.splitlines()
+                if ln.startswith('| `POINTSPAL_ENABLED`')), None)
+    assert row is not None, 'POINTSPAL_ENABLED vanished from the env reference'
+    assert PointsPalModule().default_enabled is True
+    assert '`true`' in row.lower(), (
+        'the env reference does not state the real default: %s' % row)
