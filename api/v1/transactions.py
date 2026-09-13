@@ -401,6 +401,26 @@ class TransactionDetail(Resource):
                 transaction.account_id = data['account_id']
             if 'transaction_type' in data:
                 transaction.transaction_type = data['transaction_type']
+                # *** THE WRITE THAT MAKES `match_transfers`' PROTECTION REACHABLE.
+                # *** That function filters candidates on `type_source != 'user'`
+                # in two places, and until this line existed **nothing in `api/` or
+                # `src/` ever wrote the value** — so no user action could produce
+                # the state the guard defends, and its two tests passed because
+                # they set the column on the ORM object themselves. D-106's shape:
+                # a guard whose precondition is unreachable cannot fire, and 2,095
+                # green tests said it worked.
+                #
+                # *** STAMPED WHETHER OR NOT THE VALUE CHANGED. *** A person who
+                # opens the editor, sees `income`, agrees and saves has told
+                # finPal the same thing as one who changed it. Keying on "the
+                # value differs" would discard that silently.
+                #
+                # *** AND ONLY ON THIS KEY. *** Stamping it on any edit would make
+                # renaming a transaction freeze its type against every future
+                # import — a worse failure than the one this fixes, and an
+                # invisible one, because nothing on screen would say the row had
+                # opted out.
+                transaction.type_source = 'user'
             if 'notes' in data:
                 transaction.notes = data['notes']
             if 'split_method' in data:
