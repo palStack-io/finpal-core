@@ -449,8 +449,15 @@ def create_app(config_name=None):
             # was never defaulted. Without the guard this line would reverse that
             # decision on every restart. See services/category/spending_type.py.
             try:
-                from src.services.category.spending_type import backfill_spending_types
+                from src.services.category.spending_type import (
+                    backfill_spending_type_source, backfill_spending_types)
                 backfill_spending_types()
+                # *** SEPARATE, AND IT HAS TO BE. *** `backfill_spending_types`
+                # stops at its once-per-instance guard on every stack that is
+                # already live, so the source labels and the 17 newly-guessed
+                # rows would reach nobody through it. Keyed on
+                # `spending_type_source IS NULL` instead (D-178).
+                backfill_spending_type_source()
             except Exception:
                 app.logger.exception(
                     'spending_type backfill could not run; the budget page will '

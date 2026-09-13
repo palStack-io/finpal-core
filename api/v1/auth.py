@@ -1063,6 +1063,79 @@ class ResetPassword(Resource):
                     'error': 'An internal error occurred'}, 500
 
 
+set_password_model = ns.model('SetPasswordRequest', {
+    'password': fields.String(required=True, description='The new password'),
+})
+
+
+@ns.route('/set-password')
+class SetPassword(Resource):
+    @ns.doc('set_password', security='Bearer')
+    @ns.expect(set_password_model)
+    @jwt_required()
+    def post(self):
+        """Set a first local password, authorised by a FRESH SSO assertion.
+
+        *** AN SSO USER HAS A PASSWORD THEY CAN NEVER KNOW (D-161). *** The OIDC
+        path creates them with a real hash of a random 24-byte secret, so
+        `/change-password` -- which proves identity by asking for the CURRENT
+        password -- can never work for them, and told them they had typed it
+        wrong.
+
+        Owner decision 2026-09-12: send them back to the identity provider and
+        accept a new password only on a fresh assertion. It proves they control
+        the SSO identity NOW rather than merely that they hold a session token
+        issued at some earlier point, it reuses `/login/oidc`, and it needs no
+        mail stack -- which matters, because `EMAIL_ENABLED=false` on the demo
+        would make an email-confirmation design untestable there.
+
+        *** "BEING LOGGED IN" IS DELIBERATELY NOT ENOUGH. *** A stolen session
+        would otherwise become a PERMANENT second credential, which is strictly
+        worse than the session it came from. The authorisation is a claim the
+        callback stamps only when the PROVIDER's own `auth_time` says the user
+        just authenticated, and it is re-checked for age here -- so a replayed
+        token expires with the window rather than working forever.
+        """
+        from src.services.auth.reauth import describe_refusal, reauth_is_current
+
+        try:
+            claims = get_jwt()
+            if not reauth_is_current(claims):
+                # 403, not 401: the token is VALID, it simply does not carry the
+                # authorisation this action needs. A 401 would make a client log
+                # the user out, which is the opposite of what should happen.
+                return {'success': False,
+                        'error': describe_refusal(claims),
+                        'reauth_required': True}, 403
+
+            data = request.get_json() or {}
+            new_password = data.get('password') or data.get('new_password')
+            if not new_password:
+                return {'success': False, 'error': 'A new password is required'}, 400
+            if len(new_password) < MIN_PASSWORD_LENGTH:
+                return {'success': False,
+                        'error': 'Password must be at least %d characters'
+                                 % MIN_PASSWORD_LENGTH}, 400
+
+            user = User.query.filter_by(id=get_jwt_identity()).first()
+            if user is None:
+                # The token verified, so this is a deleted account rather than a
+                # guess at somebody else's. Nothing here distinguishes account
+                # states to a caller.
+                return {'success': False, 'error': 'Could not set the password'}, 400
+
+            user.set_password(new_password)
+            db.session.commit()
+            logger.info('Local password set after a fresh SSO assertion for %s',
+                        user.id)
+            return {'success': True,
+                    'message': 'Password set. You can now sign in without SSO.'}, 200
+        except Exception:
+            logger.exception('Could not set a password')
+            db.session.rollback()
+            return {'success': False, 'error': 'Could not set the password'}, 500
+
+
 @ns.route('/oidc')
 class NativeOidcSignIn(Resource):
     decorators = [limiter.limit("10 per minute")]

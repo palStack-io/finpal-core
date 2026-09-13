@@ -41,7 +41,7 @@
  * overflow, which is the size of the findings this exists to catch.
  */
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -139,6 +139,41 @@ You are on ${process.version}. Upgrade the runtime — do not skip the gate.`);
   process.exit(2);
 }
 
+/**
+ * *** A CHROME PROFILE IS ~54 MB AND NOTHING WAS EVER DELETING THEM. ***
+ * The directory has to be per-pid (a live Chrome LOCKS it, and sharing one made
+ * a second run fail to open its debugging port while the first was still
+ * exiting) — but per-pid means a NEW one every run, and 73 of them had
+ * accumulated here: **3.8 GB** under a scripts folder, invisible because the
+ * whole pattern is gitignored.
+ *
+ * Swept at STARTUP — see the note on the loop below for why not on exit.
+ */
+const PROFILE = join(HERE, `.chrome-profile-${process.pid}`);
+
+/**
+ * *** SWEPT ON THE WAY IN, NOT ON THE WAY OUT, AND THE FIRST ATTEMPT PROVED WHY.
+ * *** Deleting our own profile from a `process.on('exit')` handler looked right
+ * and left the directory on disk anyway: node exits, the handler removes it, and
+ * the Chrome child — which nothing kills at the end of a successful run — is
+ * still alive and writes its profile straight back out. A cleanup racing a
+ * process it does not own is not a cleanup.
+ *
+ * Sweeping at STARTUP has no race to lose: by then the run that made the
+ * directory is long gone. **A dead pid's profile is removed; a LIVE pid's is
+ * left alone**, because a running Chrome holds its directory and two walks can
+ * be in flight at once (`preflight.sh` runs three of them back to back).
+ * Worst case one profile lingers until the next run, instead of all of them
+ * forever.
+ */
+for (const entry of readdirSync(HERE)) {
+  if (!entry.startsWith('.chrome-profile-')) continue;
+  const pid = Number(entry.slice('.chrome-profile-'.length));
+  if (!Number.isInteger(pid) || pid === process.pid) continue;
+  try { process.kill(pid, 0); continue; } catch { /* not running — ours to remove */ }
+  try { rmSync(join(HERE, entry), { recursive: true, force: true }); } catch { /* best effort */ }
+}
+
 const chrome = spawn(chromePath(), [
   '--headless=new', '--disable-gpu', '--hide-scrollbars',
   '--allow-file-access-from-files', '--no-first-run', '--no-default-browser-check',
@@ -147,7 +182,7 @@ const chrome = spawn(chromePath(), [
   // meant a second run silently failed to open its debugging port while the first
   // instance was still exiting, which reads as "Chrome is broken" rather than
   // "that directory is in use".
-  `--user-data-dir=${join(HERE, `.chrome-profile-${process.pid}`)}`,
+  `--user-data-dir=${PROFILE}`,
   'about:blank',
 ], { stdio: 'ignore' });
 

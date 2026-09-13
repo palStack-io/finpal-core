@@ -19,6 +19,26 @@ interface StatCardProps {
   scope?: Scope;
 }
 
+/**
+ * A translucent wash of `accentColor`, built the one way that survives a CSS
+ * variable.
+ *
+ * *** `accentColor + '33'` WAS SILENTLY PAINTING NOTHING FOR EVERY CALLER THAT
+ * PASSED A `var()`. *** Appending an alpha suffix to a hex works; appending it
+ * to `var(--x)` does not, because substitution happens on the TOKEN stream —
+ * `var(--brand-green-glow)33` resolves to `#22c55e 33`, two component values,
+ * which is an invalid declaration and is dropped. Seven call sites pass a
+ * variable, so seven icon wells rendered with no background at all and nothing
+ * anywhere said so. That is D-60's shape exactly: a value that resolves to no
+ * rule renders silently unstyled.
+ *
+ * Proven by the contrast walk rather than by reading: the Categories icon
+ * measured against `#fbfcf9`, the CARD — which is only possible if the wash was
+ * absent. `color-mix` takes a variable and a hex alike.
+ */
+const wash = (accent: string, percent: number) =>
+  `color-mix(in srgb, ${accent} ${percent}%, transparent)`;
+
 export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, icon, subtitle, valueColor, scope }) => {
   const [hovered, setHovered] = useState(false);
 
@@ -28,7 +48,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, i
       onMouseLeave={() => setHovered(false)}
       style={{
         background: 'var(--bg-card)',
-        border: `1px solid ${hovered ? accentColor + '66' : 'var(--border-light)'}`,
+        border: `1px solid ${hovered ? wash(accentColor, 40) : 'var(--border-light)'}`,
         borderRadius: '16px',
         padding: '24px',
         boxShadow: hovered ? '0 8px 24px var(--card-hover-shadow)' : 'var(--card-shadow)',
@@ -80,7 +100,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, accentColor, i
         <div style={{
           width: '48px',
           height: '48px',
-          background: accentColor + '33',
+          background: wash(accentColor, 20),
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',

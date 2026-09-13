@@ -72,8 +72,17 @@ describe('a filled coloured button uses white, never --text-primary', () => {
       for (const { body, line } of styleObjects(src)) {
         const flips = /color: *['"]var\(--text-primary\)['"]/.test(body);
         if (!flips) continue;
-        const bg = body.match(/background(?:Color)?: *['"]([^'"]+)['"]/);
-        if (!bg || !FILLED.some((c) => bg[1].includes(c))) continue;
+        // *** THE BACKGROUND MAY BE A TERNARY, AND THE FIRST VERSION OF THIS
+        //     REGEX REQUIRED A QUOTE IMMEDIATELY AFTER THE COLON. ***
+        //     `background: applyingRules ? 'rgba(...)' : 'linear-gradient(...)'`
+        //     matched nothing, so the Apply-to-All button — `--text-primary` on
+        //     an amber gradient, 1.44:1 in dark — walked straight past this
+        //     guard. Take everything up to the end of the line instead and look
+        //     for a brand colour anywhere in it. Guards keyed to a spelling go
+        //     blind, and this one was.
+        const bgLine = body.match(/background(?:Color)?: *([^\n]+)/);
+        if (!bgLine || !FILLED.some((c) => bgLine[1].includes(c))) continue;
+        const bg = [bgLine[0], bgLine[1]];
         found.push(`${relative(SRC, file).split('\\').join('/')}:${line}  ${bg[1].slice(0, 48)}`);
       }
     }

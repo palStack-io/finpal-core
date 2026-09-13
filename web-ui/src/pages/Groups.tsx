@@ -124,7 +124,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           background: 'rgba(239, 68, 68, 0.1)',
           border: '1px solid rgba(239, 68, 68, 0.3)',
           borderRadius: '8px',
-          color: 'var(--accent-red)',
+          color: 'var(--re-ink)',
           marginBottom: '16px',
           fontSize: '14px'
         }}>
@@ -364,7 +364,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
                   background: 'rgba(239, 68, 68, 0.1)',
                   border: '1px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: '8px',
-                  color: 'var(--accent-red)',
+                  color: 'var(--re-ink)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center'

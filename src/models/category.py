@@ -33,6 +33,23 @@ class Category(db.Model):
     # read from the column thereafter -- see services/category/spending_type.py.
     spending_type = db.Column(db.String(12), nullable=True)
 
+    # *** WHERE `spending_type` CAME FROM, SO A GUESS NEVER READS AS A FACT. ***
+    #
+    # 'user'     -- they classified it. Authoritative; never overwritten.
+    # 'inferred' -- finPal guessed. Owner decision 2026-09-13: for the 17 seeded
+    #               categories where the honest answer depends on the person
+    #               (Health, the fee rows, Personal, Other), GUESS AND LABEL IT.
+    # 'default'  -- the seeder's confident map, the other 128 of 145.
+    #  NULL      -- written before this column existed; readers treat it as
+    #               'default' and the boot backfill resolves it.
+    #
+    # This is `Account.type_source`'s shape deliberately (D-191), for the same
+    # reason: "we think this is a fixed cost" and "you told us it is" are
+    # different claims, and D-77/D-108 are what it looks like when a guess is
+    # rendered as a fact. The Review page is where an 'inferred' row surfaces
+    # for confirmation -- a label with nowhere to appear is not a label.
+    spending_type_source = db.Column(db.String(10), nullable=True)
+
     # *** IS THIS CATEGORY MONEY IN OR MONEY OUT? D-189. ***
     # finPal could not tell, because it has never had a column for it: income
     # and expense live on the TRANSACTION (`transaction_type`), and the seeded

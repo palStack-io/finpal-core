@@ -473,7 +473,7 @@ export const RecurringTransactions: React.FC = () => {
           marginBottom: '24px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <Sparkles size={24} style={{ color: 'var(--brand-accent-gold)' }} />
+            <Sparkles size={24} style={{ color: 'var(--au-ink)' }} />
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
               Detected Patterns ({patterns.length})
             </h3>
@@ -505,16 +505,16 @@ export const RecurringTransactions: React.FC = () => {
                           the dollar was printed verbatim, so every detected pattern
                           showed `$450.00` to a user whose currency is anything else --
                           beside amounts the rest of the app had drawn correctly. */}
-                      Amount: <strong style={{ color: 'var(--brand-light-green)' }}>{money(pattern.amount)}</strong>
+                      Amount: <strong style={{ color: 'var(--g-ink)' }}>{money(pattern.amount)}</strong>
                     </span>
                     <span style={metaTextStyle}>
-                      Frequency: <strong style={{ color: 'var(--brand-light-green)' }}>{getFrequencyLabel(pattern.frequency)}</strong>
+                      Frequency: <strong style={{ color: 'var(--g-ink)' }}>{getFrequencyLabel(pattern.frequency)}</strong>
                     </span>
                     <span style={metaTextStyle}>
-                      Occurrences: <strong style={{ color: 'var(--brand-light-green)' }}>{pattern.occurrences}</strong>
+                      Occurrences: <strong style={{ color: 'var(--g-ink)' }}>{pattern.occurrences}</strong>
                     </span>
                     <span style={metaTextStyle}>
-                      Confidence: <strong style={{ color: 'var(--brand-light-green)' }}>{(pattern.confidence * 100).toFixed(0)}%</strong>
+                      Confidence: <strong style={{ color: 'var(--g-ink)' }}>{(pattern.confidence * 100).toFixed(0)}%</strong>
                     </span>
                   </div>
                 </div>
@@ -601,15 +601,19 @@ export const RecurringTransactions: React.FC = () => {
             >
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <Repeat size={20} style={{ color: item.active ? 'var(--brand-light-green)' : 'var(--text-muted)' }} />
+                  <Repeat size={20} style={{ color: item.active ? 'var(--g-ink)' : 'var(--text-muted)' }} />
                   <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', margin: 0 }}>
                     {item.description}
                   </h3>
                   {!item.active && (
                     <span style={{
                       padding: '2px 8px',
-                      background: 'rgba(100, 116, 139, 0.3)',
-                      border: '1px solid rgba(100, 116, 139, 0.5)',
+                      /* 0.3 -> 0.16: `--text-secondary` on the thicker
+                         wash measured 3.77:1 (#56685d on #c8cfd2). The same
+                         word on the page's own wash measures 4.51, so it was
+                         the TINT that failed, not the token. D-103. */
+                      background: 'rgba(100, 116, 139, 0.16)',
+                      border: '1px solid rgba(100, 116, 139, 0.4)',
                       borderRadius: '4px',
                       color: 'var(--text-secondary)',
                       fontSize: '11px',
@@ -621,13 +625,13 @@ export const RecurringTransactions: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                   <span style={metaTextStyle}>
-                    Amount: <strong style={{ color: 'var(--brand-light-green)' }}>{money(item.amount, item.currency_code)}</strong>
+                    Amount: <strong style={{ color: 'var(--g-ink)' }}>{money(item.amount, item.currency_code)}</strong>
                   </span>
                   <span style={metaTextStyle}>
-                    Frequency: <strong style={{ color: 'var(--brand-light-green)' }}>{getFrequencyLabel(item.frequency)}</strong>
+                    Frequency: <strong style={{ color: 'var(--g-ink)' }}>{getFrequencyLabel(item.frequency)}</strong>
                   </span>
                   <span style={metaTextStyle}>
-                    Type: <strong style={{ color: 'var(--brand-light-green)' }}>{item.transaction_type}</strong>
+                    Type: <strong style={{ color: 'var(--g-ink)' }}>{item.transaction_type}</strong>
                   </span>
                 </div>
               </div>
@@ -636,10 +640,15 @@ export const RecurringTransactions: React.FC = () => {
                   onClick={() => handleToggleActive(item.id)}
                   style={{
                     padding: '8px 12px',
-                    background: item.active ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                    /* 0.2 -> 0.13. `--re-ink` on the 20% red wash measured
+                       4.41:1 in dark (#f87171 on #453127) — nine hundredths
+                       short of AA on a 13px bold label. Both halves move
+                       together so the button does not change depth when it
+                       toggles. */
+                    background: item.active ? 'rgba(239, 68, 68, 0.13)' : 'rgba(34, 197, 94, 0.13)',
                     border: `1px solid ${item.active ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`,
                     borderRadius: '8px',
-                    color: item.active ? '#fca5a5' : 'var(--brand-light-green)',
+                    color: item.active ? 'var(--re-ink)' : 'var(--g-ink)',
                     fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer',
@@ -655,10 +664,11 @@ export const RecurringTransactions: React.FC = () => {
                   onClick={() => handleDelete(item.id)}
                   style={{
                     padding: '8px',
-                    background: 'rgba(239, 68, 68, 0.2)',
+                    /* Matches the Pause button beside it — see above. */
+                    background: 'rgba(239, 68, 68, 0.13)',
                     border: '1px solid rgba(239, 68, 68, 0.5)',
                     borderRadius: '8px',
-                    color: '#fca5a5',
+                    color: 'var(--re-ink)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center'

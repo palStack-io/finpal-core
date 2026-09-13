@@ -110,17 +110,39 @@ DEFAULT_SPENDING_TYPES = {
                                               # `fixed` hides the thing people
                                               # most need to look at
 
-    # Health is person-dependent and finPal has no business guessing here.
-    'Health': None,
-    'Health/Medical': None,
-    'Health/Pharmacy': None,
-    'Health/Fitness': None,                   # gym contract vs pay-as-you-go
+    # *** HEALTH AND FEES ARE NOW GUESSED, AND THE GUESS IS LABELLED. ***
+    #
+    # This block read "finPal has no business guessing here" and left 17 of the
+    # 145 seeded categories NULL. Owner decision 2026-09-13, after seeing the
+    # measured split (128 classified, 17 not): **guess, and label it a guess.**
+    #
+    # The reasoning is the one `Account.type_source` already encodes (D-191): an
+    # inference is not the defect -- *rendering an inference as a statement* is
+    # (D-77/D-108). An unclassified category is not neutral either; it drops out
+    # of every spending-group total silently, so "no opinion" was itself a
+    # position, just an invisible one.
+    #
+    # FLEXIBLE for both groups, and neither is arbitrary:
+    #   Health   -- a gym contract is fixed and a prescription is not, but the
+    #               person who has a fixed health cost KNOWS it and will correct
+    #               one row; the person who does not would have been left with a
+    #               hole. Guess the commoner case.
+    #   Fees     -- bank, ATM and late fees are avoidable by definition. Calling
+    #               them fixed would say they are part of the ground you stand
+    #               on, which is the opposite of what they are.
+    #
+    # Every row here is written with `spending_type_source='inferred'`, and the
+    # Review page is where that surfaces for confirmation.
+    'Health': FLEXIBLE,
+    'Health/Medical': FLEXIBLE,
+    'Health/Pharmacy': FLEXIBLE,
+    'Health/Fitness': FLEXIBLE,                   # gym contract vs pay-as-you-go
 
-    'Personal': None,
+    'Personal': FLEXIBLE,
     'Personal/Self-care': FLEXIBLE,
     'Personal/Education': NON_MONTHLY,        # termly or annual, rarely monthly
 
-    'Other': None,
+    'Other': FLEXIBLE,
 
     # ==================================================================
     # The DEMO set -- src/data/default_categories.DEFAULT_CATEGORIES.
@@ -176,16 +198,16 @@ DEFAULT_SPENDING_TYPES = {
     # -- Health & Fitness. The parent and the clinical children stay None for
     #    the same reason the signup set's Health does. The two CONTRACTS are
     #    classified, because a contract is a contract.
-    'Health & Fitness': None,
-    'Health & Fitness/Doctor Visits': None,
-    'Health & Fitness/Dentist': None,
-    'Health & Fitness/Pharmacy': None,
+    'Health & Fitness': FLEXIBLE,
+    'Health & Fitness/Doctor Visits': FLEXIBLE,
+    'Health & Fitness/Dentist': FLEXIBLE,
+    'Health & Fitness/Pharmacy': FLEXIBLE,
     'Health & Fitness/Health Insurance': FIXED,
     'Health & Fitness/Gym Membership': FIXED,
     'Health & Fitness/Fitness Classes': FLEXIBLE,
     'Health & Fitness/Sports Equipment': FLEXIBLE,
-    'Health & Fitness/Wellness': None,
-    'Health & Fitness/Vision Care': None,
+    'Health & Fitness/Wellness': FLEXIBLE,
+    'Health & Fitness/Vision Care': FLEXIBLE,
 
     # -- Entertainment
     'Entertainment/Concerts': FLEXIBLE,
@@ -290,11 +312,11 @@ DEFAULT_SPENDING_TYPES = {
     # -- Miscellaneous is the one subtree finPal should not characterise at all.
     #    A bank fee can be a monthly account charge or a one-off penalty, and a
     #    late fee is a consequence rather than a choice.
-    'Miscellaneous': None,
-    'Miscellaneous/Bank Fees': None,
-    'Miscellaneous/ATM Fees': None,
-    'Miscellaneous/Late Fees': None,
-    'Miscellaneous/Other': None,
+    'Miscellaneous': FLEXIBLE,
+    'Miscellaneous/Bank Fees': FLEXIBLE,
+    'Miscellaneous/ATM Fees': FLEXIBLE,
+    'Miscellaneous/Late Fees': FLEXIBLE,
+    'Miscellaneous/Other': FLEXIBLE,
 }
 
 
@@ -310,6 +332,96 @@ def default_for_path(path):
 def default_for(name, parent_name=None):
     """The seeded default for a category by name and parent name."""
     return default_for_path(category_path(name, parent_name))
+
+
+#: The 17 the owner decided to GUESS rather than leave blank (2026-09-13).
+#: Kept as an explicit set rather than derived, because "which of these did
+#: finPal guess" is a claim about a DECISION, not about the data -- and a future
+#: edit to `DEFAULT_SPENDING_TYPES` must not silently change which rows are
+#: labelled as inferences.
+INFERRED_PATHS = frozenset({
+    'Health', 'Health/Medical', 'Health/Pharmacy', 'Health/Fitness',
+    'Personal', 'Other',
+    'Health & Fitness', 'Health & Fitness/Doctor Visits',
+    'Health & Fitness/Dentist', 'Health & Fitness/Pharmacy',
+    'Health & Fitness/Wellness', 'Health & Fitness/Vision Care',
+    'Miscellaneous', 'Miscellaneous/Bank Fees', 'Miscellaneous/ATM Fees',
+    'Miscellaneous/Late Fees', 'Miscellaneous/Other',
+})
+
+
+def backfill_spending_type_source():
+    """Label every seeded classification as a guess, a default, or the user's.
+
+    *** THIS EXISTS BECAUSE `backfill_spending_types` CANNOT DO IT. *** That
+    function carries a once-per-instance guard -- "if any category already has a
+    spending_type, the feature has taken effect here" -- which is correct for
+    what it does and makes it a no-op on every stack that is already live. The
+    17 newly-guessed rows and the source column would therefore reach nobody.
+    D-178, one layer on: a seed change is not shipped until a condition-keyed
+    correction exists for the rows the old version wrote.
+
+    *** KEYED ON `spending_type_source IS NULL`, THE OLD VALUE. *** A row a user
+    has since classified carries 'user' and does not match, so their choice
+    survives. Re-running is a no-op.
+
+    *** IT NEVER OVERWRITES A `spending_type`; IT ONLY LABELS ONE. *** The single
+    exception is a seeded path the earlier pass left NULL -- those are exactly
+    the 17 that had no answer to record, so there is nothing to overwrite.
+
+    Never raises: this runs at boot and a bad row must not stop the app starting.
+    """
+    from src.extensions import db
+    from src.models.category import Category
+
+    labelled = 0
+    guessed = 0
+    try:
+        rows = Category.query.filter(Category.spending_type_source.is_(None)).all()
+        for row in rows:
+            parent_name = row.parent.name if getattr(row, 'parent', None) else None
+            path = category_path(row.name, parent_name)
+            seeded = DEFAULT_SPENDING_TYPES.get(path)
+
+            if path in INFERRED_PATHS and (row.spending_type is None
+                                            or row.spending_type == seeded):
+                # *** ONE OF THE 17 -- BUT ONLY WHEN THERE IS NOTHING TO OVERRULE.
+                # *** On a stack that is already live the seeder wrote NULL here,
+                # so a value on one of these paths can only have come from the
+                # USER -- the gym-contract case these 17 exist for. Stamping that
+                # 'inferred' would be provably false AND would be the label a
+                # later pass feels free to overwrite: D-178's shape, applied to
+                # the rows the old meaning wrote. The `or == seeded` arm keeps a
+                # NEW signup (where the seeder now writes the guess itself)
+                # labelled as the guess it is.
+                if row.spending_type is None and seeded is not None:
+                    row.spending_type = seeded
+                    guessed += 1
+                row.spending_type_source = 'inferred'
+            elif seeded is not None and row.spending_type == seeded:
+                # Matches the seeder's confident map: a default, not a guess.
+                row.spending_type_source = 'default'
+            elif row.spending_type is not None:
+                # Classified, but not to the seeded value -- so somebody chose it.
+                # *** THIS IS THE SAFE READING. *** Calling it 'default' would let
+                # a later pass overwrite a real choice; calling it 'user' at worst
+                # means finPal declines to ask about a row it set itself.
+                row.spending_type_source = 'user'
+            else:
+                # A user's own category with no classification. Leave the source
+                # NULL: there is no claim to label yet.
+                continue
+            labelled += 1
+
+        if labelled:
+            db.session.commit()
+            logger.info('spending_type_source: labelled %d (%d newly guessed)',
+                        labelled, guessed)
+        return labelled
+    except Exception:
+        logger.exception('spending_type_source backfill could not run')
+        db.session.rollback()
+        return 0
 
 
 def backfill_spending_types():

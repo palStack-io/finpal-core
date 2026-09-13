@@ -105,7 +105,17 @@ const RecommendTable: React.FC<RecommendTableProps> = ({
                   >
                     {card.card_name}
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>
+                  {/* *** `--muted` FAILS ON THE CAPPED ROW'S RED TINT. ***
+                      A capped row paints `--re50` (#fef2f2) behind this, and
+                      `--muted` (#64748b) on it measures **4.35:1** — just under
+                      4.5. `--ink3` measures 9.47:1 on the same tint and 8.3:1 on
+                      the ordinary row background, so it clears both.
+
+                      Only the capped row changes: `--muted` is correct
+                      everywhere it is not sitting on a tint, and darkening the
+                      token globally would flatten the hierarchy it exists to
+                      create. D-103. */}
+                  <div style={{ fontSize: 10, color: isCapped ? 'var(--ink3)' : 'var(--muted)', marginTop: 1 }}>
                     {card.program}
                     {isCapped && (
                       <span style={{ color: 'var(--re-ink)', fontWeight: 700 }}> · CAP HIT</span>

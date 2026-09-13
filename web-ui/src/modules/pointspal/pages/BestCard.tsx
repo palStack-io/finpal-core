@@ -196,8 +196,18 @@ const BestCard: React.FC = () => {
                 <div style={{ fontSize: 13, color: '#fff' }}>
                   Earn {result.winner.pts_earned.toLocaleString()} pts ≈ <b>${result.winner.value_usd.toFixed(2)}</b> ({result.winner.effective_rate}×{result.winner.cap_note ? '' : ' · no cap'})
                 </div>
+                {/* *** A WHITE OVERLAY ON A GREEN CARD LIGHTENS IT AND COSTS CONTRAST. ***
+                This was `rgba(255,255,255,0.15)`, which over the card's
+                `#15803d` computes to `#38935a` — and white text on THAT
+                measures **3.82:1** against a 4.5 requirement, where white
+                on the card itself measures 5.02:1. The inset was strictly
+                worse than no inset at all.
+                
+                A black overlay darkens the same panel instead: `#127136`,
+                white at **6.10:1**. Same visual device — a panel set into
+                the card — with the contrast moving the right way. D-103. */}
                 {result.displaced_winner && (
-                  <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.15)', borderRadius: 'var(--rs)', padding: '6px 12px', fontSize: 11, color: '#fff' }}>
+                                    <div style={{ marginTop: 10, background: 'rgba(0,0,0,0.12)', borderRadius: 'var(--rs)', padding: '6px 12px', fontSize: 11, color: '#fff' }}>
                     {/* cap_note arrives as a complete phrase ("Cap at 65%", see
                         routes.py), so welding it after "capped this" rendered
                         "capped this Cap at 65%". It stands on its own after the dash. */}

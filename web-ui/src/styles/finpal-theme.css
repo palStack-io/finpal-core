@@ -251,8 +251,26 @@
      white, so it clears both. A fixed hex like --g800 cannot do this job — it does
      not theme, and it measures 1.86:1 on the dark wash. */
   --g-ink: #166534; --au-ink: #b45309; --re-ink: #b91c1c;
+  /* *** A FOURTH INK, FOR THE SAME REASON AS THE OTHER THREE. *** The Edit and
+     Delete icon buttons paint a 10% tint of their own accent and put the accent
+     itself on top: #3b82f6 on #dbe6eb measures **2.90:1** against a 3:1
+     non-text requirement, and #ef4444 on #ede0d9 measures 2.91. `--re-ink`
+     already covered the red half; blue had no ink token at all. #1d4ed8 clears
+     both blue tints (5.28 / 5.20) and is still recognisably the same blue. */
+  --bl-ink: #1d4ed8;
   --ink: #0f172a; --ink2: #1e293b; --ink3: #334155;
-  --muted: #64748b; --light: #94a3b8; --border: #e2e8f0;
+  /* `--muted` was #64748b and failed AA on two of the four surfaces it lands
+     on: **4.16:1** on the page wash (#edf1ea, 12 elements — the × close
+     buttons) and **4.35:1** on the red tint. #5a6a80 is the smallest shift that
+     clears all four (4.82 wash / 5.04 tint / 5.51 white / 5.27 bg) while still
+     reading as a muted grey beside `--ink3`.
+
+     *** SAFE TO DARKEN BECAUSE IT IS TEXT-ONLY. *** Checked, not assumed: every
+     use is a `color:`. The theme file's own warning four blocks down is what
+     made that worth checking — lightening `--g700`, which paints BOTH ink and
+     surface, fixed its text and broke every white-on-green button in dark mode.
+     A token cannot be both and change for only one. D-103. */
+  --muted: #5a6a80; --light: #94a3b8; --border: #e2e8f0;
   --bg: #f8fafc; --white: #ffffff;
   --grad: linear-gradient(135deg, #15803d, #16a34a 50%, #22c55e);
   --grad-gold: linear-gradient(135deg, #f59e0b, #fbbf24 60%, #fcd34d);
@@ -422,7 +440,13 @@
   --au100: rgba(217, 119, 6, 0.25);
   --au300: rgba(252, 211, 77, 0.4);
   --re50: rgba(220, 38, 38, 0.15);
-  --re100: rgba(220, 38, 38, 0.25);
+  /* 0.25 -> 0.18. *** THE CAPPED TAG PAINTS `--re100` AND PUTS `--re-ink`
+     (#f87171) ON IT, WHICH MEASURED 4.32:1 — THE ONLY DARK SURFACE THAT INK
+     FAILS ON. *** It clears 4.5 on every other one (5.32 on the page, 5.83 on a
+     card, 4.69 on a row), so the ink is right and the tint was too strong.
+     Lowering the alpha darkens the composite, which is the same lever as
+     darkening a solid background and leaves the text untouched. D-103. */
+  --re100: rgba(220, 38, 38, 0.18);
 
   /* ── THE ACCENT *INK* TOKENS, WHICH THIS BLOCK USED TO LEAVE BEHIND (D-103).
      The eight tints above are overridden so a badge's BACKGROUND goes dark. The
@@ -450,6 +474,10 @@
   --g-ink: #5fce8b;
   --au-ink: #fbbf24;
   --re-ink: #f87171;
+  /* The dark half of `--bl-ink`. #60a5fa measures 5.79 and 5.11 on the two dark
+     tints the icon buttons land on; the brand #3b82f6 is too dark against them
+     for the same reason its light counterpart is too light. */
+  --bl-ink: #60a5fa;
   --sh-xs: 0 1px 2px rgba(0,0,0,.25);
   --sh-sm: 0 2px 8px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
   --sh-md: 0 6px 20px rgba(0,0,0,.4);

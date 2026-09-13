@@ -9,6 +9,7 @@ from schemas.input_schemas import budget_input
 from src.utils.validation import validate_request, validation_error_response
 from src.services.budget.service import BudgetService
 from src.services.budget.pace import pace_applies, pace_for
+from src.services.budget.sinking import is_sinking_fund, monthly_set_aside
 from datetime import datetime
 import logging
 from src.models.personal_access_token import SCOPE_READ
@@ -334,6 +335,38 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
             continue
         detail['kind'] = (category.kind if category is not None else None) or 'expense'
         group = _effective_spending_type(category, by_id)
+
+        # *** A YEARLY Non-Monthly BUDGET IS A SINKING FUND, AND ITS PLANNED
+        # FIGURE FOR THIS MONTH IS THE SET-ASIDE, NOT THE WHOLE BILL. *** Owner
+        # decision 2026-09-13 (design §10 item 3): a £600 car tax compared
+        # against one month always reads as an overspend, and `sinking-funds` —
+        # a lesson finPal already ships — tells the user to divide it by twelve.
+        # Teaching one thing and computing another is worse than doing neither.
+        #
+        # `period='yearly'` is the carrier, NOT a reinterpretation of `amount`:
+        # nothing in the data distinguishes an annual figure from a monthly one,
+        # so silently dividing a user's own number would be D-178's failure with
+        # real money attached.
+        detail['is_sinking_fund'] = is_sinking_fund(group, detail.get('period'))
+        if detail['is_sinking_fund']:
+            detail['monthly_set_aside'] = monthly_set_aside(
+                detail.get('amount'), detail.get('period'))
+            # *** THE ROW AND THE GROUP MEASURE DIFFERENT SPANS, AND BOTH SAY SO.
+            # *** `spent` on a yearly budget is the CALENDAR YEAR TO DATE
+            # (`get_current_period_dates`), which is what makes the row's own
+            # arithmetic hold: "£X of £600 for the year", and `remaining` and
+            # `percentage` agree with it.
+            #
+            # The GROUP is a month — planned is one twelfth — so summing the
+            # year's spend into it would compare a month's target against a
+            # year's spending and call the difference "remaining". That is
+            # D-102's shape: a figure and a caption describing different things.
+            # So a sinking fund contributes THIS MONTH's spending to the group,
+            # and the year's stays on the row.
+            month_of = datetime.utcnow()
+            detail['month_spent'] = round(_f(budget.calculate_spent_amount(
+                year=month_of.year, month=month_of.month)), 2)
+
         (buckets[group] if group else unsorted_budgets).append(detail)
 
     groups = []
@@ -345,8 +378,18 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
         # colouring it as behind invents an urgency the data does not support.
         for row in rows:
             row['pace_applies'] = pace_applies(row.get('period'), value)
-        planned = round(sum(_f(r['amount']) for r in rows), 2)
-        actual = round(sum(_f(r['spent']) for r in rows), 2)
+        # *** BOTH SIDES OF THE GROUP ARE A MONTH. *** A sinking fund contributes
+        # its monthly SHARE to `planned` and its THIS-MONTH spending to `actual`
+        # — see the note where those are computed. Taking only one of the two
+        # would leave `remaining` subtracting a year from a month.
+        planned = round(sum(
+            (r.get('monthly_set_aside') if r.get('is_sinking_fund')
+             and r.get('monthly_set_aside') is not None else _f(r['amount']))
+            for r in rows), 2)
+        actual = round(sum(
+            (r.get('month_spent') if r.get('is_sinking_fund')
+             and r.get('month_spent') is not None else _f(r['spent']))
+            for r in rows), 2)
         groups.append({
             'spending_type': value,
             'label': GROUP_LABELS[value],

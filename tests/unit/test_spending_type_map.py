@@ -11,10 +11,20 @@ seeds 28 at signup, and `src/data/default_categories.DEFAULT_CATEGORIES` seeds
 set's `Transportation`. Keyed by bare name, the map writes `flexible` onto a gas
 BILL, which is the one thing `fixed` exists for. Keyed by path they are distinct.
 
-*** SIX OF THE SIGNUP CATEGORIES ARE DELIBERATELY UNCLASSIFIED. *** A gym contract
-is fixed and pay-as-you-go is flexible; finPal cannot know which, so it does not
-guess. Those land in Unsorted, and Unsorted having real content is what makes it
-worth showing.
+*** SIX OF THE SIGNUP CATEGORIES ARE GUESSES, AND ARE LABELLED AS GUESSES. ***
+A gym contract is fixed and pay-as-you-go is flexible; finPal cannot know which.
+Until 2026-09-13 it declined to say, and those six carried `None`.
+
+*** THAT WAS NOT THE NEUTRAL CHOICE IT LOOKED LIKE. *** An unclassified category
+drops out of every spending-group total silently, so "no opinion" was a position
+too -- just an invisible one. Owner decision 2026-09-13: **guess, and label it a
+guess.** The six now read `flexible` (the honest default for a cost that varies)
+and appear in `INFERRED_PATHS`, which is what the Review page reads to ask the
+user to confirm them. The reasoning is `Account.type_source`'s (D-191): an
+inference is not the defect; rendering an inference as a statement is.
+
+So the set below is still pinned exactly -- it has just moved from "these have no
+value" to "these have a value finPal is not sure of".
 
 *** INCOME AND SAVINGS ARE ABSENT FROM THE MAP ON PURPOSE, NOT MISSING. ***
 Owner decision 2026-09-10. Income is not spending, and `Goal` already owns
@@ -26,6 +36,7 @@ import pytest
 from src.data.default_categories import DEFAULT_CATEGORIES
 from src.services.category.spending_type import (
     DEFAULT_SPENDING_TYPES,
+    INFERRED_PATHS,
     VALID_SPENDING_TYPES,
     category_path,
     default_for_path,
@@ -35,13 +46,15 @@ SIGNUP_FIXED = {'Housing', 'Housing/Rent/Mortgage', 'Housing/Utilities'}
 SIGNUP_NON_MONTHLY = {
     'Housing/Home Maintenance', 'Shopping/Gifts', 'Personal/Education',
 }
-SIGNUP_UNCLASSIFIED = {
+#: The six the owner decided to GUESS at rather than leave blank (2026-09-13).
+#: Each is `flexible` in the map and `inferred` in `spending_type_source`.
+SIGNUP_INFERRED = {
     'Health', 'Health/Medical', 'Health/Pharmacy', 'Health/Fitness',
     'Personal', 'Other',
 }
 
 # Every path the signup seeder (`AuthService.create_default_categories`) creates.
-SIGNUP_PATHS = SIGNUP_FIXED | SIGNUP_NON_MONTHLY | SIGNUP_UNCLASSIFIED | {
+SIGNUP_PATHS = SIGNUP_FIXED | SIGNUP_NON_MONTHLY | SIGNUP_INFERRED | {
     'Food', 'Food/Groceries', 'Food/Restaurants', 'Food/Coffee Shops',
     'Transportation', 'Transportation/Gas', 'Transportation/Public Transit',
     'Transportation/Rideshare',
@@ -74,8 +87,6 @@ def test_the_signup_set_is_28_paths():
 
 
 def test_every_signup_path_is_in_the_map():
-    # Including the six whose value is None: present with a None value is a
-    # DECISION, and absent is an oversight. The map has to distinguish them.
     missing = SIGNUP_PATHS - set(DEFAULT_SPENDING_TYPES)
     assert missing == set()
 
@@ -90,9 +101,31 @@ def test_the_signup_non_monthly_set_is_exactly_what_was_agreed():
     assert got == SIGNUP_NON_MONTHLY
 
 
-def test_the_signup_unclassified_set_is_deliberate_and_exactly_what_was_agreed():
-    got = {p for p in SIGNUP_PATHS if DEFAULT_SPENDING_TYPES[p] is None}
-    assert got == SIGNUP_UNCLASSIFIED
+def test_no_signup_path_is_left_without_an_answer():
+    """The 2026-09-13 decision, in one assertion: nothing seeds as `None`."""
+    assert {p for p in SIGNUP_PATHS if DEFAULT_SPENDING_TYPES[p] is None} == set()
+
+
+def test_the_signup_guesses_are_exactly_the_six_that_were_agreed():
+    """*** THE SET IS STILL PINNED, IT HAS JUST CHANGED MEANING. ***
+
+    These used to be the paths with no value; they are now the paths whose value
+    finPal admits it guessed. Widening this set is a product decision -- it is
+    what the Review page asks the user to confirm, and a Review page that asks
+    about everything is not a review, it is a chore.
+    """
+    got = {p for p in SIGNUP_PATHS if p in INFERRED_PATHS}
+    assert got == SIGNUP_INFERRED
+
+
+def test_every_guess_is_flexible_rather_than_fixed():
+    """*** THE SAFE DIRECTION FOR A GUESS. *** `fixed` tells the user not to act
+    on a row -- the budget page says the fixed group is not where to look. A
+    wrong `fixed` therefore hides real money; a wrong `flexible` merely offers
+    them something to review. When unsure, guess the one that costs less to be
+    wrong about."""
+    for path in SIGNUP_INFERRED:
+        assert DEFAULT_SPENDING_TYPES[path] == 'flexible', path
 
 
 def test_groceries_is_FLEXIBLE_not_fixed():

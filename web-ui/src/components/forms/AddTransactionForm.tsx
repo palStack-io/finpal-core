@@ -257,9 +257,9 @@ if (loadingData) {
       {success && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'rgba(134, 239, 172, 0.1)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '8px' }}>
           <div style={{ background: 'rgba(134, 239, 172, 0.2)', padding: '8px', borderRadius: '8px' }}>
-            <Check size={20} style={{ color: 'var(--brand-light-green)' }} />
+            <Check size={20} style={{ color: 'var(--g-ink)' }} />
           </div>
-          <p style={{ color: 'var(--brand-light-green)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
+          <p style={{ color: 'var(--g-ink)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
             Transaction {transaction ? 'updated' : 'created'} successfully!
           </p>
         </div>
@@ -537,7 +537,7 @@ if (loadingData) {
               type="button"
               onClick={() => setCategorySplits([...categorySplits, { category_id: '', amount: '' }])}
               disabled={isSubmitting}
-              style={{ padding: '6px 12px', background: 'rgba(21, 128, 61, 0.2)', border: '1px solid rgba(21, 128, 61, 0.5)', borderRadius: '6px', color: 'var(--brand-light-green)', fontSize: '12px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+              style={{ padding: '6px 12px', background: 'rgba(21, 128, 61, 0.2)', border: '1px solid rgba(21, 128, 61, 0.5)', borderRadius: '6px', color: 'var(--g-ink)', fontSize: '12px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
             >
               + Add Category Split
             </button>
@@ -596,7 +596,7 @@ if (loadingData) {
                 const colour = split.isOver
                   ? 'var(--accent-red)'
                   : split.isBalanced
-                    ? 'var(--brand-light-green)'
+                    ? 'var(--g-ink)'
                     : 'var(--text-muted)';
                 const text = split.isOver
                   ? `${money.format(Math.abs(split.remainder))} over`

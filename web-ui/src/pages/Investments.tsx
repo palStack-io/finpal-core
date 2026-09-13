@@ -276,7 +276,11 @@ export const Investments: React.FC = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(21, 128, 61, 0.2)', borderRadius: '8px' }}>
-                  <DollarSign size={20} style={{ color: 'var(--brand-main-green)' }} />
+                  {/* On a 20% wash of itself: #15803d measured 2.63:1 on the
+                      dark wash (#163621) against a 3:1 floor. `--g-ink` themes —
+                      #166534 light, #5fce8b dark — which a fixed brand hex
+                      cannot do. D-103. */}
+                  <DollarSign size={20} style={{ color: 'var(--g-ink)' }} />
                 </div>
                 <span style={bodyTextStyle}>Total Value</span>
                 <ScopeTag scope="household" />
@@ -335,7 +339,7 @@ export const Investments: React.FC = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(251, 191, 36, 0.2)', borderRadius: '8px' }}>
-                  <Package size={20} style={{ color: 'var(--brand-accent-gold)' }} />
+                  <Package size={20} style={{ color: 'var(--au-ink)' }} />
                 </div>
                 <span style={bodyTextStyle}>Total Cost</span>
                 <ScopeTag scope="household" />
@@ -355,7 +359,10 @@ export const Investments: React.FC = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
-                  <BarChart3 size={20} style={{ color: 'var(--accent-blue)' }} />
+                  {/* #3b82f6 on its own 20% wash measured 2.84:1 light
+                      (#d5e4f8). `--bl-ink` was added for precisely this pair on
+                      the Edit/Delete buttons and is the same fix here. */}
+                  <BarChart3 size={20} style={{ color: 'var(--bl-ink)' }} />
                 </div>
                 <span style={bodyTextStyle}>Holdings</span>
               </div>
