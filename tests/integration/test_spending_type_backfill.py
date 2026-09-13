@@ -120,14 +120,28 @@ def test_it_NEVER_overwrites_a_choice_the_user_made(db):
     assert reread(db, groceries).spending_type == 'fixed'
 
 
-def test_it_leaves_the_deliberately_unclassified_alone(db):
+def test_the_paths_finPal_can_only_GUESS_at_are_filled_and_flagged(db):
+    """*** THIS TEST USED TO ASSERT THE OPPOSITE, AND THE DECISION CHANGED. ***
+
+    Health was one of 17 seeded paths left `None` because the honest answer
+    depends on the person -- a gym contract is fixed, pay-as-you-go is flexible.
+    Owner decision 2026-09-13: **guess, and label it a guess.** Leaving them
+    blank was not neutral, because an unclassified category drops out of every
+    spending-group total silently; "no opinion" was a position too, just an
+    invisible one.
+
+    So the value lands here, and `backfill_spending_type_source` is what marks
+    it `inferred` so the Review page can ask. See `test_spending_type_source.py`
+    for the label; this file only owns the value.
+    """
     user = UserFactory()
     health = cat(db, user, 'Health')
     fitness = cat(db, user, 'Fitness', parent=health)
 
     backfill_spending_types()
-    assert reread(db, health).spending_type is None
-    assert reread(db, fitness).spending_type is None
+    assert reread(db, health).spending_type == 'flexible'
+    assert reread(db, fitness).spending_type == 'flexible'
+
 
 
 def test_it_does_not_touch_a_users_OWN_category(db):
@@ -260,17 +274,19 @@ def test_a_new_signup_gets_the_defaults_without_the_backfill(db):
     assert find_top('Housing').spending_type == 'fixed'
     assert find_top('Food').spending_type == 'flexible'
     assert find_top('Transportation').spending_type == 'flexible'
-    assert find_top('Health').spending_type is None
+    # One of the 17 finPal can only guess at -- filled since 2026-09-13 and
+    # labelled `inferred` by `backfill_spending_type_source`, not left blank.
+    assert find_top('Health').spending_type == 'flexible'
 
     assert find('Rent/Mortgage', 'Housing').spending_type == 'fixed'
     assert find('Groceries', 'Food').spending_type == 'flexible'
     assert find('Gifts', 'Shopping').spending_type == 'non_monthly'
     # Petrol, under Transportation -- not the Housing utility.
     assert find('Gas', 'Transportation').spending_type == 'flexible'
-    # Deliberately unsorted.
-    assert find('Fitness', 'Health').spending_type is None
+    # Guessed, not unsorted -- see the note on `Health` above.
+    assert find('Fitness', 'Health').spending_type == 'flexible'
     assert Category.query.filter_by(user_id=user.id, name='Other').first() \
-        .spending_type is None
+        .spending_type == 'flexible'
 
     # And the backfill then has nothing to do.
     assert backfill_spending_types() == 0
@@ -299,7 +315,11 @@ def test_the_DEMO_seeder_applies_the_map_too(db):
     assert find_top('Housing').spending_type == 'fixed'
     assert find_top('Debt & Loans').spending_type == 'fixed'
     assert find_top('Travel').spending_type == 'non_monthly'
-    assert find_top('Miscellaneous').spending_type is None
+    # Guessed (the fee rows are Miscellaneous children), so it carries a value.
+    assert find_top('Miscellaneous').spending_type == 'flexible'
+    # *** INCOME IS ABSENT FROM THE MAP, WHICH IS NOT THE SAME AS GUESSED. ***
+    # It is not spending at all, so there is nothing to guess AT. The 2026-09-13
+    # decision filled the unknowns; it did not classify the inapplicable.
     assert find_top('Income').spending_type is None
 
     assert find('Gas', 'Housing').spending_type == 'fixed'          # the bill
