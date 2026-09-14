@@ -45,7 +45,7 @@ def _applicable_to(goal, milestones, direction):
 
 
 def _strip_for(goal, milestones, direction, unlocked):
-    """`{read, total, next}` for one goal's card.
+    """`{read, next, gear}` for one goal's card.
 
     `next` is the lowest threshold ABOVE the goal's watermark that is still
     locked -- derived the same way `evaluate_for_user` awards it, off
@@ -74,8 +74,16 @@ def _strip_for(goal, milestones, direction, unlocked):
         break
 
     return {
+        # *** NO `total` — DESIGN DECISION 5. *** This carried the denominator
+        # every goal card rendered as `4 of 4`, and nobody chose 4. It is off
+        # the WIRE rather than merely unrendered, so no client can rebuild it.
         'read': len(read),
-        'total': len(applicable),
+        # *** A BOOLEAN, NOT A COUNT, AND THE DIFFERENCE IS THE WHOLE POINT. ***
+        # Dropping `total` also dropped the strip's ability to tell "this goal
+        # has lessons and you have read none" from "this goal has none at all",
+        # which is what the honest empty state needs. `4` is a denominator a
+        # client can render; `true` is not.
+        'has_lessons': len(applicable) > 0,
         'next': nxt,
         # Earned solid, locked at 30% opacity -- the client needs both, in order.
         'gear': [{'slug': m.gear_slug, 'milestone_slug': m.slug, 'title': m.title,
@@ -155,9 +163,10 @@ def range_for_user(user_id):
         },
         # Across the whole user, which is what the banner counts -- including the
         # predicate-gated lessons a per-goal strip deliberately excludes.
+        # A count, never a denominator. The banner rendered
+        # `16 of 19 lessons read` until 2026-09-14.
         'lessons': {
             'read': len([m for m in milestones if m.slug in unlocked]),
-            'total': len(milestones),
         },
         'kit': [{'slug': m.gear_slug, 'milestone_slug': m.slug, 'title': m.title,
                  'earned': m.slug in unlocked}

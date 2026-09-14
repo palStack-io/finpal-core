@@ -15,7 +15,11 @@ import type { RangeStrip } from '../../types/learnpal';
  */
 export const GoalStrip: React.FC<{ strip: RangeStrip; goalId: number }> = ({ strip, goalId }) => {
   // Nothing applies to this goal at all -- render nothing rather than "0 of 0".
-  if (strip.total === 0 && strip.gear.length === 0) return null;
+  // *** `strip.total` IS GONE FROM THE WIRE (decision 5). *** This card
+  // rendered `4 of 4 · nothing more here`; the FRACTION went and the honest
+  // empty states stayed. "no lesson here yet" is not a report card — it is the
+  // truth about a goal nothing hangs off, and a blank strip would say it worse.
+  if (!strip.has_lessons && strip.gear.length === 0) return null;
 
   return (
     <div
@@ -42,10 +46,8 @@ export const GoalStrip: React.FC<{ strip: RangeStrip; goalId: number }> = ({ str
         ))}
       </span>
       <span>
-        {strip.total > 0 && `${strip.read} of ${strip.total}`}
         {strip.next ? (
           <>
-            {strip.total > 0 ? ' · ' : ''}
             next at{' '}
             {strip.next.unlock_at_progress !== null
               ? `${Math.round(strip.next.unlock_at_progress * 100)}%: `
@@ -53,10 +55,8 @@ export const GoalStrip: React.FC<{ strip: RangeStrip; goalId: number }> = ({ str
             <strong style={{ color: 'var(--text-primary)' }}>{strip.next.title}</strong>
           </>
         ) : (
-          // An honest empty state, not a blank strip.
-          strip.read === 0
-            ? ' · no lesson here yet'
-            : ' · nothing more here'
+          // An honest empty state, not a blank strip — and NOT a denominator.
+          strip.read === 0 ? 'no lesson here yet' : 'nothing more here'
         )}
       </span>
     </div>

@@ -249,7 +249,7 @@ export const Range: React.FC = () => {
         flexWrap: 'wrap',
       }}>
         <span style={mutedStyle}>
-          {range.lessons.read} of {range.lessons.total} lessons read
+          {range.lessons.read} {range.lessons.read === 1 ? 'lesson' : 'lessons'} read
         </span>
         <Link to="/learnpal/lessons" style={{ color: 'var(--g-ink)' }}>
           See all lessons

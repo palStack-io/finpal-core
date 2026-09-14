@@ -78,7 +78,6 @@ def highest_ever(user_id):
     mountain = Mountain.query.filter_by(slug=slug).first() if slug else None
     return {
         'band': index,
-        'band_total': len(BAND_ORDER),
         'mountain': _mountain_dict(mountain),
         'goal_id': goal.id,
         'goal_name': goal.name,
@@ -268,8 +267,12 @@ def stats_for_user(user_id):
     with_gear = [m for m in milestones if m.gear_slug]
     return {
         'lessons': {
+            # *** A COUNT, NEVER A DENOMINATOR (decision 5). *** `total`
+            # was on this payload until 2026-09-14 and the home rendered
+            # "16 of 19". Nobody chose 19. It is removed from the WIRE, not
+            # merely from the view, so no client can reconstruct one — the same
+            # discipline that kept `SECTION_LIMIT` off the Review payload.
             'read': len([m for m in milestones if m.slug in earned]),
-            'total': len(milestones),
             # *** COUNTED AND REPORTED RATHER THAN HIDDEN. *** Eleven approved
             # drafts are not seeded and four are deliberately unwritten, so a
             # lesson that is unlocked and has nothing to read is an expected
@@ -278,7 +281,6 @@ def stats_for_user(user_id):
         },
         'gear': {
             'earned': len([m for m in with_gear if m.slug in earned]),
-            'total': len(with_gear),
         },
         'highest': highest_ever(user_id),
         'recent': recently_finished(user_id),

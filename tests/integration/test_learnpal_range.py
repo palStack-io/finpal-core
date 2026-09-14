@@ -161,8 +161,22 @@ def test_THE_STRIP_COUNTS_ALTITUDE_LESSONS_ONLY(learn):
     altitude = [m for m in LearnMilestone.query.all()
                 if m.unlock_at_progress is not None
                 and (m.applies_to_direction in (None, 'paydown'))]
-    assert strip['total'] == len(altitude)
-    assert strip['total'] < LearnMilestone.query.count()
+
+    # *** `total` LEFT THE PAYLOAD ON 2026-09-14 (decision 5) — IT WAS THE `4`
+    # IN `4 of 4`. *** The subject of this test survives it: the strip must
+    # still consider ALTITUDE milestones only. `gear` is now what carries that,
+    # one entry per applicable milestone, so the assertion moves there rather
+    # than the test being deleted with the field.
+    assert strip['has_lessons'] is True
+    gear_slugs = {g['milestone_slug'] for g in strip['gear']}
+    altitude_with_gear = {m.slug for m in altitude if m.gear_slug}
+    assert gear_slugs == altitude_with_gear
+    assert len(gear_slugs) < LearnMilestone.query.count(), (
+        'the strip is considering predicate-gated lessons, which have no goal '
+        'behind them and can never be opened by this card')
+
+    # And the denominator itself must be gone from the wire, not merely unused.
+    assert 'total' not in strip
 
 
 def test_the_strip_excludes_lessons_for_the_OTHER_direction(learn):

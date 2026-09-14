@@ -84,7 +84,6 @@ def test_a_brand_new_user_gets_real_zeros_and_no_invented_mountain(user, app):
     for them is the molehill `mountain_for` refuses to draw."""
     stats = stats_for_user(user.id)
     assert stats['lessons']['read'] == 0
-    assert stats['lessons']['total'] == TOTAL
     assert stats['gear']['earned'] == 0
     assert stats['highest'] is None, 'a mountain was invented for a user with no goals'
     assert stats['recent'] == []
@@ -416,7 +415,6 @@ def test_the_endpoint_answers_and_carries_the_same_shape(
     assert resp.status_code == 200, resp.get_json()
     stats = resp.get_json()['stats']
     assert stats['highest']['mountain']['slug'] == 'mount-fuji'
-    assert stats['lessons']['total'] == TOTAL
     assert isinstance(stats['next'], list) and stats['next']
 
 
