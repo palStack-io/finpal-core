@@ -1237,6 +1237,42 @@ export const Settings: React.FC = () => {
                 <div>
                   <h2 style={sectionTitleStyle}>About finPal</h2>
 
+                  {/* *** ONBOARDING RUNS ONCE AND NOTHING LINKED BACK TO IT ***
+                      (owner, 2026-09-14: "the onboaridng happens once and user
+                      can enable it in settings agai right"). Everything the flow
+                      SETS was already re-reachable from these tabs — currency,
+                      timezone, number format, the module chooser, the data
+                      statement — but the screens that EXPLAIN mountains, coins,
+                      gear and badges were reachable only by typing the URL.
+
+                      `/onboarding` is declared `requireOnboarding={false}`, so
+                      it renders for a user who has finished it; completing it
+                      again re-asserts the same flag with the same answers. A
+                      link, therefore, and not a flag reset: nothing has to be
+                      un-done to read something again. Mobile has the same row.
+                      */}
+                  <button
+                    onClick={() => navigate('/onboarding')}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'left',
+                      marginBottom: '24px',
+                      padding: '16px 20px',
+                      background: 'var(--surface-hover)',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                      Show the introduction again
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
+                      Mountains, coins, gear and badges
+                    </div>
+                  </button>
+
                   <div style={{ marginBottom: '24px', padding: '24px', background: 'var(--surface-hover)', border: '1px solid var(--border-light)', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
                       <img

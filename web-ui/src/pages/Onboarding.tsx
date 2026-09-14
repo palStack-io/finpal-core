@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
-import { getBranding, supportedCurrencies, type Currency } from '../config/branding';
+import { getBranding, type Currency } from '../config/branding';
+import { useCurrencies } from '../hooks/useCurrencies';
 import type { OnboardingData } from '../types/user';
 import { DollarSign, Globe, Bell, Smile, ChevronRight, ChevronLeft } from 'lucide-react';
 import { apiErrorMessage } from '../utils/apiError';
@@ -87,6 +88,10 @@ export const Onboarding: React.FC = () => {
    */
   const [phase, setPhase] = useState<'orient' | 'configure' | 'basecamp'>('orient');
   const [isLoading, setIsLoading] = useState(false);
+  // D-217: the currency grid's options come from the server, not from a list
+  // this client keeps.
+  const { currencies } = useCurrencies();
+
   const [formData, setFormData] = useState<OnboardingData>({
     default_currency_code: 'USD',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
@@ -357,7 +362,15 @@ export const Onboarding: React.FC = () => {
                   gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                   gap: '1rem'
                 }}>
-                  {supportedCurrencies.map((currency) => {
+                  {/* *** THE OPTIONS ARE THE SERVER'S, NOT SIX HARDCODED HERE
+                      (D-217). *** `supportedCurrencies` listed six while the
+                      seed stocks twenty-two and mobile offered twenty, so the
+                      same account could be given a currency on the phone that
+                      this grid could not even show. The SYMBOL now comes from
+                      the payload too — the branding map only knows seven, and
+                      falling back to it would have drawn a Turkish Lira as a
+                      dollar sign. */}
+                  {currencies.map(({ code: currency, symbol, name }) => {
                     const currencyBranding = getBranding(currency);
                     const isSelected = formData.default_currency_code === currency;
                     return (
@@ -386,9 +399,15 @@ export const Onboarding: React.FC = () => {
                           }
                         }}
                       >
-                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{currencyBranding.currencySymbol}</div>
+                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{symbol}</div>
                         <div style={{ color: '#ffffff', fontWeight: '600', marginBottom: '0.25rem' }}>{currency}</div>
-                        <div style={{ color: ONBOARDING_MUTED, fontSize: '0.75rem' }}>{currencyBranding.appName}</div>
+                        {/* The branded name for the seven this client brands,
+                            and the server's own name for the rest — never
+                            `brandingMap.USD`'s fallback, which would label every
+                            unbranded currency "DollarPal". */}
+                        <div style={{ color: ONBOARDING_MUTED, fontSize: '0.75rem' }}>
+                          {currencyBranding.currencyCode === currency ? currencyBranding.appName : name}
+                        </div>
                       </button>
                     );
                   })}
