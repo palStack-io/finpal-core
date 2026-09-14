@@ -107,16 +107,19 @@ def test_the_copy_module_is_the_only_place_the_prose_is_spelled(slug):
 
 
 def test_the_orientation_screens_are_all_served(client):
-    """Five screens, and each carries what its client renders.
+    """Six screens, and each carries what its client renders.
 
     *** A MISSING SCREEN RENDERS AN EMPTY STEP, NOT AN ERROR *** — the wizard
     would advance onto blank space — so the shape is asserted rather than
-    assumed.
+    assumed. `money` was added on 2026-09-14 and is the only screen that asks
+    the user for something, so a client that walks this dict in order gets it
+    in the right place rather than having to know where to insert it.
     """
     orientation = client.get('/api/v1/modules/catalog').get_json()['orientation']
 
-    assert list(orientation) == ['welcome', 'mountains', 'game', 'modules', 'base_camp']
-    for name in ('welcome', 'mountains', 'modules', 'base_camp'):
+    assert list(orientation) == [
+        'welcome', 'mountains', 'game', 'money', 'modules', 'base_camp']
+    for name in ('welcome', 'mountains', 'money', 'modules', 'base_camp'):
         assert orientation[name]['heading']
         assert orientation[name]['lines']
 
@@ -144,6 +147,24 @@ def test_no_figure_anywhere_in_the_orientation(client):
     digits = sorted({ch for ch in prose if ch.isdigit()})
     assert not digits, f'orientation carries the digits {digits}'
 
+
+def test_no_served_sentence_uses_a_dash_for_its_punctuation(client):
+    """*** OWNER RULE, 2026-09-14: "make it sound like coming from a human with
+    no em dashes". ***
+
+    Asserted on the PAYLOAD rather than on `copy.py`, so it covers the module
+    intros and the acts' titles too — every string this endpoint hands a client
+    to render, whatever file it came from. Developer comments inside `copy.py`
+    are deliberately not in scope: nobody reads those in the app.
+
+    En dash is included because it is the substitution a reword reaches for
+    first, and on a phone the two are indistinguishable.
+    """
+    payload = client.get('/api/v1/modules/catalog').get_json()
+    for block in ('data', 'orientation', 'modules', 'first_acts'):
+        prose = str(payload[block])
+        for dash, name in (('\u2014', 'em dash'), ('\u2013', 'en dash')):
+            assert dash not in prose, f'{block} carries an {name}: {prose}'
 
 def test_the_mountain_examples_are_marked_as_examples(client):
     """A new user has no goals, so anything shown is illustrative.

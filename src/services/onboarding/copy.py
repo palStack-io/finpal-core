@@ -32,12 +32,12 @@ DATA_STATEMENT = {
     'heading': 'Your money stays on your server.',
     'lines': [
         'finPal has no analytics, no tracking and no AI. Nothing you tell it '
-        'about your money is sent to us — there is no "us" in the path.',
+        'about your money is sent to us. There is no "us" in the path.',
         'It is used only to answer your own requests, for your own account. '
         'Never sold, never pooled, never used to train anything.',
-        'The only things that ever leave are ones you switch on yourself — a '
-        'bank connection, a share-price lookup, an email — and each carries '
-        'the least it can.',
+        'The only things that ever leave are ones you switch on yourself: a '
+        'bank connection, a share-price lookup, an email. Each one carries the '
+        'least it can.',
     ],
     # *** THE OPERATOR CAVEAT IS SEPARATE, AND BELONGS IN SETTINGS RATHER THAN
     # IN ONBOARDING. *** Self-hosting is what makes the statement strong and it
@@ -48,9 +48,9 @@ DATA_STATEMENT = {
     'operator_note': (
         'finPal is open source and runs on a server somebody chose. If that is '
         'not you, whoever runs it holds the database, the backups and the mail '
-        'server — which is worth knowing, and is the same for any app you do '
-        'not host yourself. You can read every line of finPal, which is the '
-        'only privacy claim that does not depend on trusting anyone.'
+        'server. That is worth knowing, and it is true of any app you do not '
+        'host yourself. You can read every line of finPal, which is the only '
+        'privacy claim that does not depend on trusting anyone.'
     ),
 }
 
@@ -62,7 +62,7 @@ MODULE_COPY = {
     'learnpal': {
         'name': 'learnPal',
         'intro': (
-            'Short lessons that unlock from your own figures — what your debt '
+            'Short lessons that unlock from your own figures: what your debt '
             'actually costs, where your money goes, what a month of yours '
             'looks like. Nothing generic, and nothing you have to study.'
         ),
@@ -75,7 +75,7 @@ MODULE_COPY = {
             'caps and bonuses so a 5% category does not quietly stop paying '
             'halfway through the quarter.'
         ),
-        'gives': 'nothing to collect — it just answers the question',
+        'gives': 'nothing to collect, just an answer to the question',
     },
 }
 
@@ -108,8 +108,8 @@ ORIENTATION = {
         'heading': 'Anything you are working towards is drawn as a mountain.',
         'lines': [
             'The height is the size of the problem, not how hard you have '
-            'tried — so a mountain never shrinks because you had a bad month, '
-            'and never grows to make a point.',
+            'tried. A mountain never shrinks because you had a bad month, and '
+            'it never grows to make a point.',
         ],
         # *** MARKED AS EXAMPLES, AND CARRYING NO AMOUNTS. *** A new user has no
         # goals, so anything shown here is illustrative; saying so is cheaper
@@ -135,8 +135,8 @@ ORIENTATION = {
                        'your money and nothing else.'},
             {'title': 'Coins', 'question': 'What do I earn?',
              'answer': 'Coins come for telling finPal the truth about your '
-                       'money — naming an account, recording a rate. The '
-                       'reward and the benefit are the same act.'},
+                       'money, like naming an account or recording a rate. '
+                       'The reward and the benefit are the same act.'},
             {'title': 'Gear', 'question': 'What do I buy?',
              'answer': 'Kit for your climber, bought with coins. It looks '
                        'good and it gates nothing, ever.'},
@@ -156,15 +156,34 @@ ORIENTATION = {
             'target you chose.',
             'Studying cannot flatter your finances. Only your actual money '
             'moves a mountain.',
-            'You are never rewarded for your circumstances — only for what '
+            'You are never rewarded for your circumstances, only for what '
             'you did.',
+        ],
+    },
+    # *** THE ONLY SCREEN IN THE FLOW THAT ASKS FOR ANYTHING, AND IT ASKS FOR
+    # THE TWO THINGS EVERY OTHER FIGURE DEPENDS ON (owner request, 2026-09-14:
+    # "can we make it so the onboarding flows also take users currency along
+    # with their timezone"). *** Mobile had no way to set either during first
+    # run: it sent an empty body and the account kept the server's defaults,
+    # so a new user's first screen of money could be denominated in a currency
+    # they never chose.
+    #
+    # It comes AFTER the three explanation screens on purpose. A currency
+    # picker as screen one is a form; the same picker after the user knows what
+    # the numbers are for is a question they can answer.
+    'money': {
+        'heading': 'What do you count in?',
+        'lines': [
+            'Pick the currency you actually think in and the timezone your '
+            'days start in. Every figure and every date in finPal reads off '
+            'these two, and you can change either later in Settings.',
         ],
     },
     'modules': {
         'heading': 'Two optional parts, both on.',
         'lines': [
             'You can turn either off now or later, in Settings. Off means '
-            'hidden, not lost — nothing you have earned goes away.',
+            'hidden, not lost. Nothing you have earned goes away.',
         ],
     },
     'base_camp': {

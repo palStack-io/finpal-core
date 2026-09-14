@@ -9,6 +9,7 @@ from schemas import account_schema, accounts_schema
 from schemas.input_schemas import account_input
 from src.utils.validation import validate_request, validation_error_response
 from src.utils.household import visible_user_ids, is_household_member, can_manage_owned
+from src.utils.money import is_a_known_currency
 from src.repositories.account import AccountRepository
 from src.services.account.service import AccountService
 from datetime import datetime
@@ -148,6 +149,13 @@ class AccountList(Resource):
         if errors:
             return validation_error_response(errors)
 
+        # D-215: the client's currency reaches a foreign key. An account
+        # created with a code the server does not stock was a 500, not a
+        # refusal — the same hole as the profile's, one table over.
+        if validated.get('currency_code') and not is_a_known_currency(
+                validated['currency_code']):
+            return {'error': 'currency_code is not a currency this server knows'}, 400
+
         svc = AccountService()
         success, message, new_account = svc.add_account(
             user_id=current_user_id,
@@ -277,6 +285,10 @@ class AccountDetail(Resource):
             if 'balance' in data:
                 account.balance = data['balance']
             if 'currency_code' in data:
+                # D-215, on the update path too.
+                if not is_a_known_currency(data['currency_code']):
+                    return {'error': 'currency_code is not a currency this '
+                                     'server knows'}, 400
                 account.currency_code = data['currency_code']
             if 'institution' in data:
                 account.institution = data['institution']

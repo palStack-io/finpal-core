@@ -9,6 +9,7 @@ from src.models.user import User, UserApiSettings
 from src.extensions import db
 from src.utils.decorators import demo_restricted
 from src.utils.locale import is_a_usable_number_locale
+from src.utils.money import is_a_known_currency
 from datetime import datetime
 from flask import current_app
 import os
@@ -144,6 +145,11 @@ class Profile(Resource):
         if 'timezone' in data:
             user.timezone = data.get('timezone')
         if 'default_currency_code' in data:
+            # D-215: the same foreign key, and this is the row the SHIPPED
+            # Settings picker writes — `PUT` with TRY answered 500 on the demo.
+            if not is_a_known_currency(data.get('default_currency_code')):
+                return {'error': 'default_currency_code is not a currency this '
+                                 'server knows'}, 400
             user.default_currency_code = data.get('default_currency_code')
         # #132. Onboarding happens once, so without this the preference would be
         # unreachable for every already-onboarded user -- including the person who asked
