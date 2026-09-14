@@ -170,7 +170,22 @@ def sync_all_users(app):
     notice. Per-user commit so one user's failure cannot roll back everybody
     else's unlocks.
     """
-    user_ids = [row[0] for row in db.session.query(Goal.user_id).distinct().all()]
+    # *** EVERY USER, NOT EVERY USER WITH A GOAL — D-205. *** This line was
+    # `db.session.query(Goal.user_id).distinct()`, and `on_startup`'s catch-up
+    # calls the same function, so there was no second path: a user with no goal
+    # was never evaluated at all. At least seven of the predicates need no goal
+    # (`has_active_budget`, `categorised_transactions_at_least`,
+    # `categories_classified_at_least`, `has_debt_account_with_a_rate`,
+    # `has_recurring_income`, `has_non_monthly_spending`,
+    # `has_two_months_of_income`), so somebody who did all of that earned
+    # nothing, for ever, and was told nothing about why.
+    #
+    # *** IF THIS EVER GETS SLOW, BATCH IT — DO NOT FILTER IT. *** Narrowing the
+    # population is exactly what caused this row, and the filter that looked
+    # like an optimisation was the defect. A user with no data satisfies no
+    # predicate and costs a few indexed counts.
+    from src.models.user import User
+    user_ids = [row[0] for row in db.session.query(User.id).all()]
     total = 0
     for user_id in user_ids:
         try:
