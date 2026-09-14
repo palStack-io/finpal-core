@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
+  Backpack,
   LayoutDashboard,
   ArrowLeftRight,
   Wallet,
@@ -60,6 +61,11 @@ const navGroups = [
       // be a silent parity break, and "keep your setup straight" is what this
       // group already is.
       { name: 'Review', path: '/review', icon: ListChecks },
+      // *** ALSO IN `Plan`, AND FOR THE SAME REASON AS Review ABOVE. ***
+      // NAV_GROUP_HEADINGS is mirrored by mobile and compared by a test, so a
+      // sixth heading here is a silent parity break. Kit belongs beside Review
+      // anyway: Review is where coins are earned and Kit is where they go.
+      { name: 'Kit', path: '/kit', icon: Backpack },
     ],
   },
   { heading: 'Insight', items: [{ name: 'Analytics', path: '/analytics', icon: TrendingUp }] },

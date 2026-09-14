@@ -90,6 +90,12 @@ const HEADINGS: Record<string, RegExp> = {
   '/analytics': /Analytics/,
   '/investments': /Investments/,
   '/settings': /Settings/,
+  // *** `/review` WAS UNACCOUNTED FROM THE DAY IT SHIPPED (2026-09-13). *** The
+  // count guard above was red the whole time and nobody saw it, because this
+  // suite is deliberately not in `preflight.sh` and had not been run since.
+  // A gate nobody runs protects nothing.
+  '/review': /Review/,
+  '/kit': /Your kit/,
 };
 
 /** Routes that exist but are deliberately not walked here, each with a reason. */
@@ -139,7 +145,10 @@ const MODULE_HEADINGS: Record<string, RegExp> = {
   '/pointspal/cards': /My Cards/,
   '/pointspal/redeem': /Redemption Optimizer/,
   '/learnpal': /learnPal/,
-  '/learnpal/range': /Range/,
+  // Lowercase 'r': the page is headed "Your range". `/Range/` never matched
+  // it, and nobody noticed because learnPal was off in this suite until
+  // 2026-09-14 — so this expectation had never once been exercised.
+  '/learnpal/range': /Your range/,
   '/learnpal/lessons': /Lesson/,
 };
 

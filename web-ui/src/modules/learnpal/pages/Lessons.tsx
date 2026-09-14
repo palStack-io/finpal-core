@@ -47,7 +47,12 @@ const linkButtonStyle: React.CSSProperties = {
 
 export const Lessons: React.FC = () => {
   const [rows, setRows] = useState<LessonRow[] | null>(null);
-  const [counts, setCounts] = useState<{ read: number; total: number } | null>(null);
+  /* *** A COUNT, NOT A FRACTION (decision 5). *** This held `{read, total}` and
+     the page printed "0 of 19". Nobody chose 19 — finPal did. Found on
+     2026-09-14 by the e2e no-denominator walk, which was the SEVENTH instance:
+     the other six had already been fixed by reading the components, and this
+     one survived because nobody thought to look at this page. */
+  const [counts, setCounts] = useState<{ read: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<LessonDetail | null>(null);
@@ -58,7 +63,7 @@ export const Lessons: React.FC = () => {
     try {
       const data = await learnpalService.getLessons();
       setRows(data?.lessons ?? null);
-      setCounts(data ? { read: data.read, total: data.total } : null);
+      setCounts(data ? { read: data.read } : null);
       setError(null);
     } catch (err) {
       setError(apiErrorMessage(err, 'Could not load the lessons.'));
@@ -102,7 +107,9 @@ export const Lessons: React.FC = () => {
       <div style={{ marginBottom: 18 }}>
         <h1 className="page-title">Lessons</h1>
         <p className="fp-hint">
-          {counts ? `${counts.read} of ${counts.total} read.` : null}{' '}
+          {counts
+            ? `${counts.read} ${counts.read === 1 ? 'lesson' : 'lessons'} read.`
+            : null}{' '}
           A lesson opens when your own figures make it relevant — not on a
           schedule, and never because you clicked something.
         </p>
