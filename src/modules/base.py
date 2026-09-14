@@ -71,6 +71,21 @@ class ModuleBase:
         """
         return []
 
+    def get_checks(self) -> dict:
+        """Return `{check_type: (fn, reason_or_None)}` for this module.
+
+        *** THE REGISTRY IS CORE'S AND THE ENTRIES ARE THE MODULES'. *** Almost
+        every predicate reads core tables and belongs in
+        `src/services/literacy/checks.py`. This hook is for the genuine
+        exception: a predicate whose SUBJECT is the module's own data --
+        learnPal's `has_completed_three_lessons` reads `LearnCompletion`, and
+        pointsPal's community acts read its card tables.
+
+        A contribution naming something core already owns is REFUSED and
+        logged, never silently overridden.
+        """
+        return {}
+
     def register_tasks(self, scheduler, app) -> None:
         """Register APScheduler cron jobs for this module."""
         pass
