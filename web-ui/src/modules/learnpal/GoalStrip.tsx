@@ -41,7 +41,7 @@ export const GoalStrip: React.FC<{ strip: RangeStrip; goalId: number }> = ({ str
                that grew an icon at a time would never show the shape of it. */
             style={{ opacity: g.earned ? 1 : 0.3, lineHeight: 0 }}
           >
-            <GearIcon slug={g.slug ?? g.milestone_slug} size={18} />
+            <GearIcon slug={g.slug ?? g.milestone_slug} size={24} />
           </span>
         ))}
       </span>
@@ -55,8 +55,15 @@ export const GoalStrip: React.FC<{ strip: RangeStrip; goalId: number }> = ({ str
             <strong style={{ color: 'var(--text-primary)' }}>{strip.next.title}</strong>
           </>
         ) : (
-          // An honest empty state, not a blank strip — and NOT a denominator.
-          strip.read === 0 ? 'no lesson here yet' : 'nothing more here'
+          /* *** "nothing more here" IS GONE, AND REMOVING THE COUNT IS WHAT
+             EXPOSED IT. *** With `4 of 4` in front of it the phrase had
+             context; alone beside four SOLID earned icons it reads as "this is
+             empty" while the gear plainly says otherwise. The icons are the
+             statement, so nothing is said.
+
+             `no lesson here yet` STAYS: a goal nothing hangs off has no gear to
+             speak for it, and a blank strip would say that worse. */
+          strip.read === 0 ? 'no lesson here yet' : null
         )}
       </span>
     </div>

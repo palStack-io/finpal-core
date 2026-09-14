@@ -194,10 +194,24 @@ export const Kit: React.FC = () => {
                       type="button"
                       onClick={() => buy(g.slug)}
                       disabled={busy === g.slug}
+                      /* *** A QUIET BUTTON, AND THE REASON IS NOT "IT WAS
+                         LOUD" — IT IS THAT GREEN MEANT TWO THINGS. *** A filled
+                         green Buy sat inside a card whose GREEN BORDER means
+                         "owned", so the same colour carried both *you have
+                         this* and *spend here*. Eighteen filled buttons down a
+                         page also gave equal urgency to a screen where nothing
+                         is urgent.
+
+                         Now green means one thing — owned — and buying is an
+                         outlined action. `--g-ink` is the theme-aware link ink
+                         (6.92 / 8.21), not the fill token: white on
+                         `--brand-main-green` is fine at 5.02:1 but this is text
+                         on a card, not on green. */
                       style={{
                         marginTop: 9, width: '100%',
-                        background: 'var(--brand-main-green)', color: 'white',
-                        border: 0, borderRadius: 9, padding: '7px 0',
+                        background: 'transparent', color: 'var(--g-ink)',
+                        border: '1px solid var(--border-medium)',
+                        borderRadius: 9, padding: '6px 0',
                         fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
                       }}
                     >

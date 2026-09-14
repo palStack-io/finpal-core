@@ -96,7 +96,7 @@ const Peak: React.FC<{ entry: RangePeak }> = ({ entry }) => {
                 title={`${g.title}${g.earned ? '' : ' — not yet'}`}
                 style={{ opacity: g.earned ? 1 : 0.3, lineHeight: 0 }}
               >
-                <GearIcon slug={g.slug ?? g.milestone_slug} size={16} />
+                <GearIcon slug={g.slug ?? g.milestone_slug} size={22} />
               </span>
             ))}
           </div>
@@ -196,7 +196,17 @@ export const Range: React.FC = () => {
           border: '1px solid var(--border-light)', borderRadius: 18,
           background: 'var(--bg-secondary)', overflow: 'hidden',
         }}>
-          <div style={{ display: 'flex', gap: 0, padding: '20px 22px 8px' }}>
+          {/* *** STACKS ON A PHONE, AND IT USED TO SQUEEZE. *** At 390px the
+              two sides became narrow columns — "What's costing you" held one
+              peak beside a tall empty gap while "What you're building" held
+              three. It read as broken rather than designed. Found by capturing
+              the range at 390px in the walkthrough; no width query existed
+              because the range shipped desktop-first.
+
+              `.range-sides` is a named role class, not a utility atom (owner
+              decision), and lives beside the other width queries in
+              `finpal-theme.css`. */}
+          <div className="range-sides" style={{ display: 'flex', gap: 0, padding: '20px 22px 8px' }}>
             <Side side={range.cost} scale="cost" />
             {/* *** THE DIVIDER IS REQUIRED AT THIS SIZE AND WAS NOT AT
                 THUMBNAIL SIZE. *** Without it the two clusters read as one
