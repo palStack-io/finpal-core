@@ -19,10 +19,15 @@ Three properties, each load-bearing:
 opposite direction, and keeping them as mirrors means adding an act without a
 payoff line is a visible omission rather than a silent one.
 
-*** CURRENCY IS NOT FORMATTED HERE. *** The server does not know the user's
-symbol placement conventions and the clients already format money. These return
-plain figures; the client renders them. Doing otherwise is D-101's shape -- two
-places computing one presentation.
+*** CURRENCY IS FORMATTED HERE, AND THE FIRST VERSION OF THIS COMMENT ARGUED
+THE OPPOSITE. *** It said the clients format money and these should return plain
+figures. Reading the real payload disproved it: the money is EMBEDDED IN A
+SENTENCE, so a client cannot format it without parsing prose back apart. The
+sentence is composed on the server, therefore so is its money.
+
+`src/utils/money.py::format_money` is the same function the rest of the server
+uses, taking the user's own `default_currency_code`, so this introduces no
+second formatter -- which is what D-101 actually warns about.
 """
 
 from decimal import Decimal
@@ -38,9 +43,27 @@ from src.models.transaction import Expense
 ZERO_MONEY = Decimal('0')
 
 
-def _q(value):
-    """Two decimal places, as money."""
-    return Decimal(str(value or 0)).quantize(Decimal('0.01'))
+def _currency_for(user_id):
+    """The user's own currency code, or USD if they have never set one.
+
+    *** A WRONG UNIT ON A REAL FIGURE IS WORSE THAN NO FIGURE, *** so an unknown
+    code is not guessed at: `format_money` raises on one, and `_money` below
+    turns that into `None` — no sentence rather than a sentence in the wrong
+    currency.
+    """
+    from src.models.user import User
+    user = db.session.get(User, user_id)
+    return (user and user.default_currency_code) or 'USD'
+
+
+def _money(value, currency):
+    """Formatted money, or `None` if it cannot be formatted honestly."""
+    from src.utils.money import format_money
+    try:
+        return format_money(Decimal(str(value or 0)).quantize(Decimal('0.01')),
+                            currency)
+    except Exception:
+        return None
 
 
 def bank_connected(user_id):
@@ -70,7 +93,8 @@ def transactions_categorised(user_id):
     if not total:
         return None
     share = (Decimal(str(amount)) / Decimal(str(total)) * 100).quantize(Decimal('1'))
-    return (f'Your biggest line is {name} at {_q(amount)} — {share}% of '
+    return (f'Your biggest line is {name} at '
+            f'{_money(amount, _currency_for(user_id))} — {share}% of '
             'everything that went out.')
 
 
@@ -90,11 +114,26 @@ def categories_classified(user_id):
     flexible = totals.get('flexible')
     if fixed is None and flexible is None:
         return None
-    return (f'{_q(fixed or 0)} of your spending arrives whatever you do. '
-            f'{_q(flexible or 0)} is the part that is actually yours to move.')
+    currency = _currency_for(user_id)
+    return (f'{_money(fixed or 0, currency)} of your spending arrives whatever '
+            f'you do. {_money(flexible or 0, currency)} is the part that is '
+            'actually yours to move.')
 
 
 def has_a_budget(user_id):
+    """*** RETURNS NOTHING UNLESS THERE IS ACTUALLY A BUDGET. ***
+
+    This returned its sentence unconditionally until the real payload was read
+    back, which showed `coins: 0` beside *"Your budgets now cover..."* — the act
+    had earned nothing and the copy claimed it was done. That is precisely the
+    bluffing this module's header says it never does, and no test caught it
+    because every test asserted the sentence's CONTENT rather than whether it
+    should exist at all.
+    """
+    from src.models.budget import Budget
+    if Budget.query.filter(Budget.user_id == user_id,
+                           Budget.active.is_(True)).first() is None:
+        return None
     return ('Your budgets now cover the part of your spending that can '
             'actually move. The rest was never yours to cut.')
 
@@ -112,13 +151,35 @@ def accounts_confirmed(user_id):
 
 
 def income_recorded(user_id):
-    return ('finPal now knows what arrives. Everything else it shows you is '
-            'measured against it.')
+    """Nothing unless a recurring income row actually exists. See `has_a_budget`."""
+    from src.models.recurring import RecurringExpense
+    row = db.session.query(RecurringExpense.amount).filter(
+        RecurringExpense.user_id == user_id,
+        RecurringExpense.active.is_(True),
+        RecurringExpense.transaction_type == 'income',
+    ).first()
+    if row is None:
+        return None
+    amount = _money(row[0], _currency_for(user_id))
+    if amount is None:
+        return ('finPal now knows what arrives. Everything else it shows you '
+                'is measured against it.')
+    return (f'finPal now knows {amount} arrives. Everything else it shows you '
+            'is measured against it.')
 
 
 def taught_a_rule(user_id):
-    return ('finPal will sort that one for you from now on, before you ever '
-            'see it.')
+    """Nothing unless a rule actually exists. See `has_a_budget`."""
+    from src.models.transaction_rule import TransactionRule
+    count = db.session.query(func.count(TransactionRule.id)).filter(
+        TransactionRule.user_id == user_id,
+        TransactionRule.active.is_(True),
+    ).scalar() or 0
+    if not count:
+        return None
+    noun = 'rule' if count == 1 else 'rules'
+    return (f'finPal has {count} {noun} of yours now, and applies them before '
+            'you ever see the transaction.')
 
 
 def has_a_goal(user_id):
@@ -152,14 +213,19 @@ def debt_rates(user_id):
     if monthly <= 0:
         return None
 
-    line = (f'{card.name} is at {apr}%, which costs you {_q(monthly)} a month.')
+    currency = _currency_for(user_id)
+    monthly_s = _money(monthly, currency)
+    if monthly_s is None:
+        return None
+    line = f'{card.name} is at {apr}%, which costs you {monthly_s} a month.'
     minimum = card.min_payment and Decimal(str(card.min_payment))
     if not minimum or minimum <= monthly:
         return line
     principal = minimum - monthly
     share = (monthly / minimum * 100).quantize(Decimal('1'))
-    return (f'{line} Of your {_q(minimum)} minimum only {_q(principal)} comes '
-            f'off the balance — {share}% of what you pay is rent on the debt.')
+    return (f'{line} Of your {_money(minimum, currency)} minimum only '
+            f'{_money(principal, currency)} comes off the balance — {share}% of '
+            'what you pay is rent on the debt.')
 
 
 def debt_limits(user_id):
@@ -170,13 +236,68 @@ def debt_limits(user_id):
     if limit <= 0:
         return None
     used = sum(max(ZERO_MONEY, -Decimal(str(c.balance or 0))) for c in cards)
+    currency = _currency_for(user_id)
     pct = (used / limit * 100).quantize(Decimal('1'))
-    return (f'You are using {_q(used)} of {_q(limit)} — {pct}%. Under 30% is '
-            'where it stops counting against you.')
+    return (f'You are using {_money(used, currency)} of '
+            f'{_money(limit, currency)} — {pct}%. Under 30% is where it stops '
+            'counting against you.')
 
 
 def debt_minimums(user_id):
-    return ('finPal can now show you how long each card takes at the minimum, '
+    """How long the card takes at the minimum — the figure nobody is ever shown.
+
+    *** IT NEEDS BOTH A RATE AND A MINIMUM, AND SAYS NOTHING WITHOUT EITHER. ***
+    A fourth bluffing payoff was found here by the parametrised no-bluff test:
+    this returned its sentence to a user with no cards at all.
+
+    *** AND THE HONEST ANSWER IS SOMETIMES "NEVER". *** If the minimum does not
+    exceed the monthly interest the balance never falls, and saying so plainly
+    is far more use than a number. That is not a judgement about the user —
+    voice rule 11 — it is arithmetic about the product they were sold.
+    """
+    import math
+
+    card = Account.query.filter(
+        Account.user_id == user_id,
+        Account.type == 'credit',
+        Account.apr.isnot(None),
+        Account.min_payment.isnot(None),
+    ).order_by(Account.balance.asc()).first()
+    if card is None:
+        return None
+    balance = Decimal(str(card.balance or 0))
+    if balance >= 0:
+        return None
+    owed = -balance
+    rate = Decimal(str(card.apr)) / Decimal('100') / Decimal('12')
+    payment = Decimal(str(card.min_payment))
+    interest = owed * rate
+
+    currency = _currency_for(user_id)
+    payment_s = _money(payment, currency)
+    if payment_s is None:
+        return None
+
+    if payment <= interest:
+        return (f'At {payment_s} a month this card never clears — the interest '
+                f'alone is {_money(interest, currency)}. That is the product, '
+                'not you.')
+
+    # Standard amortisation. `rate == 0` would divide by zero, and a 0% card is
+    # a real thing, so it is handled as plain division.
+    if rate == 0:
+        months = int(math.ceil(float(owed / payment)))
+    else:
+        months = int(math.ceil(
+            -math.log(1 - float(owed * rate / payment)) / math.log(1 + float(rate))))
+    years, rem = divmod(months, 12)
+    if years and rem:
+        span = f'{years} year{"s" if years > 1 else ""} and {rem} month{"s" if rem > 1 else ""}'
+    elif years:
+        span = f'{years} year{"s" if years > 1 else ""}'
+    else:
+        span = f'{months} month{"s" if months > 1 else ""}'
+    return (f'Paying {payment_s} a month, this card takes {span} to clear — '
             'which is usually longer than it feels.')
 
 
@@ -190,5 +311,6 @@ def transfers_confirmed(user_id):
     if not rows:
         return None
     total = sum(abs(Decimal(str(r.amount or 0))) for r in rows)
-    return (f'{_q(total)} that looked like income is money you moved between '
-            'your own accounts. Your income figure is the real one now.')
+    return (f'{_money(total, _currency_for(user_id))} that looked like income '
+            'is money you moved between your own accounts. Your income figure '
+            'is the real one now.')
