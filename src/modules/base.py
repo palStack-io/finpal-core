@@ -86,6 +86,15 @@ class ModuleBase:
         """
         return {}
 
+    def get_acts(self) -> dict:
+        """Return `{slug: Act}` for this module's own earnable acts.
+
+        The mirror of `get_checks()`, and for the same reason: pointsPal's
+        community acts read its card tables, so they cannot live in core. A slug
+        core already registers is REFUSED, never replaced.
+        """
+        return {}
+
     def register_tasks(self, scheduler, app) -> None:
         """Register APScheduler cron jobs for this module."""
         pass
