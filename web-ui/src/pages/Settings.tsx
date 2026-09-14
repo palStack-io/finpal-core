@@ -15,6 +15,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
 import { moduleService } from '../services/moduleService';
 import type { ModuleManifest } from '../modules/registry';
+import { DataStatement } from '../components/privacy/DataStatement';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { useToast } from '../contexts/ToastContext';
@@ -1105,6 +1106,15 @@ export const Settings: React.FC = () => {
               {activeTab === 'data' && (
                 <div>
                   <h2 style={sectionTitleStyle}>Data & Privacy</h2>
+
+                  {/* *** THE STATEMENT GOES FIRST, ABOVE EXPORT AND DELETE. ***
+                      Owner requirement 2026-09-14: users must know what they
+                      tell finPal about their money never leaves their server
+                      and is only used for their own account. This tab already
+                      held the two ACTIONS (export, delete) and never said the
+                      thing the actions imply. Renders nothing if the copy
+                      cannot be fetched — see DataStatement. */}
+                  <DataStatement showOperatorNote />
 
                   {/* Error Message */}
                   {saveError && (
