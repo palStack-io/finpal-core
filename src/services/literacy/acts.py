@@ -116,6 +116,15 @@ def _register_core_acts():
             coverage.taught_a_rule, payoff.taught_a_rule, universal=True),
         Act('has_a_goal', 'Name what you are working toward', 600,
             coverage.has_a_goal, payoff.has_a_goal, universal=True),
+        # ---- conditional: dormant unless the user's circumstances raise them ----
+        Act('debt_rates', 'Know what your debt costs', 1200,
+            coverage.debt_rates, payoff.debt_rates),
+        Act('transfers_confirmed', 'Confirm your transfers', 800,
+            coverage.transfers_confirmed, payoff.transfers_confirmed),
+        Act('debt_limits', 'Know your limits', 600,
+            coverage.debt_limits, payoff.debt_limits),
+        Act('debt_minimums', 'Know your minimums', 400,
+            coverage.debt_minimums, payoff.debt_minimums),
     ]
     for act in core:
         register_act(act)

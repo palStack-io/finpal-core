@@ -229,3 +229,101 @@ def bank_connected(user_id):
     if not rows:
         return None
     return _share(sum(1 for a in rows if a.import_source), len(rows))
+
+
+# ══════════════════════════════════════════════════════════════════════
+# The CONDITIONAL acts — dormant unless the user's circumstances raise them.
+# They are excluded from §7.2's affordability check for exactly that reason:
+# pricing the kit against a ceiling a debt-free user can never reach would lock
+# them out of it.
+# ══════════════════════════════════════════════════════════════════════
+
+def _owed(account):
+    """What is actually owed on an account, as a positive number.
+
+    *** CARD DEBT IS A NEGATIVE BALANCE, AND AN OVERPAID CARD IS NOT DEBT. ***
+    `balances.py::_move` applies one rule to every account type with no
+    `type == 'credit'` special case, so an owed 1,125.41 is stored as -1125.41
+    and what is USED is `-balance`. Writing `abs(balance)` here would count an
+    OVERPAID card -- a positive balance, where the bank owes the user -- as
+    debt, which is D-176's exact arithmetic error one table over, and
+    `credit_utilisation_below` carries the same warning.
+    """
+    balance = Decimal(str(account.balance or 0))
+    return -balance if balance < 0 else ZERO
+
+
+def debt_rates(user_id):
+    """Share of what you OWE that sits on an account with a recorded rate.
+
+    Dormant when nothing is owed: a user who owes nothing has no rate to record
+    and is not failing at anything.
+    """
+    rows = Account.query.filter(
+        Account.user_id == user_id,
+        Account.type.in_(DEBT_TYPES),
+    ).all()
+    total = sum(_owed(a) for a in rows)
+    if total <= 0:
+        return None
+    covered = sum(_owed(a) for a in rows if a.apr is not None)
+    return _share(covered, total)
+
+
+def debt_limits(user_id):
+    """Share of your card balances sitting on a card with a recorded limit.
+
+    Weighted by what is owed, because a limit on a card you owe nothing on tells
+    you nothing about your utilisation.
+    """
+    rows = Account.query.filter(
+        Account.user_id == user_id,
+        Account.type.in_(CARD_TYPES),
+    ).all()
+    if not rows:
+        return None
+    total = sum(_owed(a) for a in rows)
+    if total <= 0:
+        # Cards exist but none is in debt. Counting them is the honest fallback:
+        # a limit is still worth recording before you use it.
+        return _share(sum(1 for a in rows if a.credit_limit is not None), len(rows))
+    covered = sum(_owed(a) for a in rows if a.credit_limit is not None)
+    return _share(covered, total)
+
+
+def debt_minimums(user_id):
+    """Share of your card debt sitting on a card with a recorded minimum payment."""
+    rows = Account.query.filter(
+        Account.user_id == user_id,
+        Account.type.in_(CARD_TYPES),
+    ).all()
+    if not rows:
+        return None
+    total = sum(_owed(a) for a in rows)
+    if total <= 0:
+        return _share(sum(1 for a in rows if a.min_payment is not None), len(rows))
+    covered = sum(_owed(a) for a in rows if a.min_payment is not None)
+    return _share(covered, total)
+
+
+def transfers_confirmed(user_id):
+    """Share of the money in matched transfer pairs that the user has blessed.
+
+    *** A TRANSFER RECORDED AS INCOME INFLATES WHAT finPal THINKS YOU EARN, AND
+    BUDGETS EXCLUDE TRANSFERS (D-183). *** So this is not tidiness: it is the
+    difference between a true income figure and a flattering one. On the live
+    demo it is six rows worth 1,900.00, all named "Transfer into the emergency
+    fund" and all recorded as income.
+
+    Dormant when nothing has been matched as a pair.
+    """
+    rows = Expense.query.filter(
+        Expense.user_id == user_id,
+        Expense.transfer_group_id.isnot(None),
+    ).all()
+    if not rows:
+        return None
+    total = sum(abs(Decimal(str(r.amount or 0))) for r in rows)
+    covered = sum(abs(Decimal(str(r.amount or 0)))
+                  for r in rows if r.type_source == 'user')
+    return _share(covered, total)

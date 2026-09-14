@@ -35,6 +35,9 @@ from src.models.category import Category
 from src.models.transaction import Expense
 
 
+ZERO_MONEY = Decimal('0')
+
+
 def _q(value):
     """Two decimal places, as money."""
     return Decimal(str(value or 0)).quantize(Decimal('0.01'))
@@ -120,3 +123,72 @@ def taught_a_rule(user_id):
 
 def has_a_goal(user_id):
     return None      # the goal's own peak is the payoff; a sentence would repeat it
+
+
+def debt_rates(user_id):
+    """*** THE WORKED CASE FROM THE SPEC, AND THE STRONGEST LINE IN THE PRODUCT. ***
+
+    A card at 19.99% owing 800.00 with a 35.00 minimum: 13.33 a month is
+    interest, so only 21.67 of the payment comes off the balance. That ratio is
+    the number worth carrying around, and it is not a judgement about anybody --
+    it is the same arithmetic for everyone at that rate.
+
+    Returns `None` unless every figure it needs is present. **No computable
+    consequence, no sentence.**
+    """
+    card = Account.query.filter(
+        Account.user_id == user_id,
+        Account.type.in_(('credit', 'loan')),
+        Account.apr.isnot(None),
+    ).order_by(Account.balance.asc()).first()
+    if card is None:
+        return None
+    balance = Decimal(str(card.balance or 0))
+    if balance >= 0:
+        return None                      # nothing owed: no cost to describe
+    owed = -balance
+    apr = Decimal(str(card.apr))
+    monthly = (owed * apr / Decimal('100') / Decimal('12'))
+    if monthly <= 0:
+        return None
+
+    line = (f'{card.name} is at {apr}%, which costs you {_q(monthly)} a month.')
+    minimum = card.min_payment and Decimal(str(card.min_payment))
+    if not minimum or minimum <= monthly:
+        return line
+    principal = minimum - monthly
+    share = (monthly / minimum * 100).quantize(Decimal('1'))
+    return (f'{line} Of your {_q(minimum)} minimum only {_q(principal)} comes '
+            f'off the balance — {share}% of what you pay is rent on the debt.')
+
+
+def debt_limits(user_id):
+    cards = Account.query.filter(
+        Account.user_id == user_id, Account.type == 'credit',
+        Account.credit_limit.isnot(None)).all()
+    limit = sum(Decimal(str(c.credit_limit or 0)) for c in cards)
+    if limit <= 0:
+        return None
+    used = sum(max(ZERO_MONEY, -Decimal(str(c.balance or 0))) for c in cards)
+    pct = (used / limit * 100).quantize(Decimal('1'))
+    return (f'You are using {_q(used)} of {_q(limit)} — {pct}%. Under 30% is '
+            'where it stops counting against you.')
+
+
+def debt_minimums(user_id):
+    return ('finPal can now show you how long each card takes at the minimum, '
+            'which is usually longer than it feels.')
+
+
+def transfers_confirmed(user_id):
+    """*** A TRANSFER COUNTED AS INCOME INFLATES WHAT finPal THINKS YOU EARN. ***"""
+    rows = Expense.query.filter(
+        Expense.user_id == user_id,
+        Expense.transfer_group_id.isnot(None),
+        Expense.type_source == 'user',
+    ).all()
+    if not rows:
+        return None
+    total = sum(abs(Decimal(str(r.amount or 0))) for r in rows)
+    return (f'{_q(total)} that looked like income is money you moved between '
+            'your own accounts. Your income figure is the real one now.')
