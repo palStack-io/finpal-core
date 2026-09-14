@@ -32,6 +32,18 @@ class LearnPalModule(ModuleBase):
         from src.modules.learnpal.routes import learnpal_ns
         return [(learnpal_ns, '/learnpal')]
 
+    def get_checks(self):
+        # *** THE ONLY PREDICATE WHOSE SUBJECT IS A LESSON. *** The other twelve
+        # are core's, because they read a user's own money and a user who hides
+        # this module must not lose them.
+        from src.modules.learnpal.checks import (
+            CHECK_REASON, has_completed_three_lessons,
+        )
+        return {
+            'has_completed_three_lessons': (
+                has_completed_three_lessons, CHECK_REASON),
+        }
+
     def on_startup(self, app):
         # Milestones only. *** MOUNTAINS ARE SEEDED BY CORE *** (src/__init__.py),
         # because a goal is drawn as a peak whether or not this module is on.

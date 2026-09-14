@@ -50,6 +50,13 @@ from src.models.mountain import Mountain, MountainBand  # noqa: F401
 # exists to prove create_all() builds these tables — never ran the default it
 # claimed to cover. `test_pointspal_in_core.py` now pins both readers to one
 # source of truth instead.
+# The coin ledger. *** CORE, AND UNCONDITIONAL. *** Coins are earned for
+# understanding your own money, which is not a module's business — the whole
+# point of moving the predicate library out of learnPal was that a user who
+# hides a module must not lose this. Two new TABLES, so `create_all()` makes
+# them at boot; a new COLUMN would have been invisible to it (D-121).
+from src.models.coins import CoinAward, CoinPurchase  # noqa: F401,E402
+
 from src.modules.pointspal.manifest import PointsPalModule as _PointsPalModule
 if _PointsPalModule().is_enabled():
     from src.modules.pointspal.models import (

@@ -85,6 +85,72 @@ def _learnpal_reset(user_id):
         synchronize_session=False)
 
 
+def _coins_reset(user_id):
+    """Delete a demo user's coin ledger. Core, so no optional-import dance.
+
+    *** AWARDS AND PURCHASES BOTH GO. *** Leaving the awards behind would let a
+    reset user keep coins earned against data that no longer exists, and leaving
+    the purchases behind would leave them owning gear they can no longer afford.
+    The pair is one state.
+    """
+    from src.models.coins import CoinAward, CoinPurchase
+    removed = CoinAward.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    removed += CoinPurchase.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    return removed
+
+
+def _coins_award(user_id):
+    """Recompute a demo user's coins from the data just seeded.
+
+    *** COINS ARE EARNED, NOT SEEDED. *** Writing fabricated rows would make the
+    demo show a figure no act produced, which is the one thing this whole design
+    refuses. Running the real award pass means the demo's coins are exactly what
+    that user's data justifies -- and if the arithmetic is wrong, the demo shows
+    it wrong, which is what a demo is for.
+
+    *** AND IT MATTERS BECAUSE THE DEMO STACK HAS NO SCHEDULER. *** The 04:30
+    nightly pass never runs on llm, so without this call a demo user would have
+    an empty wallet for ever and every coins surface would demo itself empty --
+    D-77's shape, which has hidden three defects here already.
+    """
+    from src.services.literacy.acts import award_for_user
+    try:
+        awarded = len(award_for_user(user_id))
+    except Exception:
+        logger.exception('demo: coin award failed for %s', user_id)
+        return 0
+    _coins_demo_kit(user_id)
+    return awarded
+
+
+# What a demo climber has already bought. *** THREE PIECES, SO THE KIT SHOWS ALL
+# THREE STATES: *** owned, affordable-and-being-saved-for, and out of reach. A
+# shop where everything is locked demos itself empty, which is D-77's shape and
+# is exactly what the demo-coverage guard exists to catch.
+_DEMO_GEAR = ('map', 'boots', 'rope')
+
+
+def _coins_demo_kit(user_id):
+    """Buy the demo climber a few pieces, through the REAL purchase path.
+
+    *** NOT INSERTED DIRECTLY. *** Going through `CoinRepository.purchase` means
+    the demo obeys the same affordability and already-owned rules a user does,
+    so a demo that shows gear owned is proof those rules work rather than a
+    picture of them working. If the balance cannot cover a piece, it is simply
+    not bought — which is also the honest outcome.
+    """
+    from src.repositories.coins import CoinRepository
+    from src.services.literacy.gear import GEAR_PRICES
+
+    repo = CoinRepository()
+    for slug in _DEMO_GEAR:
+        price = GEAR_PRICES.get(slug)
+        if price is not None:
+            repo.purchase(user_id, slug, price)
+
+
 class DemoService:
     """Service for managing demo mode functionality"""
 
@@ -188,6 +254,23 @@ class DemoService:
         # destroys live data on a public service to close a gap that is purely
         # additive.
         DemoService._backfill_demo_gaps()
+
+        # *** COINS ARE AWARDED HERE, AND THIS IS THE BACKFILL AS WELL AS THE
+        # SEED (D-178). *** `reset_demo_user` awards too, but a reset is
+        # something somebody has to trigger — so on its own it would reach a
+        # fresh install and never the one deployed demo the work was written
+        # for. This runs on every boot, so an existing demo user gets the coins
+        # their existing data already justifies.
+        #
+        # *** AND IT MATTERS MORE ON THE DEMO THAN ANYWHERE: llm HAS NO
+        # SCHEDULER, *** so the 04:30 nightly pass never runs there. Without
+        # this, every coins surface would demo itself empty — D-77's shape,
+        # which has hidden three defects in this project already.
+        #
+        # Idempotent: the award is a ratchet, so re-running it on a caught-up
+        # user awards nothing.
+        for demo_user in User.query.filter(User.id.like('demo%@finpal.demo')).all():
+            _coins_award(demo_user.id)
 
         try:
             db.session.commit()
@@ -1628,6 +1711,7 @@ class DemoService:
             # `has_active_budget`), so a user with no goals still has unlocks.
             # The first version was nested there and the sweep caught it.
             _learnpal_reset(user_id)
+            _coins_reset(user_id)
             if investment_ids:
                 InvestmentTransaction.query.filter(
                     InvestmentTransaction.investment_id.in_(
@@ -1703,6 +1787,14 @@ class DemoService:
             # the only things that row exists to demonstrate. It is idempotent
             # and it no-ops unless both demo1 and demo2 are present.
             DemoService._seed_demo_co_owners()
+            db.session.commit()
+
+            # *** LAST, BECAUSE COVERAGE IS MEASURED AGAINST EVERYTHING ABOVE.
+            # *** Awarding before the accounts, categories and transactions
+            # exist would compute coverage against an empty picture and stamp a
+            # watermark the user could then never rise above -- the ratchet
+            # would hold them at nothing.
+            _coins_award(user_id)
             db.session.commit()
 
             return {'success': True, 'message': 'Demo user data reset successfully'}

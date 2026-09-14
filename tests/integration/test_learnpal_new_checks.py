@@ -17,7 +17,7 @@ from src.extensions import db as _db
 from src.models.category import Category
 from src.models.goal import Goal
 from src.models.recurring import RecurringExpense
-from src.modules.learnpal.checks import CHECKS, _is_paydown
+from src.services.literacy.checks import CHECKS, _is_paydown
 from src.modules.learnpal.models import LearnCompletion
 from src.modules.learnpal.seed import seed_milestones
 from src.services.goal.service import GoalService

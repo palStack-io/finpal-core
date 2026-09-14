@@ -38,6 +38,20 @@ class ModuleRegistry:
         """
         for module in self.modules:
             try:
+                # *** CHECKS FIRST, THEN on_startup. *** learnPal's startup hook
+                # seeds milestones and then runs a catch-up evaluation, and that
+                # evaluation dispatches through `CHECKS`. Registering after it
+                # would make the first pass on every boot silently skip the
+                # module's own predicate and log an unknown check_type.
+                #
+                # `self.modules` already holds only ENABLED modules —
+                # `register()` gates on `is_enabled()` — so there is no second
+                # reader of that decision here.
+                from src.services.literacy.checks import register_check
+                for check_type, entry in (module.get_checks() or {}).items():
+                    fn, reason = entry if isinstance(entry, tuple) else (entry, None)
+                    register_check(check_type, fn, reason)
+
                 module.on_startup(app)
             except Exception as e:
                 logger.warning(f"Module {module.name} on_startup failed: {e}")

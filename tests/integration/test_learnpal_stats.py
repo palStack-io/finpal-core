@@ -17,7 +17,7 @@ from src.extensions import db as _db
 from src.data.seed_mountains import seed_mountains
 from src.models.budget import Budget
 from src.models.goal import Goal
-from src.modules.learnpal.checks import CHECK_REASONS, CHECKS, check_reason
+from src.services.literacy.checks import CHECK_REASONS, CHECKS, check_reason
 from src.modules.learnpal.models import LearnCompletion
 from src.modules.learnpal.seed import MILESTONES, seed_milestones
 from src.modules.learnpal.stats import stats_for_user, what_is_next
