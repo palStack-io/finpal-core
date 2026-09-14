@@ -87,10 +87,18 @@ export const Kit: React.FC = () => {
     );
   }
 
-  /* The cheapest piece not yet owned is the one being saved for. `undefined`
-     when the kit is complete — which is an honest end, not a state to pad. */
+  /* The cheapest piece you cannot YET afford is the one being saved for.
+     `undefined` when the kit is complete, or when everything left is already
+     affordable — both are honest ends, not states to pad.
+
+     *** "CANNOT YET AFFORD" IS THE WHOLE CONDITION, AND THE FIRST VERSION
+     OMITTED IT. *** It took the cheapest unowned piece outright, so a user with
+     7,853 coins saw "7,853 / 200" under a 200-coin item they could buy twice
+     over. A savings bar for something already in reach is not progress, it is
+     noise — and no test caught it because every fixture had a balance smaller
+     than the cheapest price. Found by looking at the deployed demo. */
   const nextUp = wallet.gear
-    .filter((g) => !g.owned)
+    .filter((g) => !g.owned && wallet.balance < g.price)
     .sort((a, b) => a.price - b.price)[0];
 
   return (

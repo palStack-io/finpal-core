@@ -71,4 +71,28 @@ describe('Your kit', () => {
     // progress bar the product allows.
     await waitFor(() => expect(screen.getByTestId('gear-saving-bar')).toBeTruthy());
   });
+
+  it('*** SHOWS NO SAVINGS BAR FOR GEAR THE BALANCE ALREADY COVERS ***', async () => {
+    /* The bug this test exists for: `nextUp` took the cheapest UNOWNED piece
+       outright, so a user with 7,853 coins saw "7,853 / 200" under a 200-coin
+       item they could buy twice over. A bar for something already in reach is
+       noise, not progress.
+
+       *** THE FOUR TESTS ABOVE ALL PASSED WITH THE BUG PRESENT, *** because
+       every one of their fixtures has a balance BELOW the cheapest price — so
+       the broken branch was never reached. It was found by looking at the
+       deployed demo, and this is the fixture that would have caught it. */
+    vi.mocked(coinService.getWallet).mockResolvedValue({
+      ...WALLET,
+      balance: 7853,
+    } as never);
+
+    render(<Kit />);
+    await screen.findByRole('heading', { level: 1, name: 'Your kit' });
+
+    expect(screen.queryByTestId('gear-saving-bar')).toBeNull();
+    // And everything unowned is buyable, so every one offers the button.
+    expect(screen.getAllByRole('button', { name: 'Buy' })).toHaveLength(2);
+    expect(document.body.textContent).not.toMatch(/7,853\s*\/\s*\d/);
+  });
 });
