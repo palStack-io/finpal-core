@@ -27,4 +27,25 @@ def init_scheduled_tasks():
             except Exception as e:
                 logger.error(f"Budget rollover task failed: {str(e)}")
 
+    @scheduler.task('cron', id='literacy_award_coins', hour=4, minute=30)
+    def award_literacy_coins():
+        """Award coins for acts of understanding, nightly at 04:30.
+
+        *** 04:30, DELIBERATELY AFTER learnPal's 04:15 UNLOCK PASS. *** A lesson
+        unlocked tonight is already recorded by the time coins are counted, so
+        the two never disagree about the same evening.
+
+        *** CORE, NOT A MODULE. *** Coins are earned for understanding your own
+        money, and a user who hides learnPal must not lose that — which is the
+        whole reason the predicate library moved out of the module.
+        """
+        with scheduler.app.app_context():
+            logger.info("Running literacy coin award pass...")
+            try:
+                from src.services.literacy.acts import award_all_users
+                total = award_all_users(scheduler.app)
+                logger.info(f"Literacy coin pass completed: {total} coin(s)")
+            except Exception as e:
+                logger.error(f"Literacy coin pass failed: {str(e)}")
+
     logger.info("Scheduled tasks initialized successfully")

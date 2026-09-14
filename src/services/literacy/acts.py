@@ -131,3 +131,70 @@ def _register_core_acts():
 
 
 _register_core_acts()
+
+
+def award_for_user(user_id) -> list:
+    """Award every act this user has newly covered. Returns `[(slug, coins)]`.
+
+    *** DOES NOT COMMIT. *** The caller owns the transaction, so a night's awards
+    land together or not at all -- the same convention `raise_watermark` follows.
+
+    *** A DORMANT ACT IS SKIPPED, NOT AWARDED ZERO. *** `coverage` returning
+    `None` means the user has nothing this act could be about, and writing a
+    zero row would turn an absence into a score.
+
+    *** THE RATCHET LIVES IN THE REPOSITORY, NOT HERE. *** This computes what the
+    act is worth at today's coverage; `upsert_award` decides whether that is an
+    increase. One writer, one rule -- a caller that worked the delta out itself
+    would get it wrong in one place and right in four others.
+    """
+    from src.repositories.coins import CoinRepository
+
+    repo = CoinRepository()
+    earned = []
+    for slug, act in ACTS.items():
+        try:
+            covered = act.coverage(user_id)
+        except Exception:
+            # *** ONE BROKEN ACT MUST NOT COST A USER THE OTHER TWELVE. ***
+            # Same failure isolation as `run_check`, and the same reason: a
+            # predicate that raises is a bug, not a verdict.
+            logger.exception('literacy: coverage for %r raised — skipped', slug)
+            continue
+        if covered is None:
+            continue
+        coins = int(Decimal(str(act.ceiling)) * Decimal(str(covered)))
+        delta = repo.upsert_award(user_id, slug, covered, coins)
+        if delta:
+            earned.append((slug, delta))
+    return earned
+
+
+def award_all_users(app) -> int:
+    """The nightly pass. Commits per user. Returns the total coins awarded.
+
+    *** IT RUNS FOR EVERY USER, NOT EVERY USER WITH A GOAL — D-205, WHICH MUST
+    NOT BE RE-MADE ONE SERVICE OVER. *** That row exists because the unlock pass
+    looped over `Goal.user_id`, so the population base camp is designed for never
+    earned anything. Almost every act here is goal-independent, so the same
+    filter would be the same defect with a different name.
+
+    Per-user commit, so one user's failure cannot roll back everybody else's
+    coins (D-61's lesson, where a shared session silently rolled writes back).
+    """
+    from src.extensions import db
+    from src.models.user import User
+
+    total = 0
+    user_ids = [row[0] for row in db.session.query(User.id).all()]
+    for user_id in user_ids:
+        try:
+            awarded = award_for_user(user_id)
+            db.session.commit()
+            total += sum(coins for _, coins in awarded)
+        except Exception:
+            db.session.rollback()
+            logger.exception('literacy: award pass failed for %s', user_id)
+    if total:
+        app.logger.info('literacy: %s coin(s) awarded', total)
+    return total
