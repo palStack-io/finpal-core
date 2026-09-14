@@ -1,9 +1,21 @@
-"""learnPal's event predicates.
+"""The predicate library: pure questions about a user's own money.
+
+*** THIS IS CORE, NOT learnPal, AND THAT IS THE POINT OF THE FILE. *** Twelve of
+these read `Account`, `Category`, `Budget`, `Expense` and `Goal` and not one
+touches a learning table. Living inside an OPTIONAL module meant a user who
+HID learnPal lost the engine that rewards them for understanding their own
+money -- and none of those acts are lessons. This extends the cut already made
+for `Goal` and `Mountain` rather than inventing a new one.
+
+*** ONE PREDICATE IS GENUINELY learnPal's AND IT STAYS THERE. ***
+`has_completed_three_lessons` reads `LearnCompletion`. It registers into
+`CHECKS` through `ModuleBase.get_checks()`, which is the same hook pointsPal
+uses. So the registry is core's and the contributions are the modules'.
 
 *** EVERY PREDICATE IS PURE `check(user_id, args) -> bool` AND UNIT-TESTABLE
 WITHOUT HTTP. *** That is the parent spec's design and it is kept exactly,
-because the same convention is reused by `questions.py`'s generators in C1e --
-one naming convention for both, so a reader who learns one has learned the other.
+because the same convention is reused by `questions.py`'s generators -- one
+naming convention for both, so a reader who learns one has learned the other.
 
 *** A PREDICATE THAT CANNOT ANSWER RETURNS False, NEVER True. *** An unlock is
 permanent (design decision 4), so a wrong True can never be taken back, while a
@@ -13,6 +25,12 @@ reason the default is what it is.
 They read core tables directly rather than going through services. That is a
 deliberate narrowing: a predicate must not be able to WRITE anything, and the
 services can.
+
+*** `CHECKS` ANSWERS "SHOULD THIS LESSON OPEN", NOT "SHOULD THIS PAY". *** The
+earning registry is `ACTS` and it is a DIFFERENT list, because about half of
+these describe a user's SITUATION rather than something they did -- paying for
+`has_two_or_more_debt_accounts` would reward taking out a second loan, and for
+`has_debt_and_no_savings_goal` would reward not having one. See the spec's S3.
 """
 
 import logging
@@ -283,29 +301,13 @@ def has_buffer_and_debt(user_id, args=None):
     return False
 
 
-def has_completed_three_lessons(user_id, args):
-    """At least `n` lessons already unlocked. Default 3.
-
-    Lesson 19 is *what finPal cannot tell you*, and it is deliberately last: it
-    is the one that says the product has limits, and saying that to somebody who
-    has read nothing is a disclaimer rather than a lesson.
-
-    *** THE ONLY PREDICATE THAT READS learnPal's OWN TABLE, AND IT CANNOT COUNT
-    ITSELF. *** `evaluate_for_user` snapshots `already` BEFORE the loop and adds
-    to it as it goes, so a milestone unlocked earlier in the same pass is
-    already in the database when this runs -- which is correct and is why the
-    threshold is a floor rather than an equality.
-    """
-    n = int((args or {}).get('n', 3))
-    from src.modules.learnpal.models import LearnCompletion
-    count = db.session.query(func.count(LearnCompletion.id)).filter(
-        LearnCompletion.user_id == user_id).scalar() or 0
-    return count >= n
-
-
 # The registry the engine dispatches through. A milestone naming a `check_type`
 # that is not in here is SKIPPED and logged -- never treated as satisfied.
 # A seeded row with a typo in it must not unlock anything.
+#
+# *** MUTABLE ON PURPOSE: A MODULE MAY ADD TO IT VIA `register_check`. ***
+# learnPal contributes `has_completed_three_lessons`, whose subject really is a
+# lesson. Core never removes an entry and a module may never replace one.
 CHECKS = {
     'categorised_transactions_at_least': categorised_transactions_at_least,
     'has_active_budget': has_active_budget,
@@ -320,7 +322,6 @@ CHECKS = {
     'has_non_monthly_spending': has_non_monthly_spending,
     'has_recurring_income': has_recurring_income,
     'has_buffer_and_debt': has_buffer_and_debt,
-    'has_completed_three_lessons': has_completed_three_lessons,
 }
 
 
@@ -375,8 +376,6 @@ CHECK_REASONS = {
         ('Add your pay as a recurring income', {}),
     'has_buffer_and_debt':
         ('Reach the target on a savings goal while you still have debt', {}),
-    'has_completed_three_lessons':
-        ('Read {n} lessons first', {'n': 3}),
 }
 
 
@@ -413,10 +412,33 @@ def run_check(check_type, user_id, args=None):
     """
     fn = CHECKS.get(check_type)
     if fn is None:
-        logger.warning('learnpal: unknown check_type %r — treated as not met', check_type)
+        logger.warning('literacy: unknown check_type %r — treated as not met', check_type)
         return False
     try:
         return bool(fn(user_id, args))
     except Exception:
-        logger.exception('learnpal: check %r raised — treated as not met', check_type)
+        logger.exception('literacy: check %r raised — treated as not met', check_type)
         return False
+
+
+def register_check(check_type, fn, reason=None):
+    """Add a module's own predicate to the core registry.
+
+    *** REFUSES A NAME CORE ALREADY OWNS, RATHER THAN OVERRIDING IT. *** A
+    module silently shadowing a core predicate would change what a seeded
+    milestone means, with no way to see it from core -- the same class of
+    surprise `run_check` refuses when it fails closed on an unknown name.
+
+    `reason` is the `(sentence, defaults)` pair `check_reason` renders, and is
+    optional only because a predicate with no user-facing lock message is a
+    legitimate shape. A name already present in `CHECK_REASONS` is left alone on
+    the same rule.
+    """
+    if check_type in CHECKS:
+        logger.warning(
+            'literacy: refusing to re-register check %r — core already owns it',
+            check_type)
+        return
+    CHECKS[check_type] = fn
+    if reason is not None and check_type not in CHECK_REASONS:
+        CHECK_REASONS[check_type] = reason

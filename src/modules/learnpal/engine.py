@@ -49,7 +49,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.extensions import db
 from src.models.goal import Goal
-from src.modules.learnpal.checks import run_check
+from src.services.literacy.checks import run_check
 from src.modules.learnpal.models import LearnCompletion, LearnMilestone
 
 logger = logging.getLogger(__name__)

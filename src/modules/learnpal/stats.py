@@ -29,7 +29,7 @@ from decimal import Decimal
 from src.extensions import db
 from src.models.goal import Goal
 from src.models.mountain import Mountain
-from src.modules.learnpal.checks import check_reason
+from src.services.literacy.checks import check_reason
 from src.modules.learnpal.models import LearnCompletion, LearnMilestone
 from src.services.goal.mountains import BAND_ORDER
 
