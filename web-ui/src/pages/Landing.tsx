@@ -46,7 +46,17 @@ export const Landing = () => {
     {
       icon: <Shield size={32} />,
       title: 'Complete Data Control',
-      description: 'Self-hosted solution means your financial data stays on your server. No third-party access, ever.'
+      /* *** "No third-party access, ever" WAS NOT TRUE AND THIS IS THE SIGNED-OUT
+         PITCH, SO IT WAS THE MOST PUBLIC CLAIM IN THE PRODUCT. *** Six things can
+         leave an instance and every one of them involves a third party: SimpleFin
+         if you connect a bank, a price provider if you use Investments, the
+         currency API, the pointsPal catalogue, Google or Apple if you choose that
+         sign-in, and the operator's mail server. All opt-in or
+         operator-configured, all inventoried in docs/DATA_BOUNDARIES.md.
+         Replaced with the claim that IS unconditionally true and is also the
+         stronger one — measured 2026-09-14: zero analytics, telemetry,
+         crash-reporting or model dependencies anywhere in this product. */
+      description: 'Self-hosted means your financial data stays on your server. No analytics, no tracking, no AI.'
     },
     {
       icon: <Users size={32} />,

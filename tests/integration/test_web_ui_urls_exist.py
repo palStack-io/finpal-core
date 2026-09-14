@@ -1,4 +1,4 @@
-"""Every `/api/v1/...` URL web-ui names must be a route this app serves.
+"""Every URL web-ui names must be a route this app serves — prefix included.
 
 The single most repeated defect in this codebase is a client calling an endpoint that
 does not exist. PR #42 deleted **18** such service methods at once (AUDIT D-15), each
@@ -16,6 +16,19 @@ a defect because they enumerated known cases; see AUDIT D-28.
 
 Not a lint rule about strings: a URL that does not resolve is a feature that silently
 does nothing, and the client has no way to find out except at runtime.
+
+*** AND IT WENT BLIND IN A WAY WORTH RECORDING — D-211, 2026-09-14. *** The sweep
+below is keyed to `['"`](/api/v1/...)`, so it could only ever check URLs that ALREADY
+carry the prefix. `moduleService.ts` asked for `/users/module-preferences` — no prefix
+at all — and was therefore invisible to the one gate whose entire job is this. Because
+web's axios `baseURL` is the empty string, that request reached the SPA's own origin and
+Vite answered **200 with index.html**; `response.data.hidden ?? []` turned the HTML into
+"nothing is hidden", so hiding a module from Settings wrote nothing and said it worked.
+
+The second sweep (`test_no_client_call_omits_the_api_prefix`) closes that hole by keying
+on the CALL rather than on the string: any `api.<verb>()` whose path does not start with
+`/api/v1/` fails. Both halves are lower bounds — a path assembled at runtime is still
+invisible — which is this project's standing lesson about guards keyed to a spelling.
 """
 import re
 from pathlib import Path
@@ -137,3 +150,84 @@ def test_the_scanner_sees_a_url_it_should_reject():
     # normalised rather than left as `${id}`.
     assert '/api/v1/transactions/<*>' in urls, sorted(urls)[:20]
     assert '/api/v1/auth/login' in urls
+
+
+# ---------------------------------------------------------------------------
+# The second sweep: the PREFIX itself.
+# ---------------------------------------------------------------------------
+
+CALL = re.compile(
+    r"""api\.(?:get|post|put|patch|delete)(?:<[^>]*>)?\(\s*(['"`])([^'"`]+)\1""")
+
+# A const whose value is an absolute API path, e.g. `const BASE = '/api/v1/pointspal'`.
+BASE_CONST = re.compile(r"""(?:const|let)\s+\w+\s*=\s*['"`](/api/v1/[^'"`]*)['"`]""")
+
+
+def _client_calls():
+    """Every `api.<verb>('…')` in web-ui, with its file, comments stripped."""
+    out = []
+    for path in WEB_SRC.rglob('*.ts*'):
+        if '__tests__' in path.parts or '__mocks__' in path.parts:
+            continue
+        text = _without_comments(path.read_text(encoding='utf-8'))
+        for _quote, url in CALL.findall(text):
+            out.append((path, text, url))
+    return out
+
+
+def test_the_prefix_sweep_reads_the_client_at_all():
+    """A sweep that finds no calls passes for the wrong reason."""
+    calls = _client_calls()
+    assert len(calls) > 50, f'only found {len(calls)} api calls'
+
+
+def test_no_client_call_omits_the_api_prefix():
+    """*** `baseURL` IS THE EMPTY STRING, SO A MISSING PREFIX IS NOT A 404. ***
+
+    It is a **200 with the SPA's own HTML**, which axios hands back as a string
+    and the caller reads fields off. Two of these have now shipped: `/coins`
+    (crashed the Kit page on `.filter`) and `/users/module-preferences` (silent,
+    because a `?? []` absorbed it). A 404 would have been the kind outcome.
+
+    `${...}` is allowed only where the file defines a base const that is itself
+    absolute — that is how `pointspal/service.ts` writes `${BASE}/cards`.
+    """
+    offenders = []
+    for path, text, url in _client_calls():
+        if url.startswith('/api/v1/'):
+            continue
+        if url.startswith('${'):
+            # `${API_CONFIG.endpoints…}` is the central table, checked whole by
+            # the test below rather than per call site.
+            if url.startswith('${API_CONFIG.'):
+                continue
+            if BASE_CONST.search(text):
+                continue
+            offenders.append(
+                f'{path.name}: {url!r} interpolates a base this file does not '
+                f'define as an absolute /api/v1 path')
+            continue
+        offenders.append(f'{path.name}: {url!r} has no /api/v1 prefix')
+
+    assert not offenders, (
+        'These client calls do not carry the API prefix. web-ui\'s axios '
+        'baseURL is the empty string, so each one resolves to the SPA itself '
+        'and returns 200 with index.html rather than failing:\n  '
+        + '\n  '.join(sorted(offenders)))
+
+
+def test_every_api_config_endpoint_is_absolute():
+    """The central endpoint table, checked whole.
+
+    `config/api.ts` is the one place a path may be spelled away from its call
+    site, so the sweep above waves `${API_CONFIG.…}` through — which is only safe
+    if every value in that table carries the prefix. One relative entry there
+    would be the D-211 defect on every screen that used it at once.
+    """
+    config = (WEB_SRC / 'config' / 'api.ts').read_text(encoding='utf-8')
+    literals = re.findall(r"""^\s*\w+:\s*['"`](/[^'"`]*)['"`]""",
+                          _without_comments(config), flags=re.M)
+    assert literals, 'read no endpoint literals out of config/api.ts'
+    relative = [p for p in literals if not p.startswith('/api/v1')]
+    assert not relative, (
+        f'config/api.ts has endpoint(s) without the /api/v1 prefix: {relative}')

@@ -100,11 +100,17 @@ echo "────────────────────────�
 # (D-169). It stopped the push. It was right to: the rule cannot tell a
 # throwaway from a live credential, and a rule that tried would be the one that
 # eventually waves a real one through.
+# *** learnPal IS ON HERE ON PURPOSE, AND IT WAS OFF UNTIL 2026-09-14. ***
+# It is `default_enabled = False`, so every learnPal route redirected and every
+# spec touching one SKIPPED. Those pages are exactly where the six report-card
+# denominators lived, so the suite was silent about the surfaces the work was
+# aimed at. A skip is not a pass, and a skipped gate protects nothing.
 SECRET_KEY="$(openssl rand -hex 24)" \
 JWT_SECRET_KEY="$(openssl rand -hex 24)" \
 SQLALCHEMY_DATABASE_URI="sqlite:///$DB_FILE" \
 DEMO_MODE=true \
 EMAIL_ENABLED=false \
+LEARNPAL_ENABLED=true \
 "$ROOT/venv/bin/python" -m flask --app src run --port "$BACKEND_PORT" --no-reload \
   > "$LOG_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!

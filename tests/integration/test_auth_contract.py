@@ -610,10 +610,46 @@ def test_onboarding_saves_every_preference_it_accepts(
 
 @BOTH_SPELLINGS
 def test_onboarding_requires_a_body(client, db, user, auth_headers, slash):
+    """A wholly ABSENT body is refused.
+
+    *** THIS TEST USED TO SEND `json={}` AND EXPECT 400, WHICH PINNED A DEFECT
+    AS INTENDED BEHAVIOUR (D-63's shape). *** `{}` is falsy in Python, so the
+    handler's `if not data` refused an empty object too — and an empty object is
+    a real request: *"I am done, change nothing."* That is mobile's case
+    exactly, since it sets currency, timezone and notifications in Settings and
+    posting defaults here would OVERWRITE what the user chose on web. So the
+    refusal now keys on `None` and this test sends no body at all, which is the
+    thing it was always meant to describe.
+    """
     resp = client.post(f'/api/v1/auth/onboarding{slash}',
-                       headers=auth_headers(user), json={})
+                       headers=auth_headers(user))
     assert resp.status_code == 400
     assert resp.get_json() == {'error': 'Request body is required'}
+
+
+@BOTH_SPELLINGS
+def test_onboarding_accepts_an_empty_object_and_still_completes(
+        client, db, user, auth_headers, slash):
+    """*** "I AM DONE, CHANGE NOTHING" IS A REAL REQUEST. ***
+
+    And the inverse is what makes this worth asserting: the user's existing
+    preferences must survive it. A client that had to send something in order to
+    finish onboarding would be a client overwriting choices made elsewhere.
+    """
+    user.default_currency_code = 'GBP'
+    user.timezone = 'Europe/London'
+    db.session.commit()
+
+    resp = client.post(f'/api/v1/auth/onboarding{slash}',
+                       headers=auth_headers(user), json={})
+    assert resp.status_code == 200, resp.get_json()
+    assert resp.get_json()['hasCompletedOnboarding'] is True
+
+    db.session.refresh(user)
+    assert user.has_completed_onboarding is True
+    # Untouched, which is the whole point.
+    assert user.default_currency_code == 'GBP'
+    assert user.timezone == 'Europe/London'
 
 
 @BOTH_SPELLINGS

@@ -26,6 +26,7 @@ from src.data import seed_user_defaults
 from schemas.input_schemas import login_input, register_input
 from src.utils.validation import validate_request, validation_error_response
 from src.utils.locale import is_a_usable_number_locale
+from src.utils.money import is_a_known_currency
 import logging
 import threading
 from src.models.personal_access_token import SCOPE_READ
@@ -744,12 +745,35 @@ class CompleteOnboarding(Resource):
             if not user:
                 return {'error': 'User not found'}, 404
 
-            data = request.get_json()
+            # *** `{}` IS A VALID BODY HERE AND `None` IS NOT. *** This read
+            # `if not data: 400`, and an empty JSON object is falsy in Python,
+            # so a client with nothing to change could not mark onboarding
+            # complete at all — while "I am done, change nothing" is a request
+            # this endpoint must be able to answer.
+            #
+            # *** THE CLIENT THAT MADE IT MATTER NOW SENDS A BODY. *** Mobile
+            # sent `{}` until 2026-09-14, when its first run gained the currency
+            # and timezone step; it still sends only those two, so notification
+            # preferences and the profile emoji a user set on web survive an
+            # onboarding completed on the phone. Every field below is applied
+            # only when present, which is what makes that true.
+            #
+            # A wholly absent or unparseable body is still refused, because that
+            # is a client that failed to send what it meant to.
+            data = request.get_json(silent=True)
 
-            if not data:
+            if data is None:
                 return {'error': 'Request body is required'}, 400
 
             if 'default_currency_code' in data:
+                # *** A FOREIGN KEY INTO `currencies`, SO AN UNKNOWN CODE WAS A
+                # 500 THAT LEFT `has_completed_onboarding` FALSE (D-215). ***
+                # Measured on the live demo: TRY answered 500 and the user would
+                # have met the wizard again on every launch, for ever. SQLite
+                # does not enforce the key, which is why the suite was green.
+                if not is_a_known_currency(data['default_currency_code']):
+                    return {'error': 'default_currency_code is not a currency '
+                                     'this server knows'}, 400
                 user.default_currency_code = data['default_currency_code']
 
             if 'timezone' in data:

@@ -15,6 +15,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
 import { moduleService } from '../services/moduleService';
 import type { ModuleManifest } from '../modules/registry';
+import { DataStatement } from '../components/privacy/DataStatement';
+import { FINPAL_PRIVACY, FINPAL_TERMS } from '../constants/links';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { useToast } from '../contexts/ToastContext';
@@ -1105,6 +1107,61 @@ export const Settings: React.FC = () => {
               {activeTab === 'data' && (
                 <div>
                   <h2 style={sectionTitleStyle}>Data & Privacy</h2>
+
+                  {/* *** THE STATEMENT GOES FIRST, ABOVE EXPORT AND DELETE. ***
+                      Owner requirement 2026-09-14: users must know what they
+                      tell finPal about their money never leaves their server
+                      and is only used for their own account. This tab already
+                      held the two ACTIONS (export, delete) and never said the
+                      thing the actions imply. Renders nothing if the copy
+                      cannot be fetched — see DataStatement. */}
+                  <DataStatement showOperatorNote />
+
+                  {/* *** THE TWO DEDICATED PAGES, WHICH THIS TAB HAD NO ROUTE TO
+                      AT ALL *** (owner, 2026-09-14: "dont we already have a page
+                      dedicated to it"). There is one, it is live, and the only
+                      link to it in this client was on the REGISTER page — so a
+                      signed-in user could not reach it from the tab named Data &
+                      Privacy. Mobile groups the statement with these same two
+                      rows; this is the same grouping, and the URLs come from
+                      `constants/links.ts` so the host is spelled once (D-201,
+                      D-216).
+
+                      The statement stays in the app rather than becoming a link:
+                      those pages are palStack's, about the hosted product, and
+                      this statement is about THIS instance.
+
+                      *** THE LINK COLOUR IS THE THEME TOKEN, AND MEASURING IS
+                      WHAT CAUGHT THAT. *** The first draft copied Register's
+                      literal `#15803d`, which is right there because an auth
+                      card is always light. This tab follows the theme:
+                      `#15803d` on dark's `--kt-card` (#16241A) measures
+                      **3.22:1**, an AA failure. `var(--kt-green)` is
+                      theme-aware — **4.87:1** light (#15803d on #FBFCF9) and
+                      **8.21:1** dark (#5FCE8B on #16241A). */}
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--text-secondary)',
+                    margin: '-8px 0 24px',
+                  }}>
+                    <a
+                      href={FINPAL_PRIVACY}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--kt-green)', textDecoration: 'none' }}
+                    >
+                      Privacy Policy
+                    </a>
+                    {' · '}
+                    <a
+                      href={FINPAL_TERMS}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--kt-green)', textDecoration: 'none' }}
+                    >
+                      Terms of Service
+                    </a>
+                  </p>
 
                   {/* Error Message */}
                   {saveError && (
