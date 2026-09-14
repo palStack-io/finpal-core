@@ -43,6 +43,17 @@ SURVIVES_A_RESET = {
     'user_module_access': 'entitlement, written by adminPal — not ours to clear',
     'user_module_preferences': 'the user\'s own show/hide choice, not seeded content',
     'agent_actions': 'an audit trail of what an agent did, same reason as login_events',
+    # *** THESE TWO DO NOT SURVIVE — THEY ARE DELETED AND RE-EARNED, AND THE
+    # SWEEP CANNOT TELL THE DIFFERENCE FROM A ROW COUNT. *** `reset_demo_user`
+    # calls `_coins_reset` (both tables) and then, after everything is seeded,
+    # `_coins_award`, which recomputes coverage against the data that now
+    # exists. Leaving the wallet empty would make every coins surface demo
+    # itself empty — D-77's shape, which the demo-coverage guard exists to
+    # catch — and the demo stack has no scheduler, so nothing else would ever
+    # fill it. `test_a_reset_re_earns_rather_than_keeps` below pins the
+    # distinction this exemption cannot express.
+    'coin_awards': 'deleted by _coins_reset, then RE-EARNED by _coins_award',
+    'coin_purchases': 'deleted with the awards; the demo kit is re-bought',
 }
 
 
@@ -151,3 +162,36 @@ def test_every_exemption_names_a_reason(db):
     """A bare set would let anything in; the value is the argument."""
     for table, why in SURVIVES_A_RESET.items():
         assert len(why) > 20, f'{table} needs a real reason, not "{why}"'
+
+
+def test_a_reset_re_earns_coins_rather_than_KEEPING_them(demo_user):
+    """*** THE ASSERTION `SURVIVES_A_RESET` CANNOT MAKE. ***
+
+    That dict is keyed on a row count, so it cannot distinguish *kept* from
+    *deleted and recreated*. The exemption for the two coin tables claims the
+    second. This proves it: stamp a row that the seeded data could never
+    justify, reset, and it must be gone — while genuinely earned coins come
+    back.
+    """
+    from src.models.coins import CoinAward
+    from src.repositories.coins import CoinRepository
+
+    _db.session.add(CoinAward(user_id=demo_user.id, act_slug='not_a_real_act',
+                              coverage=1, coins=99999))
+    _db.session.commit()
+
+    assert DemoService.reset_demo_user(demo_user.id)['success'] is True
+    _db.session.expire_all()
+
+    survived = CoinAward.query.filter_by(
+        user_id=demo_user.id, act_slug='not_a_real_act').first()
+    assert survived is None, (
+        'the fabricated award survived the reset, so the rows are being KEPT '
+        'rather than re-earned and the exemption above is wrong.')
+    # *** NOT ASSERTING `earned > 0` FOR THIS FIXTURE, AND THE REASON MATTERS.
+    # *** `demo-reset@finpal.demo` is not one of the four seeded personas, so
+    # `reset_demo_user` wipes it and re-seeds NOTHING — there is no data for any
+    # act to be measured against, and an empty wallet is the honest result.
+    # `test_the_demo_covers_every_feature.py` is what proves the real personas
+    # end up with coins; this test's job is the deletion half.
+    assert CoinRepository().earned(demo_user.id) == 0

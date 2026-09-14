@@ -77,6 +77,13 @@ class CoinRepository:
         coverage = Decimal(str(coverage))
         row = self.award_row(user_id, act_slug)
         if row is None:
+            # *** AN ACT WORTH NOTHING YET WRITES NO ROW AT ALL. *** A user who
+            # has not named a goal is at coverage 0, and a row saying so is a
+            # zero nobody asked for: it makes the wallet look populated while it
+            # is empty, and it is one query away from being rendered as a score
+            # the user is failing at. The row appears when they earn something.
+            if int(coins) <= 0:
+                return 0
             db.session.add(CoinAward(
                 user_id=user_id, act_slug=act_slug,
                 coverage=coverage, coins=int(coins)))
