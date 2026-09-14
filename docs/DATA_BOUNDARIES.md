@@ -24,9 +24,17 @@ beside it.
   your own rows by your own instance. Nothing is scored elsewhere and sent back.
 - **Your data is scoped to your account.** Household sharing is opt-in and
   explicit; the one predicate that decides it is `src/utils/household.py`.
-- **Fonts and assets are served from your own instance.** No CDN and no Google
-  Fonts, so loading a page does not tell a third party your IP address. Guarded
-  by `web-ui/src/__tests__/unit/noRemoteFontOrigin.test.ts`.
+- **The web page loads nothing from anywhere but your own server.** Checked on
+  the BUILT output, not inferred from the source: `dist/index.html` references
+  one stylesheet, one script and one icon, all same-origin, and there is no
+  remote `src`/`href` in it at all — no CDN, no Google Fonts, no tag manager, no
+  remote favicon. So opening finPal does not hand your IP address to a third
+  party. The fonts half is additionally guarded by
+  `web-ui/src/__tests__/unit/noRemoteFontOrigin.test.ts`; the rest is a build
+  property you can re-derive in one line:
+  `grep -oE '(src|href)="https?://[^"]*"' web-ui/dist/index.html` (expect no
+  output). Third-party URLs *do* appear as strings inside the bundle — library
+  error messages, and links a user can click — but nothing fetches them.
 - **The mobile app talks only to the server you point it at.** The backend URL
   is yours to set, and the app ships no analytics SDK and no crash reporter.
 
