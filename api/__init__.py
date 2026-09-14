@@ -120,7 +120,7 @@ def handle_http_exception(error):
     }, (error.code or 500)
 
 # Import and register namespaces (will be created next)
-from api.v1 import coins, auth, analytics, transactions, accounts, goals, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources, agent_actions, access_tokens, review
+from api.v1 import modules as modules_api, currencies as currencies_api, coins, auth, analytics, transactions, accounts, goals, budgets, categories, groups, recurring, investments, csv_import, users, team, transaction_rules, demo, import_sources, agent_actions, access_tokens, review
 
 # Register namespaces
 api.add_namespace(auth.ns, path='/auth')
@@ -148,6 +148,17 @@ api.add_namespace(import_sources.profiles_ns, path='/import-profiles')
 api.add_namespace(agent_actions.ns, path='/agent-actions')
 api.add_namespace(access_tokens.ns, path='/access-tokens')
 api.add_namespace(review.ns, path='/review')
+# *** NOT UNDER THE MODULE REGISTRY BELOW, AND THAT IS THE POINT. *** This
+# namespace DESCRIBES the modules and is core's; registering it through the
+# registry would make the catalogue disappear on a deployment that runs no
+# optional modules, which is precisely when a user most needs to be told what
+# the product does and does not do with their money.
+api.add_namespace(modules_api.ns, path='/modules')
+
+# Reference data, not a module: `currencies` is what every `default_currency_code`
+# and `currency_code` foreign key points at, and until now no route served it, so
+# each client shipped its own hardcoded guess (D-217).
+api.add_namespace(currencies_api.ns, path='/currencies')
 
 # Module namespaces — self-registering via ModuleRegistry
 try:

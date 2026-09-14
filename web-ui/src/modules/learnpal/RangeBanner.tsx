@@ -98,7 +98,8 @@ export const RangeBanner: React.FC<{ range: LearnRange }> = ({ range }) => {
             Your range
           </strong>{' '}
           <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
-            {range.lessons.read} of {range.lessons.total} lessons read
+            {range.lessons.read}{' '}
+            {range.lessons.read === 1 ? 'lesson' : 'lessons'} read
             {next && (
               <>
                 {' · next at '}

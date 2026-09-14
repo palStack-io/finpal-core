@@ -1,6 +1,6 @@
 """No service may hand a database exception's text to a client.
 
-CLAUDE.md forbids returning `str(e)` in an error response, and the reason is not
+This codebase forbids returning `str(e)` in an error response, and the reason is not
 style. `GroupService.create_group` caught the IntegrityError from a missing
 `name` and returned it verbatim, so `POST /api/v1/groups` with no name answered,
 on the live deployed instance:

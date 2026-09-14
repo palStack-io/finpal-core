@@ -30,8 +30,8 @@ beforeEach(() => {
 });
 
 const EMPTY: LearnStats = {
-  lessons: { read: 0, total: 8, without_body: 8 },
-  gear: { earned: 0, total: 8 },
+  lessons: { read: 0, without_body: 8 },
+  gear: { earned: 0 },
   highest: null,
   recent: [],
   next: [],
@@ -49,23 +49,29 @@ describe('the learnPal home', () => {
   it('SHOWS NO POINTS FIGURE OF ANY KIND', async () => {
     // Owner decision 2026-09-11: learnPal has no points, so a tile fed by a
     // figure nothing can increment would read 0 for ever.
-    serve({ ...EMPTY, lessons: { read: 3, total: 8, without_body: 5 } });
+    serve({ ...EMPTY, lessons: { read: 3, without_body: 5 } });
     const { container } = draw();
     await screen.findByText('Lessons read');
     expect(container.textContent?.toLowerCase()).not.toContain('point');
   });
 
-  it('reports lessons and gear as a FRACTION, which says what is left', async () => {
+  it('reports lessons and gear as a COUNT, with NO denominator anywhere', async () => {
     serve({
       ...EMPTY,
-      lessons: { read: 3, total: 8, without_body: 5 },
-      gear: { earned: 2, total: 8 },
+      lessons: { read: 3, without_body: 5 },
+      gear: { earned: 2 },
     });
     draw();
     await screen.findByText('Lessons read');
     expect(screen.getByText('Gear earned')).toBeTruthy();
-    // Both counters render `read` then `of total`, so assert the pair.
-    expect(screen.getAllByText(/of 8/).length).toBeGreaterThanOrEqual(2);
+    // *** THIS TEST USED TO ASSERT THE OPPOSITE. *** It required `of 8` on both
+    // cards. Nobody chose 8 — finPal did — and design decision 5 permits a
+    // denominator only where the user picked the target. Asserted as an
+    // ABSENCE, over the whole rendered page, because a fraction reappearing
+    // anywhere on this screen is the regression that matters.
+    expect(document.body.textContent).not.toMatch(/\d+\s+of\s+\d+/);
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
     expect(screen.getByText('5 have no write-up yet')).toBeTruthy();
   });
 
@@ -84,11 +90,11 @@ describe('the learnPal home', () => {
     expect(container.textContent).not.toContain('band 1 of 6');
   });
 
-  it('names the hardest mountain, its band and the goal it was', async () => {
+  it('names the hardest mountain and the goal it was, without a band fraction', async () => {
     serve({
       ...EMPTY,
       highest: {
-        band: 3, band_total: 6,
+        band: 3,
         mountain: {
           slug: 'mount-rainier', name: 'Mount Rainier', elevation_m: 4392,
           fact: 'Rainier carries more glacier ice than any other peak in the '
@@ -101,11 +107,17 @@ describe('the learnPal home', () => {
     draw();
     await screen.findByTestId('learnpal-highest');
     expect(screen.getByText('Mount Rainier')).toBeTruthy();
-    // The band is 0-indexed on the wire and 1-indexed in the sentence: "band 4
-    // of 6" is what a human counts, and off-by-one here is the kind of thing a
-    // green typecheck is perfectly happy with.
-    expect(screen.getByText(/band 4 of 6/)).toBeTruthy();
+    // *** THE BAND FRACTION IS GONE (decision 5). *** This asserted
+    // `band 4 of 6`; nobody chose 6. The elevation stays, because 4,392 m is a
+    // fact about a mountain rather than a score about a user.
     expect(screen.getByText(/4,392 m/)).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/band\s*\d+\s*of\s*\d+/);
+    // *** AND THE HEADING NO LONGER CLAIMS THE USER REACHED IT. *** A brand-new
+    // goal with a $100,000 target and nothing saved comes back as Everest,
+    // because `hardest_band` reads magnitude and never reads progress. The
+    // figure is right; "Highest you have reached" was not.
+    expect(screen.getByText('The hardest this ever got')).toBeTruthy();
+    expect(screen.queryByText('Highest you have reached')).toBeNull();
   });
 
   it('SAYS A FINISHED GOAL IS FINISHED instead of implying it is under way',
@@ -118,7 +130,7 @@ describe('the learnPal home', () => {
       serve({
         ...EMPTY,
         highest: {
-          band: 4, band_total: 6,
+          band: 4,
           mountain: { slug: 'aconcagua', name: 'Aconcagua', elevation_m: 6961,
                       fact: null, summit_note: null },
           goal_id: 7, goal_name: 'Clear the Amex', goal_status: 'archived',
@@ -135,7 +147,7 @@ describe('the learnPal home', () => {
     serve({
       ...EMPTY,
       highest: {
-        band: 4, band_total: 6,
+        band: 4,
         mountain: { slug: 'aconcagua', name: 'Aconcagua', elevation_m: 6961,
                     fact: null, summit_note: null },
         goal_id: 7, goal_name: 'Clear the Amex', goal_status: 'active',
@@ -267,25 +279,19 @@ describe('the learnPal home', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('draws an empty bar rather than NaN% when the seeder has not run',
-    async () => {
-      // `total: 0` is a real state on an instance whose milestone seed has not
-      // run. 0/0 is NaN, and `$NaN` rendered eight times on a page both gates
-      // called clean is D-107.
-      serve({ ...EMPTY, lessons: { read: 0, total: 0, without_body: 0 },
-              gear: { earned: 0, total: 0 } });
+  it('renders a bare zero rather than a bar when nothing has been read', async () => {
+      // *** THE BAR THIS ONCE GUARDED IS GONE. *** It drew `read / total`, and
+      // `total: 0` on an unseeded instance made 0/0 = NaN — `width: 'NaN%'` is
+      // invalid CSS, so the DOM dropped it and an assertion on the markup passed
+      // with the bug present (D-107). Removing the denominator removed the
+      // division, so the whole class of bug went with it. What is left to check
+      // is that zero renders as zero and no fraction sneaks back.
+      serve({ ...EMPTY, lessons: { read: 0, without_body: 0 },
+              gear: { earned: 0 } });
       draw();
       await screen.findByText('Lessons read');
-      /*
-       * *** ASSERTED ON THE WIDTH, NOT ON THE ABSENCE OF THE STRING "NaN". ***
-       * `width: 'NaN%'` is an invalid CSS value, so the DOM drops it and
-       * `innerHTML` never carries it — the markup assertion this replaced
-       * passed with the bug present, which a sabotage found. A dropped width is
-       * a bar rendered at its container's full width: 0 of 0 drawn as complete.
-       */
-      for (const bar of screen.getAllByTestId('counter-bar')) {
-        expect((bar as HTMLElement).style.width).toBe('0%');
-      }
+      expect(screen.queryByTestId('counter-bar')).toBeNull();
+      expect(document.body.textContent).not.toMatch(/\d+\s+of\s+\d+/);
     });
 
   it('links to the range at its NEW path, not at the module root', async () => {

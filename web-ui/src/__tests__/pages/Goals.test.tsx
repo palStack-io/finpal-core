@@ -917,9 +917,7 @@ describe('Goals page — the card opens the editor, and delete asks first', () =
 // C1c — the learnPal banner and the per-goal strip
 // ---------------------------------------------------------------------------
 
-const STRIP = {
-  read: 3,
-  total: 4,
+const STRIP = { read: 3, has_lessons: true,
   next: { slug: 'avalanche-vs-snowball', title: 'Avalanche or snowball',
           unlock_at_progress: 0.25, gear_slug: 'compass' },
   gear: [
@@ -946,7 +944,7 @@ const RANGE = {
     heading: "What you're building", unit: 'still to save', total: 0, peaks: [],
   },
   ground: { total: 1600, recurring: 1565, minimums: 35 },
-  lessons: { read: 3, total: 8 },
+  lessons: { read: 3 },
   kit: STRIP.gear,
 };
 
@@ -1008,7 +1006,7 @@ describe('Goals page — learnPal is ON', () => {
     mockGoals([PAYOFF_GOAL], [], RANGE);
     render(<MemoryRouter><Goals /></MemoryRouter>);
     await screen.findByTestId('range-banner');
-    expect(screen.getByText(/3 of 8 lessons read/)).toBeInTheDocument();
+    expect(screen.getByText(/3 lessons read/)).toBeInTheDocument();
     expect(screen.getAllByText(/Avalanche or snowball/).length).toBeGreaterThan(0);
   });
 
@@ -1024,7 +1022,9 @@ describe('Goals page — learnPal is ON', () => {
     mockGoals([PAYOFF_GOAL], [], RANGE);
     render(<MemoryRouter><Goals /></MemoryRouter>);
     const strip = await screen.findByTestId('goal-strip-1');
-    expect(strip).toHaveTextContent('3 of 4');
+    // *** THE FRACTION IS GONE (decision 5). *** It read `3 of 4`; nobody
+    // chose 4. Asserted as an ABSENCE, because that is the whole change.
+    expect(strip).not.toHaveTextContent(/\d+ of \d+/);
     // Locked gear is SHOWN at reduced opacity, not omitted: the row is what the
     // user is working towards, and a strip that grew an icon at a time would
     // never show the shape of it.
@@ -1035,7 +1035,7 @@ describe('Goals page — learnPal is ON', () => {
   it('says so honestly when a goal has no lesson yet', async () => {
     const bare = { ...RANGE, cost: { ...RANGE.cost, peaks: [{
       ...RANGE.cost.peaks[0],
-      strip: { read: 0, total: 2, next: null, gear: [] },
+      strip: { read: 0, has_lessons: true, next: null, gear: [] },
     }] } };
     mockGoals([PAYOFF_GOAL], [], bare);
     render(<MemoryRouter><Goals /></MemoryRouter>);

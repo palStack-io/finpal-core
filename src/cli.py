@@ -229,6 +229,16 @@ def create_default_currencies():
         {'code': 'NOK', 'name': 'Norwegian Krone', 'symbol': 'kr', 'rate_to_base': 0.093},
         {'code': 'DKK', 'name': 'Danish Krone', 'symbol': 'kr', 'rate_to_base': 0.15},
         {'code': 'PLN', 'name': 'Polish Zloty', 'symbol': 'zł', 'rate_to_base': 0.25},
+
+        # *** MOBILE'S PICKER HAS OFFERED THESE TWO SINCE IT SHIPPED AND THE
+        # TABLE HAD NEITHER (D-215). *** `users.default_currency_code` is a
+        # foreign key, so choosing Turkish Lira in Settings answered 500 on the
+        # live demo and changed nothing. Reaches every existing stack on the
+        # next deploy without a separate correction, because
+        # `_seed_reference_data` runs on every boot and this loop inserts only
+        # what is missing.
+        {'code': 'TRY', 'name': 'Turkish Lira', 'symbol': '₺', 'rate_to_base': 0.029},
+        {'code': 'RUB', 'name': 'Russian Ruble', 'symbol': '₽', 'rate_to_base': 0.011},
     ]
 
     for curr_data in default_currencies:

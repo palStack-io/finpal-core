@@ -97,3 +97,41 @@ def test_a_card_in_credit_gets_no_payoff_sentence_either(db):
     _card(user.id, 'Overpaid', 400.0, apr=19.99)
 
     assert payoff.debt_rates('credit@test.com') is None
+
+
+def test_the_minimum_payoff_names_a_real_TIME_not_a_platitude(db):
+    """demo1's card: -800.00 at 19.99% with a 35.00 minimum.
+
+    Standard amortisation, so the figure is checkable by hand rather than being
+    whatever the code happens to produce.
+    """
+    user = UserFactory(id='clears@test.com', name='Clears')
+    _db.session.commit()
+    _card(user.id, 'Visa', -800.0, apr=19.99, minimum=35.0)
+
+    line = payoff.debt_minimums('clears@test.com')
+
+    assert line is not None
+    assert 'takes' in line and 'clear' in line, line
+    # *** 30 MONTHS, VERIFIED BY SIMULATING THE CARD MONTH BY MONTH *** rather
+    # than by trusting the formula or the code: 800 at 19.99% with a 35.00
+    # payment takes 30 payments to clear. The closed form gives 29.009, and the
+    # ceiling is right — the 30th payment is the small one. An earlier version
+    # of this test guessed 28 and the code was correct.
+    assert '2 years and 6 months' in line, line
+
+
+def test_a_minimum_THAT_NEVER_CLEARS_THE_CARD_SAYS_SO(db):
+    """*** THE HONEST ANSWER IS SOMETIMES "NEVER", AND IT IS THE MOST USEFUL
+    THING finPal CAN SAY. *** A minimum below the monthly interest means the
+    balance grows. Voice rule 11: name the condition, then name whose fault it
+    is not."""
+    user = UserFactory(id='never@test.com', name='Never')
+    _db.session.commit()
+    # 10,000 at 29.99% is ~249.92 a month in interest. A 25.00 minimum loses.
+    _card(user.id, 'Trap', -10000.0, apr=29.99, minimum=25.0)
+
+    line = payoff.debt_minimums('never@test.com')
+
+    assert 'never clears' in line, line
+    assert 'That is the product, not you.' in line, line

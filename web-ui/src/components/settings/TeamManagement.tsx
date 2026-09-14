@@ -30,7 +30,7 @@ import {
 import type { TeamMember, Invitation, TeamRole, StoredRole } from '../../types/team';
 import { apiErrorMessage } from '../../utils/apiError';
 
-/** Semantic accent colours; deliberately not variablised — see CLAUDE.md. */
+/** Semantic accent colours; deliberately not variablised — see CONTRIBUTING.md. */
 const GREEN = '#22c55e';
 const RED = '#ef4444';
 const BLUE = '#3b82f6';

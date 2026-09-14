@@ -217,3 +217,37 @@ def format_money(amount, currency_code, number_locale=None, *,
         sign = '+'
 
     return f'{sign}{symbol}{digits_only}'
+
+
+# ── THE CURRENCY CODE ITSELF ────────────────────────────────────────────────────
+
+def is_a_known_currency(code):
+    """Is this code a row in `currencies`, i.e. can a user column hold it?
+
+    *** `users.default_currency_code` AND `accounts.currency_code` ARE FOREIGN
+    KEYS, AND EVERY WRITER TOOK THE CLIENT'S WORD FOR IT (D-215). *** SQLite does
+    not enforce a foreign key unless asked to, so 2,269 green tests said nothing
+    about it; Postgres does, and both deployed stacks are Postgres. Measured on
+    the live demo before this existed: `PUT /users/profile` with
+    `default_currency_code: "TRY"` answered **500 Internal Server Error**, and
+    `POST /auth/onboarding` with the same body answered 500 *and left
+    `has_completed_onboarding` false* — so a user who picked that currency on
+    mobile's first-run screen would have been shown the wizard again on every
+    launch, for ever.
+
+    Mobile's picker has offered twenty currencies since it shipped and the table
+    is seeded with twenty-two, but the two sets are not nested: **RUB and TRY**
+    were in the picker and not in the table. They are seeded now, which is the
+    product answer; this predicate is the engineering one, because a client is
+    not the only thing that can write here — a script or a personal access token
+    can too, and D-99's rule is that a defect belongs to the server until the
+    server refuses it.
+
+    `None` is a legitimate value (the column is nullable and means "no
+    preference"), so it is not this function's business: callers check presence
+    first. Anything else that is not a row is False, including the empty string.
+    """
+    if not code:
+        return False
+    from src.models.currency import Currency
+    return Currency.query.filter_by(code=str(code).upper()).first() is not None

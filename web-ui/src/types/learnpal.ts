@@ -37,8 +37,14 @@ export interface RangeStrip {
    * predicate-gated lesson ("20 categorised transactions") has no goal behind
    * it, so counting it here would print "3 of 8" on a card where five can never
    * be opened by it.
+   *
+   * *** `total` IS GONE FROM THIS PAYLOAD (decision 5, 2026-09-14). *** The card
+   * rendered `4 of 4` from it, and nobody chose 4. It was removed from the WIRE
+   * rather than merely unrendered, so no client can rebuild it.
    */
-  total: number;
+  /** Whether this goal has ANY altitude lesson. A boolean, deliberately: it is
+   *  what the empty state needs and it is not a denominator. */
+  has_lessons: boolean;
   /** `null` when there is nothing ahead — every gate is cleared or recorded. */
   next: RangeNext | null;
   gear: RangeGear[];
@@ -74,7 +80,7 @@ export interface LearnRange {
   build: RangeScaleSide;
   ground: RangeGround;
   /** Across the whole user — includes the predicate lessons a strip excludes. */
-  lessons: { read: number; total: number };
+  lessons: { read: number };
   kit: RangeGear[];
 }
 
@@ -130,9 +136,9 @@ export interface StatsMountain {
 }
 
 export interface StatsHighest {
-  /** Index into the band ladder, 0-based. */
+  /** Index into the band ladder, 0-based. The ladder's LENGTH is deliberately
+   *  not sent: `band 4 of 6` is a denominator finPal chose (decision 5). */
   band: number;
-  band_total: number;
   mountain: StatsMountain | null;
   goal_id: number;
   goal_name: string;
@@ -187,11 +193,10 @@ export interface StatsNext {
 export interface LearnStats {
   lessons: {
     read: number;
-    total: number;
     /** How many have no prose yet. A reader must not be offered for those. */
     without_body: number;
   };
-  gear: { earned: number; total: number };
+  gear: { earned: number };
   /** `null` when no goal has a band — not band zero. */
   highest: StatsHighest | null;
   recent: StatsRecent[];

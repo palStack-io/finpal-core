@@ -61,35 +61,20 @@ const mutedStyle: React.CSSProperties = { fontSize: 13, color: 'var(--text-secon
    on 2026-09-11. `--g-ink` is theme-aware and measures 6.92 / 8.21. */
 const linkStyle: React.CSSProperties = { color: 'var(--g-ink)', fontSize: 13 };
 
-/** `read of total`, with the bar underneath. No percentage in the figure: a
- *  fraction says how much is LEFT, which a percentage does not. */
-const Counter: React.FC<{
-  eyebrow: string; read: number; total: number; note?: string;
-}> = ({ eyebrow, read, total, note }) => (
+/** A bare count. *** NO DENOMINATOR AND NO BAR — DESIGN DECISION 5. ***
+ *
+ *  This rendered `16 of 19` with a progress bar under it until 2026-09-14, on
+ *  two cards. Nobody chose 19; finPal did. A rising count is momentum, and
+ *  "16 of 19" is a report card — and the difference is the whole voice of the
+ *  product. The only progress bar finPal may draw is one whose target the user
+ *  picked themselves, which is why the gear shop has one and this does not. */
+const Tally: React.FC<{
+  eyebrow: string; read: number; note?: string;
+}> = ({ eyebrow, read, note }) => (
   <div style={{ ...cardStyle, flex: 1, minWidth: 190 }}>
     <div style={eyebrowStyle}>{eyebrow}</div>
     <div style={{ ...figureStyle, marginTop: 6 }}>
-      {read} <span style={{ fontSize: 18, color: 'var(--text-secondary)' }}>of {total}</span>
-    </div>
-    <div
-      aria-hidden="true"
-      style={{
-        marginTop: 10, height: 6, borderRadius: 3,
-        background: 'var(--surface-hover)', overflow: 'hidden',
-      }}
-    >
-      {/* `data-testid` so a test can assert the WIDTH rather than the absence of
-          the string "NaN". `width: 'NaN%'` is an invalid CSS value, so the DOM
-          drops it silently and `innerHTML` never contains it — an assertion on
-          the markup passes with the bug present, which is exactly what a
-          sabotage found here. */}
-      <div data-testid="counter-bar" style={{
-        // `total` can be 0 on an instance whose seeder has not run, and 0/0
-        // must draw an empty bar rather than `NaN%` — which is what an
-        // investments fixture shipped eight times over (D-107).
-        width: total > 0 ? `${Math.min(100, (read / total) * 100)}%` : '0%',
-        height: '100%', background: 'var(--peak-build)',
-      }} />
+      {read}
     </div>
     {note && <div style={{ ...mutedStyle, marginTop: 8 }}>{note}</div>}
   </div>
@@ -104,7 +89,7 @@ const HighestCard: React.FC<{ stats: LearnStats }> = ({ stats }) => {
   if (!highest || !highest.mountain) {
     return (
       <div style={{ ...cardStyle, flex: 2, minWidth: 260 }}>
-        <div style={eyebrowStyle}>Highest you have reached</div>
+        <div style={eyebrowStyle}>The hardest this ever got</div>
         <div style={{ ...figureStyle, marginTop: 6, fontSize: 20 }}>Nothing yet</div>
         <p style={{ ...mutedStyle, marginTop: 8 }}>
           A goal is drawn as a mountain, sized by what it asks of you.{' '}
@@ -122,13 +107,19 @@ const HighestCard: React.FC<{ stats: LearnStats }> = ({ stats }) => {
       style={{ ...cardStyle, flex: 2, minWidth: 260, display: 'flex', gap: 18 }}
     >
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={eyebrowStyle}>Highest you have reached</div>
+        {/* *** "THE HARDEST THIS EVER GOT", NOT "HIGHEST YOU HAVE REACHED".
+            *** `hardest_band` is computed from `peak_magnitude` and never reads
+            progress, so a brand-new goal with a $100,000 target and nothing
+            saved comes back as Everest — proven. The FIGURE is right and
+            useful; the old heading told somebody who had done nothing that they
+            had reached the top of the world. This is what the column actually
+            means, and what the mountain's own summit note already says. */}
+        <div style={eyebrowStyle}>The hardest this ever got</div>
         <div style={{ ...figureStyle, marginTop: 6, fontSize: 24 }}>
           {highest.mountain.name}
         </div>
         <div style={mutedStyle}>
-          {highest.mountain.elevation_m.toLocaleString()} m · band{' '}
-          {highest.band + 1} of {highest.band_total}
+          {highest.mountain.elevation_m.toLocaleString()} m
         </div>
         <p style={{ ...mutedStyle, marginTop: 10 }}>
           {/* *** "SINCE FINISHED" RATHER THAN IMPLYING IT IS STILL UNDER WAY.
@@ -274,18 +265,16 @@ export const Home: React.FC = () => {
       {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <Counter
+        <Tally
           eyebrow="Lessons read"
           read={stats.lessons.read}
-          total={stats.lessons.total}
           note={stats.lessons.without_body > 0
             ? `${stats.lessons.without_body} have no write-up yet`
             : undefined}
         />
-        <Counter
+        <Tally
           eyebrow="Gear earned"
           read={stats.gear.earned}
-          total={stats.gear.total}
         />
         <HighestCard stats={stats} />
       </div>

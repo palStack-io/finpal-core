@@ -38,7 +38,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
   }, [toast.duration, onClose]);
 
   const icons = {
-    // Semantic accents stay literal per CLAUDE.md — they read on both themes.
+    // Semantic accents stay literal per the frontend conventions — they read on both themes.
     success: <CheckCircle size={20} style={{ color: '#22c55e' }} />,
     error: <XCircle size={20} style={{ color: '#ef4444' }} />,
     warning: <AlertCircle size={20} style={{ color: '#f59e0b' }} />,

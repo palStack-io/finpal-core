@@ -120,7 +120,7 @@ def test_internal_errors_do_not_leak_exception_text(app, client, db, auth_header
                                                     monkeypatch):
     """A 500 must not hand the client the exception string.
 
-    finpal_core/CLAUDE.md: "never return str(e) to the client — log the
+    The convention (CONTRIBUTING.md): "never return str(e) to the client — log the
     exception, return a sanitized message". Exception text routinely carries
     table names, DSNs and internal hostnames.
     """

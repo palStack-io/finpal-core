@@ -158,7 +158,7 @@ export const tabular: React.CSSProperties = {
 };
 
 /**
- * Semantic accents stay literal per CLAUDE.md — they read correctly on both
+ * Semantic accents stay literal per the frontend conventions — they read correctly on both
  * themes, which is exactly why they were never variablised.
  */
 const TONE_COLOR: Record<MoneyTone, string> = {

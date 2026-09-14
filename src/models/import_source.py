@@ -1,6 +1,6 @@
 """Models for CSV import sources, learned column profiles and import batches.
 
-Per finpal_core/CLAUDE.md these must not import other model files — use
+By convention (CONTRIBUTING.md) these must not import other model files — use
 string-based relationships.
 """
 from datetime import datetime
@@ -76,6 +76,6 @@ class ImportBatch(db.Model):
     reverted_at = db.Column(db.DateTime, nullable=True)
 
     # ImportProfile lives in this same file, so this is not the cross-model
-    # import CLAUDE.md forbids. Eager-loaded because the batch history endpoint
+    # import the model conventions forbid. Eager-loaded because the batch history endpoint
     # serialises a whole page at once and would otherwise emit a query per row.
     profile = db.relationship('ImportProfile', lazy='joined')

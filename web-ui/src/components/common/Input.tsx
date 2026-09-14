@@ -29,7 +29,7 @@ export const Input: React.FC<InputProps> = ({
 
   // Inline styles with CSS variables. Previously Tailwind, so the field had a
   // fixed dark background and white text — unreadable on a light theme. Error
-  // red stays literal per CLAUDE.md.
+  // red stays literal per the frontend conventions.
   const iconStyle: React.CSSProperties = {
     position: 'absolute',
     top: 0,

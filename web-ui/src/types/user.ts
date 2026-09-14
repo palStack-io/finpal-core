@@ -11,7 +11,20 @@
  * `$`. Found via D-45, because the vacuous typecheck gate meant the resulting
  * assignment error was never reported.
  */
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR' | 'JPY' | 'CAD' | 'AUD';
+/**
+ * *** A CURRENCY CODE IS WHATEVER THE SERVER STOCKS, NOT A UNION OF SEVEN
+ * (D-217). *** This was a seven-member union while `currencies` seeded
+ * twenty-two rows and mobile's picker offered twenty — so a user who set TRY on
+ * their phone held a value this client's own type said was impossible, and the
+ * onboarding grid could only ever offer the six it hardcoded.
+ *
+ * The narrow type was never the safety it looked like: `default_currency_code`
+ * arrives from the API as a string and nothing validated it on the way in, so
+ * the union described a hope rather than a fact. The server validates it now
+ * against the foreign key (`is_a_known_currency`, D-215), which is the check
+ * that can actually be true.
+ */
+export type Currency = string;
 
 export interface ServerFeatures {
   simplefin: boolean;

@@ -82,7 +82,7 @@ const codeBlockStyle: React.CSSProperties = {
   overflowWrap: 'anywhere',
 };
 
-/** Semantic status colours; deliberately not variablised — see CLAUDE.md. */
+/** Semantic status colours; deliberately not variablised — see CONTRIBUTING.md. */
 const STATUS_COLOR: Record<AgentActionStatus, string> = {
   applied: '#22c55e',
   approved: '#22c55e',

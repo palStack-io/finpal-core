@@ -100,7 +100,7 @@
      carrying it across. */
 
   /* ── STATUS COLOURS, AND WHY THEY ARE TOKENS NOW ───────────────────────────
-     CLAUDE.md said the semantic accents "are NOT variablized — they work on both
+     The conventions said the semantic accents "are NOT variablized — they work on both
      themes". *** MEASURED, THAT IS FALSE. *** On the card, #22c55e is 2.21:1 and
      #f59e0b is 2.09:1 in light — both far below AA for the status text they
      carry, while being perfectly legible in dark. One value against two very
@@ -1039,7 +1039,7 @@ body {
   margin-bottom: 16px;
 }
 
-/* Inline validation / failure text. Semantic red stays literal per CLAUDE.md. */
+/* Inline validation / failure text. Semantic red stays literal per the conventions. */
 .fp-error-text {
   color: var(--accent-red);
   font-size: 14px;
@@ -1429,4 +1429,19 @@ body {
 .fp-two-pane > *,
 .fp-main-aside > * {
   min-width: 0;
+}
+
+/* ── The range stacks on a phone ─────────────────────────────────────────────
+   *** AT 390px THE TWO SIDES SQUEEZED INTO NARROW COLUMNS *** — one peak
+   beside a tall empty gap on the cost side, three stacked on the build side.
+   It read as broken rather than designed, and no width query existed because
+   the range shipped desktop-first. Found by capturing it at 390px during the
+   2026-09-14 walkthrough.
+
+   The DIVIDER has to go with it: a vertical hairline between two stacked
+   blocks is a line to nowhere, and the divider exists to stop the two scales
+   reading as one range — a job the vertical stack already does. */
+@media (max-width: 767px) {
+  .range-sides { flex-direction: column; gap: 22px; }
+  .range-sides > [aria-hidden='true'] { display: none; }
 }
