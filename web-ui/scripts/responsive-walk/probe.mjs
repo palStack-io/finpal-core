@@ -3,7 +3,7 @@
  * width. Exists for one job: diffing a named role class against the inline style it
  * replaces, BEFORE adopting it.
  *
- * `finpal_core/CLAUDE.md` requires this, and the reason is measured: two of the two
+ * The conventions require this, and the reason is measured: two of the two
  * role classes anyone has checked were already drifted from what the app renders
  * (`.page-title` said 28px where pages render 32px; `.fp-input` said `10px 14px`
  * where inputs render `12px`). A rule nothing references cannot be wrong, so nothing

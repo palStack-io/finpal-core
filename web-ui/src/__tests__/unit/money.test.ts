@@ -91,7 +91,7 @@ describe('formatMoney', () => {
 });
 
 describe('tone', () => {
-  it('keeps semantic accents literal, per CLAUDE.md', () => {
+  it('keeps semantic accents literal, per the frontend conventions', () => {
     expect(moneyStyle({ tone: 'income' }).color).toBe('#22c55e');
     expect(moneyStyle({ tone: 'expense' }).color).toBe('#ef4444');
   });

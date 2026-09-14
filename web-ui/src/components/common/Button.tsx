@@ -37,7 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
     lg: { padding: '12px 24px', fontSize: '18px' },
   };
 
-  // Semantic accents stay literal per CLAUDE.md, as does `color: 'white'` on a
+  // Semantic accents stay literal per the frontend conventions, as does `color: 'white'` on a
   // coloured button — both are correct on either theme.
   const VARIANTS: Record<ButtonVariant, React.CSSProperties> = {
     primary: {

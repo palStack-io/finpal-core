@@ -28,7 +28,7 @@
  * account's colour is still carried — by the tint behind the glyph — so nothing is lost but
  * the glyph's own hue, and it buys 10.84:1 at worst instead of 1.72:1.
  *
- * Note this does NOT contradict CLAUDE.md's "do not use var(--text-primary) on coloured
+ * Note this does NOT contradict the convention "do not use var(--text-primary) on coloured
  * buttons — use white". That rule is about a SOLID colour background; a 12.5% tint is a
  * near-card surface, which is exactly where the ink token belongs.
  *

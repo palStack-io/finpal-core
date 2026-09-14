@@ -222,7 +222,7 @@ def test_group_update_refuses_an_empty_name(client, headers, group_id, slash):
 
 def test_group_update_never_returns_the_exception_text(client, db, headers,
                                                        group_id, monkeypatch):
-    """CLAUDE.md forbids `str(e)` in a response, and restoring the edit route
+    """This codebase forbids `str(e)` in a response, and restoring the edit route
     made that path reachable: `update_group` delegates any settings change to
     `update_settings` and propagates its message straight into
     `jsonify({'error': message})`.

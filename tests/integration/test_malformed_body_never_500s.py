@@ -13,7 +13,7 @@ problem is what happens next: the legacy blueprints wrap their bodies in
         return jsonify({'error': str(e)}), 500
 
 and `BadRequest` is an `Exception`. So a correct **400 becomes a 500**, and the
-exception text is handed to the client — which `CLAUDE.md` forbids outright ("never
+exception text is handed to the client — which the conventions forbid outright ("never
 return `str(e)` to the client") and which the Q-01 bulk fix was supposed to have
 removed. `POST /api/v1/categories` did this for four of five malformed-body shapes.
 

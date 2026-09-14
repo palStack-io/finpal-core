@@ -1,7 +1,7 @@
 /**
  * A filled coloured button's label is white, and this is the gate.
  *
- * *** THE CONVENTION WAS WRITTEN DOWN AND VIOLATED IN FIVE PLACES. *** `CLAUDE.md`
+ * *** THE CONVENTION WAS WRITTEN DOWN AND VIOLATED IN FIVE PLACES. *** CONTRIBUTING.md
  * says plainly: *"Do not use `color: 'var(--text-primary)'` on colored
  * (green/red/blue) buttons — use `'white'`."* `Investments.tsx` even carried a
  * comment spelling out the measured ratios. Five other buttons did it anyway.

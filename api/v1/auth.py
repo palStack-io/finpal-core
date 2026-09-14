@@ -410,7 +410,8 @@ def _complete_native_signin(provider, claims, full_name=None):
         user = User.from_oidc(oidc_data, provider=provider)
     except ValueError as exc:
         # from_oidc raises ValueError only with an authored, user-facing message
-        # ("already linked to X"). Not the str(e) leak CLAUDE.md forbids.
+        # ("already linked to X"). Not a `str(e)` leak — see CONTRIBUTING.md,
+        # "Backend conventions".
         return {'error': str(exc)}, 409
     except HTTPException:
         raise

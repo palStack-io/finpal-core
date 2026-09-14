@@ -272,7 +272,7 @@ class GroupService:
             return True, 'Group updated successfully!'
         except Exception:
             db.session.rollback()
-            # Deliberately not `str(e)` — CLAUDE.md forbids returning the
+            # Deliberately not `str(e)` — this codebase never returns the
             # exception text to a client, and `update_settings` still does.
             current_app.logger.exception('Error updating group')
             return False, 'Error updating group'
@@ -314,7 +314,7 @@ class GroupService:
             db.session.rollback()
             # `update_group` delegates here and propagates this message straight
             # into `jsonify({'error': message})`, so returning `str(e)` sent
-            # SQLAlchemy's exception text to the client — which CLAUDE.md forbids
+            # SQLAlchemy's exception text to the client — which the conventions forbid
             # and which restoring the edit route made reachable.
             current_app.logger.exception('Error updating group settings')
             return False, 'Error updating settings'

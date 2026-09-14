@@ -58,7 +58,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: '500',
   marginBottom: '8px',
 };
-/** Semantic status colours; deliberately not variablised — see CLAUDE.md. */
+/** Semantic status colours; deliberately not variablised — see CONTRIBUTING.md. */
 const STATUS_COLOR: Record<ImportBatchStatus, string> = {
   success: '#22c55e',
   partial: '#f59e0b',

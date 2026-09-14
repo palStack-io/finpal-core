@@ -100,7 +100,7 @@
      carrying it across. */
 
   /* ── STATUS COLOURS, AND WHY THEY ARE TOKENS NOW ───────────────────────────
-     CLAUDE.md said the semantic accents "are NOT variablized — they work on both
+     The conventions said the semantic accents "are NOT variablized — they work on both
      themes". *** MEASURED, THAT IS FALSE. *** On the card, #22c55e is 2.21:1 and
      #f59e0b is 2.09:1 in light — both far below AA for the status text they
      carry, while being perfectly legible in dark. One value against two very
@@ -1039,7 +1039,7 @@ body {
   margin-bottom: 16px;
 }
 
-/* Inline validation / failure text. Semantic red stays literal per CLAUDE.md. */
+/* Inline validation / failure text. Semantic red stays literal per the conventions. */
 .fp-error-text {
   color: var(--accent-red);
   font-size: 14px;

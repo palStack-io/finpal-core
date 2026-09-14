@@ -1,6 +1,6 @@
 """Every query against the coin ledger, in one place.
 
-The repository pattern is established for `Account` (`CLAUDE.md`): services
+The repository pattern is established for `Account` (CONTRIBUTING.md): services
 import the repository, and route handlers never touch the ORM. These are new
 models, so they get one from the start.
 

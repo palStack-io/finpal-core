@@ -495,7 +495,7 @@ export const CategoryManagement: React.FC = () => {
 
                *** THIS EXACT FIX ALREADY EXISTED IN `Investments.tsx`, WITH THE
                SAME RATIOS WRITTEN OUT, AND THIS BUTTON DID NOT HAVE IT. *** A
-               convention recorded in one file and in CLAUDE.md ("do NOT use
+               convention recorded in one file and in CONTRIBUTING.md ("do NOT use
                `var(--text-primary)` on coloured buttons") is not adoption --
                which is D-106's shape, one layer over. The contrast walk is what
                found the second site. D-103. */
