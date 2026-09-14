@@ -40,10 +40,32 @@ export interface DataStatementPayload {
   operator_note: string;
 }
 
+export interface OrientationPanel {
+  title: string;
+  question: string;
+  answer: string;
+}
+
+export interface OrientationCopy {
+  welcome: { heading: string; lines: string[] };
+  mountains: {
+    heading: string;
+    lines: string[];
+    examples: Array<{ label: string; text: string }>;
+  };
+  game: { heading: string; panels: OrientationPanel[]; promises: string[] };
+  modules: { heading: string; lines: string[] };
+  base_camp: { heading: string; lines: string[] };
+}
+
 export interface ModuleCatalog {
   success: boolean;
   modules: ModuleCopy[];
   data: DataStatementPayload;
+  orientation: OrientationCopy;
+  /** The three acts base camp offers — slug and title only. NO ceiling: it is a
+   *  denominator finPal chose and stays on the server (decision 5). */
+  first_acts: Array<{ slug: string; title: string }>;
 }
 
 export const onboardingService = {

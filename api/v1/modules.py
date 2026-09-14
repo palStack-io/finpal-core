@@ -30,7 +30,9 @@ import logging
 
 from flask_restx import Namespace, Resource
 
-from src.services.onboarding.copy import DATA_STATEMENT, MODULE_COPY
+from src.services.onboarding.copy import (
+    DATA_STATEMENT, MODULE_COPY, ORIENTATION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,4 +88,28 @@ class ModuleCatalog(Resource):
             # The key is `data` because that is what the user calls it. The
             # client renders heading + lines verbatim and adds nothing.
             'data': DATA_STATEMENT,
+            # The five orientation screens. Same reasoning as the module copy:
+            # a client holding it could only be corrected by shipping.
+            'orientation': ORIENTATION,
+            'first_acts': _first_acts(),
         }
+
+
+def _first_acts():
+    """The three acts base camp offers, taken from the REGISTRY.
+
+    *** DERIVED, NOT RETYPED, SO THE CLOSING SCREEN CANNOT PROMISE AN ACT THAT
+    NO LONGER EXISTS. *** These are the three highest-ceiling UNIVERSAL acts —
+    universal because base camp's audience is a user with no data at all, and a
+    conditional act ("know what your debt costs") is dormant for someone with no
+    cards and would read as a task they are failing (§4.2.1).
+
+    *** THE CEILING IS NOT SENT. *** It is a denominator finPal chose, and
+    decision 5 forbids one unless the user picked the target; it only orders the
+    list here. The title is a statement of what to do, which is all the screen
+    needs.
+    """
+    from src.services.literacy.acts import ACTS
+    universal = [a for a in ACTS.values() if a.universal]
+    universal.sort(key=lambda a: -a.ceiling)
+    return [{'slug': a.slug, 'title': a.title} for a in universal[:3]]

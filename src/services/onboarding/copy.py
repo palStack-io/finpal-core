@@ -78,3 +78,101 @@ MODULE_COPY = {
         'gives': 'nothing to collect — it just answers the question',
     },
 }
+
+
+# *** THE ORIENTATION PROSE IS THE SERVER'S TOO, FOR THE REASON THE MODULE COPY
+# IS. *** Five screens of product explanation are exactly the copy most likely
+# to need a reword after a real person reads it, and mobile cannot reword
+# anything without a store build. One source, both clients, no second route.
+#
+# *** NOT ONE FIGURE ANYWHERE IN HERE, AND A TEST ENFORCES IT. *** §6 of the
+# design spec forbids inventing one, and a first-run screen has NO DATA to
+# interpolate: the user has not entered anything yet. That is why the mountain
+# examples describe what the height MEANS rather than showing a height — a
+# plausible "£4,200 to go" on screen two would be a number finPal made up, on
+# the screen whose whole job is to establish that the numbers are the user's.
+ORIENTATION = {
+    'welcome': {
+        'heading': 'finPal is for making the numbers true.',
+        'lines': [
+            'Most money apps start by telling you what to do. This one starts '
+            'by getting your own figures straight, because almost every '
+            'decision people regret was made on a number they had wrong.',
+            # Voice rule 11, in the second paragraph — deliberately.
+            'Rent, food and borrowing have outrun wages, and no app fixes '
+            'that. What finPal can do is show you your own position without '
+            'flattering it or scolding you for it.',
+        ],
+    },
+    'mountains': {
+        'heading': 'Anything you are working towards is drawn as a mountain.',
+        'lines': [
+            'The height is the size of the problem, not how hard you have '
+            'tried — so a mountain never shrinks because you had a bad month, '
+            'and never grows to make a point.',
+        ],
+        # *** MARKED AS EXAMPLES, AND CARRYING NO AMOUNTS. *** A new user has no
+        # goals, so anything shown here is illustrative; saying so is cheaper
+        # than the alternative, which is a user believing finPal already knows
+        # something about them.
+        'examples': [
+            {'label': 'Example',
+             'text': 'Paying off a card is a mountain whose height is what the '
+                     'debt is costing you every month.'},
+            {'label': 'Example',
+             'text': 'Saving for something is a mountain whose height is what '
+                     'is still left to save.'},
+        ],
+    },
+    # Step 3 is the one this whole flow exists for. Four panels, each answering
+    # a DIFFERENT question — if two answered the same one, the user would be
+    # left to guess which word meant which thing.
+    'game': {
+        'heading': 'Four different things, four different questions.',
+        'panels': [
+            {'title': 'Mountains', 'question': 'What am I climbing?',
+             'answer': 'Your goals, at the size of what they ask. Drawn from '
+                       'your money and nothing else.'},
+            {'title': 'Coins', 'question': 'What do I earn?',
+             'answer': 'Coins come for telling finPal the truth about your '
+                       'money — naming an account, recording a rate. The '
+                       'reward and the benefit are the same act.'},
+            {'title': 'Gear', 'question': 'What do I buy?',
+             'answer': 'Kit for your climber, bought with coins. It looks '
+                       'good and it gates nothing, ever.'},
+            {'title': 'Badges', 'question': 'What am I given?',
+             'answer': 'For reading a lesson. Given rather than bought, which '
+                       'is why a badge is a stamped disc and gear is '
+                       'equipment.'},
+        ],
+        # *** EACH PROMISE IS ENFORCED STRUCTURALLY RATHER THAN BY POLICY,
+        # WHICH IS WHAT MAKES IT SAFE TO PRINT. *** The ratchet means an award
+        # cannot be revoked; decision 5 means the only denominator is a price
+        # the user chose; coverage is computed from the user's own money, not
+        # from lessons read; and every act is weighted by what the user DID.
+        'promises': [
+            'Nothing is ever taken away. No streak to break, no score to decay.',
+            'No score you did not ask for. The only progress bar is one whose '
+            'target you chose.',
+            'Studying cannot flatter your finances. Only your actual money '
+            'moves a mountain.',
+            'You are never rewarded for your circumstances — only for what '
+            'you did.',
+        ],
+    },
+    'modules': {
+        'heading': 'Two optional parts, both on.',
+        'lines': [
+            'You can turn either off now or later, in Settings. Off means '
+            'hidden, not lost — nothing you have earned goes away.',
+        ],
+    },
+    'base_camp': {
+        'heading': 'You are at base camp.',
+        'lines': [
+            'Nothing here is locked. These are simply the three things that '
+            'tell finPal the most about your position, and each one pays '
+            'coins the moment it is true.',
+        ],
+    },
+}

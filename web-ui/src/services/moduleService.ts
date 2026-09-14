@@ -11,12 +11,25 @@ import { api } from './api';
  * Before this, the toggle wrote `module_hidden_${slug}` to `localStorage` — a
  * per-BROWSER hide that did not follow the user to another device and that
  * mobile could not see at all.
+ *
+ * *** THE PATHS BELOW ARE ABSOLUTE, AND THEY WERE NOT UNTIL 2026-09-14 — D-211.
+ * *** This file asked for `/users/module-preferences`, and `api`'s `baseURL` is
+ * the EMPTY STRING in this client, so the request went to the SPA's own origin
+ * and Vite answered **200 with index.html**. `response.data.hidden` on an HTML
+ * string is `undefined`, the `?? []` turned that into "nothing is hidden", and
+ * `setVisible` reported success having written nothing. So hiding a module from
+ * Settings has never worked since it shipped in #172 — and #172 REPLACED a
+ * localStorage hide that did work, so the feature went backwards.
+ *
+ * Measured on the live demo: `/users/module-preferences` → **200 (HTML)**,
+ * `/api/v1/users/module-preferences` → **401**. Identical to the `/coins` bug
+ * found hours earlier; the `??` fallback is what made this one silent.
  */
 export const moduleService = {
   /** Slugs this user has hidden. */
   async getHidden(): Promise<string[]> {
     const response = await api.get<{ success: boolean; hidden: string[] }>(
-      '/users/module-preferences');
+      '/api/v1/users/module-preferences');
     return response.data.hidden ?? [];
   },
 
@@ -26,7 +39,7 @@ export const moduleService = {
    */
   async setVisible(slug: string, visible: boolean): Promise<string[]> {
     const response = await api.put<{ success: boolean; hidden: string[] }>(
-      `/users/module-preferences/${slug}`, { visible });
+      `/api/v1/users/module-preferences/${slug}`, { visible });
     return response.data.hidden ?? [];
   },
 };

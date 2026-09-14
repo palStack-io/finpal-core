@@ -17,12 +17,20 @@ import { useDataStatement } from '../../hooks/useDataStatement';
  * would defeat the reason the prose lives on the server at all.
  */
 export const DataStatement: React.FC<{
+  /**
+   * *** THE ONBOARDING SHELL IS A FIXED DARK GRADIENT IN BOTH THEMES (D-212),
+   * SO THE THEME TOKENS ARE WRONG THERE. *** Without this, the panel rendered
+   * near-white with dark ink on a dark card in LIGHT theme: legible, and
+   * visually a hole punched in the screen. These four values are measured on
+   * that shell — #ffffff 15.37:1, #cbd5e1 10.35:1, #94a3b8 5.99:1.
+   */
+  onDarkShell?: boolean;
   /** Settings shows the operator caveat; onboarding does not — on first run the
    *  user has not yet decided whose server this is, and the sentence reads as a
    *  disclaimer stapled to a promise. */
   showOperatorNote?: boolean;
   compact?: boolean;
-}> = ({ showOperatorNote = false, compact = false }) => {
+}> = ({ showOperatorNote = false, compact = false, onDarkShell = false }) => {
   const { data } = useDataStatement();
   if (!data) return null;
 
@@ -31,8 +39,10 @@ export const DataStatement: React.FC<{
       aria-label="Where your data lives"
       style={{
         padding: compact ? '18px 20px' : '24px 26px',
-        background: 'var(--surface-hover)',
-        border: '1px solid var(--border-light)',
+        background: onDarkShell ? 'rgba(148, 163, 184, 0.08)' : 'var(--surface-hover)',
+        border: onDarkShell
+          ? '1px solid rgba(148, 163, 184, 0.22)'
+          : '1px solid var(--border-light)',
         borderRadius: '12px',
         marginBottom: '24px',
       }}
@@ -41,7 +51,7 @@ export const DataStatement: React.FC<{
         style={{
           fontSize: compact ? '18px' : '21px',
           fontWeight: 700,
-          color: 'var(--text-primary)',
+          color: onDarkShell ? '#ffffff' : 'var(--text-primary)',
           margin: '0 0 12px',
           lineHeight: 1.25,
         }}
@@ -54,7 +64,7 @@ export const DataStatement: React.FC<{
           style={{
             fontSize: '14.5px',
             lineHeight: 1.6,
-            color: 'var(--text-secondary)',
+            color: onDarkShell ? '#cbd5e1' : 'var(--text-secondary)',
             margin: '0 0 10px',
           }}
         >
@@ -72,10 +82,12 @@ export const DataStatement: React.FC<{
             // duplication by inventing a third token: measured 5.45:1 light and
             // 6.58:1 dark on `--surface-hover`, both AA, and a genuinely
             // lighter grey would not be.
-            color: 'var(--text-muted)',
+            color: onDarkShell ? '#94a3b8' : 'var(--text-muted)',
             margin: '14px 0 0',
             paddingTop: '14px',
-            borderTop: '1px solid var(--border-light)',
+            borderTop: onDarkShell
+              ? '1px solid rgba(148, 163, 184, 0.22)'
+              : '1px solid var(--border-light)',
           }}
         >
           {data.operator_note}

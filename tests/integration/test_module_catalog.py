@@ -104,3 +104,76 @@ def test_the_copy_module_is_the_only_place_the_prose_is_spelled(slug):
         assert needle not in path.read_text(encoding='utf-8'), (
             f'{path} spells out {slug} copy that belongs only in '
             f'src/services/onboarding/copy.py')
+
+
+def test_the_orientation_screens_are_all_served(client):
+    """Five screens, and each carries what its client renders.
+
+    *** A MISSING SCREEN RENDERS AN EMPTY STEP, NOT AN ERROR *** — the wizard
+    would advance onto blank space — so the shape is asserted rather than
+    assumed.
+    """
+    orientation = client.get('/api/v1/modules/catalog').get_json()['orientation']
+
+    assert list(orientation) == ['welcome', 'mountains', 'game', 'modules', 'base_camp']
+    for name in ('welcome', 'mountains', 'modules', 'base_camp'):
+        assert orientation[name]['heading']
+        assert orientation[name]['lines']
+
+    # Step 3 is the one the flow exists for: four panels, four DIFFERENT
+    # questions. Two panels answering the same question would leave the user to
+    # guess which word means which thing, which is the confusion this replaces.
+    panels = orientation['game']['panels']
+    assert len(panels) == 4
+    assert {p['title'] for p in panels} == {'Mountains', 'Coins', 'Gear', 'Badges'}
+    questions = [p['question'] for p in panels]
+    assert len(set(questions)) == 4, questions
+    assert len(orientation['game']['promises']) == 4
+
+
+def test_no_figure_anywhere_in_the_orientation(client):
+    """*** §6: NEVER INVENT A FIGURE, AND A FIRST-RUN SCREEN HAS NONE TO SHOW.
+
+    *** The user has entered nothing, so any digit here is one finPal made up —
+    on the very screens whose job is to establish that the numbers are theirs.
+    That is why the mountain examples describe what a height MEANS instead of
+    showing one.
+    """
+    payload = client.get('/api/v1/modules/catalog').get_json()
+    prose = str(payload['orientation'])
+    digits = sorted({ch for ch in prose if ch.isdigit()})
+    assert not digits, f'orientation carries the digits {digits}'
+
+
+def test_the_mountain_examples_are_marked_as_examples(client):
+    """A new user has no goals, so anything shown is illustrative.
+
+    Unlabelled, it reads as something finPal already knows about them.
+    """
+    mountains = client.get('/api/v1/modules/catalog').get_json()['orientation']['mountains']
+    assert len(mountains['examples']) == 2
+    for example in mountains['examples']:
+        assert example['label'] == 'Example'
+        assert example['text']
+
+
+def test_base_camp_offers_three_universal_acts_from_the_registry(client):
+    """*** DERIVED FROM `ACTS`, SO THE SCREEN CANNOT PROMISE A RETIRED ACT. ***
+
+    Universal only: base camp's audience is a user with no data, and a
+    conditional act is DORMANT for them (§4.2.1) — offering "know what your debt
+    costs" to somebody with no cards is a task they cannot do.
+    """
+    from src.services.literacy.acts import ACTS
+
+    acts = client.get('/api/v1/modules/catalog').get_json()['first_acts']
+    assert len(acts) == 3
+    for act in acts:
+        assert act['slug'] in ACTS
+        assert ACTS[act['slug']].universal, f"{act['slug']} is conditional"
+        assert act['title'] == ACTS[act['slug']].title
+
+    # *** NO CEILING ON THE WIRE. *** It orders the list on the server and stays
+    # there: a ceiling is a denominator finPal chose, and decision 5 permits one
+    # only when the user picked the target.
+    assert all('ceiling' not in act for act in acts)

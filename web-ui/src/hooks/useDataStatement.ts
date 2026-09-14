@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import { onboardingService, type DataStatementPayload, type ModuleCopy } from '../services/onboardingService';
+import {
+  onboardingService,
+  type DataStatementPayload,
+  type ModuleCatalog,
+  type ModuleCopy,
+} from '../services/onboardingService';
 
 /**
  * The catalogue, fetched once per mount.
@@ -13,6 +18,7 @@ import { onboardingService, type DataStatementPayload, type ModuleCopy } from '.
 export function useDataStatement() {
   const [data, setData] = useState<DataStatementPayload | null>(null);
   const [modules, setModules] = useState<ModuleCopy[]>([]);
+  const [catalog, setCatalog] = useState<ModuleCatalog | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -22,6 +28,7 @@ export function useDataStatement() {
         if (!alive) return;
         setData(catalog.data ?? null);
         setModules(catalog.modules ?? []);
+        setCatalog(catalog);
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
@@ -32,5 +39,5 @@ export function useDataStatement() {
     };
   }, []);
 
-  return { data, modules };
+  return { data, modules, catalog };
 }

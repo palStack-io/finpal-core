@@ -9,6 +9,42 @@ import { DollarSign, Globe, Bell, Smile, ChevronRight, ChevronLeft } from 'lucid
 import { apiErrorMessage } from '../utils/apiError';
 import { NUMBER_FORMATS } from '../constants/numberFormats';
 import { tabular } from '../styles/money';
+import { Orientation } from '../components/onboarding/Orientation';
+import { BaseCamp } from '../components/onboarding/BaseCamp';
+
+/**
+ * *** THIS PAGE'S SHELL IS A FIXED DARK GRADIENT IN BOTH THEMES, SO ITS TEXT
+ * CANNOT USE THE THEME TOKENS — D-212. ***
+ *
+ * Thirteen places read `var(--text-muted)` on a card painted
+ * `rgba(30, 41, 59, 0.8)` over `#0f172a → #1e293b`. In DARK that token is
+ * `#9CB3A3` and measures 6.87:1; in LIGHT it is `#56685D` and measures
+ * **2.59:1 — a WCAG failure on the first screen a new user sees**. (`
+ * var(--text-primary)` would have been 1.08:1, which is invisible; nothing used
+ * it, which is the only reason this was a legibility bug rather than a blank
+ * page.)
+ *
+ * The fix is not to variablise the shell: it is deliberately dark, like a
+ * marketing screen, and the rest of the file already uses explicit light values
+ * (`#ffffff` at 15.37:1, `#94a3b8` at 5.99:1) for exactly that reason. So the
+ * muted role gets an explicit light value too, measured on the same surface.
+ *
+ * *** WHY NO GATE SAW IT: the onboarding page is not in the contrast walk. ***
+ * The walk captures 21 routes and this is not one of them — it needs an
+ * unauthenticated, mid-wizard state no fixture produces — so every pair on it
+ * has always been unmeasured. `onboardingContrast.test.ts` now computes them
+ * from the values in the file.
+ */
+const ONBOARDING_MUTED = '#94a3b8';   // 5.99:1 on this page's card. Measured.
+/**
+ * The boundary of an UNSELECTED option in the currency / timezone / emoji
+ * grids. It was `#334155` — **1.48:1** against this page's card, so a grid of
+ * choosable cards barely read as controls at all; selected ones are bordered
+ * `#15803d`, so the contrast between the two states carried the whole meaning.
+ * `#64748b` measures **3.23:1**, which clears WCAG 1.4.11's 3:1 floor for a UI
+ * boundary, and is a value this file already used for muted text.
+ */
+const ONBOARDING_LINE = '#64748b';
 
 const timezones = [
   'America/New_York',
@@ -36,6 +72,20 @@ export const Onboarding: React.FC = () => {
   const { updateUser } = useAuthStore();
   const { showToast } = useToast();
   const [step, setStep] = useState(1);
+  /**
+   * *** ORIENT, THEN CONFIGURE, THEN BASE CAMP — one of the five onboarding
+   * decisions (2026-09-12). *** This wizard used to open by asking for a
+   * currency, a timezone, notification preferences and an emoji before saying
+   * what finPal was for. A user who signed up ninety seconds ago cannot judge
+   * any of those, and the four words the product runs on — mountains, coins,
+   * gear, badges — were left to be learned by guessing.
+   *
+   * Three phases rather than nine steps in one counter: the existing four
+   * configure steps are untouched, orientation is four screens in front of
+   * them, and base camp is the closing screen that used to be a "Complete"
+   * button. `POST /auth/onboarding` still fires exactly once, from base camp.
+   */
+  const [phase, setPhase] = useState<'orient' | 'configure' | 'basecamp'>('orient');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<OnboardingData>({
     default_currency_code: 'USD',
@@ -93,7 +143,11 @@ export const Onboarding: React.FC = () => {
       });
 
       showToast('Welcome to ' + branding.appName + '!', 'success');
-      navigate('/dashboard');
+      // *** NOT `navigate` — BASE CAMP IS THE LAST SCREEN OF THIS FLOW. ***
+      // The preferences are saved and `has_completed_onboarding` is true, so a
+      // refresh here lands in the app; the user still gets told where they are
+      // before the dashboard's empty state arrives unexplained.
+      setPhase('basecamp');
     } catch (error: any) {
       console.error('Onboarding error:', error);
       showToast(
@@ -168,7 +222,7 @@ export const Onboarding: React.FC = () => {
             }}>
               Welcome to {branding.appName}
             </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>
               Let's get you set up in just a few steps
             </p>
 
@@ -207,7 +261,7 @@ export const Onboarding: React.FC = () => {
                 background: 'transparent',
                 border: '1px solid rgba(148, 163, 184, 0.3)',
                 borderRadius: '0.5rem',
-                color: 'var(--text-muted)',
+                color: ONBOARDING_MUTED,
                 fontSize: '0.875rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
@@ -227,25 +281,48 @@ export const Onboarding: React.FC = () => {
             </button>
           </div>
 
+          {/* *** ORIENTATION AND BASE CAMP REPLACE THE WHOLE STEP MACHINERY,
+              RATHER THAN BECOMING STEPS 1-4 AND 9 OF IT. *** Nine positions in
+              one counter would have meant printing "Step 6 of 9" on the screen
+              that promises "no score you did not ask for" — and the orientation
+              screens have no Back/Next semantics in common with a form. Each
+              phase brings its own navigation; only the configure phase keeps
+              the original wizard's. */}
+          {phase === 'orient' && (
+            <Orientation onDone={() => setPhase('configure')} />
+          )}
+
+          {phase === 'basecamp' && (
+            <BaseCamp onStart={() => navigate('/dashboard')} />
+          )}
+
+          {phase === 'configure' && (
+          <>
           {/* Progress Bar */}
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Step {step} of 4</span>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{Math.round((step / 4) * 100)}%</span>
-            </div>
-            <div style={{
-              height: '0.5rem',
-              background: 'rgba(51, 65, 85, 0.5)',
-              borderRadius: '9999px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                height: '100%',
-                background: 'linear-gradient(to right, #15803d, #fbbf24)',
-                width: `${(step / 4) * 100}%`,
-                transition: 'width 0.3s ease'
-              }}></div>
-            </div>
+          {/* *** A DOT STRIP, NOT "STEP 2 OF 4" AND NOT A PERCENTAGE — SPEC
+              §10.5. *** A wizard counter is still a denominator finPal chose,
+              and `50%` is a score for filling in a form. The dots say where you
+              are without printing a fraction; the `aria-label` carries the
+              position for a screen reader, which needs the number even where
+              the screen must not show one. Same shape as the orientation's
+              strip, deliberately: it is one flow. */}
+          <div
+            role="group"
+            aria-label={`Step ${step} of 4`}
+            style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginBottom: '2rem' }}
+          >
+            {[1, 2, 3, 4].map((n) => (
+              <span
+                key={n}
+                style={{
+                  width: n === step ? '1.5rem' : '0.5rem',
+                  height: '0.5rem',
+                  borderRadius: '9999px',
+                  background: n <= step ? '#86efac' : 'rgba(148, 163, 184, 0.22)',
+                  transition: 'width 0.2s ease',
+                }}
+              />
+            ))}
           </div>
 
           {/* Step Content */}
@@ -269,7 +346,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Choose Your Currency
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: ONBOARDING_MUTED, margin: 0 }}>
                       This will personalize your experience
                     </p>
                   </div>
@@ -290,7 +367,7 @@ export const Onboarding: React.FC = () => {
                         style={{
                           padding: '1.5rem',
                           borderRadius: '0.75rem',
-                          border: isSelected ? '2px solid #15803d' : '2px solid #334155',
+                          border: isSelected ? '2px solid #15803d' : `2px solid ${ONBOARDING_LINE}`,
                           background: isSelected ? 'rgba(21, 128, 61, 0.1)' : 'rgba(15, 23, 42, 0.5)',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
@@ -298,20 +375,20 @@ export const Onboarding: React.FC = () => {
                         }}
                         onMouseEnter={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = '#475569';
+                            e.currentTarget.style.borderColor = ONBOARDING_MUTED;   // 5.99:1 — hover is MORE visible than rest
                             e.currentTarget.style.background = 'rgba(15, 23, 42, 0.7)';
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = '#334155';
+                            e.currentTarget.style.borderColor = ONBOARDING_LINE;
                             e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
                           }
                         }}
                       >
                         <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{currencyBranding.currencySymbol}</div>
                         <div style={{ color: '#ffffff', fontWeight: '600', marginBottom: '0.25rem' }}>{currency}</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{currencyBranding.appName}</div>
+                        <div style={{ color: ONBOARDING_MUTED, fontSize: '0.75rem' }}>{currencyBranding.appName}</div>
                       </button>
                     );
                   })}
@@ -324,7 +401,7 @@ export const Onboarding: React.FC = () => {
                   <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#ffffff', marginBottom: '0.25rem' }}>
                     How should amounts look?
                   </h3>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  <p style={{ fontSize: '0.8125rem', color: ONBOARDING_MUTED, marginBottom: '0.75rem' }}>
                     You can change this later in Settings.
                   </p>
                   <div style={{ display: 'grid', gap: '0.5rem' }}>
@@ -350,7 +427,7 @@ export const Onboarding: React.FC = () => {
                           <span style={{ ...tabular, fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>
                             {format.label}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '0.75rem', color: ONBOARDING_MUTED }}>
                             {format.hint}
                           </span>
                         </button>
@@ -380,7 +457,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Select Your Timezone
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: ONBOARDING_MUTED, margin: 0 }}>
                       For accurate transaction timing
                     </p>
                   </div>
@@ -400,7 +477,7 @@ export const Onboarding: React.FC = () => {
                         style={{
                           padding: '1rem',
                           borderRadius: '0.5rem',
-                          border: isSelected ? '2px solid #15803d' : '2px solid #334155',
+                          border: isSelected ? '2px solid #15803d' : `2px solid ${ONBOARDING_LINE}`,
                           background: isSelected ? 'rgba(21, 128, 61, 0.1)' : 'rgba(15, 23, 42, 0.5)',
                           cursor: 'pointer',
                           textAlign: 'left',
@@ -409,13 +486,13 @@ export const Onboarding: React.FC = () => {
                         }}
                         onMouseEnter={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = '#475569';
+                            e.currentTarget.style.borderColor = ONBOARDING_MUTED;   // 5.99:1 — hover is MORE visible than rest
                             e.currentTarget.style.background = 'rgba(15, 23, 42, 0.7)';
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = '#334155';
+                            e.currentTarget.style.borderColor = ONBOARDING_LINE;
                             e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
                           }
                         }}
@@ -447,7 +524,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Notification Preferences
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: ONBOARDING_MUTED, margin: 0 }}>
                       Stay updated with what matters to you
                     </p>
                   </div>
@@ -467,7 +544,7 @@ export const Onboarding: React.FC = () => {
                         width: '100%',
                         padding: '1rem',
                         borderRadius: '0.5rem',
-                        border: '2px solid #334155',
+                        border: `2px solid ${ONBOARDING_LINE}`,
                         background: 'rgba(15, 23, 42, 0.5)',
                         cursor: 'pointer',
                         display: 'flex',
@@ -476,23 +553,23 @@ export const Onboarding: React.FC = () => {
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#475569';
+                        e.currentTarget.style.borderColor = ONBOARDING_MUTED;   // 5.99:1 — hover is MORE visible than rest
                         e.currentTarget.style.background = 'rgba(15, 23, 42, 0.7)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#334155';
+                        e.currentTarget.style.borderColor = ONBOARDING_LINE;
                         e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
                       }}
                     >
                       <div style={{ textAlign: 'left' }}>
                         <div style={{ color: '#ffffff', fontWeight: '500', marginBottom: '0.25rem' }}>{item.label}</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{item.description}</div>
+                        <div style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>{item.description}</div>
                       </div>
                       <div style={{
                         height: '1.5rem',
                         width: '2.75rem',
                         borderRadius: '9999px',
-                        background: formData.notifications[item.key] ? '#15803d' : '#475569',
+                        background: formData.notifications[item.key] ? '#15803d' : ONBOARDING_LINE,
                         transition: 'background 0.2s',
                         position: 'relative',
                         flexShrink: 0
@@ -533,7 +610,7 @@ export const Onboarding: React.FC = () => {
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ffffff', marginBottom: '0.25rem' }}>
                       Pick Your Emoji
                     </h2>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+                    <p style={{ fontSize: '0.875rem', color: ONBOARDING_MUTED, margin: 0 }}>
                       Choose an emoji as your profile picture
                     </p>
                   </div>
@@ -555,7 +632,7 @@ export const Onboarding: React.FC = () => {
                   }}>
                     {formData.profile_emoji}
                   </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>This will appear as your profile picture</p>
+                  <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>This will appear as your profile picture</p>
                 </div>
 
                 <div style={{
@@ -572,7 +649,7 @@ export const Onboarding: React.FC = () => {
                         style={{
                           padding: '0.75rem',
                           borderRadius: '0.75rem',
-                          border: isSelected ? '2px solid #15803d' : '2px solid #334155',
+                          border: isSelected ? '2px solid #15803d' : `2px solid ${ONBOARDING_LINE}`,
                           background: isSelected ? 'rgba(21, 128, 61, 0.1)' : 'rgba(15, 23, 42, 0.5)',
                           cursor: 'pointer',
                           fontSize: '1.75rem',
@@ -585,13 +662,13 @@ export const Onboarding: React.FC = () => {
                         }}
                         onMouseEnter={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = '#475569';
+                            e.currentTarget.style.borderColor = ONBOARDING_MUTED;   // 5.99:1 — hover is MORE visible than rest
                             e.currentTarget.style.background = 'rgba(15, 23, 42, 0.7)';
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = '#334155';
+                            e.currentTarget.style.borderColor = ONBOARDING_LINE;
                             e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
                           }
                         }}
@@ -611,7 +688,7 @@ export const Onboarding: React.FC = () => {
             justifyContent: 'space-between',
             marginTop: '2rem',
             paddingTop: '1.5rem',
-            borderTop: '1px solid #334155'
+            borderTop: '1px solid #64748b'
           }}>
             <button
               onClick={handleBack}
@@ -619,7 +696,7 @@ export const Onboarding: React.FC = () => {
               style={{
                 padding: '0.75rem 1.5rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #334155',
+                border: '1px solid #64748b',
                 background: 'transparent',
                 color: step === 1 ? '#64748b' : '#ffffff',
                 fontSize: '0.9375rem',
@@ -634,13 +711,13 @@ export const Onboarding: React.FC = () => {
               onMouseEnter={(e) => {
                 if (step !== 1) {
                   e.currentTarget.style.background = 'rgba(51, 65, 85, 0.3)';
-                  e.currentTarget.style.borderColor = '#475569';
+                  e.currentTarget.style.borderColor = ONBOARDING_MUTED;   // 5.99:1 — hover is MORE visible than rest
                 }
               }}
               onMouseLeave={(e) => {
                 if (step !== 1) {
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.borderColor = '#334155';
+                  e.currentTarget.style.borderColor = ONBOARDING_LINE;
                 }
               }}
             >
@@ -709,6 +786,8 @@ export const Onboarding: React.FC = () => {
               </button>
             )}
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

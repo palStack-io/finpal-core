@@ -1,3 +1,11 @@
+/*
+ * *** THIS FILE ASSERTED THE BROKEN PATH AND THEREFORE PINNED THE DEFECT
+ * (D-211, and D-63's shape). *** It was written from the implementation rather
+ * than from the route table, so `/users/module-preferences` — which resolves to
+ * the SPA's own index.html — was the expected value, and 809 green tests said
+ * the module toggle worked while it silently wrote nothing. A test that copies
+ * the code cannot contradict the code.
+ */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -109,7 +117,7 @@ describe('Settings — Modules tab', () => {
 
     // Asserted on the REQUEST BODY, not on a status code and not on localStorage.
     expect(api.put).toHaveBeenCalledWith(
-      '/users/module-preferences/pointspal', { visible: false });
+      '/api/v1/users/module-preferences/pointspal', { visible: false });
     expect(useAuthStore.getState().user?.hidden_modules).toEqual(['pointspal']);
   });
 
@@ -122,7 +130,7 @@ describe('Settings — Modules tab', () => {
     await act(async () => { fireEvent.click(screen.getByRole('switch')); });
 
     expect(api.put).toHaveBeenCalledWith(
-      '/users/module-preferences/pointspal', { visible: true });
+      '/api/v1/users/module-preferences/pointspal', { visible: true });
     expect(useAuthStore.getState().user?.hidden_modules).toEqual([]);
   });
 

@@ -744,9 +744,20 @@ class CompleteOnboarding(Resource):
             if not user:
                 return {'error': 'User not found'}, 404
 
-            data = request.get_json()
+            # *** `{}` IS A VALID BODY HERE AND `None` IS NOT — THE DISTINCTION
+            # MATTERS TO MOBILE. *** This read `if not data: 400`, and an empty
+            # JSON object is falsy in Python, so a client with nothing to change
+            # could not mark onboarding complete at all. That is precisely
+            # mobile's case: currency, timezone and notifications are set in
+            # Settings on that client, and sending defaults here would OVERWRITE
+            # whatever the user had already chosen on web — so the honest
+            # request is "I am done, change nothing".
+            #
+            # A wholly absent or unparseable body is still refused, because that
+            # is a client that failed to send what it meant to.
+            data = request.get_json(silent=True)
 
-            if not data:
+            if data is None:
                 return {'error': 'Request body is required'}, 400
 
             if 'default_currency_code' in data:
