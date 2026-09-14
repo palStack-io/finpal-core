@@ -50,3 +50,25 @@ def test_a_name_core_already_owns_is_REFUSED_not_overridden():
 def test_an_unknown_check_still_fails_closed():
     assert literacy.run_check('no_such_check', 'anyone@test.com') is False
     assert literacy.check_reason('no_such_check') is None
+
+
+def test_learnpals_predicate_reaches_the_core_registry_at_startup(app):
+    """*** A HOOK THAT IS NEVER CALLED IS D-187's SHAPE. *** The engine had zero
+    production callers while two docstrings asserted a call site. Assert on the
+    registry after a real startup, not on the manifest returning a dict.
+
+    If this fails, check `LEARNPAL_ENABLED` in the test app config: the registry
+    skips a disabled module and the predicate is then correctly absent.
+    """
+    from src.services.literacy import checks as literacy
+    assert 'has_completed_three_lessons' in literacy.CHECKS
+    assert literacy.check_reason('has_completed_three_lessons', {'n': 3}) \
+        == 'Read 3 lessons first'
+
+
+def test_the_contribution_is_the_modules_function_not_a_core_copy(app):
+    """Pins WHICH function got registered, so a future core predicate with the
+    same name cannot quietly take over the slug."""
+    from src.modules.learnpal.checks import has_completed_three_lessons
+    from src.services.literacy import checks as literacy
+    assert literacy.CHECKS['has_completed_three_lessons'] is has_completed_three_lessons

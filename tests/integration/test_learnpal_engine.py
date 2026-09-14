@@ -28,7 +28,7 @@ from src.models.budget import Budget
 from src.models.category import Category
 from src.models.goal import Goal
 from src.models.transaction import Expense
-from src.modules.learnpal import checks
+from src.services.literacy import checks
 from src.modules.learnpal.engine import (
     evaluate_for_goal, evaluate_for_user, raise_watermark, sync_all_users,
 )
