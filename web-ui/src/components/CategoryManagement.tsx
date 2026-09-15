@@ -7,6 +7,11 @@ import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from './budgets/SpendingTypeControl';
 import { StatCard } from './StatCard';
+import { PageHead } from './PageHead';
+import { formatMoney } from '../styles/money';
+import { analyticsService } from '../services/analyticsService';
+import { lastFullMonth } from '../utils/monthKeys';
+import { spendingTypeByName, splitSpendByGroup, SpendSplit } from '../utils/spendingGroups';
 
 /**
  * Where the "Hide these" choice for the suggested-categories panel lives (#125). A per-user
@@ -343,9 +348,52 @@ export const CategoryManagement: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [addingSubcategoryTo, setAddingSubcategoryTo] = useState<number | null>(null);
 
+  /**
+   * *** WHAT LAST MONTH'S SPENDING ACTUALLY SPLIT INTO. ***
+   * The page has always been able to say how categories are CLASSIFIED and
+   * never what that classification is worth, so the three-way control had no
+   * payoff on screen: a user could sort 128 categories and see no figure
+   * change anywhere. This is that figure — and it is the last COMPLETE month,
+   * because on the 3rd rent has landed and the month's groceries have not, so
+   * "fixed" would read as almost all of spending and tell the reader nothing
+   * is theirs to move.
+   *
+   * Loaded in its own effect, not folded into `loadCategories`: it is a
+   * different endpoint with a different failure mode, and a spend request that
+   * 500s must not take the category list down with it. The split simply does
+   * not render.
+   */
+  const [split, setSplit] = useState<(SpendSplit & { label: string }) | null>(null);
+
   useEffect(() => {
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    if (!categories.length) return;
+    let cancelled = false;
+    (async () => {
+      const month = lastFullMonth();
+      try {
+        // 200, not 5: this is a total, and a "top 5" would silently make every
+        // figure on the row too small. The endpoint's default is 5.
+        const rows = await analyticsService.getTopSpendingCategories(
+          200, month.start, month.end, 'expense');
+        if (cancelled) return;
+        const byName = spendingTypeByName(categories.map((c) => ({
+          id: c.id, name: c.name, parent_id: c.parent_id ?? null,
+          spending_type: (c.spending_type ?? null) as never,
+        })));
+        setSplit({ ...splitSpendByGroup(rows, byName), label: month.label });
+      } catch {
+        // Silent on purpose: the split is an extra, and an error banner over a
+        // working category list would be the page shouting about the wrong
+        // thing. `uiHonesty` forbids showing a zero here instead.
+        if (!cancelled) setSplit(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [categories]);
 
   const loadCategories = async () => {
     try {
@@ -469,17 +517,13 @@ export const CategoryManagement: React.FC = () => {
        *** THIS FILE ALREADY IMPORTED `pageContainerStyle` AND NEVER USED IT. ***
        A shared barrel import makes a page look like it adopted the shell. */
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          {/* h1, not h2 — this is the PAGE's own title and everything under it is
-              a section, so the document outline started at level 2 with no h1
-              at all. Size stays inline; nothing moves on screen. Found by
-              `every-page.spec.ts`, which walks all 21 routes — the older h1
-              check walked six and this page was not one of them. */}
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Categories</h1>
-          <p style={bodyTextStyle}>Organize your transactions with categories and subcategories</p>
-        </div>
-        <button
+      <PageHead
+        band="categories"
+        title="Categories"
+        subtitle={split
+          ? `${split.label}, your last full month. Fixed is what arrives whatever you do; flexible is what is actually yours to move.`
+          : 'Fixed is what arrives whatever you do; flexible is what is actually yours to move.'}
+        right={<button
           onClick={handleAddCategory}
           style={{
             padding: '12px 20px',
@@ -511,8 +555,87 @@ export const CategoryManagement: React.FC = () => {
         >
           <Plus size={20} />
           Add Category
-        </button>
-      </div>
+        </button>}
+      />
+
+      {/* *** THE PAYOFF FOR SORTING THEM, WHICH THIS PAGE NEVER SHOWED. ***
+          Three figures, from the last full month, in the same three groups the
+          per-row control sets. Fixed first because it is the one the reader
+          cannot change; flexible second because it is the answer to "what is
+          actually mine to move".
+
+          Every number here is joined from two payloads by category NAME,
+          because `/analytics/categories/top` carries no id. Names can collide —
+          the demo has six duplicates, one resolving to two different types — so
+          `splitSpendByGroup` refuses an ambiguous name rather than guessing,
+          and anything it could not attribute is named below rather than
+          quietly missing from a total. */}
+      {split && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1px',
+          background: 'var(--border-light)',
+          border: '1px solid var(--border-light)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          marginBottom: '24px',
+        }}>
+          {([
+            ['Fixed', split.fixed, 'var(--text-primary)', 'arrives whatever you do'],
+            ['Flexible', split.flexible, 'var(--g-ink)', 'yours to move'],
+            // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
+            // FILLS. `--kt-seg-4` is #B8884D, which measures **3.06:1** on the
+            // card in light theme — the contrast walk failed this exact pair,
+            // and `coins/_kit.css` already carries the warning with the same
+            // number on it: "#B8884D survives as --seg-4, which is a FILL and
+            // never carries a label". A gold that reads perfectly gold and
+            // fails AA is why this project measures a colour instead of
+            // matching one.
+            ['Non-monthly', split.non_monthly, 'var(--au-ink)', 'lands some months and not others'],
+          ] as const).map(([label, value, colour, note]) => (
+            <div key={label} style={{ background: 'var(--bg-card)', padding: '18px 20px' }}>
+              <div style={{
+                fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--text-secondary)', fontWeight: 600,
+              }}>{label}</div>
+              <div style={{
+                fontSize: '22px', fontWeight: 600, marginTop: '3px', color: colour,
+                fontVariantNumeric: 'tabular-nums',
+              }}>{formatMoney(value)}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {/* A zero is a fact about the month, not a gap to apologise
+                    for: nothing non-monthly landed in August. */}
+                {value === 0 ? `nothing landed in ${split.label.split(' ')[0]}` : note}
+              </div>
+            </div>
+          ))}
+          {split.unsorted > 0 && (
+            <div style={{ background: 'var(--bg-card)', padding: '18px 20px' }}>
+              <div style={{
+                fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--text-secondary)', fontWeight: 600,
+              }}>Not sorted yet</div>
+              <div style={{
+                fontSize: '22px', fontWeight: 600, marginTop: '3px',
+                color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums',
+              }}>{formatMoney(split.unsorted)}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {/* NOT folded into flexible. Unsorted means finPal does not
+                    know; calling it movable would claim the user said so. */}
+                finPal cannot say which of the three this is
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {split && split.unattributable.length > 0 && (
+        <p className="fp-hint" style={{ marginTop: '-12px', marginBottom: '24px' }}>
+          Left out of the figures above, because more than one category shares
+          the name and they are sorted differently:{' '}
+          {split.unattributable.join(', ')}.
+        </p>
+      )}
 
       {/* Stats
 

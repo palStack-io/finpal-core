@@ -48,3 +48,39 @@ export const isCurrentMonth = (key: MonthKey): boolean => {
   const start = startOfMonth(key);
   return start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth();
 };
+
+/**
+ * The last month that has actually finished, and its bounds as `YYYY-MM-DD`
+ * strings the API takes.
+ *
+ * *** WHY NOT "THIS MONTH". *** A split of fixed against flexible spending is
+ * only meaningful over a whole month: on the 3rd, rent has landed and the
+ * month's groceries have not, so "fixed" reads as 95% of everything and the
+ * page tells the user their spending is almost entirely beyond their control.
+ * The figure has to be the last COMPLETE month for the comparison to mean what
+ * it says.
+ *
+ * Built from LOCAL date parts, for the reason at the top of this file: a
+ * date-only string is UTC midnight, which west of UTC names the wrong month
+ * (D-206). `new Date(year, month, 0)` gives the last day of the previous month
+ * — including February in a leap year — without a table of month lengths.
+ */
+export function lastFullMonth(now: Date = new Date()): {
+  key: MonthKey;
+  start: string;
+  end: string;
+  label: string;
+} {
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-based; this is THIS month, so it is also the
+                                // exclusive end of the previous one.
+  const lastDay = new Date(year, month, 0); // day 0 = the day before the 1st
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const key = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}`;
+  return {
+    key,
+    start: `${key}-01`,
+    end: `${key}-${pad(lastDay.getDate())}`,
+    label: monthLabelLong(key),
+  };
+}

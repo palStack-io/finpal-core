@@ -57,6 +57,12 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
     opacity: 0.3,
     base: { d: 'M0,44 L1100,44 L1100,52 L0,52 Z', opacity: 0.5 },
   },
+  /* Categories is the longest list in the app; a mid-weight ridge keeps the
+     three-way split below it as the thing the eye lands on. */
+  categories: {
+    d: 'M0,52 L120,26 L220,52 L340,20 L450,52 L580,30 L690,52 L830,22 L930,52 L1100,36 L1100,52 Z',
+    opacity: 0.4,
+  },
   /* Rules is a list of things the user taught it — a plain ridge, mid weight. */
   rules: {
     d: 'M0,52 L130,28 L240,52 L370,22 L480,52 L620,32 L740,52 L880,24 L980,52 L1100,38 L1100,52 Z',

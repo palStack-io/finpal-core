@@ -337,6 +337,29 @@ export const pointspalHandlers = [
   // people to ignore MSW errors, and ignoring them is exactly how this suite
   // came to be non-hermetic before (#96: unmatched requests escaped to the real
   // network and passed only because something happened to listen on port 3000).
+  /**
+   * The Categories page's fixed/flexible split reads this.
+   *
+   * *** A MISSING HANDLER HERE IS NOT A WARNING, IT IS A FAILED RUN. ***
+   * `onUnhandledRequest` is `'error'`, so the first version of that fetch
+   * produced 19 unhandled rejections across the suite — 875 tests still
+   * "passed", which is precisely the false positive the option exists to
+   * prevent. The same trap took a page capture down when Review gained its
+   * wallet read.
+   *
+   * Non-zero amounts, and two categories that map to DIFFERENT spending types
+   * in the category fixture, so a component reading this renders a real split
+   * rather than three zeroes — a fixture that cannot produce the live case is
+   * D-165.
+   */
+  http.get(`${BASE}/api/v1/analytics/categories/top`, () => HttpResponse.json({
+    success: true,
+    categories: [
+      { name: 'Housing', amount: 1800, color: '#3b82f6', icon: '' },
+      { name: 'Groceries', amount: 283.56, color: '#dc2626', icon: '' },
+    ],
+  })),
+
   http.get(`${BASE}/api/v1/analytics/spending-summary`, ({ request }) => {
     const groupBy = new URL(request.url).searchParams.get('group_by') ?? 'category';
     const groups = groupBy === 'owner'
