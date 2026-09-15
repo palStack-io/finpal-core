@@ -6,7 +6,7 @@ interface PageHeadProps {
   title: string;
   /** One sentence saying what the page is for. Optional, but almost always wanted. */
   subtitle?: React.ReactNode;
-  /** Actions, filters or the coin purse. Sits top-right, clear of the title. */
+  /** Actions, filters or the coin purse. Sits beside the title, wrapping under it when narrow. */
   right?: React.ReactNode;
   /** Which ridge to draw. Keys are in `headBands.ts`. */
   band: keyof typeof HEAD_BANDS;
@@ -24,59 +24,46 @@ interface PageHeadProps {
  * subtitle's colour. That is the shape the mockups replace, and copying the new
  * one eleven times would only move the drift rather than remove it.
  *
+ * *** THE LAYOUT LIVES IN `finpal-theme.css` AS ROLE CLASSES, NOT INLINE. ***
+ * Not for tidiness: the actions need a media query. The first version placed
+ * them absolutely and they covered the subtitle at 390px, which no gate can see
+ * because the responsive walk measures overflow and an overlap is inside the
+ * viewport. The role classes use flow plus `flex-wrap`, so the actions drop
+ * below the sentence when there is no room — overlap is impossible rather than
+ * tuned out. The reasoning is written beside the rules.
+ *
  * `className="page-title"` is KEPT on the h1 deliberately. The role class
  * carries this project's history of title sizing (it once claimed 28px where
  * every page rendered 32px), and a rule nothing references is a rule nothing
  * keeps right — `roleClassesAreReferenced.test.ts` exists for exactly that. One
  * component referencing it is better than eleven pages referencing it.
- *
- * The band is `aria-hidden`: it is decoration and never the only thing carrying
- * a fact.
  */
 export const PageHead: React.FC<PageHeadProps> = ({ title, subtitle, right, band, children }) => {
   const ridge = HEAD_BANDS[band];
 
   return (
-    <div
-      style={{
-        background: 'linear-gradient(178deg, var(--head-sky), var(--bg-card) 96%)',
-        borderBottom: '1px solid var(--border-light)',
-        padding: '24px 24px 0',
-        position: 'relative',
-      }}
-    >
-      <h1 className="page-title" style={{ fontSize: '27px', marginBottom: '3px' }}>{title}</h1>
-      {subtitle && (
-        <p style={{
-          margin: '0 0 14px',
-          color: 'var(--text-secondary)',
-          fontSize: '13.5px',
-          maxWidth: '600px',
-        }}>
-          {subtitle}
-        </p>
-      )}
-
-      {/* Absolute, so a long title wraps under the actions instead of shoving
-          them off the row — which is what the flex version did at 768px. */}
-      {right && (
-        <div style={{
-          position: 'absolute', top: '24px', right: '24px',
-          display: 'flex', gap: '9px', alignItems: 'center', flexWrap: 'wrap',
-          justifyContent: 'flex-end', maxWidth: '55%',
-        }}>
-          {right}
+    <div className="fp-page-head">
+      <div className="fp-page-head-top">
+        <div className="fp-page-head-text">
+          {/* 27px, where `.page-title` says 32px. The mockups set the smaller
+              size and the role class note says changing it is a design decision
+              rather than a consolidation — this is that decision, applied where
+              the head has been adopted. When every page is converted, the class
+              itself should come down to 27 and this override should go. */}
+          <h1 className="page-title" style={{ fontSize: '27px', marginBottom: '3px' }}>{title}</h1>
+          {subtitle && <p className="fp-page-head-sub">{subtitle}</p>}
         </div>
-      )}
+        {right && <div className="fp-page-head-actions">{right}</div>}
+      </div>
 
       {children}
 
       <svg
+        className="fp-page-head-band"
         viewBox="0 0 1100 52"
         preserveAspectRatio="none"
         aria-hidden="true"
         focusable="false"
-        style={{ display: 'block', width: '100%', height: '52px' }}
       >
         <path d={ridge.d} fill="var(--head-ridge)" opacity={ridge.opacity} />
       </svg>

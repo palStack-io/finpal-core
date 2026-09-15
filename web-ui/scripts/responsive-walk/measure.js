@@ -150,8 +150,83 @@
     });
   }
 
+  /* ── A FOURTH THING, AND IT IS NOT OVERFLOW ────────────────────────────────
+   * Text covered by something painted on top of it, INSIDE A PAGE HEAD.
+   *
+   * *** WHY THIS TIER EXISTS. *** `PageHead`'s first version placed its action
+   * buttons at `position: absolute; top: 24px; right: 24px`. At 390px Accounts'
+   * three buttons stacked straight down over the subtitle, so "what you have,
+   * what you owe, and what it costs to owe it" rendered as "what you owe, c …
+   * to owe it" — and this walk PASSED, at all four widths, in both themes,
+   * because an overlap sits entirely inside the viewport and overflows nothing.
+   * It was caught in a screenshot of the deployed demo.
+   *
+   * *** AND WHY IT IS SCOPED TO `.fp-page-head` RATHER THAN THE WHOLE PAGE. ***
+   * A general overlap detector fires on every legitimate overlay this app has —
+   * dropdowns, tooltips, badges pinned to a corner, the sidebar drawer — and a
+   * gate that fails on an opinion is a gate that gets skipped. The page head has
+   * no legitimate overlap: everything in it is in flow by design, which is
+   * exactly the property that made the defect impossible rather than tuned out.
+   * So this asserts that property directly, for all eleven pages as they adopt
+   * it, and claims nothing about anywhere else.
+   */
+  const collisions = [];
+  /**
+   * *** THE RECTS ARE THE GLYPHS, NOT THE ELEMENT BOXES, AND THE FIRST VERSION
+   * GOT THAT WRONG. *** An `<h1>` is a block, so its box spans the full column
+   * whatever the word inside is: measuring boxes reported "Accounts is covered
+   * by Import CSV" at 1440px, where the title ends around x=400 and the button
+   * starts around x=1000 and nothing whatsoever overlaps. A gate whose stated
+   * reason is false is the defect D-221 was — a written claim that does not
+   * match what is on screen — and it is how a gate gets disbelieved and then
+   * switched off.
+   *
+   * A `Range` over the element's own text nodes gives the LINE boxes, tight to
+   * the text. Those are what a reader can actually see covered.
+   */
+  const textRects = (el) => {
+    const out = [];
+    for (const n of el.childNodes) {
+      if (n.nodeType !== 3 || !n.textContent.trim().length) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const r of range.getClientRects()) {
+        if (r.width > 1 && r.height > 1) out.push(r);
+      }
+      range.detach();
+    }
+    return out;
+  };
+  for (const head of document.querySelectorAll('.fp-page-head')) {
+    const boxes = [];
+    for (const el of head.querySelectorAll('*')) {
+      // The band is decoration and is MEANT to sit under things.
+      if (el.classList.contains('fp-page-head-band') || el.closest('svg')) continue;
+      for (const r of textRects(el)) boxes.push({ el, r });
+    }
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+        // Nesting is not collision: a <b> inside a <p> shares its box by design.
+        if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+        const h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        // 4px each way: two lines of text 1px apart is kerning, not a defect.
+        if (w > 4 && h > 4) {
+          collisions.push({
+            a: (a.el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30),
+            b: (b.el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30),
+            over: `${Math.round(w)}x${Math.round(h)}`,
+          });
+        }
+      }
+    }
+  }
+
   window.__RESP = {
     total,
+    collisions,
     scrollable,
     doc: { content: de.scrollWidth, box: de.clientWidth },
     main: { content: main.scrollWidth, box: main.clientWidth, left: Math.round(main.getBoundingClientRect().left) },
