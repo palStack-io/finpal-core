@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { PageHead } from '../components/PageHead';
+import { categoriesApi } from '../services/api/categories';
+import { spendingTypeByName, splitSpendByGroup } from '../utils/spendingGroups';
 import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -80,6 +83,22 @@ export const Analytics: React.FC = () => {
     expenses: number;
     savings: number;
   }>>([]);
+
+  /**
+   * *** WHAT OF THIS MONTH'S SPENDING WAS ACTUALLY YOURS TO MOVE. ***
+   * A donut says where money went and cannot say whether any of it was a
+   * choice — 76% of the demo's September was rent, and a page that shows a big
+   * housing wedge without saying so invites someone to conclude they overspend
+   * on housing when the honest reading is that the ground is expensive. That
+   * distinction is the spec's voice rule 11, and the data for it already
+   * exists: `Category.spending_type`, the same field the Categories page sets.
+   *
+   * Null until the categories load, because the sentence is unsayable without
+   * them — never a zero, which would read as "nothing was movable".
+   */
+  const [movable, setMovable] = useState<
+    { fixed: number; flexible: number; total: number; unattributable: string[] } | null
+  >(null);
 
   const [categorySpending, setCategorySpending] = useState<Array<{
     name: string;
@@ -238,6 +257,33 @@ export const Analytics: React.FC = () => {
       setPrevious(summarise(sumAmounts(priorIncome), sumAmounts(priorExpenses)));
 
       const expenseTotal = sumAmounts(currentExpenses);
+
+      // *** OVER THE WHOLE EXPENSE LIST, NOT THE EIGHT THE DONUT DRAWS. ***
+      // `slice(0, 8)` below is a chart decision; using it here would leave
+      // everything past the eighth category out of a figure presented as the
+      // month's total, which is the silent-undercount shape that has bitten
+      // this project before.
+      try {
+        const { categories: table } = await categoriesApi.getAll();
+        const byName = spendingTypeByName((table || []).map((c) => ({
+          id: c.id, name: c.name, parent_id: c.parent_id ?? null,
+          spending_type: (c.spending_type ?? null) as never,
+        })));
+        const split = splitSpendByGroup(
+          currentExpenses.map((cat) => ({ name: cat.name || '', amount: cat.amount || 0 })),
+          byName);
+        setMovable({
+          fixed: split.fixed,
+          flexible: split.flexible,
+          total: expenseTotal,
+          unattributable: split.unattributable,
+        });
+      } catch {
+        // The sentence is an extra. A category-table failure must not take the
+        // charts down, and showing zeroes instead would be a claim.
+        setMovable(null);
+      }
+
       setCategorySpending(currentExpenses.slice(0, 8).map((cat, idx) => ({
         name: cat.name || 'Uncategorised',
         value: cat.amount || 0,
@@ -393,31 +439,18 @@ export const Analytics: React.FC = () => {
     <>
       <div style={pageContainerStyle}>
         <div className="page-container">
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '32px',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: '32px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              marginBottom: '8px'
-            }}>
-              Analytics Dashboard
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-              {selectedMember
-                ? `${selectedMember.name}'s money`
-                : 'Everyone sharing this finPal instance'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {/* "Analytics", not "Analytics Dashboard" — the app has a Dashboard and
+            it is a different page. The mockup's sentence says what this one is
+            for, and the member filter still qualifies whose money it is. */}
+        <PageHead
+          band="analytics"
+          title="Analytics"
+          subtitle={<>
+            Where it went, and how that compares with the months behind it.
+            {' '}
+            {selectedMember ? `${selectedMember.name}'s money.` : 'Everyone sharing this finPal instance.'}
+          </>}
+          right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Beside the range selector: both narrow the whole page, so they
                 belong together rather than beside any one chart. */}
             <MemberFilter members={members} value={memberId} onChange={setMemberId} />
@@ -462,8 +495,8 @@ export const Analytics: React.FC = () => {
               <Download size={16} />
               Export
             </button>
-          </div>
-        </div>
+          </div>}
+        />
 
         {/* A failed load used to be console.error only, leaving every figure at
             its initial 0 while the health ratios reported "good" — an outage that
@@ -674,6 +707,45 @@ export const Analytics: React.FC = () => {
                         </div>
                       ))}
                     </div>
+
+                    {/* *** THE ONE SENTENCE A DONUT CANNOT SAY. ***
+                        A big housing wedge invites the reading "I overspend on
+                        housing". The honest reading is usually the opposite —
+                        the ground is expensive, and rent was never the part
+                        that could have gone differently. `spending_type` is
+                        what lets the page tell those apart, and it is the same
+                        field the Categories page sets, so sorting categories
+                        changes this sentence. That is voice rule 11 made
+                        structural rather than written as a paragraph.
+
+                        Shown only when finPal can actually attribute the
+                        month: `movable` is null until the category table
+                        arrives, and a zero here would read as "nothing was
+                        yours to move". */}
+                    {movable && movable.total > 0 && movable.fixed > 0 && (
+                      <p style={{
+                        marginTop: '18px', paddingTop: '16px',
+                        borderTop: '1px solid var(--border-light)',
+                        fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.6,
+                      }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>
+                          {(movable.fixed / movable.total * 100).toFixed(1)}% of what went out
+                          arrives whatever you do
+                        </strong>
+                        {' '}— so it is not the part you could have spent differently. What was
+                        actually yours to move was{' '}
+                        <strong style={{ color: 'var(--text-primary)' }}>
+                          {formatMoney(movable.flexible)}
+                        </strong>.
+                        {movable.unattributable.length > 0 && (
+                          <>
+                            {' '}Left out of that split, because more than one category shares
+                            the name and they are sorted differently:{' '}
+                            {movable.unattributable.join(', ')}.
+                          </>
+                        )}
+                      </p>
+                    )}
                   </>
                 ) : (
                   <div style={emptyStateStyle}>No spending data</div>

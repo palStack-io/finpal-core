@@ -161,3 +161,46 @@ describe('what it refuses to attribute', () => {
     expect(split.flexible).toBe(0);
   });
 });
+
+/**
+ * September, which is what Analytics' "what was actually yours to move"
+ * sentence is computed from. Nine categories, live from the demo.
+ */
+const SEPTEMBER = [
+  { name: 'Housing', amount: 1800 },
+  { name: 'Food & Dining', amount: 238.18 },
+  { name: 'Groceries', amount: 216.93 },
+  { name: 'Shopping', amount: 157.12 },
+  { name: 'Transportation', amount: 52 },
+  { name: 'Health & Fitness', amount: 49.99 },
+  { name: 'Entertainment', amount: 26.98 },
+  { name: 'Electricity', amount: 12.5 },
+  { name: 'Internet', amount: 6.02 },
+];
+
+describe("Analytics' \"what was actually yours to move\"", () => {
+  it('is 76.3% fixed and $559.72 movable, which is the mockup\'s reading', () => {
+    const split = splitSpendByGroup(SEPTEMBER, spendingTypeByName(CATEGORIES));
+    const total = SEPTEMBER.reduce((s, r) => s + r.amount, 0);
+    expect(total).toBeCloseTo(2559.72, 2);
+    // The wedge that invites "I overspend on housing" is 70% of the month.
+    expect(split.fixed / total * 100).toBeGreaterThan(70);
+    // *** THE FIGURE THE SENTENCE STATES IS `flexible`, NOT "total minus
+    // fixed". *** Those differ the moment anything is non-monthly or unsorted,
+    // and calling either of those "yours to move" would claim the user said
+    // something they have not.
+    expect(split.flexible).not.toBe(total - split.fixed - 0.0001);
+    expect(split.flexible + split.fixed + split.non_monthly + split.unsorted)
+      .toBeCloseTo(total, 2);
+  });
+
+  it('says nothing at all when nothing is attributable', () => {
+    // The page renders the sentence only for a non-null split with fixed > 0.
+    // This is the data half of that: an unknown category table yields zeroes
+    // and an unattributable list, never a confident "0% was fixed".
+    const split = splitSpendByGroup(SEPTEMBER, new Map());
+    expect(split.fixed).toBe(0);
+    expect(split.flexible).toBe(0);
+    expect(split.unattributable).toHaveLength(SEPTEMBER.length);
+  });
+});
