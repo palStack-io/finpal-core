@@ -9,6 +9,7 @@ import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { StatCard } from '../components/StatCard';
 import { SectionCard } from '../components/SectionCard';
 import { MemberFilter } from '../components/MemberFilter';
+import { PageHead } from '../components/PageHead';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
 import { accountService, Account } from '../services/accountService';
@@ -233,13 +234,13 @@ export const Transactions: React.FC = () => {
       <div style={pageContainerStyle}>
         <div className="page-container">
 
-          {/* Header */}
-          <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h1 className="page-title">Transactions</h1>
-              <p className="fp-hint">{pageSubtitle}</p>
-            </div>
-            <button
+          {/* The page head, with the quietest band in the set — this page is the
+              density test, and a loud ridge competes with the first rows. */}
+          <PageHead
+            band="transactions"
+            title="Transactions"
+            subtitle={pageSubtitle}
+            right={<button
               onClick={() => setIsAddPanelOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
@@ -255,8 +256,8 @@ export const Transactions: React.FC = () => {
             >
               <Plus size={20} />
               Add Transaction
-            </button>
-          </div>
+            </button>}
+          />
 
           {/* Loading */}
           {loading && (

@@ -206,6 +206,20 @@
      and never the only thing carrying a fact. */
   --peak-backdrop-opacity: 0.16;
 
+  /* The page head's sky and its ridge band.
+     *** THE SKY IS THE FIRST STOP OF A GRADIENT, AND THAT IS THE STOP THE
+     CONTRAST WALK MEASURES AGAINST. *** `walk.js` takes a gradient's first
+     colour stop deliberately (the colour actually under a label's left edge),
+     so the page title and its sentence are gated against `--head-sky` rather
+     than against the card they fade into. In light that is the harder of the
+     two stops, because the sky is darker than `--bg-card`; in dark it is the
+     easier one, and the other stop IS `--bg-card`, which every other surface
+     in the app is already measured on. So both ends are covered — see
+     `pageHeadContrast.test.ts`, which asserts it rather than assuming it.
+     The ridge itself is decoration, `aria-hidden`, and carries no text. */
+  --head-sky: #DCE7DE;
+  --head-ridge: #B7CBBC;
+
   /* Tooltip */
   --tooltip-bg: #ffffff;
   --tooltip-border: #e9eee5;
@@ -412,6 +426,9 @@
   --peak-build: #5FBE7E;
   --peak-unmeasured: var(--text-muted);
   --peak-backdrop-opacity: 0.22;
+
+  --head-sky: #12211A;
+  --head-ridge: #20362A;
 
   /* Tooltip */
   /* --kt-hover, not --kt-card: a tooltip floats OVER a card, so it wants the palette's

@@ -5,6 +5,7 @@ import { formatMoney } from '../styles/money';
 import { goalFigures } from '../utils/goalFigures';
 import { goalTrackingLabel } from '../utils/goalTracking';
 import { MountainSilhouette } from '../components/MountainSilhouette';
+import { PageHead } from '../components/PageHead';
 import { heightForMagnitude } from '../utils/mountainGeometry';
 import {
   UNMEASURED_SUBLINE, peakColorVar, peakEyebrow, peakHardestLine,
@@ -709,23 +710,20 @@ export const Goals: React.FC = () => {
        only one page is missing it. */
     <div style={pageContainerStyle}>
       <div className="page-container">
-      <div
-        style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: 24, gap: 12, flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <h1 className="page-title">Goals</h1>
-          <p className="fp-hint">
-            Link a goal to an account and finPal works the progress out from the
-            balance, so the number is never one you typed.
-          </p>
-        </div>
-        <button type="button" style={primaryButtonStyle} onClick={openCreate}>
-          <Plus size={16} /> New goal
-        </button>
-      </div>
+      {/* The most mountainous band in the set, because this is the page the
+          range vocabulary comes from. The card bodies below already carry the
+          mockup's artwork, subline and summit note from an earlier pass — the
+          head is what was left. */}
+      <PageHead
+        band="goals"
+        title="Goals"
+        subtitle="Link a goal to an account and finPal works the progress out from the balance, so the number is never one you typed."
+        right={
+          <button type="button" style={primaryButtonStyle} onClick={openCreate}>
+            <Plus size={16} /> New goal
+          </button>
+        }
+      />
 
       {/* *** THE FORM COMES IN FROM THE SIDE, LIKE EVERY OTHER PAGE'S. ***
           `SlidePanel` is already used by Accounts, Transactions, Budgets, Groups

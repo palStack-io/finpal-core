@@ -14,6 +14,7 @@ import { StatCard } from '../components/StatCard';
 import { BankSyncCallout } from '../components/accounts/BankSyncCallout';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { CoOwnerControl } from '../components/accounts/CoOwnerControl';
+import { PageHead } from '../components/PageHead';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -269,16 +270,14 @@ export const Accounts = () => {
     <>
       <div style={pageContainerStyle}>
         <div className="page-container">
-        {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <h1 className="page-title">
-                Accounts
-              </h1>
-              <p style={bodyTextStyle}>Manage all your financial accounts in one place</p>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        {/* The page head, with its own ridge. Replaces the hand-rolled flex row
+            that every page carried a slightly different version of; the actions
+            move into the `right` slot unchanged. */}
+        <PageHead
+          band="accounts"
+          title="Accounts"
+          subtitle="What you have, what you owe, and what it costs to owe it."
+          right={<>
               <button
                 onClick={() => setShowCSVImport(true)}
                 style={actionBtnStyle}
@@ -305,9 +304,8 @@ export const Accounts = () => {
               >
                 <Plus size={16} /> Add Account
               </button>
-            </div>
-          </div>
-        </div>
+          </>}
+        />
 
         {/* Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
