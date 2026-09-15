@@ -9,6 +9,7 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../utils/apiError';
 import { StatCard } from './StatCard';
 import { PageHead } from './PageHead';
+import { formatMoney } from '../styles/money';
 
 const accentTextStyle: React.CSSProperties = { fontSize: '14px', color: 'var(--text-secondary)', margin: 0 };
 const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 };
@@ -331,12 +332,27 @@ export const TransactionRules: React.FC = () => {
                     <p style={fieldMetaStyle}>
                       <strong>Field:</strong> {rule.pattern_field}
                     </p>
-                    {(rule.amount_min !== undefined || rule.amount_max !== undefined) && (
+                    {/* *** THIS RENDERED "Amount: Min: $null - Max: $null" ON
+                        EVERY RULE CARD, AND IT IS LIVE ON main. *** The guard
+                        tested `!== undefined`; the API sends `null`, and
+                        `null !== undefined` is true — so the line drew for all
+                        52 of the demo's rules with the literal word "null"
+                        formatted as money. `$null` is worse than silence: it
+                        is a figure that cannot be questioned because it is not
+                        a figure.
+
+                        `!= null` is deliberate — the one place loose equality
+                        earns its keep, because it covers null AND undefined —
+                        and the amounts go through `formatMoney` rather than a
+                        `$` template, so they carry the user's own currency
+                        symbol and separators instead of a hardcoded dollar.
+                        Found in a screenshot of the deployed demo. */}
+                    {(rule.amount_min != null || rule.amount_max != null) && (
                       <p style={fieldMetaStyle}>
                         <strong>Amount:</strong>{' '}
-                        {rule.amount_min !== undefined && `Min: $${rule.amount_min}`}
-                        {rule.amount_min !== undefined && rule.amount_max !== undefined && ' - '}
-                        {rule.amount_max !== undefined && `Max: $${rule.amount_max}`}
+                        {rule.amount_min != null && `Min: ${formatMoney(rule.amount_min)}`}
+                        {rule.amount_min != null && rule.amount_max != null && ' - '}
+                        {rule.amount_max != null && `Max: ${formatMoney(rule.amount_max)}`}
                       </p>
                     )}
                     {rule.transaction_type_filter && (
