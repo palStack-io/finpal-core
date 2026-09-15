@@ -150,14 +150,24 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
 
   return (
     <div style={{ overflowX: 'auto', padding: '4px 0 0' }}>
+      {/* *** A FIXED HEIGHT PLUS `width: 100%` DESTROYED THIS ON A PHONE, AND
+          THE DESKTOP CAPTURE COULD NOT SHOW IT. *** With `height={250}` and a
+          1100-wide viewBox, `meet` scaled the content to fit 340px of phone
+          width — so the whole range drew at 340x77, anchored to the bottom of a
+          250px card, under 170px of dead space, with 12.5px labels rendered at
+          under 4px. Found by the walkthrough's phone pass, which is the only
+          thing that looks at this width.
+
+          `minWidth` instead: the range keeps a size its labels are legible at
+          and the wrapper above scrolls horizontally when the viewport is
+          narrower. `height="auto"` lets the box follow its own aspect ratio
+          rather than reserving space the drawing does not use. */}
       <svg
         viewBox={`0 0 ${width} ${BOX_HEIGHT}`}
-        width="100%"
-        height={BOX_HEIGHT}
         preserveAspectRatio="xMidYMax meet"
         role="img"
         aria-label={`Your goals as a mountain range: ${ordered.map((p) => p.goal.name).join(', ')}`}
-        style={{ display: 'block', maxWidth: '100%' }}
+        style={{ display: 'block', width: '100%', minWidth: 680, height: 'auto' }}
       >
         <defs>
           {/* The shaded face as a GRADIENT, not a flat wedge. The first version
