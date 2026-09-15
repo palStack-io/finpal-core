@@ -25,6 +25,7 @@
  * than as a failed request.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { coinService } from '../services/coinService';
 import { AlertCircle, Check, Loader2, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -143,9 +144,25 @@ const sectionCardStyle: React.CSSProperties = {
   overflow: 'hidden',
 };
 
-/** Reads "3 to review". Never a fraction — see the file docstring. */
-function SectionHeader({ title, blurb, count }: {
-  title: string; blurb: string; count: number;
+/**
+ * Reads "3 to review". Never a fraction — see the file docstring.
+ *
+ * *** THE COINS ARE PER SECTION, BECAUSE CLEARING A SECTION IS WHAT COMPLETES
+ * AN ACT *** (`docs/mockups/coins/pages-web-1.html`). Each section here maps to
+ * exactly one act — spending groups to `categories_classified`, account types
+ * to `accounts_confirmed`, uncategorised transactions to
+ * `transactions_categorised` — so the coins belong beside the section rather
+ * than in a page total that says nothing about what to do next.
+ *
+ * *** THE LABEL SAYS "EARNED", AND THAT IS NOT DECORATION. *** `/coins`
+ * returns coins ALREADY EARNED for an act, scaled by coverage — not a price for
+ * finishing it. Labelling it "+1,500 for clearing this" would be inventing a
+ * figure: the act pays progressively and nobody has promised a total. Checked
+ * in `api/v1/coins.py` ("What IS sent is the coins earned so far") rather than
+ * guessed from the field name.
+ */
+function SectionHeader({ title, blurb, count, coins }: {
+  title: string; blurb: string; count: number; coins?: number | null;
 }) {
   return (
     <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between',
@@ -155,13 +172,32 @@ function SectionHeader({ title, blurb, count }: {
                      color: 'var(--text-primary)' }}>{title}</h2>
         <p className="fp-hint" style={{ margin: '4px 0 0' }}>{blurb}</p>
       </div>
-      <span style={{
-        flexShrink: 0, fontSize: 13, fontWeight: 600,
-        padding: '4px 10px', borderRadius: 999,
-        background: 'var(--nav-hover)', color: 'var(--text-secondary)',
-      }}>
-        {count} to review
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {/* Absent when the act has earned nothing yet: a "0 coins earned" badge
+            on the section you have not started is a scolding, and this page is
+            the one that has to feel like a way up rather than a list of
+            failures. */}
+        {coins != null && coins > 0 && (
+          <span
+            title="Coins earned so far for this, scaled by how much of your own picture it covers"
+            style={{
+              fontSize: 13, fontWeight: 600, padding: '4px 10px', borderRadius: 999,
+              background: 'color-mix(in srgb, var(--coin-gold, #8A6A2F) 12%, transparent)',
+              color: 'var(--text-primary)',
+              border: '1px solid color-mix(in srgb, var(--coin-gold, #8A6A2F) 40%, transparent)',
+            }}
+          >
+            {coins.toLocaleString()} earned
+          </span>
+        )}
+        <span style={{
+          fontSize: 13, fontWeight: 600,
+          padding: '4px 10px', borderRadius: 999,
+          background: 'var(--nav-hover)', color: 'var(--text-secondary)',
+        }}>
+          {count} to review
+        </span>
+      </div>
     </div>
   );
 }
@@ -177,6 +213,16 @@ function RowError({ message }: { message: string }) {
 
 export default function Review() {
   const [payload, setPayload] = useState<ReviewPayload | null>(null);
+  /**
+   * Coins earned per act, keyed by slug.
+   *
+   * A Map rather than the raw list because each section looks up exactly one
+   * act, and an empty Map is the honest default: if `/coins` fails or the
+   * deployment predates it, the sections render with no badge rather than a
+   * zero, and the review list still works. Coins are the reward for this page,
+   * never a precondition for using it.
+   */
+  const [actCoins, setActCoins] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   /** Keyed `kind:id`, so two rows acting at once cannot overwrite each other's
@@ -201,6 +247,15 @@ export default function Review() {
   }, [setFromPayload]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    // Separate from `load()` on purpose: the review list is the page and the
+    // coins are an ornament on it. A failing wallet must not take the list
+    // down, and a slow one must not hold it back.
+    void coinService.getWallet()
+      .then((wallet) => setActCoins(new Map(wallet.acts.map((a) => [a.slug, a.coins]))))
+      .catch(() => { /* no badges; the list is unaffected */ });
+  }, []);
 
   useEffect(() => {
     // Only needed for the third section's picker, and it is fine for it to
@@ -295,6 +350,7 @@ export default function Review() {
           <section style={sectionCardStyle}>
             <SectionHeader
               title="Spending groups finPal guessed"
+              coins={actCoins.get('categories_classified')}
               blurb="Fixed means committed by contract, not essential. Groceries are flexible — you must eat, and you still choose weekly."
               count={payload.counts.categories}
             />
@@ -360,6 +416,7 @@ export default function Review() {
           <section style={sectionCardStyle}>
             <SectionHeader
               title="Account types finPal worked out"
+              coins={actCoins.get('accounts_confirmed')}
               blurb="Your bank did not say what kind of account these are, so finPal read it from the balance and the name."
               count={payload.counts.accounts}
             />
@@ -418,6 +475,7 @@ export default function Review() {
           <section style={sectionCardStyle}>
             <SectionHeader
               title="Transactions with no category"
+              coins={actCoins.get('transactions_categorised')}
               blurb="finPal has no opinion about these — transfers between your own accounts are left out, because there is nothing to categorise there."
               count={payload.counts.uncategorised}
             />

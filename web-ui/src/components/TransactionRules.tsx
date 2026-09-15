@@ -378,7 +378,22 @@ export const TransactionRules: React.FC = () => {
 
                   {/* Stats */}
                   <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    <span>Matched: {rule.match_count} times</span>
+                    {/* *** "Matched: 0 times" IS ACCURATE AND IT READS AS A
+                        FAILURE. *** demo1 has 52 rules and a total match count
+                        of zero — a seed characteristic, not a defect:
+                        `match_count` increments on import and these
+                        transactions were seeded directly. But a user with a new
+                        rule sees the same zero, and "a rule nobody can see
+                        working is furniture" (mockup, pages-web-2).
+
+                        So a rule that has fired says how often, and one that has
+                        not says what that means rather than printing a zero.
+                        Both are the truth; only one is usable. */}
+                    <span>
+                      {rule.match_count > 0
+                        ? `Matched ${rule.match_count.toLocaleString()} ${rule.match_count === 1 ? 'time' : 'times'}`
+                        : 'Not matched yet — it will apply to the next import'}
+                    </span>
                     <span>Priority: {rule.priority}</span>
                     {rule.last_matched && <span>Last matched: {new Date(rule.last_matched).toLocaleDateString()}</span>}
                   </div>

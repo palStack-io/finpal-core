@@ -116,7 +116,16 @@ export const Accounts = () => {
         // every account on every load, rendered as a green upward 2.3% beside
         // each balance. There is no balance history to derive one from.
         institution: acc.institution || 'Manual',
-        accountNumber: acc.account_number || 'N/A',
+        // *** `'N/A'` WAS BEING SHOWN TO USERS. *** Every account on the demo
+        // has no `account_number`, so every row read "Manual • N/A" — a
+        // placeholder rendered as content. A field nobody filled in should
+        // produce nothing, not an abbreviation for nothing.
+        accountNumber: acc.account_number || null,
+        // *** THE CREDIT TERMS WERE ALREADY MAPPED, 40 LINES BELOW — apr,
+        // creditLimit and minPayment, with deliberate `??` handling so a real
+        // 0% is not turned into null. Nothing needed adding here; what was
+        // missing was any RENDER of them. My first attempt duplicated all three
+        // and the typecheck caught it immediately. ***
         // Who this account belongs to. The list is household-wide, so without this
         // every row looks like the signed-in user's — and under the settled model a
         // transaction's attribution comes from its account, which makes this the
@@ -415,8 +424,26 @@ export const Accounts = () => {
                           />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          {/* *** WHAT THIS ROW SAYS ABOUT ITSELF. *** It read
+                              "Manual • N/A" on every account: an institution
+                              defaulted to "Manual" and a placeholder for an
+                              account number nobody has entered. For a credit
+                              account the useful facts were in the payload the
+                              whole time — the rate, and the minimum. The rate
+                              is the single most consequential number finPal
+                              holds about a debt, and this page did not print
+                              it. */}
                           <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-                            {account.institution} • {account.accountNumber}
+                            {[
+                              account.institution,
+                              account.accountNumber,
+                              account.apr !== null && account.apr > 0
+                                ? `${account.apr}% APR`
+                                : null,
+                              account.minPayment !== null && account.minPayment > 0
+                                ? `${formatMoney(account.minPayment, { currency: account.currency })} minimum`
+                                : null,
+                            ].filter(Boolean).join(' · ')}
                           </p>
                           {/* *** ONLY CONNECTED ACCOUNTS HAVE ANYTHING TO BE
                               STALE ABOUT. *** A "never synced" note on an
@@ -450,13 +477,59 @@ export const Accounts = () => {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                      {/* Credit Card Specific Info */}
+                      {/* *** "Available Credit $2,400.00" IS THE LEAST USEFUL
+                          TRUE THING THIS ROW COULD SAY. *** It is headroom to
+                          borrow more, presented in green, on the one account
+                          that is costing the user money. What actually matters
+                          about a card is how much of its limit is in use —
+                          utilisation is what a credit file reads, and under 30%
+                          is where it stops counting against you.
+
+                          So the figure stays (it is real and somebody wants it)
+                          but the sentence leads with the use, and the threshold
+                          is stated rather than implied. Both numbers come
+                          straight from the payload: no formula is duplicated
+                          here, which is D-101's rule — `apr` and the monthly
+                          interest it implies are computed server-side for the
+                          goal peak and are deliberately not recomputed. */}
                       {account.type === 'credit' && account.creditLimit && (
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Available Credit</p>
-                          <p style={{ color: 'var(--brand-green-glow)', fontSize: '16px', fontWeight: '600' }}>
-                            {showBalances ? formatCurrency(account.availableCredit) : '••••••'}
-                          </p>
+                        <div style={{ textAlign: 'right', maxWidth: '260px' }}>
+                          {(() => {
+                            const used = Math.abs(account.balance);
+                            const pct = (used / account.creditLimit!) * 100;
+                            const healthy = pct < 30;
+                            return (
+                              <>
+                                <p style={{
+                                  color: healthy ? 'var(--status-ok)' : 'var(--status-warn)',
+                                  fontSize: '14px', fontWeight: 600, marginBottom: '2px',
+                                }}>
+                                  {showBalances ? `${pct.toFixed(0)}% of the limit in use` : '••••••'}
+                                </p>
+                                <p className="fp-hint" style={{ fontSize: '12px', margin: 0 }}>
+                                  {showBalances
+                                    ? `${formatCurrency(used)} of ${formatCurrency(account.creditLimit!)}`
+                                    : '••••••'}
+                                  {healthy ? ' · under 30%, where it stops counting against you' : ' · over 30% counts against you'}
+                                </p>
+                                {/* *** THE AVAILABLE-CREDIT FIGURE STAYS, AND
+                                    REMOVING IT WAS MY MISTAKE. *** My first pass
+                                    replaced it with the utilisation line and
+                                    three tests went red — `AccountsAvailableCredit`
+                                    pins D-176, where this figure was understated
+                                    by TWICE any overpayment. The calculation is
+                                    audited and its only proof is that it is
+                                    rendered; deleting the render retires the
+                                    test silently. So utilisation LEADS, because
+                                    it is the fact that matters on a card, and
+                                    the headroom follows it. */}
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '11.5px', marginBottom: '2px', marginTop: '6px' }}>Available Credit</p>
+                                <p style={{ color: 'var(--brand-green-glow)', fontSize: '14px', fontWeight: '600', margin: 0 }}>
+                                  {showBalances ? formatCurrency(account.availableCredit) : '••••••'}
+                                </p>
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
 

@@ -593,6 +593,46 @@ export const CategoryManagement: React.FC = () => {
       </div>
 
       {/* Categories List */}
+      {/* *** THE PAYOFF LINE — the mockup's one addition to this page. *** It
+          lists categories and never says why sorting them matters, so the
+          three-way control reads as admin. What it earns the user is stated
+          here, in their own numbers.
+
+          *** A COUNT OF WHAT IS LEFT, NEVER A FRACTION. *** "128 of 147" is a
+          denominator finPal chose; "36 have no spending group yet" is a fact
+          about their data and it goes down as they work. Decision 5 allows one
+          denominator — a target the user set — and this is not one.
+
+          *** AND NO COIN FIGURE, DELIBERATELY. *** The mockup prints
+          "+300 coins" for finishing, but `/coins` returns coins ALREADY EARNED
+          scaled by coverage, not a price for completion. Promising 300 would be
+          inventing a figure on the screen whose whole job is to be trustworthy.
+          Review shows the earned badge per section, which is the honest half of
+          the same idea. */}
+      {(() => {
+        // `categories` is already FLAT — parents and children together, with
+        // the tree derived from `parent_id` (the stat row above counts
+        // children the same way). My first version recursed into a
+        // `subcategories` field this type does not declare, and the typecheck
+        // said so.
+        const unsorted = categories.filter((c) => !c.spending_type).length;
+        if (unsorted === 0) return null;
+        return (
+          <div style={{
+            marginBottom: '16px', padding: '14px 18px',
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--border-light)',
+            borderRadius: '12px',
+            fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6,
+          }}>
+            <strong>{unsorted.toLocaleString()}</strong>{' '}
+            {unsorted === 1 ? 'category has' : 'categories have'} no spending group yet.
+            Sorting {unsorted === 1 ? 'it' : 'them'} is what lets finPal tell you what is
+            actually yours to move each month, instead of guessing at it.
+          </div>
+        );
+      })()}
+
       <div style={flexColGap16}>
         {parentCategories.length === 0 ? (
           <div style={{

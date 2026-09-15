@@ -590,6 +590,38 @@ export const RecurringTransactions: React.FC = () => {
         </div>
       ) : (
         <div style={flexColGap12}>
+          {/* *** "NOTHING HERE IS INCOME" IS THE ACT THIS PAGE IS FOR, AND THE
+              PAGE NEVER SAID IT. *** demo1 has eight recurring rows and every
+              one is an expense, so `has_recurring_income` is false — which
+              makes this the only honest place to raise it. Every figure on this
+              page is what leaves before any decision is made; without one
+              income row there is nothing for it to be measured against.
+
+              *** RENDERED ONLY WHEN IT IS TRUE, AND NEVER AS A SCOLD. *** Gated
+              on there being rows but no income row: an empty page already has
+              its own empty state, and someone who has recorded income must
+              never see this. `POST /recurring` has accepted
+              `transaction_type: 'income'` since #133 — see this file's header —
+              so the thing it asks for is actually possible.
+
+              No coin figure, unlike the mockup's "+200 coins": `/coins`
+              returns coins EARNED, not a price for finishing, and promising a
+              number nobody has committed to is the one thing these screens
+              must not do. */}
+          {recurring.length > 0
+            && !recurring.some((item) => item.transaction_type === 'income') && (
+            <div style={{
+              padding: '14px 18px',
+              background: 'var(--surface-hover)',
+              border: '1px solid var(--border-light)',
+              borderRadius: '12px',
+              fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6,
+            }}>
+              <strong>Nothing here is income.</strong> Everything on this page is
+              what leaves before you decide anything. Add what arrives and every
+              figure here gets something to be measured against.
+            </div>
+          )}
           {recurring.map((item) => (
             <div
               key={item.id}

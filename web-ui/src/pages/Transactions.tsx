@@ -436,7 +436,34 @@ export const Transactions: React.FC = () => {
                                     {transaction.description || transaction.name}
                                   </p>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginTop: '2px' }}>
-                                    <span style={metaTextStyle}>{transaction.category?.name || 'Uncategorized'}</span>
+                                    {/* *** A DOT, NOT A TINTED CHIP — the mockup's
+                                        one change to this page. *** The category
+                                        name is plain muted text here, which is
+                                        readable but says nothing at a glance; a
+                                        tinted chip would say it and fail WCAG,
+                                        which is exactly what the dashboard's
+                                        breakdown was doing at 1.06:1 (D-218).
+
+                                        A 7px dot in the category's own colour
+                                        carries the identity where colour cannot
+                                        hurt anybody — it holds no text — and the
+                                        label keeps its contrast. `aria-hidden`
+                                        because the name is right beside it, so a
+                                        screen reader gets the category once, not
+                                        twice. */}
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                      {transaction.category?.color && (
+                                        <span
+                                          aria-hidden="true"
+                                          style={{
+                                            width: '7px', height: '7px', borderRadius: '50%',
+                                            background: transaction.category.color,
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      )}
+                                      <span style={metaTextStyle}>{transaction.category?.name || 'Uncategorized'}</span>
+                                    </span>
                                     {/* Named only when there is more than one
                                         account to tell apart. On a one-account
                                         instance this repeated the same name down
