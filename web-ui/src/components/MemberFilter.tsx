@@ -26,22 +26,35 @@ export interface MemberFilterProps {
   /** `null` means the whole household. */
   value: string | null;
   onChange: (memberId: string | null) => void;
+  /**
+   * What this control narrows, in the caller's own words.
+   *
+   * *** IT SAID "Show transactions for" ON EVERY PAGE, INCLUDING ONES WITH NO
+   * TRANSACTIONS ON THEM. *** True on `/transactions`; on Analytics it narrows
+   * charts, and on the Dashboard — once the recent-transactions strip was
+   * removed — it narrows figures and nothing else. A control that names the
+   * wrong thing is worse on a screen reader than on screen, because the label
+   * is all there is. Defaulted so `/transactions` is unchanged.
+   */
+  label?: string;
 }
 
 const HOUSEHOLD = '__household__';
 
-export const MemberFilter: React.FC<MemberFilterProps> = ({ members, value, onChange }) => {
+export const MemberFilter: React.FC<MemberFilterProps> = ({
+  members, value, onChange, label = 'Show transactions for',
+}) => {
   if (members.length <= 1) return null;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '200px' }}>
       <Users size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
       <label htmlFor="member-filter" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-        Show transactions for
+        {label}
       </label>
       <select
         id="member-filter"
-        aria-label="Show transactions for"
+        aria-label={label}
         value={value ?? HOUSEHOLD}
         onChange={(e) => onChange(e.target.value === HOUSEHOLD ? null : e.target.value)}
         style={{

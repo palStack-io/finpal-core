@@ -206,6 +206,20 @@
      and never the only thing carrying a fact. */
   --peak-backdrop-opacity: 0.16;
 
+  /* The page head's sky and its ridge band.
+     *** THE SKY IS THE FIRST STOP OF A GRADIENT, AND THAT IS THE STOP THE
+     CONTRAST WALK MEASURES AGAINST. *** `walk.js` takes a gradient's first
+     colour stop deliberately (the colour actually under a label's left edge),
+     so the page title and its sentence are gated against `--head-sky` rather
+     than against the card they fade into. In light that is the harder of the
+     two stops, because the sky is darker than `--bg-card`; in dark it is the
+     easier one, and the other stop IS `--bg-card`, which every other surface
+     in the app is already measured on. So both ends are covered — see
+     `pageHeadContrast.test.ts`, which asserts it rather than assuming it.
+     The ridge itself is decoration, `aria-hidden`, and carries no text. */
+  --head-sky: #DCE7DE;
+  --head-ridge: #B7CBBC;
+
   /* Tooltip */
   --tooltip-bg: #ffffff;
   --tooltip-border: #e9eee5;
@@ -412,6 +426,9 @@
   --peak-build: #5FBE7E;
   --peak-unmeasured: var(--text-muted);
   --peak-backdrop-opacity: 0.22;
+
+  --head-sky: #12211A;
+  --head-ridge: #20362A;
 
   /* Tooltip */
   /* --kt-hover, not --kt-card: a tooltip floats OVER a card, so it wants the palette's
@@ -896,6 +913,71 @@ body {
   color: var(--text-primary);
   margin: 0 0 8px;
   transition: color 0.3s ease;
+}
+
+/* ── the page head ─────────────────────────────────────────────────────────
+   Title, sentence, actions and a ridge band, on a sky that fades into the card
+   below. Rendered only by `PageHead.tsx`.
+
+   *** THE LAYOUT IS FLOW, AND THE FIRST VERSION WAS ABSOLUTE. ***
+   Putting the actions at `position: absolute; top: 24px; right: 24px` fixed the
+   problem it was aimed at — a long title shoving the buttons off the row — and
+   created a worse one: absolute positioning takes the actions OUT of flow, so
+   at 390px Accounts' three buttons stacked straight down over the subtitle and
+   "what you have, what you owe, and what it costs to owe it" read as "what you
+   owe, c … to owe it".
+
+   *** AND NO GATE COULD SEE IT. *** The responsive walk measures OVERFLOW at
+   four widths and passed, because an overlap sits entirely inside the viewport.
+   It was found in a screenshot of the deployed demo, which is the whole reason
+   the owner's rule is that a UI change is not done until it is seen there.
+
+   So the fix is structural rather than another nudge: `flex-wrap` plus
+   `flex: 1 1 260px` on the text means the actions drop BELOW the sentence when
+   there is no room beside it. Overlap is not tuned out, it is impossible. */
+.fp-page-head {
+  background: linear-gradient(178deg, var(--head-sky), var(--bg-card) 96%);
+  border-bottom: 1px solid var(--border-light);
+  padding: 24px 24px 0;
+}
+.fp-page-head-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+/* 260px is the basis, not a minimum width: below it the text block stops
+   competing for the row and the actions wrap under it. */
+.fp-page-head-text {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.fp-page-head-actions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media (max-width: 767px) {
+  /* Once they have wrapped under the sentence, right-aligning them reads as a
+     mistake. */
+  .fp-page-head-actions { justify-content: flex-start; }
+}
+.fp-page-head-sub {
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  max-width: 600px;
+}
+/* The ridge. Decoration, `aria-hidden`, and `none` so it fills the box at every
+   width — `meet` plus a fixed height is what shrank GoalRange to 340x77 on a
+   phone under 170px of dead space. */
+.fp-page-head-band {
+  display: block;
+  width: 100%;
+  height: 52px;
 }
 
 /* The outer wrapper the same seven pages inline. Only ever these two

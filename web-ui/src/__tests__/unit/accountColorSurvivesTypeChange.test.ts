@@ -141,7 +141,20 @@ describe('#123 was fixed in two of three copies — the third is live data', () 
       // A `style={{ color: 'var(--text-primary)' }}` is styling, not account data. The
       // defect is a var() reaching a `color:` that is POSTed or stored, which in these
       // files means the account-colour maps and the swatch list.
-      .filter(([, line]) => !/style=|background|border|boxShadow|:\s*'var\(--text|:\s*'var\(--border/i.test(line));
+      // *** `--status-*` ADDED 2026-09-15, AND THE REASON IS THE HEURISTIC'S
+      // LIMIT. *** This filter is line-based, so it recognises styling by
+      // seeing `style=` on the SAME line — which fails the moment a colour
+      // sits inside a multi-line `style={{ … }}` object, as the Accounts
+      // utilisation line now does:
+      //     color: healthy ? 'var(--status-ok)' : 'var(--status-warn)',
+      // That is styling and always will be: `--status-ok`, `--status-warn` and
+      // `--status-over` are presentation tokens for "money going the right or
+      // wrong way" and are never POSTed or stored. The defect this guard exists
+      // for is a `var()` reaching an ACCOUNT COLOUR — the swatch list and the
+      // colour maps — and those are literal hexes, so widening to the status
+      // trio cannot hide it. Named explicitly rather than widened to `var(--`,
+      // because a guard that excludes everything catches nothing.
+      .filter(([, line]) => !/style=|background|border|boxShadow|:\s*'var\(--text|:\s*'var\(--border|var\(--status-/i.test(line));
     expect(offenders).toEqual([]);
   });
 

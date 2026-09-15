@@ -60,6 +60,13 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
   isOpen,
   onToggle,
 }) => {
+  /* *** EVERY FIGURE HERE GOES THROUGH `money()`, AND FIVE OF THEM DID NOT. ***
+     The strings were built with a hardcoded `$` — a hardcoded dollar plus an interpolation — in an app
+     that seeds 22 currencies, so a household on GBP read its cap alerts in
+     dollars. `money()` was already in this file and already used one line
+     below the first offender. Found by `noNullRenderedAsMoney`, which was
+     written for the `$null` on the rules page and swept this up on its first
+     run. */
   const { money } = useMoney();
   const cfg = statusConfig[status];
   const noCap = cap_amount === null;
@@ -68,15 +75,15 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
     status === 'capped'
       ? `🚨 Cap Reached — Now Earning ${effective_rate}× Instead of ${normal_rate}×`
       : status === 'warning'
-      ? `⚡ Approaching Cap — $${room_left} Left at ${effective_rate}×`
+      ? `⚡ Approaching Cap — ${money(room_left)} Left at ${effective_rate}×`
       : `✅ On Track — Full rate active`;
 
   const alertDesc =
     status === 'capped'
-      ? `You've hit your $${cap_amount?.toLocaleString()} ${cap_period} cap on ${category.toLowerCase()}. Every dollar since has earned just ${effective_rate}× instead of ${normal_rate}×. Switch cards immediately for the rest of this period.`
+      ? `You've hit your ${cap_amount == null ? 'capped' : money(cap_amount)} ${cap_period} cap on ${category.toLowerCase()}. Every dollar since has earned just ${effective_rate}× instead of ${normal_rate}×. Switch cards immediately for the rest of this period.`
       : status === 'warning'
       ? `At your typical spend you'll hit the cap soon. Cap resets ${resets_at}. Plan accordingly.`
-      : `At your current pace you have $${room_left?.toLocaleString()} remaining at ${effective_rate}×. Cap resets ${resets_at}.`;
+      : `At your current pace you have ${money(room_left)} remaining at ${effective_rate}×. Cap resets ${resets_at}.`;
 
   return (
     <div
@@ -109,7 +116,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
           <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>
             {noCap
               ? 'No cap — always earning'
-              : `$${cap_amount?.toLocaleString()}/${cap_period} cap · resets ${resets_at}`}
+              : `${cap_amount == null ? 'No' : money(cap_amount)}/${cap_period} cap · resets ${resets_at}`}
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -125,7 +132,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
             {effective_rate}×
           </div>
           <div style={{ fontSize: 10, color: 'var(--ink3)', marginTop: 2 }}>
-            {status === 'capped' ? 'Effective now' : status === 'warning' ? `$${room_left} left` : 'Full rate'}
+            {status === 'capped' ? 'Effective now' : status === 'warning' ? `${money(room_left)} left` : 'Full rate'}
           </div>
         </div>
       </div>
@@ -183,8 +190,8 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
           {noCap
             ? 'No cap — no action needed'
             : status === 'capped'
-            ? `$${cap_amount?.toLocaleString()} cap — CAPPED`
-            : `$${cap_amount?.toLocaleString()} cap — $${room_left} remaining at ${effective_rate}×`}
+            ? `${cap_amount == null ? 'No cap' : money(cap_amount)} cap — CAPPED`
+            : `${cap_amount == null ? 'No cap' : money(cap_amount)} cap — ${money(room_left)} remaining at ${effective_rate}×`}
         </b>
       </div>
 
@@ -251,7 +258,7 @@ const CapProgressCard: React.FC<CapProgressCardProps> = ({
                 }}
               >
                 {recommended_switch.rate}×{' '}
-                {recommended_switch.cap ? `to $${recommended_switch.cap.toLocaleString()}` : 'no cap'}
+                {recommended_switch.cap ? `to ${money(recommended_switch.cap)}` : 'no cap'}
               </span>
             </div>
           )}

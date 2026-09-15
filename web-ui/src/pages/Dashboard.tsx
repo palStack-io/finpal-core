@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Wallet, CreditCard, PiggyBank, ChevronDown, ChevronUp, Loader2, ArrowRight } from 'lucide-react';
 import { analyticsService } from '../services/analyticsService';
 import { accountService } from '../services/accountService';
-import { transactionsApi } from '../services/api/transactions';
 import { budgetService } from '../services/budgetService';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
@@ -11,7 +10,6 @@ import { formatMoney, Money, moneyStyle, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
 import { useTheme } from '../contexts/ThemeContext';
 import { CHART_COLORS } from '../config/theme';
-import { StatCard } from '../components/StatCard';
 import { ShareBar } from '../components/dashboard/ShareBar';
 import {
   spendingSummaryApi,
@@ -19,6 +17,13 @@ import {
   type SpendingGroup,
 } from '../services/api/spendingSummary';
 import { SectionCard } from '../components/SectionCard';
+import { ScrollPane } from '../components/ScrollPane';
+import { PageHead } from '../components/PageHead';
+import { GoalRange } from '../components/dashboard/GoalRange';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
+import { goalService } from '../services/goalService';
+import type { Goal } from '../types/goal';
+import { monthLabelLong, monthLabelShort } from '../utils/monthKeys';
 import { MemberFilter } from '../components/MemberFilter';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
@@ -69,15 +74,18 @@ export const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('month');
   const [loading, setLoading] = useState(true);
 
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [netWorth, setNetWorth] = useState(0);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
-  const [savingsRate, setSavingsRate] = useState(0);
+  /* *** null IS NOT ZERO, AND THE DIFFERENCE IS THE WHOLE CARD. *** With no
+     income recorded this month there is no rate to state — a ratio needs a
+     denominator the user actually has. Same treatment as Budgets' "Left to
+     budget", which learned this first. */
+  const [savingsRate, setSavingsRate] = useState<number | null>(null);
 
   const [cashFlowData, setCashFlowData] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   /**
    * The household roster, for the owner badge on the Recent Transactions strip.
    *
@@ -135,7 +143,21 @@ export const Dashboard = () => {
       .catch(() => setByPerson([]));
   }, [members.length]);
   const [monthlyAggregation, setMonthlyAggregation] = useState<any[]>([]);
-  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  /*
+   * *** THE CURRENT MONTH STARTS OPEN AND EVERY OTHER MONTH STARTS SHUT. ***
+   * Every month rendered all of its category and account chips unconditionally,
+   * so three months of history was a wall of forty chips and the month totals —
+   * the thing somebody actually scans for — were lost inside it. The mockup
+   * shows summary rows with the current month open.
+   *
+   * Built from local parts, not from `toISOString()`, which is UTC: west of UTC
+   * that would open LAST month for the first hours of every day. Same bug as
+   * D-206, one line over.
+   */
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(() => {
+    const now = new Date();
+    return new Set([`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`]);
+  });
 
   const COLORS = CHART_COLORS;
 
@@ -147,7 +169,7 @@ export const Dashboard = () => {
     try {
       setLoading(true);
 
-      const [dashboardData, accountsData, transactionsData, budgetsData] = await Promise.all([
+      const [dashboardData, accountsData, budgetsData, goalsData] = await Promise.all([
         // BOTH of these move together, and that is the D-51 lesson applied
         // rather than repeated: #76 re-scoped the recent strip and left the
         // figures alone, which is how the page came to describe two different
@@ -155,9 +177,15 @@ export const Dashboard = () => {
         // whole page.
         analyticsService.getDashboardData(memberId),
         accountService.getAccounts(),
-        transactionsApi.getAll({ per_page: 5, member_id: memberId || undefined }),
-        budgetService.getBudgets()
+        budgetService.getBudgets(),
+        /* The range needs the user's own goals. Fetched in the same wave rather
+           than in a second effect: a range that appears a beat after the totals
+           is a page that moves under the reader. A failure here must not take
+           the dashboard down with it, so it resolves to an empty list. */
+        goalService.getGoals().catch(() => [] as Goal[])
       ]);
+
+      setGoals(goalsData || []);
 
       setNetWorth(dashboardData.net_worth || 0);
 
@@ -172,7 +200,14 @@ export const Dashboard = () => {
       const income = dashboardData.current_month_income || 0;
       const expenses = Math.abs(dashboardData.current_month_expenses_only || 0);
       const savings = income - expenses;
-      setSavingsRate(income > 0 ? Math.max(0, (savings / income) * 100) : 0);
+      /* *** THE CLAMP WAS THE DEFECT. *** `Math.max(0, ...)` turned every
+         overspent month into a flat "0.0%". Measured on the live demo: $250.00
+         income against $2,359.72 out is **−843.9%**, and the card said 0.0% —
+         a figure finPal invented, in the most prominent row of its most
+         visited page. Spending eight times what you earned is the single most
+         useful thing that page could tell someone, and it was rounded away to
+         look like a quiet month. */
+      setSavingsRate(income > 0 ? (savings / income) * 100 : null);
 
       const now = new Date();
       const dataByPeriod: any = {};
@@ -211,8 +246,12 @@ export const Dashboard = () => {
 
       const periods = Object.keys(dataByPeriod).sort();
       const formattedCashFlow = periods.map((periodKey: string) => {
+        // D-206: `new Date('2026-09-01')` is UTC midnight, i.e. 31 August west of
+        // UTC, so this axis named every month one early. The daily branch is
+        // untouched and correct — `periodKey` there is a full date-TIME with no
+        // offset, which the spec parses as local.
         const label = groupByMonth
-          ? new Date(periodKey + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+          ? monthLabelShort(periodKey)
           : new Date(periodKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         return {
           month: label,
@@ -222,37 +261,12 @@ export const Dashboard = () => {
       });
       setCashFlowData(formattedCashFlow);
 
-      setCategoryData(
-        (dashboardData.top_categories || []).map((cat: any, idx: number) => ({
-          name: cat.name || cat.category_name,
-          value: Math.abs(cat.amount),
-          color: cat.color || COLORS[idx % COLORS.length]
-        }))
-      );
-
       setAccounts(
         (accountsData || []).slice(0, 3).map((acc: any) => ({
           id: acc.id,
           name: acc.name,
           balance: acc.balance || 0,
           type: acc.account_type || 'checking',
-        }))
-      );
-
-      setRecentTransactions(
-        (transactionsData.transactions || []).slice(0, 5).map((txn: any) => ({
-          id: txn.id,
-          description: txn.description || 'Unknown',
-          amount: txn.amount || 0,
-          transaction_type: txn.transaction_type || 'expense',
-          category: txn.category || 'Uncategorized',
-          date: txn.date ? new Date(txn.date).toLocaleDateString() : 'Invalid Date',
-          account: txn.account || 'Unknown',
-          // Kept when flattening, because `/api/v1/transactions/` went
-          // household-scoped on 2026-08-06 (D-18 items B+D) and this strip is
-          // built from it. Without the owner the strip silently shows a
-          // housemate's rows with nothing saying whose they are.
-          owner: txn.account?.owner ?? null,
         }))
       );
 
@@ -340,8 +354,65 @@ export const Dashboard = () => {
     });
   };
 
-  const formatMonthLabel = (monthKey: string) =>
-    new Date(monthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  // D-206. This is the one a user actually noticed: the strip at the top of
+  // this page called $2,359.72 "this month" while the breakdown below called
+  // the identical figure "August 2026" — two names for one number, on one
+  // screen. See `utils/monthKeys.ts` for why the `T00:00:00` is the whole fix.
+  const formatMonthLabel = monthLabelLong;
+
+  /**
+   * A bar's corner radius, which must never exceed half its width.
+   *
+   * Beyond about a dozen periods the bars are too narrow for a decorative
+   * corner, and recharts answers an impossible radius with an empty path rather
+   * than a clamped one — so this returns a shape it can actually draw. Exported
+   * shape kept simple on purpose: two values, one threshold, no measurement of
+   * the container, because a wrong guess here degrades a corner and the old
+   * behaviour deleted the entire series.
+   */
+  /**
+   * The four headline figures. Built here because this is where the data and
+   * the currency are; `TotalsRow` knows nothing about what a savings rate is.
+   */
+  // Labels keep their original capitalisation. `textTransform: uppercase` in
+  // the row makes them read the same on screen either way, but the DOM text is
+  // what the suite and a screen reader see, and three tests anchor on
+  // "Net Worth" to know the page has finished loading.
+  const totalsCells = [
+    {
+      label: 'Net Worth',
+      value: formatCurrency(netWorth),
+      note: 'Accounts and investments',
+    },
+    {
+      label: 'Monthly Income',
+      value: formatCurrency(monthlyIncome),
+      note: 'Current month earnings',
+    },
+    {
+      label: 'Monthly Expenses',
+      value: formatCurrency(monthlyExpenses),
+      valueColor: 'var(--status-over)',
+      note: 'Spending this month',
+    },
+    {
+      label: 'Savings Rate',
+      // D-206's sibling: `null` is not zero. No income recorded means there is
+      // no rate, and a clamped 0.0% was a figure finPal invented.
+      value: savingsRate === null ? '—' : `${savingsRate.toFixed(1)}%`,
+      valueColor: savingsRate === null
+        ? 'var(--text-muted)'
+        : savingsRate < 0 ? 'var(--status-over)' : undefined,
+      note: savingsRate === null
+        ? 'No income recorded this month yet'
+        : savingsRate < 0
+          ? 'You spent more than you earned this month'
+          : 'Of income, after expenses',
+    },
+  ];
+
+  const cashFlowBarRadius: [number, number, number, number] =
+    cashFlowData.length > 12 ? [2, 2, 0, 0] : [8, 8, 0, 0];
 
   const getBudgetPercentage = (spent: number, budget: number) => Math.min((spent / budget) * 100, 100);
 
@@ -367,92 +438,113 @@ export const Dashboard = () => {
     <>
       <div style={pageContainerStyle}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '32px' }}>
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-primary)' }}>Dashboard</h1>
-            <p className="fp-hint">
-              {selectedMember
-                ? `${selectedMember.name}'s money`
-                : 'Everyone sharing this finPal instance'}
-            </p>
-          </div>
-          {/* Top of page, not beside the cards: this narrows the WHOLE page, and
-              a control that sits next to one figure reads as belonging to it. */}
-          <MemberFilter
+        {/* *** THE DASHBOARD WAS THE LAST PAGE HAND-ROLLING ITS OWN HEAD, AND I
+            WROTE THAT HEAD MYSELF EARLIER TODAY. *** A 28px inline h1 with
+            neither `PageHead` nor `.page-title`, which `pageShells.test.ts`
+            could not see while it counted class usages rather than asking
+            whether any page invents a title. Now the same component as every
+            other page, which is what "everything else does the same" asked
+            for. */}
+        <PageHead
+          band="dashboard"
+          title="Dashboard"
+          subtitle={selectedMember
+            ? `${selectedMember.name}'s money`
+            : 'Everyone sharing this finPal instance'}
+          /* Top of page, not beside the cards: this narrows the WHOLE page, and
+             a control that sits next to one figure reads as belonging to it. */
+          right={<MemberFilter
             members={members}
             value={memberId}
             onChange={setMemberId}
-          />
-        </div>
+            /* Figures, not transactions: the recent-transactions strip this
+               used to narrow is gone, and `/analytics/dashboard` is now the
+               only read on this page that takes `member_id` at all — accounts,
+               budgets and goals accept no member filter, which is a limit of
+               those endpoints rather than of this control. */
+            label="Show figures for"
+          />}
+        />
 
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
 
-        {/* The share bar — "what is this month made of?".
+        {/* *** THE RANGE EARNS THE TOP OF THE PAGE — spec variant B. *** The
+            user's own goals, drawn at their real named elevations, above the
+            totals rather than below them. A dashboard that opens with four
+            figures opens the same way every money app does; this one opens with
+            the thing that belongs to the person reading it.
+
+            Renders nothing at all when there are no goals with peaks, which is
+            deliberate: an empty frame here would be decoration standing in for
+            a fact, and the "you have nothing yet" case belongs to base camp. */}
+        {/* *** THE TOP OF THE PAGE IS ONE OBJECT NOW, NOT FIVE. *** It was a
+            range panel followed by four stat cards, each with its own border,
+            shadow, icon chip and padding — three competing headers before any
+            content, which is what "everything looks out of place" meant. The
+            mockup puts the totals inside the range's own card, divided by
+            hairlines. `TotalsRow` is deliberately dumb so Analytics can reuse
+            it: the caller owns the formatting and the colours.
+
+            *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
+            GROUND". *** The ground is a monthly recurring total, and the only
+            place it is computed today is learnPal's range endpoint — reading it
+            here would make the core dashboard depend on a module a self-hoster
+            can switch off, which is D-187's shape. Deriving it from
+            `/recurring/` in core is the right fix and is its own change. */}
+        {goals.length > 0 ? (
+          <SectionCard title="Your range" subtitle="What you are climbing, and the ground you stand on while you climb.">
+            <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
+            <TotalsRow cells={totalsCells} />
+          </SectionCard>
+        ) : (
+          /* No goals yet: the figures still have to be somewhere, so the row
+             stands on its own card rather than vanishing with the range. */
+          <SectionCard title="Where you stand">
+            <TotalsRow cells={totalsCells} />
+          </SectionCard>
+        )}
+
+        {/* *** THE SPEND BAR IS A SECTION NOW, NOT A LOOSE STRIP. *** It sat
+            between the range card and the stat cards with a bare sentence for a
+            heading, which is half of why the page read as a pile of unrelated
+            things. The mockup gives it a title naming the month and the period
+            it covers, and the bar itself carries the per-category amounts — so
+            this is the ONLY place on the page that says where the money went,
+            after the duplicate donut was removed.
+
             One user slices by category, two or more by person with a toggle,
             and a month with no spending renders NOTHING rather than an empty
-            track. See ShareBar's own docstring for why that is not a detail. */}
-        <ShareBar
-          memberCount={members.length}
-          byCategory={byCategory}
-          byPerson={byPerson}
-          currency={user?.default_currency_code || 'USD'}
-        />
+            track — see ShareBar's own docstring for why that is not a detail.
+            Which is also why the card is conditional: a titled card wrapping a
+            component that renders null is an empty panel. */}
+        {(byCategory.length > 0 || byPerson.length > 0) && (
+          <div style={{ marginBottom: '24px' }}>
+            <SectionCard
+              title={`Where ${new Date().toLocaleDateString('en-US', { month: 'long' })} went`}
+              subtitle={`${formatCurrency(monthlyExpenses)} out · day ${new Date().getDate()} of the month`}
+              action={<ViewAllBtn href="/transactions" />}
+            >
+              <ShareBar
+                memberCount={members.length}
+                byCategory={byCategory}
+                byPerson={byPerson}
+                currency={user?.default_currency_code || 'USD'}
+                hideTitle
+              />
+            </SectionCard>
+          </div>
+        )}
 
-        {/* Stat Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          {/* **No per-figure scope tags any more — D-18 item E.** They existed
-              because this one payload used to carry the caller's own net worth
-              and expense share alongside the household's income, so no single
-              caption was true for the page. Every figure now follows the member
-              filter above together, which answers the question once instead of
-              four times. `utils/scope.ts` keeps the vocabulary for the surfaces
-              that still need it. */}
-          <StatCard
-            label="Net Worth"
-            value={formatCurrency(netWorth)}
-            accentColor="#22c55e"
-            icon={<Wallet size={24} color="#22c55e" />}
-            /* "Accounts and investments" and "Spending this month" are DESCRIPTIONS of
-                what the figure is, not statuses. Colouring them was the same
-                over-claim O1 retired on the ledger — and measured, the green was
-                2.21:1 and the red 3.65:1 on the card, so they were illegible as
-                well as wrong. The ICONS keep their colour; they are decorative
-                and carry no text. */
-            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Accounts and investments</span></>}
-          />
-          <StatCard
-            label="Monthly Income"
-            value={formatCurrency(monthlyIncome)}
-            accentColor="#3b82f6"
-            icon={<TrendingUp size={24} color="#3b82f6" />}
-            subtitle={<span className="fp-hint">Current month earnings</span>}
-          />
-          <StatCard
-            label="Monthly Expenses"
-            value={formatCurrency(monthlyExpenses)}
-            accentColor="#ef4444"
-            icon={<TrendingDown size={24} color="#ef4444" />}
-            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Spending this month</span></>}
-          />
-          {/* Still no congratulation. The subtitle used to read "Great job
-              saving!" unconditionally — praise for a number that read 100% for a
-              member who had entered nothing and 0% for someone with no income at
-              all. The 100% case is fixed (D-18 item E: both terms now describe
-              the same people), the 0%-without-income case is not, and an
-              unconditional compliment is wrong either way. */}
-          <StatCard
-            label="Savings Rate"
-            value={`${savingsRate.toFixed(1)}%`}
-            accentColor="#fbbf24"
-            icon={<PiggyBank size={24} color="#fbbf24" />}
-            subtitle={<span className="fp-hint">Of income, after expenses</span>}
-          />
-        </div>
-
-        {/* Charts Row */}
-        <div className="fp-main-aside" style={{ marginBottom: '24px' }}>
+        {/* *** ONE CARD IN A TWO-COLUMN GRID LEAVES HALF THE ROW EMPTY. ***
+            Removing the duplicate category donut left Cash Flow alone in an
+            `auto-fit` grid, so it rendered at ~60% width with dead space beside
+            it — the same shape as the Budgets five-card row, caused by me in
+            the same session. A single full-width card needs no grid at all. */}
+        {/* Cash flow, full width. `fp-main-aside` is `2fr 1fr` and the aside
+            was the duplicate category donut; with one child left it took two
+            thirds of the row and left a third blank. */}
+        <div style={{ marginBottom: '24px' }}>
           <SectionCard
             title="Cash Flow"
             action={
@@ -495,54 +587,29 @@ export const Dashboard = () => {
                 <YAxis stroke={chartColors.tick} tick={{ fill: chartColors.tick, fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: chartColors.cursor }} />
                 <Legend wrapperStyle={{ color: chartColors.tick }} />
-                <Bar dataKey="income" fill="#22c55e" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="expenses" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                {/* *** A CORNER RADIUS WIDER THAN THE BAR DRAWS NOTHING AT
+                    ALL. *** The default view is "Last 30 days", which groups by
+                    DAY: ~20 periods × 2 series across 702px leaves each bar
+                    about 10px wide, and `radius={[8, 8, 0, 0]}` asks for 16px
+                    of corner on it. recharts' rounded-rect path generator
+                    cannot build that shape and emits an empty group, so the
+                    chart rendered axes, gridlines, a legend and no data.
+
+                    Measured on the deployed page rather than inferred: all 40
+                    `.recharts-bar-rectangle` groups were literally
+                    `<g class="recharts-layer recharts-bar-rectangle"></g>` —
+                    present, and containing no path. The monthly view has wide
+                    enough bars to survive, which is why this never looked like
+                    a chart bug: switch to "Last year" and it draws.
+
+                    The radius now follows the bar, so it cannot outgrow it. */}
+                <Bar dataKey="income" fill="#22c55e" radius={cashFlowBarRadius} />
+                <Bar dataKey="expenses" fill="#ef4444" radius={cashFlowBarRadius} />
               </BarChart>
             </ResponsiveContainer>
             )}
           </SectionCard>
 
-          <SectionCard title="Spending by Category">
-            {categoryData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div style={tooltipBoxStyle}>
-                              <p style={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
-                              <p style={{ color: payload[0].payload.color, margin: 0 }}>{formatCurrency(payload[0].value as number)}</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{ marginTop: '16px' }}>
-                  {categoryData.slice(0, 4).map((cat, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <div style={flexRowGap8}>
-                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }} />
-                        <span className="fp-hint">{cat.name}</span>
-                      </div>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{formatCurrency(cat.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div style={emptyStateStyle}>No spending data</div>
-            )}
-          </SectionCard>
         </div>
 
         {/* Budget + Accounts Row */}
@@ -607,7 +674,23 @@ export const Dashboard = () => {
                   {/* The green "▲ 2.3%" that used to sit under each balance came
                       from a literal, identical on every account. There is no
                       per-account balance history to compute a trend from. */}
-                  <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: 0, ...tabular }}>{formatCurrency(Math.abs(account.balance))}</p>
+                  {/* *** `Math.abs()` HERE SHOWED A DEBT AS AN ASSET. *** The
+                      API sends the Visa as `-800.0`; this rendered "$800.00",
+                      indistinguishable from the $5,000 checking and $3,000
+                      savings listed directly above it. Three positive numbers
+                      in a column invite adding them up: $8,800 against a real
+                      net of $7,200. Measured on the demo.
+
+                      The sign is the fact, so the sign is printed, and a
+                      negative balance wears the direction's clay — the same
+                      token an over-budget row uses, so "money the wrong way"
+                      looks the same everywhere on this page. */}
+                  <p style={{
+                    color: account.balance < 0 ? 'var(--status-over)' : 'var(--text-primary)',
+                    fontSize: '16px', fontWeight: '600', marginBottom: 0, ...tabular,
+                  }}>
+                    {account.balance < 0 ? '−' : ''}{formatCurrency(Math.abs(account.balance))}
+                  </p>
                 </div>
               </div>
             )) : (
@@ -616,63 +699,17 @@ export const Dashboard = () => {
           </SectionCard>
         </div>
 
-        {/* Recent Transactions */}
-        <div style={{ marginBottom: '24px' }}>
-          <SectionCard title="Recent Transactions" action={<ViewAllBtn href="/transactions" />}>
-            {recentTransactions.length > 0 ? recentTransactions.map((txn, idx) => (
-              <div
-                key={txn.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 0',
-                  borderBottom: idx < recentTransactions.length - 1 ? '1px solid var(--border-light)' : 'none',
-                }}
-              >
-                <div style={flexRowGap12}>
-                  <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
-                    background: txn.transaction_type === 'income' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {txn.transaction_type === 'income'
-                      ? <TrendingUp size={16} color="#22c55e" />
-                      : <TrendingDown size={16} color="#ef4444" />}
-                  </div>
-                  <div>
-                    <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500', marginBottom: '2px' }}>{txn.description}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: 0 }}>{txn.category?.name || txn.category || 'Uncategorized'} · {txn.date}</p>
-                      <OwnerBadge owner={txn.owner} memberCount={members.length} size="sm" />
-                    </div>
-                  </div>
-                </div>
-                {/* Same rule as the Transactions ledger — O1, owner decision
-                    2026-08-09. A transaction's amount is not painted by whether
-                    it is an expense; red is kept for figures that are over or
-                    negative, which on this page is the budget bar above. Both
-                    surfaces have to agree or the colour means one thing on the
-                    dashboard and another one screen over. */}
-                <span style={{
-                  color: txn.transaction_type === 'income' ? 'var(--amount-income)' : 'var(--text-primary)',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  flexShrink: 0,
-                }}>
-                  {txn.transaction_type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(txn.amount))}
-                </span>
-              </div>
-            )) : (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0' }}>No recent transactions</div>
-            )}
-          </SectionCard>
-        </div>
-
+        {/* *** RECENT TRANSACTIONS IS GONE — owner call, and the reason is
+            duplication. *** Monthly Expense Breakdown sits directly below it,
+            opens on the current month, and lists every transaction in it behind
+            "Show (13)". A five-row preview of the same rows, 400px above the
+            full list, is the shape this page had three times over: one fact,
+            two places. The strip's own "View all" went to /transactions, which
+            is where somebody who wants the ledger should be. */}
         {/* Monthly Expense Breakdown */}
         <SectionCard title="Monthly Expense Breakdown" subtitle="View expenses grouped by month, category, and account">
           {monthlyAggregation.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
+            <ScrollPane label="Monthly expense breakdown table" axis="x">
               <table style={tableStyle}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
@@ -699,36 +736,76 @@ export const Dashboard = () => {
                             {formatCurrency(month.total)}
                           </td>
                           <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                            {/* Collapsed, a month states WHAT it holds rather
+                                than nothing — a blank cell reads as missing
+                                data, and the count is the affordance that says
+                                there is something to open. */}
+                            {!isExpanded ? (
+                              <span className="fp-hint" style={{ fontSize: '13px' }}>
+                                {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+                              </span>
+                            ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               {categories.map((cat: any) => (
                                 <div key={cat.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                                  {/* *** EVERY ONE OF THESE CHIPS FAILED WCAG AA,
+                                      AND "Pharmacy" MEASURED 1.06:1. *** The label
+                                      was painted in the raw category colour on a
+                                      12.5% tint of that same colour over a near-white
+                                      card: a pale cyan category rendered pale cyan on
+                                      pale cyan. Measured on the running page, 11 of 11
+                                      chips were under 4.5:1 and the worst was
+                                      effectively invisible.
+
+                                      The colour now lives where colour can be pale —
+                                      the tint and the border — and the label takes ink,
+                                      which is how every other categorised row in this
+                                      app already does it. The category is still
+                                      identifiable at a glance and is now also readable.
+
+                                      *** WHY THE CONTRAST WALK MISSED IT: *** it walks
+                                      `/dashboard`, but its fixture produces no monthly
+                                      aggregation, so these chips have never existed in
+                                      a captured page. D-165's shape — a fixture that
+                                      cannot produce the real case. */}
                                   <span style={{
                                     fontSize: '13px', fontWeight: '500', padding: '4px 10px', borderRadius: '6px',
                                     background: cat.color ? `color-mix(in srgb, ${cat.color} 12.5%, transparent)` : 'rgba(107,114,128,0.2)',
-                                    color: cat.color || 'var(--text-secondary)',
-                                    border: `1px solid color-mix(in srgb, ${cat.color || 'var(--text-secondary)'} 25%, transparent)`,
+                                    color: 'var(--text-primary)',
+                                    border: `1px solid color-mix(in srgb, ${cat.color || 'var(--text-secondary)'} 45%, transparent)`,
                                     display: 'inline-block'
                                   }}>{cat.name}</span>
                                   <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(cat.total)}</span>
                                 </div>
                               ))}
                             </div>
+                            )}
                           </td>
                           <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                            {!isExpanded ? (
+                              <span className="fp-hint" style={{ fontSize: '13px' }}>
+                                {monthAccounts.length} {monthAccounts.length === 1 ? 'account' : 'accounts'}
+                              </span>
+                            ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               {monthAccounts.map((acc: any) => (
                                 <div key={acc.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                                  {/* The account chips are the same construction and
+                                      the same defect — fixed together, because leaving
+                                      one is how the next reader concludes the pattern
+                                      is fine. */}
                                   <span style={{
                                     fontSize: '13px', fontWeight: '500', padding: '4px 10px', borderRadius: '6px',
                                     background: acc.color ? `color-mix(in srgb, ${acc.color} 12.5%, transparent)` : 'rgba(107,114,128,0.2)',
-                                    color: acc.color || 'var(--text-secondary)',
-                                    border: `1px solid color-mix(in srgb, ${acc.color || 'var(--text-secondary)'} 25%, transparent)`,
+                                    color: 'var(--text-primary)',
+                                    border: `1px solid color-mix(in srgb, ${acc.color || 'var(--text-secondary)'} 45%, transparent)`,
                                     display: 'inline-block'
                                   }}>{acc.name}</span>
                                   <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(acc.total)}</span>
                                 </div>
                               ))}
                             </div>
+                            )}
                           </td>
                           <td style={{ padding: '16px 12px', textAlign: 'center', verticalAlign: 'top' }}>
                             <button
@@ -758,15 +835,21 @@ export const Dashboard = () => {
                           <tr>
                             <td colSpan={5} style={{ padding: '0', background: 'var(--bg-primary)' }}>
                               <div style={{ padding: '16px', borderTop: '1px solid var(--border-light)' }}>
-                                {/* h4, not h5: the nearest heading above this
-                                    is SectionCard's h3, and skipping a level
-                                    breaks the outline a screen reader navigates
-                                    by. The size is inline, so the tag change is
-                                    invisible on screen. */}
-                                <h4 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                {/* h3, not h4: the heading above this is
+                                    SectionCard's h2, so an h4 here jumps a
+                                    level and breaks the outline a screen
+                                    reader navigates by — the E2E heading check
+                                    caught exactly that. This comment said "h3"
+                                    while the tag said h4, which is how the
+                                    skip survived review. The size is inline,
+                                    so the tag change is invisible on screen. */}
+                                <h3 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                                   Individual Transactions ({month.transactions.length})
-                                </h4>
-                                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                </h3>
+                                <ScrollPane
+                                  label={`Individual transactions for ${monthLabelLong(month.month)}`}
+                                  maxHeight={300}
+                                >
                                   <table style={tableStyle}>
                                     <thead>
                                       <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -797,7 +880,7 @@ export const Dashboard = () => {
                                       ))}
                                     </tbody>
                                   </table>
-                                </div>
+                                </ScrollPane>
                               </div>
                             </td>
                           </tr>
@@ -815,7 +898,7 @@ export const Dashboard = () => {
               >
                 View All Transactions
               </button>
-            </div>
+            </ScrollPane>
           ) : (
             <div style={emptyStateStyle}>No expense data found</div>
           )}

@@ -250,64 +250,21 @@ describe('Transactions page — household', () => {
  * `dashboardData.recent_transactions` from `/analytics/dashboard`, which was already
  * household-scoped and already carries `<ScopeTag scope="household" />`.
  */
-describe('Dashboard — the recent transactions strip', () => {
-  it('names whose row each one is', async () => {
-    server.use(
-      http.get(`${BASE}/api/v1/team/members`, () =>
-        HttpResponse.json([ALICE, BOB].map(member))
-      ),
-      http.get(`${BASE}/api/v1/transactions/`, () =>
-        HttpResponse.json({
-          success: true,
-          transactions: [row(1, 'Alice groceries', ALICE), row(2, 'Bob petrol', BOB)],
-          summary: { total_income: 6, total_expense: 20, net_balance: -14 },
-          pagination: { page: 1, per_page: 5, total: 2, pages: 1, has_next: false, has_prev: false },
-        })
-      ),
-      // The strip is loaded inside a Promise.all with three other calls, so any
-      // one of them rejecting leaves it empty and this test green for the wrong
-      // reason. All four are stubbed deliberately.
-      // Nested under `data` — `getDashboardData` returns `response.data.data`.
-      // Flattening it makes the payload `undefined`, the whole Promise.all throws,
-      // and the page renders every default including an empty strip: green for
-      // exactly the wrong reason.
-      http.get(`${BASE}/api/v1/analytics/dashboard`, () =>
-        HttpResponse.json({
-          success: true,
-          data: {
-            net_worth: 0, total_assets: 0, total_debts: 0,
-            current_month_income: 0, current_month_expenses: 0,
-            total_income: 0, total_expenses_only: 0,
-            net_cash_flow: 0, savings_rate: 0,
-            recent_transactions: [], top_categories: [], monthly_trends: [],
-          },
-        })
-      ),
-      http.get(`${BASE}/api/v1/accounts`, () =>
-        HttpResponse.json({ success: true, accounts: [] })
-      ),
-      http.get(`${BASE}/api/v1/budgets`, () =>
-        HttpResponse.json({ success: true, budgets: [] })
-      ),
-    );
-
-    // The Dashboard reads ThemeContext and ToastContext, so it needs both
-    // providers — unlike Transactions, which reads neither.
-    const { Dashboard } = await import('../../pages/Dashboard');
-    const { ThemeProvider } = await import('../../contexts/ThemeContext');
-    const { ToastProvider } = await import('../../contexts/ToastContext');
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <ToastProvider>
-            <Dashboard />
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>
-    );
-
-    await waitFor(() => expect(screen.getByText('Bob petrol')).toBeInTheDocument());
-    expect(screen.getByText('🐟 Bob')).toBeInTheDocument();
-    expect(screen.getByText('🌱 Alice')).toBeInTheDocument();
-  });
-});
+/*
+ * *** THE DASHBOARD'S RECENT-TRANSACTIONS STRIP IS GONE, SO ITS TEST IS GONE
+ * WITH IT — owner decision, 2026-09-15. ***
+ *
+ * It tested a real rule and the rule still holds: a household-scoped list must
+ * say whose row each one is (D-18 items B+D, and D-83 where mobile's accounts
+ * list dropped the owner it had already fetched). What changed is that the
+ * dashboard no longer has such a list: Monthly Expense Breakdown sits directly
+ * below where the strip was, opens on the current month and lists every
+ * transaction in it, so the five-row preview was one fact in two places.
+ *
+ * *** THE RULE IS STILL COVERED, WHICH IS WHY THIS DELETION IS SAFE. *** The
+ * `Transactions — household scoping` block ABOVE tests the same owner labelling
+ * on `/transactions`, which is the page that actually owns the ledger. Deleting
+ * a test whose subject was deleted is correct; deleting one whose rule moved
+ * elsewhere would not be, and that is the distinction checked before removing
+ * it rather than after.
+ */

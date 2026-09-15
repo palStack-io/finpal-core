@@ -37,6 +37,14 @@ interface ShareBarProps {
   byCategory: SpendingGroup[];
   byPerson: SpendingGroup[];
   currency: string;
+  /**
+   * Suppress the built-in heading, for a caller that already has one.
+   *
+   * The dashboard wraps this in a titled card now — "Where September went" —
+   * and two headings in one card is the duplication this page has been losing
+   * all week. `/analytics` still uses the built-in one.
+   */
+  hideTitle?: boolean;
   /** Test seam only: the axis to start on when both are available. */
   initialAxis?: ShareBarAxis;
 }
@@ -83,6 +91,7 @@ export function toSegments(groups: SpendingGroup[]): SpendingGroup[] {
 }
 
 export const ShareBar: React.FC<ShareBarProps> = ({
+  hideTitle = false,
   memberCount,
   byCategory,
   byPerson,
@@ -105,9 +114,11 @@ export const ShareBar: React.FC<ShareBarProps> = ({
   return (
     <div className="fp-sharebar" data-axis={effectiveAxis}>
       <div className="fp-sharebar-head">
-        <p className="fp-sharebar-title">
-          {formatMoney(total, { currency })} went out this month
-        </p>
+        {!hideTitle && (
+          <p className="fp-sharebar-title">
+            {formatMoney(total, { currency })} went out this month
+          </p>
+        )}
 
         {/* The toggle appears ONLY when both readings exist. On a one-user
             instance "by person" is not a second view, it is the same bar with a

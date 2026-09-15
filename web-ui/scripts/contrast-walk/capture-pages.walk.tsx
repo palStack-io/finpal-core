@@ -105,6 +105,29 @@ beforeEach(() => {
       ],
       accounts: [{ id: 1, name: 'Everyday Current', balance: 1104.55, type: 'checking' }],
     })),
+    /*
+     * The wallet. Review reads it for the per-section "earned" badges, so
+     * without a handler MSW's `error` strategy takes the whole capture down —
+     * which is how it failed the pre-commit gate rather than quietly rendering
+     * without badges.
+     *
+     * Non-zero coins on the acts the Review sections map to, deliberately: a
+     * fixture of zeroes would capture a page with no badges on it, and a badge
+     * the walk never sees is a colour pair the walk never measures. That is
+     * D-165's rule — a fixture that cannot produce the real case measures
+     * nothing.
+     */
+    http.get('*/api/v1/coins', () => HttpResponse.json({
+      balance: 7603,
+      earned: 7603,
+      acts: [
+        { slug: 'categories_classified', title: 'Sort your categories', coins: 1500, revealed: null },
+        { slug: 'accounts_confirmed', title: 'Confirm what finPal guessed', coins: 800, revealed: null },
+        { slug: 'transactions_categorised', title: 'Categorise your spending', coins: 2000, revealed: null },
+      ],
+      gear: [],
+    })),
+
     http.get('*/api/v1/goals', () => HttpResponse.json({
       success: true,
       goals: [
