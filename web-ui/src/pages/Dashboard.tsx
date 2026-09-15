@@ -3,7 +3,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { TrendingUp, TrendingDown, Wallet, CreditCard, PiggyBank, ChevronDown, ChevronUp, Loader2, ArrowRight } from 'lucide-react';
 import { analyticsService } from '../services/analyticsService';
 import { accountService } from '../services/accountService';
-import { transactionsApi } from '../services/api/transactions';
 import { budgetService } from '../services/budgetService';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
@@ -85,7 +84,6 @@ export const Dashboard = () => {
 
   const [cashFlowData, setCashFlowData] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   /**
    * The household roster, for the owner badge on the Recent Transactions strip.
    *
@@ -155,7 +153,7 @@ export const Dashboard = () => {
     try {
       setLoading(true);
 
-      const [dashboardData, accountsData, transactionsData, budgetsData, goalsData] = await Promise.all([
+      const [dashboardData, accountsData, budgetsData, goalsData] = await Promise.all([
         // BOTH of these move together, and that is the D-51 lesson applied
         // rather than repeated: #76 re-scoped the recent strip and left the
         // figures alone, which is how the page came to describe two different
@@ -163,7 +161,6 @@ export const Dashboard = () => {
         // whole page.
         analyticsService.getDashboardData(memberId),
         accountService.getAccounts(),
-        transactionsApi.getAll({ per_page: 5, member_id: memberId || undefined }),
         budgetService.getBudgets(),
         /* The range needs the user's own goals. Fetched in the same wave rather
            than in a second effect: a range that appears a beat after the totals
@@ -254,23 +251,6 @@ export const Dashboard = () => {
           name: acc.name,
           balance: acc.balance || 0,
           type: acc.account_type || 'checking',
-        }))
-      );
-
-      setRecentTransactions(
-        (transactionsData.transactions || []).slice(0, 5).map((txn: any) => ({
-          id: txn.id,
-          description: txn.description || 'Unknown',
-          amount: txn.amount || 0,
-          transaction_type: txn.transaction_type || 'expense',
-          category: txn.category || 'Uncategorized',
-          date: txn.date ? new Date(txn.date).toLocaleDateString() : 'Invalid Date',
-          account: txn.account || 'Unknown',
-          // Kept when flattening, because `/api/v1/transactions/` went
-          // household-scoped on 2026-08-06 (D-18 items B+D) and this strip is
-          // built from it. Without the owner the strip silently shows a
-          // housemate's rows with nothing saying whose they are.
-          owner: txn.account?.owner ?? null,
         }))
       );
 
@@ -417,6 +397,12 @@ export const Dashboard = () => {
             members={members}
             value={memberId}
             onChange={setMemberId}
+            /* Figures, not transactions: the recent-transactions strip this
+               used to narrow is gone, and `/analytics/dashboard` is now the
+               only read on this page that takes `member_id` at all — accounts,
+               budgets and goals accept no member filter, which is a limit of
+               those endpoints rather than of this control. */
+            label="Show figures for"
           />
         </div>
 
@@ -518,8 +504,15 @@ export const Dashboard = () => {
           })()}
         </div>
 
-        {/* Charts Row */}
-        <div className="fp-main-aside" style={{ marginBottom: '24px' }}>
+        {/* *** ONE CARD IN A TWO-COLUMN GRID LEAVES HALF THE ROW EMPTY. ***
+            Removing the duplicate category donut left Cash Flow alone in an
+            `auto-fit` grid, so it rendered at ~60% width with dead space beside
+            it — the same shape as the Budgets five-card row, caused by me in
+            the same session. A single full-width card needs no grid at all. */}
+        {/* Cash flow, full width. `fp-main-aside` is `2fr 1fr` and the aside
+            was the duplicate category donut; with one child left it took two
+            thirds of the row and left a third blank. */}
+        <div style={{ marginBottom: '24px' }}>
           <SectionCard
             title="Cash Flow"
             action={
@@ -649,7 +642,23 @@ export const Dashboard = () => {
                   {/* The green "▲ 2.3%" that used to sit under each balance came
                       from a literal, identical on every account. There is no
                       per-account balance history to compute a trend from. */}
-                  <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: 0, ...tabular }}>{formatCurrency(Math.abs(account.balance))}</p>
+                  {/* *** `Math.abs()` HERE SHOWED A DEBT AS AN ASSET. *** The
+                      API sends the Visa as `-800.0`; this rendered "$800.00",
+                      indistinguishable from the $5,000 checking and $3,000
+                      savings listed directly above it. Three positive numbers
+                      in a column invite adding them up: $8,800 against a real
+                      net of $7,200. Measured on the demo.
+
+                      The sign is the fact, so the sign is printed, and a
+                      negative balance wears the direction's clay — the same
+                      token an over-budget row uses, so "money the wrong way"
+                      looks the same everywhere on this page. */}
+                  <p style={{
+                    color: account.balance < 0 ? 'var(--status-over)' : 'var(--text-primary)',
+                    fontSize: '16px', fontWeight: '600', marginBottom: 0, ...tabular,
+                  }}>
+                    {account.balance < 0 ? '−' : ''}{formatCurrency(Math.abs(account.balance))}
+                  </p>
                 </div>
               </div>
             )) : (
@@ -658,59 +667,13 @@ export const Dashboard = () => {
           </SectionCard>
         </div>
 
-        {/* Recent Transactions */}
-        <div style={{ marginBottom: '24px' }}>
-          <SectionCard title="Recent Transactions" action={<ViewAllBtn href="/transactions" />}>
-            {recentTransactions.length > 0 ? recentTransactions.map((txn, idx) => (
-              <div
-                key={txn.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 0',
-                  borderBottom: idx < recentTransactions.length - 1 ? '1px solid var(--border-light)' : 'none',
-                }}
-              >
-                <div style={flexRowGap12}>
-                  <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
-                    background: txn.transaction_type === 'income' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {txn.transaction_type === 'income'
-                      ? <TrendingUp size={16} color="#22c55e" />
-                      : <TrendingDown size={16} color="#ef4444" />}
-                  </div>
-                  <div>
-                    <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500', marginBottom: '2px' }}>{txn.description}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: 0 }}>{txn.category?.name || txn.category || 'Uncategorized'} · {txn.date}</p>
-                      <OwnerBadge owner={txn.owner} memberCount={members.length} size="sm" />
-                    </div>
-                  </div>
-                </div>
-                {/* Same rule as the Transactions ledger — O1, owner decision
-                    2026-08-09. A transaction's amount is not painted by whether
-                    it is an expense; red is kept for figures that are over or
-                    negative, which on this page is the budget bar above. Both
-                    surfaces have to agree or the colour means one thing on the
-                    dashboard and another one screen over. */}
-                <span style={{
-                  color: txn.transaction_type === 'income' ? 'var(--amount-income)' : 'var(--text-primary)',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  flexShrink: 0,
-                }}>
-                  {txn.transaction_type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(txn.amount))}
-                </span>
-              </div>
-            )) : (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0' }}>No recent transactions</div>
-            )}
-          </SectionCard>
-        </div>
-
+        {/* *** RECENT TRANSACTIONS IS GONE — owner call, and the reason is
+            duplication. *** Monthly Expense Breakdown sits directly below it,
+            opens on the current month, and lists every transaction in it behind
+            "Show (13)". A five-row preview of the same rows, 400px above the
+            full list, is the shape this page had three times over: one fact,
+            two places. The strip's own "View all" went to /transactions, which
+            is where somebody who wants the ledger should be. */}
         {/* Monthly Expense Breakdown */}
         <SectionCard title="Monthly Expense Breakdown" subtitle="View expenses grouped by month, category, and account">
           {monthlyAggregation.length > 0 ? (

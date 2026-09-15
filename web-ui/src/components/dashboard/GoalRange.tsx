@@ -1,55 +1,69 @@
 import React from 'react';
 
-import { MountainSilhouette } from '../MountainSilhouette';
+import {
+  RANGE_SILHOUETTES, RANGE_UNMEASURED, MIN_RANGE_HEIGHT,
+} from '../../utils/rangeSilhouettes';
 import { heightForMagnitude } from '../../utils/mountainGeometry';
 import { formatMoney } from '../../styles/money';
 import type { Goal } from '../../types/goal';
 
 /**
- * Every goal, drawn as one range.
+ * Every goal, drawn as ONE range.
  *
- * *** THE RANGE IS THE DASHBOARD — spec variant B. *** The page used to open
- * with four stat cards, which is the same opening as every other money app. A
- * user's goals are the one thing on it that is theirs, so they earn the top and
- * the totals sit underneath rather than above.
+ * *** THE FIRST VERSION OF THIS WAS FOUR SEPARATE PEAKS IN A FLEX ROW, AND IT
+ * READ AS CLIP-ART. *** Each `MountainSilhouette` rendered its own `<svg>` in
+ * its own box with a gap beside it, so what arrived on the page was four icons
+ * in a line — not a landscape. The owner's word for it was "absurd", and the
+ * mockup (`docs/mockups/dashboard-web.html`) shows why: a range is peaks that
+ * OVERLAP on a SHARED ground line, with the sky behind them.
  *
- * *** IT REUSES `MountainSilhouette` RATHER THAN DRAWING ITS OWN PEAKS. ***
- * Goals already draws one peak per card from `goal.peak`, and a second
- * implementation of the same shape is how two pictures of one fact drift apart
- * — the failure this codebase has paid for more than once. What is new here is
- * only the ARRANGEMENT: a shared baseline, a reading order, and a label per
- * peak.
+ * So this draws one SVG. What it does NOT do is invent new mountain shapes:
+ * the paths come from `MOUNTAIN_SILHOUETTES`, the same band-indexed data the
+ * Goals page draws, translated and scaled into a single viewBox. One source for
+ * the shapes, two arrangements — because two sets of paths for one mountain is
+ * how the two pages would drift.
  *
- * *** NO DENOMINATOR, DELIBERATELY. *** No "2 of 4 goals", no percentage
- * complete across the range. Decision 5 allows exactly one denominator — a
- * target the user chose themselves — and "how many goals have you finished" is
- * not one of those. Each peak states its own remaining figure, which is the
- * user's own target and therefore honest.
+ * *** THE SCALE IS UNIFORM, WHICH IS WHAT KEEPS IT HONEST. ***
+ * `heightForMagnitude` measures a goal against the global ceiling, which is
+ * right for one card showing one peak. Four of those side by side read flat —
+ * measured on the demo, Mount Rainier (4,392 m) and Table Mountain (1,085 m)
+ * came out nearly the same size, the opposite of what a range is for. Every
+ * peak is therefore multiplied by ONE factor so the tallest fills the frame.
+ * Ratios survive exactly; only the zoom changes. Normalising each peak
+ * independently would be the dishonest version and is the obvious thing to
+ * reach for.
+ *
+ * *** NO DENOMINATOR. *** No "2 of 4 goals", no percentage across the range.
+ * Decision 5 permits one denominator — a target the user chose — and each peak
+ * prints its own real figure above it.
  */
 
-/** Peaks read tallest-first, so the eye lands on the biggest climb. */
-const byHeightDescending = (a: RangePeak, b: RangePeak) => b.height - a.height;
+/** The drawing box. Height is fixed; width grows with the number of peaks. */
+const BOX_HEIGHT = 250;
+const LABEL_BAND = 58;      // room above the tallest summit for its label block
+const GROUND_Y = BOX_HEIGHT - 10;
 
 interface RangePeak {
   goal: Goal;
+  /** 0..100 from the shared geometry, before the range's uniform zoom. */
   height: number;
-  /** A build goal at zero magnitude is finished; a cost goal at zero costs nothing. */
+  band: number | null;
+  scale: 'cost' | 'build' | string;
+  unmeasured: boolean;
   finished: boolean;
 }
 
 export interface GoalRangeProps {
   goals: Goal[];
   currency: string;
-  /** Pixels the tallest peak occupies. Everything scales from it. */
-  maxPixelHeight?: number;
 }
 
 /**
- * What is left to do on this goal, in the goal's own terms.
+ * What is left to do, in the goal's own terms.
  *
  * A saving goal states what is still to save. A payoff goal states what the
- * debt costs per month, because that is the figure that makes it urgent — the
- * balance alone says nothing about whether it is worth paying first.
+ * debt costs per month, because a balance alone does not say whether it is
+ * worth paying first.
  */
 const remainingLabel = (goal: Goal, currency: string): string => {
   const peak = goal.peak;
@@ -63,77 +77,250 @@ const remainingLabel = (goal: Goal, currency: string): string => {
   return left > 0 ? `${formatMoney(left, { currency })} still to save` : 'Finished';
 };
 
-export const GoalRange: React.FC<GoalRangeProps> = ({
-  goals,
-  currency,
-  maxPixelHeight = 140,
-}) => {
+/**
+ * Arrange peaks so the range rises to a summit instead of stepping down.
+ *
+ * Tallest goes nearest the middle and the rest alternate outwards, which is
+ * what a real skyline does and what the mockup draws. A plain sort renders a
+ * staircase, which looks like a chart rather than a landscape.
+ */
+const intoRangeOrder = <T,>(sortedDescending: T[]): T[] => {
+  const left: T[] = [];
+  const right: T[] = [];
+  sortedDescending.forEach((item, i) => {
+    if (i === 0) left.push(item);
+    else if (i % 2 === 1) right.push(item);
+    else left.unshift(item);
+  });
+  return [...left, ...right];
+};
+
+export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
   /*
-   * *** A GOAL WITHOUT A PEAK IS SKIPPED, NOT DRAWN FLAT. *** `peak` is
-   * undefined when the backend predates mountains, and inventing a shape for it
-   * would be drawing a fact finPal does not have. The Goals page makes the same
-   * choice for the same reason.
+   * A goal with no `peak` is skipped. That field is undefined on any backend
+   * predating mountains, and drawing a shape for it would be inventing a fact
+   * the server never sent — the same choice the Goals page makes.
    */
   const peaks: RangePeak[] = goals
     .filter((goal) => goal.peak !== undefined)
-    .map((goal) => ({
-      goal,
-      height: heightForMagnitude(goal.peak!.magnitude, goal.peak!.scale),
-      finished: (goal.peak!.magnitude ?? 0) <= 0,
-    }))
-    .sort(byHeightDescending);
+    .map((goal) => {
+      const peak = goal.peak!;
+      return {
+        goal,
+        height: heightForMagnitude(peak.magnitude, peak.scale),
+        band: peak.band,
+        scale: peak.scale,
+        unmeasured: peak.unmeasured,
+        finished: (peak.magnitude ?? 0) <= 0,
+      };
+    })
+    .sort((a, b) => b.height - a.height);
 
-  // Nothing to draw is not an empty frame: the caller decides what to show
-  // instead, because "you have no goals yet" belongs to base camp, not here.
   if (peaks.length === 0) return null;
 
+  const tallest = Math.max(...peaks.map((p) => p.height));
+  const zoom = tallest > 0 ? 1 / tallest : 0;   // tallest peak -> full band
+
+  const ordered = intoRangeOrder(peaks);
+
+  const usable = BOX_HEIGHT - LABEL_BAND - (BOX_HEIGHT - GROUND_Y);
+
+  /*
+   * *** THE SLOT IS NARROWER THAN A PEAK, WHICH IS WHAT MAKES IT A RANGE. ***
+   * Width tracks height (uniform scale of a 100x100 box), so the tallest peak
+   * is `usable` wide. A slot of that width leaves every peak standing alone
+   * with the far ridge visible between them — which is what the previous
+   * version did, and it read as four mountains rather than one range. At 68%
+   * the near peaks overlap the shoulders of their neighbours.
+   */
+  const SLOT = Math.round(usable * 0.68);
+  const contentWidth = SLOT * ordered.length + usable * 0.5;
+
+  /*
+   * *** THE GROUND LINE HAS TO REACH BOTH EDGES OF THE CARD. ***
+   * `preserveAspectRatio` scales the viewBox to fit, so a 500x250 box inside a
+   * 1150px card rendered the whole range at half width with dead space either
+   * side — it looked like a picture pasted into the middle of a panel. The box
+   * is now at least as wide as the card's aspect, the ground and the far ridge
+   * span all of it, and the peaks are centred within it. The mockup does the
+   * same thing with extra ridges out at the edges.
+   */
+  const width = Math.max(contentWidth, BOX_HEIGHT * 4.4);
+  const offset = (width - contentWidth) / 2;
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        gap: '28px',
-        padding: '20px 24px 0',
-        minHeight: `${maxPixelHeight + 60}px`,
-        overflowX: 'auto',
-      }}
-    >
-      {peaks.map(({ goal, height, finished }) => (
-        <div
-          key={goal.id}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '128px' }}
-        >
-          {/* The label sits ABOVE its own peak rather than in a shared legend:
-              a legend makes the reader match colours, and these peaks differ by
-              shape and height, not by colour. */}
-          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {goal.name}{finished ? ' ✓' : ''}
-            </div>
-            <div className="fp-hint" style={{ fontSize: '11.5px' }}>
-              {goal.peak?.mountain?.name}
-              {goal.peak?.mountain?.elevation_m
-                ? ` · ${goal.peak.mountain.elevation_m.toLocaleString()} m`
-                : ''}
-            </div>
-            <div className="fp-hint" style={{ fontSize: '11.5px' }}>
-              {remainingLabel(goal, currency)}
-            </div>
-          </div>
-          {/* `aria-hidden` through `decorative`: every figure the picture
-              carries is written above it in text, so a screen reader loses
-              nothing by skipping the art. */}
-          <MountainSilhouette
-            band={goal.peak!.band}
-            height={height}
-            scale={goal.peak!.scale}
-            unmeasured={goal.peak!.unmeasured}
-            maxPixelHeight={maxPixelHeight}
-            decorative
-          />
-        </div>
-      ))}
+    <div style={{ overflowX: 'auto', padding: '4px 0 0' }}>
+      <svg
+        viewBox={`0 0 ${width} ${BOX_HEIGHT}`}
+        width="100%"
+        height={BOX_HEIGHT}
+        preserveAspectRatio="xMidYMax meet"
+        role="img"
+        aria-label={`Your goals as a mountain range: ${ordered.map((p) => p.goal.name).join(', ')}`}
+        style={{ display: 'block', maxWidth: '100%' }}
+      >
+        <defs>
+          {/* The shaded face as a GRADIENT, not a flat wedge. The first version
+              painted 17% black over half the peak and the hard vertical seam
+              down each summit is what made them look like folded paper. */}
+          <linearGradient id="range-shade" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#000000" stopOpacity="0.02" />
+            <stop offset="1" stopColor="#000000" stopOpacity="0.20" />
+          </linearGradient>
+        </defs>
+
+        {/* A far ridge, behind everything. Decorative: it carries no figure,
+            it is what stops the peaks floating on a blank rectangle. */}
+        {/* *** THE FAR RIDGE SPANS THE WHOLE BOX, NOT THE PEAK SLOTS. ***
+            It was generated at `i * SLOT`, which is peak-slot space — so once
+            the peaks were centred with an offset the ridge stayed bunched on
+            the left and the right half of the card was empty. It is now eight
+            vertices distributed across the full width, independent of how many
+            goals there are, so the horizon reaches both edges whether the user
+            has one goal or six. Decorative: it carries no figure. */}
+        <path
+          d={`M0,${GROUND_Y} ${Array.from({ length: 8 }, (_, i) => {
+            const x = (width / 8) * i;
+            const dip = i % 2 === 0 ? 30 : 16;
+            return `L${x + width / 16},${GROUND_Y - dip} L${x + width / 8},${GROUND_Y - 4}`;
+          }).join(' ')} L${width},${GROUND_Y} Z`}
+          fill="var(--peak-build)"
+          opacity="var(--peak-backdrop-opacity)"
+        />
+
+        {/* Tallest first, so shorter peaks are drawn in FRONT of it and the
+            range has depth rather than a single flat row. */}
+        {[...ordered]
+          .map((peak, slot) => ({ peak, slot }))
+          .sort((a, b) => b.peak.height - a.peak.height)
+          .map(({ peak, slot }) => {
+            const shape = peak.unmeasured
+              ? RANGE_UNMEASURED
+              : RANGE_SILHOUETTES[Math.max(0, Math.min(peak.band ?? 0, RANGE_SILHOUETTES.length - 1))];
+            const drawn = Math.max(peak.height * zoom, MIN_RANGE_HEIGHT);
+            const pixelHeight = drawn * usable;
+            /* The shape's box is 100 x 100 and the scale is UNIFORM, so the
+               path is never distorted. Base width therefore tracks height,
+               which is what a real range does — a taller mountain has a wider
+               footprint. */
+            const sc = pixelHeight / 100;
+            const w = 100 * sc;
+            const x = offset + slot * SLOT + (SLOT - w) / 2;
+            const y = GROUND_Y - pixelHeight;
+            const colour = peak.unmeasured
+              ? 'var(--peak-unmeasured)'
+              : peak.scale === 'cost' ? 'var(--peak-cost)' : 'var(--peak-build)';
+            return (
+              <g key={peak.goal.id} transform={`translate(${x} ${y}) scale(${sc})`} color={colour}>
+                <path d={shape.body} fill="currentColor" />
+                {/* The shaded face. Without it four peaks read as flat paper
+                    cut-outs, which is exactly how the first version looked. */}
+                {shape.shade && (
+                  <path d={shape.shade} fill="url(#range-shade)" />
+                )}
+                {shape.snow && (
+                  <path d={shape.snow} fill="#ffffff" opacity={shape.snowOpacity ?? 0.85} />
+                )}
+              </g>
+            );
+          })}
+
+        {/* The ground. One line under the whole range, which is the thing that
+            makes four peaks read as one landscape. */}
+        <line
+          x1="0" y1={GROUND_Y} x2={width} y2={GROUND_Y}
+          stroke="var(--border-light)" strokeWidth="1.5"
+        />
+
+        {/* *** LABELS SIT ABOVE THEIR OWN SUMMIT, NOT IN A SHARED BAND. ***
+            The first version put all three lines at y=18/32/45 for every peak,
+            so a label could be 130px above the mountain it names and the reader
+            had to guess which was which. Each block now hangs just over its own
+            summit with a short leader, clamped so it never leaves the box. Every
+            figure the picture carries is written here, which is why the whole
+            `<svg>` can carry one `role="img"` label and lose nothing. */}
+        {ordered.map((peak, slot) => {
+          const cx = offset + slot * SLOT + SLOT / 2;
+          const drawn = Math.max(peak.height * zoom, MIN_RANGE_HEIGHT);
+          const top = GROUND_Y - drawn * usable;
+          // Three lines of ~13px, plus a leader. Clamped to the top of the box.
+          const blockBottom = Math.max(top - 10, 46);
+          const line1 = blockBottom - 28;
+          return (
+            <g key={`label-${peak.goal.id}`}>
+              <line
+                x1={cx} y1={blockBottom - 6} x2={cx} y2={top - 3}
+                stroke="var(--border-light)" strokeWidth="1"
+              />
+              <text x={cx} y={line1} textAnchor="middle"
+                    style={{ fontSize: '12.5px', fontWeight: 600, fill: 'var(--text-primary)' }}>
+                {peak.goal.name}{peak.finished ? ' ✓' : ''}
+              </text>
+              <text x={cx} y={line1 + 13} textAnchor="middle"
+                    style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>
+                {peak.goal.peak?.mountain?.name}
+                {peak.goal.peak?.mountain?.elevation_m
+                  ? ` · ${peak.goal.peak.mountain.elevation_m.toLocaleString()} m`
+                  : ''}
+              </text>
+              <text x={cx} y={line1 + 26} textAnchor="middle"
+                    style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>
+                {remainingLabel(peak.goal, currency)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* *** THE CLIMBER, AND THE ONE DENOMINATOR DECISION 5 PERMITS. ***
+            A figure on the ground under the tallest climb, with a dashed trail
+            to how far up it the user actually is. That percentage is allowed
+            precisely because the target is one the USER chose — it is their own
+            goal's progress, not a band finPal invented. It is omitted entirely
+            when there is nothing to stand under (every goal finished) rather
+            than drawing a climber at 0%. */}
+        {(() => {
+          const tallestPeak = ordered.find((p) => p.height === tallest);
+          if (!tallestPeak || tallestPeak.finished) return null;
+          const slot = ordered.indexOf(tallestPeak);
+          const cx = offset + slot * SLOT + SLOT / 2;
+          const drawn = Math.max(tallestPeak.height * zoom, MIN_RANGE_HEIGHT);
+          const top = GROUND_Y - drawn * usable;
+          const target = tallestPeak.goal.target_amount ?? 0;
+          const current = tallestPeak.goal.current_amount ?? 0;
+          const pct = target > 0 ? Math.max(0, Math.min(100, (current / target) * 100)) : 0;
+          if (pct <= 0) return null;
+          const markY = GROUND_Y - (GROUND_Y - top) * (pct / 100);
+          return (
+            <g>
+              <path
+                d={`M${cx - 34},${GROUND_Y - 2} Q${cx - 26},${(GROUND_Y + markY) / 2} ${cx - 8},${markY}`}
+                fill="none" stroke="var(--text-primary)" strokeWidth="1.4"
+                strokeDasharray="3 5" opacity="0.42"
+              />
+              <circle cx={cx - 8} cy={markY} r="4" fill="var(--peak-build)" />
+              {/* White, because this label sits ON the mountain. In
+                  `--text-secondary` it rendered as unreadable mid-grey over
+                  dark green — caught by looking at the picture, which is the
+                  only way: the contrast walk reads computed CSS backgrounds and
+                  never composites an SVG fill. */}
+              <text x={cx + 2} y={markY + 4}
+                    style={{ fontSize: '10.5px', fontWeight: 600, fill: '#ffffff' }}>
+                {pct.toFixed(0)}% up
+              </text>
+              {/* The climber: a stick figure, deliberately crude, standing on
+                  the ground line rather than floating. */}
+              <g stroke="var(--text-primary)" strokeWidth="1.6" fill="none" opacity="0.7">
+                <circle cx={cx - 40} cy={GROUND_Y - 20} r="3.2" fill="var(--text-primary)" stroke="none" />
+                <line x1={cx - 40} y1={GROUND_Y - 17} x2={cx - 40} y2={GROUND_Y - 8} />
+                <line x1={cx - 40} y1={GROUND_Y - 14} x2={cx - 45} y2={GROUND_Y - 11} />
+                <line x1={cx - 40} y1={GROUND_Y - 14} x2={cx - 35} y2={GROUND_Y - 16} />
+                <line x1={cx - 40} y1={GROUND_Y - 8} x2={cx - 44} y2={GROUND_Y - 1} />
+                <line x1={cx - 40} y1={GROUND_Y - 8} x2={cx - 36} y2={GROUND_Y - 1} />
+              </g>
+            </g>
+          );
+        })()}
+      </svg>
     </div>
   );
 };

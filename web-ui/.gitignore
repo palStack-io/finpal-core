@@ -85,3 +85,10 @@ scripts/*/captured/
 e2e/.auth/
 test-results/
 playwright-report/
+
+# Local-only: a dev server pointed at the DEPLOYED demo API, so the dashboard
+# can be iterated on against real data without a build-and-deploy per change.
+# `.env` pins VITE_API_BASE_URL to http://localhost, which is why a plain
+# `vite dev` reaches nothing.
+vite.demo.config.ts
+.env.demo.local
