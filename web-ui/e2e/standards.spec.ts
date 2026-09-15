@@ -95,4 +95,16 @@ test('dark mode meets the same standard, not a lower one', async ({ page }) => {
  * there is a strict superset of the one that was here AND its route list is
  * DERIVED from `App.tsx` plus the module manifests, so a page added tomorrow is
  * checked tomorrow rather than when somebody remembers to type it in.
+ *
+ * *** AND THE SAME ARGUMENT APPLIES TO THE axe RUNS LEFT IN THIS FILE, WHICH IS
+ * SAID HERE RATHER THAN LEFT FOR SOMEBODY TO NOTICE. *** `every-page.spec.ts`
+ * runs axe at the same tags, with `color-contrast` disabled the same way, over
+ * all 21 routes in both themes — so the six `PAGES` tests below and the dark-mode
+ * test are a subset of it too. They are KEPT, deliberately: a failure scoped to
+ * one named page is faster to read than the same failure inside a 40-test walk,
+ * and deleting a working gate is a bigger risk than carrying a redundant one.
+ * That is a judgement, not an oversight, and it is the next thing to consolidate
+ * if this file is touched again. **D-221 was a comment that described a world
+ * that had moved on; a comment that quietly contradicts its own file is the same
+ * defect waiting to happen.**
  */
