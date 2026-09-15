@@ -479,9 +479,16 @@ export const RecurringTransactions: React.FC = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <Sparkles size={24} style={{ color: 'var(--au-ink)' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+            {/* h2, not h3. This sits directly under the page's single h1 with no
+                section heading between, so an h3 here jumps a level and breaks
+                the outline a screen reader navigates by. Found by widening
+                `every-page.spec.ts`'s heading check from the six pages
+                `standards.spec.ts` listed to all 21 derived routes — four pages
+                were doing this and nothing said so. The size is inline, so the
+                tag change is invisible on screen. */}
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
               Detected Patterns ({patterns.length})
-            </h3>
+            </h2>
           </div>
           <p className="fp-hint-block">
             We found these recurring transaction patterns. Create automatic recurring transactions or ignore them.
@@ -500,9 +507,11 @@ export const RecurringTransactions: React.FC = () => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <h4 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                  {/* h3: one level under the "Detected Patterns" h2 above,
+                      which moved from h3 to h2 in the same change. */}
+                  <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
                     {pattern.description}
-                  </h4>
+                  </h3>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     <span style={metaTextStyle}>
                       {/* *** THE `$` HERE WAS A LITERAL CHARACTER IN JSX TEXT, NOT A
@@ -639,9 +648,16 @@ export const RecurringTransactions: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                   <Repeat size={20} style={{ color: item.active ? 'var(--g-ink)' : 'var(--text-muted)' }} />
-                  <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                  {/* h2, not h3. This sits directly under the page's single h1 with no
+                      section heading between, so an h3 here jumps a level and breaks
+                      the outline a screen reader navigates by. Found by widening
+                      `every-page.spec.ts`'s heading check from the six pages
+                      `standards.spec.ts` listed to all 21 derived routes — four pages
+                      were doing this and nothing said so. The size is inline, so the
+                      tag change is invisible on screen. */}
+                  <h2 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', margin: 0 }}>
                     {item.description}
-                  </h3>
+                  </h2>
                   {!item.active && (
                     <span style={{
                       padding: '2px 8px',

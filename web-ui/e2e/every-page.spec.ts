@@ -235,6 +235,32 @@ for (const [route, heading] of Object.entries(HEADINGS)) {
         results.violations.map((v) => `${v.id}: ${v.nodes.length} node(s)`),
         `WCAG violations on ${route} (${theme})`,
       ).toEqual([]);
+
+      // *** THE HEADING OUTLINE, ON ALL OF THEM RATHER THAN SIX. ***
+      // `standards.spec.ts` has asserted this since it was written, over its own
+      // hand-typed list of six pages — so fifteen routes could jump h1 -> h3 and
+      // nothing said so. That is the same gap this file exists to close for axe,
+      // and it is D-59's rule again: prefer a sweep to a list. The route list
+      // here is DERIVED, so a page added tomorrow is checked tomorrow.
+      //
+      // Neither `page-has-heading-one` nor `heading-order` is a WCAG AA rule —
+      // both are axe "best practice" and so out of scope for the run above — but
+      // a screen reader navigates by this outline, and D-221 was a real skip on
+      // the app's landing page justified by a comment claiming the opposite.
+      const levels = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+          // Only what is actually on screen: a collapsed section's heading is
+          // not in the outline a reader walks.
+          .filter((h) => (h as HTMLElement).offsetParent !== null)
+          .map((h) => Number(h.tagName[1])));
+
+      expect(levels.filter((l) => l === 1).length,
+        `${route} (${theme}): expected exactly one h1`).toBe(1);
+      for (let i = 1; i < levels.length; i += 1) {
+        expect(levels[i] - levels[i - 1],
+          `${route} (${theme}): heading jumps h${levels[i - 1]} -> h${levels[i]}`)
+          .toBeLessThanOrEqual(1);
+      }
     });
   }
 }

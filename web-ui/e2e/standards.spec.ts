@@ -80,27 +80,19 @@ test('dark mode meets the same standard, not a lower one', async ({ page }) => {
   expect(results.violations.map((v) => v.id)).toEqual([]);
 });
 
-test('every page has exactly one h1 and no skipped heading level', async ({
-  page,
-}) => {
-  // Not an axe rule at AA (`page-has-heading-one` is best-practice, and
-  // `heading-order` is too), but it is the thing that makes a page navigable by
-  // screen reader and it is cheap to assert. Kept separate from the axe run so
-  // that a failure here is legible as a structure problem, not a WCAG citation.
-  for (const [name, path, heading] of PAGES) {
-    await page.goto(path);
-    await pageIsLoaded(page, heading);
-
-    const levels = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'))
-        .filter((h) => (h as HTMLElement).offsetParent !== null)
-        .map((h) => Number(h.tagName[1])));
-
-    expect(levels.filter((l) => l === 1), `${name}: h1 count`).toHaveLength(1);
-    for (let i = 1; i < levels.length; i += 1) {
-      expect(levels[i] - levels[i - 1],
-        `${name}: heading jumps h${levels[i - 1]} -> h${levels[i]}`)
-        .toBeLessThanOrEqual(1);
-    }
-  }
-});
+/**
+ * *** THE HEADING-OUTLINE CHECK MOVED TO `every-page.spec.ts`. ***
+ *
+ * It lived here, over the six-page `PAGES` list above, and that list is exactly
+ * the problem `every-page.spec.ts` was written to fix: six routes audited, the
+ * app has twenty-one. Widening it found **four more pages** jumping `h1 -> h3`
+ * — /categories, /recurring, /rules and /groups — none of which this file could
+ * ever have seen.
+ *
+ * It is not duplicated in both places on purpose. This repo's own rule, written
+ * at the top of this file for colour-contrast: two gates on one criterion means
+ * two places to update and two chances to disagree (D-18). The version over
+ * there is a strict superset of the one that was here AND its route list is
+ * DERIVED from `App.tsx` plus the module manifests, so a page added tomorrow is
+ * checked tomorrow rather than when somebody remembers to type it in.
+ */

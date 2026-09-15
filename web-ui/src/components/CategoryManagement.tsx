@@ -699,9 +699,16 @@ export const CategoryManagement: React.FC = () => {
                       {categoryIcon(category.icon)}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px', overflowWrap: 'anywhere' }}>
+                      {/* h2, not h3. This sits directly under the page's single h1 with no
+                          section heading between, so an h3 here jumps a level and breaks
+                          the outline a screen reader navigates by. Found by widening
+                          `every-page.spec.ts`'s heading check from the six pages
+                          `standards.spec.ts` listed to all 21 derived routes — four pages
+                          were doing this and nothing said so. The size is inline, so the
+                          tag change is invisible on screen. */}
+                      <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px', overflowWrap: 'anywhere' }}>
                         {category.name}
-                      </h3>
+                      </h2>
                       <p style={bodyTextStyle}>
                         {subcategories.length} subcategor{subcategories.length === 1 ? 'y' : 'ies'}
                       </p>
@@ -915,9 +922,9 @@ export const CategoryManagement: React.FC = () => {
           borderRadius: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <h3 className="fp-section-title" style={{ marginBottom: 0 }}>
+            <h2 className="fp-section-title" style={{ marginBottom: 0 }}>
               Suggested Categories
-            </h3>
+            </h2>
             <button
               type="button"
               onClick={dismissSuggestions}

@@ -647,9 +647,16 @@ export const Groups: React.FC = () => {
               textAlign: 'center'
             }}>
               <Users size={64} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
+              {/* h2, not h3. This sits directly under the page's single h1 with no
+                  section heading between, so an h3 here jumps a level and breaks
+                  the outline a screen reader navigates by. Found by widening
+                  `every-page.spec.ts`'s heading check from the six pages
+                  `standards.spec.ts` listed to all 21 derived routes — four pages
+                  were doing this and nothing said so. The size is inline, so the
+                  tag change is invisible on screen. */}
+              <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
                 {searchTerm ? 'No groups match your search' : 'No groups yet'}
-              </h3>
+              </h2>
               {!searchTerm && (
                 <>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
@@ -719,9 +726,16 @@ export const Groups: React.FC = () => {
                         {group.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {/* h2, not h3. This sits directly under the page's single h1 with no
+                            section heading between, so an h3 here jumps a level and breaks
+                            the outline a screen reader navigates by. Found by widening
+                            `every-page.spec.ts`'s heading check from the six pages
+                            `standards.spec.ts` listed to all 21 derived routes — four pages
+                            were doing this and nothing said so. The size is inline, so the
+                            tag change is invisible on screen. */}
+                        <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
                           {group.name}
-                        </h3>
+                        </h2>
                         <p style={smallMetaStyle}>
                           {group.description || 'No description'}
                         </p>

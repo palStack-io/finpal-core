@@ -311,9 +311,16 @@ export const TransactionRules: React.FC = () => {
                 <div style={{ flex: 1 }}>
                   {/* Rule Name and Status */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>
+                    {/* h2, not h3. This sits directly under the page's single h1 with no
+                        section heading between, so an h3 here jumps a level and breaks
+                        the outline a screen reader navigates by. Found by widening
+                        `every-page.spec.ts`'s heading check from the six pages
+                        `standards.spec.ts` listed to all 21 derived routes — four pages
+                        were doing this and nothing said so. The size is inline, so the
+                        tag change is invisible on screen. */}
+                    <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>
                       {rule.name}
-                    </h3>
+                    </h2>
                     {rule.active ? (
                       <span style={{ padding: '4px 12px', background: 'rgba(134, 239, 172, 0.2)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--g-ink)', fontWeight: '600' }}>
                         Active
