@@ -236,6 +236,41 @@ export const accountHandlers = [
 
 // ── Budgets ───────────────────────────────────────────────────────────────────
 export const budgetHandlers = [
+  /*
+   * The dashboard's range reads the user's goals (spec variant B). Two goals
+   * with peaks and one WITHOUT, because `peak` is undefined on a backend that
+   * predates mountains and the component must skip that one rather than invent
+   * a shape for it — a fixture with only the happy case cannot show that.
+   */
+  http.get(`${BASE}/api/v1/goals`, () =>
+    HttpResponse.json({
+      success: true,
+      goals: [
+        {
+          id: 1,
+          name: 'Emergency fund',
+          target_amount: 16000,
+          current_amount: 8000,
+          peak: {
+            scale: 'build', magnitude: 8000, unmeasured: false, band: 3,
+            mountain: { slug: 'mount-rainier', name: 'Mount Rainier', elevation_m: 4392 },
+          },
+        },
+        {
+          id: 2,
+          name: 'Pay off the Visa',
+          target_amount: 0,
+          current_amount: -800,
+          peak: {
+            scale: 'cost', magnitude: 13.33, unmeasured: false, band: 1,
+            mountain: { slug: 'ben-nevis', name: 'Ben Nevis', elevation_m: 1345 },
+            apr: 19.99,
+          },
+        },
+        { id: 3, name: 'A goal from before mountains', target_amount: 100, current_amount: 0 },
+      ],
+    })),
+
   http.get(`${BASE}/api/v1/budgets`, () =>
     HttpResponse.json({
       success: true,

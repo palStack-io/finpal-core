@@ -1018,18 +1018,41 @@ const BudgetsMinimal = () => {
                     </span>
                   }
                 />
-                {/* Budget Health — custom layout, not a simple stat */}
-                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+                {/* *** FIVE CARDS IN AN auto-fit GRID IS FOUR AND A LONELY
+                    ONE. *** At 1440px this grid computes four 273px columns, so
+                    the fifth card sat by itself on a second row with ~880px of
+                    empty space beside it — measured on the live page, and the
+                    first thing anyone notices about this screen.
+
+                    Spanning it is the fix rather than narrowing `minmax`:
+                    Budget Health is a BAR, it reads better wide than boxed, and
+                    a width that happens to fit five cards at one viewport
+                    breaks again at the next one. `1 / -1` is correct at every
+                    width, including the single-column phone layout where it is
+                    a no-op. */}
+                <div style={{ gridColumn: '1 / -1', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
                   <p className="fp-hint-block">Budget Health</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '10px' }}>
                     <span style={{ color: 'var(--status-ok)' }}>{onTrack} on track</span>
                     <span style={{ color: 'var(--status-warn)' }}>{warning} at risk</span>
                     <span style={{ color: 'var(--status-over)' }}>{over} over</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '2px', height: '20px', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{ flex: onTrack || 0.1, background: 'var(--status-ok)' }} />
-                    <div style={{ flex: warning || 0.1, background: 'var(--status-warn)' }} />
-                    <div style={{ flex: over || 0.1, background: 'var(--status-over)' }} />
+                  {/* *** A ZERO COUNT DREW A VISIBLE SLIVER, SO THE BAR
+                      CONTRADICTED THE NUMBERS PRINTED DIRECTLY ABOVE IT. ***
+                      `flex: warning || 0.1` gave every empty band a floor, and
+                      on the live demo "0 at risk / 0 over" rendered 5.2px of
+                      amber and 5.2px of clay — measured, not guessed. A user
+                      reads a picture faster than a label, so the picture was
+                      telling them something was wrong when nothing was.
+
+                      Bands are now rendered only when they hold something. The
+                      `|| 0.1` existed so a flex child with no basis would not
+                      collapse; omitting the child entirely answers that without
+                      inventing a quantity. */}
+                  <div style={{ display: 'flex', gap: '2px', height: '20px', borderRadius: '6px', overflow: 'hidden', background: 'var(--progress-track)' }}>
+                    {onTrack > 0 && <div style={{ flex: onTrack, background: 'var(--status-ok)' }} />}
+                    {warning > 0 && <div style={{ flex: warning, background: 'var(--status-warn)' }} />}
+                    {over > 0 && <div style={{ flex: over, background: 'var(--status-over)' }} />}
                   </div>
                 </div>
               </div>

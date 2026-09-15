@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Wallet, CreditCard, PiggyBank, ChevronDown, ChevronUp, Loader2, ArrowRight } from 'lucide-react';
 import { analyticsService } from '../services/analyticsService';
 import { accountService } from '../services/accountService';
@@ -19,6 +19,10 @@ import {
   type SpendingGroup,
 } from '../services/api/spendingSummary';
 import { SectionCard } from '../components/SectionCard';
+import { GoalRange } from '../components/dashboard/GoalRange';
+import { goalService } from '../services/goalService';
+import type { Goal } from '../types/goal';
+import { monthLabelLong, monthLabelShort } from '../utils/monthKeys';
 import { MemberFilter } from '../components/MemberFilter';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
@@ -69,13 +73,17 @@ export const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('month');
   const [loading, setLoading] = useState(true);
 
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [netWorth, setNetWorth] = useState(0);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
-  const [savingsRate, setSavingsRate] = useState(0);
+  /* *** null IS NOT ZERO, AND THE DIFFERENCE IS THE WHOLE CARD. *** With no
+     income recorded this month there is no rate to state — a ratio needs a
+     denominator the user actually has. Same treatment as Budgets' "Left to
+     budget", which learned this first. */
+  const [savingsRate, setSavingsRate] = useState<number | null>(null);
 
   const [cashFlowData, setCashFlowData] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   /**
@@ -147,7 +155,7 @@ export const Dashboard = () => {
     try {
       setLoading(true);
 
-      const [dashboardData, accountsData, transactionsData, budgetsData] = await Promise.all([
+      const [dashboardData, accountsData, transactionsData, budgetsData, goalsData] = await Promise.all([
         // BOTH of these move together, and that is the D-51 lesson applied
         // rather than repeated: #76 re-scoped the recent strip and left the
         // figures alone, which is how the page came to describe two different
@@ -156,8 +164,15 @@ export const Dashboard = () => {
         analyticsService.getDashboardData(memberId),
         accountService.getAccounts(),
         transactionsApi.getAll({ per_page: 5, member_id: memberId || undefined }),
-        budgetService.getBudgets()
+        budgetService.getBudgets(),
+        /* The range needs the user's own goals. Fetched in the same wave rather
+           than in a second effect: a range that appears a beat after the totals
+           is a page that moves under the reader. A failure here must not take
+           the dashboard down with it, so it resolves to an empty list. */
+        goalService.getGoals().catch(() => [] as Goal[])
       ]);
+
+      setGoals(goalsData || []);
 
       setNetWorth(dashboardData.net_worth || 0);
 
@@ -172,7 +187,14 @@ export const Dashboard = () => {
       const income = dashboardData.current_month_income || 0;
       const expenses = Math.abs(dashboardData.current_month_expenses_only || 0);
       const savings = income - expenses;
-      setSavingsRate(income > 0 ? Math.max(0, (savings / income) * 100) : 0);
+      /* *** THE CLAMP WAS THE DEFECT. *** `Math.max(0, ...)` turned every
+         overspent month into a flat "0.0%". Measured on the live demo: $250.00
+         income against $2,359.72 out is **−843.9%**, and the card said 0.0% —
+         a figure finPal invented, in the most prominent row of its most
+         visited page. Spending eight times what you earned is the single most
+         useful thing that page could tell someone, and it was rounded away to
+         look like a quiet month. */
+      setSavingsRate(income > 0 ? (savings / income) * 100 : null);
 
       const now = new Date();
       const dataByPeriod: any = {};
@@ -211,8 +233,12 @@ export const Dashboard = () => {
 
       const periods = Object.keys(dataByPeriod).sort();
       const formattedCashFlow = periods.map((periodKey: string) => {
+        // D-206: `new Date('2026-09-01')` is UTC midnight, i.e. 31 August west of
+        // UTC, so this axis named every month one early. The daily branch is
+        // untouched and correct — `periodKey` there is a full date-TIME with no
+        // offset, which the spec parses as local.
         const label = groupByMonth
-          ? new Date(periodKey + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+          ? monthLabelShort(periodKey)
           : new Date(periodKey).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         return {
           month: label,
@@ -221,14 +247,6 @@ export const Dashboard = () => {
         };
       });
       setCashFlowData(formattedCashFlow);
-
-      setCategoryData(
-        (dashboardData.top_categories || []).map((cat: any, idx: number) => ({
-          name: cat.name || cat.category_name,
-          value: Math.abs(cat.amount),
-          color: cat.color || COLORS[idx % COLORS.length]
-        }))
-      );
 
       setAccounts(
         (accountsData || []).slice(0, 3).map((acc: any) => ({
@@ -340,8 +358,24 @@ export const Dashboard = () => {
     });
   };
 
-  const formatMonthLabel = (monthKey: string) =>
-    new Date(monthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  // D-206. This is the one a user actually noticed: the strip at the top of
+  // this page called $2,359.72 "this month" while the breakdown below called
+  // the identical figure "August 2026" — two names for one number, on one
+  // screen. See `utils/monthKeys.ts` for why the `T00:00:00` is the whole fix.
+  const formatMonthLabel = monthLabelLong;
+
+  /**
+   * A bar's corner radius, which must never exceed half its width.
+   *
+   * Beyond about a dozen periods the bars are too narrow for a decorative
+   * corner, and recharts answers an impossible radius with an empty path rather
+   * than a clamped one — so this returns a shape it can actually draw. Exported
+   * shape kept simple on purpose: two values, one threshold, no measurement of
+   * the container, because a wrong guess here degrades a corner and the old
+   * behaviour deleted the entire series.
+   */
+  const cashFlowBarRadius: [number, number, number, number] =
+    cashFlowData.length > 12 ? [2, 2, 0, 0] : [8, 8, 0, 0];
 
   const getBudgetPercentage = (spent: number, budget: number) => Math.min((spent / budget) * 100, 100);
 
@@ -388,6 +422,21 @@ export const Dashboard = () => {
 
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
+
+        {/* *** THE RANGE EARNS THE TOP OF THE PAGE — spec variant B. *** The
+            user's own goals, drawn at their real named elevations, above the
+            totals rather than below them. A dashboard that opens with four
+            figures opens the same way every money app does; this one opens with
+            the thing that belongs to the person reading it.
+
+            Renders nothing at all when there are no goals with peaks, which is
+            deliberate: an empty frame here would be decoration standing in for
+            a fact, and the "you have nothing yet" case belongs to base camp. */}
+        {goals.length > 0 && (
+          <SectionCard title="Your range" subtitle="What you are climbing, and the ground you stand on while you climb.">
+            <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
+          </SectionCard>
+        )}
 
         {/* The share bar — "what is this month made of?".
             One user slices by category, two or more by person with a toggle,
@@ -442,13 +491,31 @@ export const Dashboard = () => {
               all. The 100% case is fixed (D-18 item E: both terms now describe
               the same people), the 0%-without-income case is not, and an
               unconditional compliment is wrong either way. */}
-          <StatCard
-            label="Savings Rate"
-            value={`${savingsRate.toFixed(1)}%`}
-            accentColor="#fbbf24"
-            icon={<PiggyBank size={24} color="#fbbf24" />}
-            subtitle={<span className="fp-hint">Of income, after expenses</span>}
-          />
+          {(() => {
+            // Colour follows the fact, not the brand: money going the wrong way
+            // wears the direction's clay, the same token an over-budget row uses.
+            const rateColor = savingsRate === null
+              ? 'var(--text-muted)'
+              : savingsRate < 0 ? 'var(--status-over)' : '#fbbf24';
+            return (
+              <StatCard
+                label="Savings Rate"
+                value={savingsRate === null ? '—' : `${savingsRate.toFixed(1)}%`}
+                accentColor={rateColor}
+                valueColor={rateColor}
+                icon={<PiggyBank size={24} color={rateColor} />}
+                subtitle={
+                  <span className="fp-hint">
+                    {savingsRate === null
+                      ? 'No income recorded this month yet'
+                      : savingsRate < 0
+                        ? 'You spent more than you earned this month'
+                        : 'Of income, after expenses'}
+                  </span>
+                }
+              />
+            );
+          })()}
         </div>
 
         {/* Charts Row */}
@@ -495,54 +562,29 @@ export const Dashboard = () => {
                 <YAxis stroke={chartColors.tick} tick={{ fill: chartColors.tick, fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: chartColors.cursor }} />
                 <Legend wrapperStyle={{ color: chartColors.tick }} />
-                <Bar dataKey="income" fill="#22c55e" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="expenses" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                {/* *** A CORNER RADIUS WIDER THAN THE BAR DRAWS NOTHING AT
+                    ALL. *** The default view is "Last 30 days", which groups by
+                    DAY: ~20 periods × 2 series across 702px leaves each bar
+                    about 10px wide, and `radius={[8, 8, 0, 0]}` asks for 16px
+                    of corner on it. recharts' rounded-rect path generator
+                    cannot build that shape and emits an empty group, so the
+                    chart rendered axes, gridlines, a legend and no data.
+
+                    Measured on the deployed page rather than inferred: all 40
+                    `.recharts-bar-rectangle` groups were literally
+                    `<g class="recharts-layer recharts-bar-rectangle"></g>` —
+                    present, and containing no path. The monthly view has wide
+                    enough bars to survive, which is why this never looked like
+                    a chart bug: switch to "Last year" and it draws.
+
+                    The radius now follows the bar, so it cannot outgrow it. */}
+                <Bar dataKey="income" fill="#22c55e" radius={cashFlowBarRadius} />
+                <Bar dataKey="expenses" fill="#ef4444" radius={cashFlowBarRadius} />
               </BarChart>
             </ResponsiveContainer>
             )}
           </SectionCard>
 
-          <SectionCard title="Spending by Category">
-            {categoryData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div style={tooltipBoxStyle}>
-                              <p style={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{payload[0].name}</p>
-                              <p style={{ color: payload[0].payload.color, margin: 0 }}>{formatCurrency(payload[0].value as number)}</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{ marginTop: '16px' }}>
-                  {categoryData.slice(0, 4).map((cat, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <div style={flexRowGap8}>
-                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: cat.color }} />
-                        <span className="fp-hint">{cat.name}</span>
-                      </div>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{formatCurrency(cat.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div style={emptyStateStyle}>No spending data</div>
-            )}
-          </SectionCard>
         </div>
 
         {/* Budget + Accounts Row */}
