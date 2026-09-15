@@ -16,6 +16,15 @@ export interface Group {
   default_payer?: string;
   auto_include_all: boolean;
   members: GroupMember[];
+  /**
+   * How many expenses are in this group.
+   *
+   * Zero is a real answer — the seeded demo's three groups have held none, and
+   * a row that offered "View balances" on an empty group promised a page with
+   * nothing on it. Optional because a server older than 2026-09-15 does not
+   * send it, and absent must mean "unknown" rather than "empty".
+   */
+  expense_count?: number;
 }
 
 /**

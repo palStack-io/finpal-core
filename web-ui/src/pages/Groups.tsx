@@ -738,9 +738,26 @@ export const Groups: React.FC = () => {
                           {group.members?.length || 0} members
                         </span>
                       </div>
+                      {/* *** "View balances" ON AN EMPTY GROUP PROMISES A PAGE
+                          WITH NOTHING ON IT. *** The seeded demo's three groups
+                          hold no expenses at all, so every row invited a click
+                          through to an empty screen — D-77's shape, which has
+                          hidden three defects in this product before, and the
+                          mockup's point about this page: say what it would show
+                          rather than dress it up.
+
+                          `expense_count === undefined` is a server that predates
+                          the field, and that is NOT the same as empty — it keeps
+                          the old label rather than claiming a group is bare. */}
                       <div style={flexRowGap8}>
                         <DollarSign size={16} color="var(--text-muted)" />
-                        <span style={bodyTextStyle}>View balances</span>
+                        <span style={bodyTextStyle}>
+                          {group.expense_count === undefined
+                            ? 'View balances'
+                            : group.expense_count === 0
+                              ? 'Nothing recorded yet'
+                              : `${group.expense_count} ${group.expense_count === 1 ? 'expense' : 'expenses'}`}
+                        </span>
                       </div>
                     </div>
 

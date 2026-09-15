@@ -30,7 +30,32 @@ import {
 type AnalyticsTab = 'overview' | 'cashflow' | 'spending' | 'health';
 
 // Color palette for categories
-const CATEGORY_COLORS = ['var(--accent-blue)', '#a855f7', 'var(--accent-green)', '#f97316', '#ec4899', '#06b6d4', 'var(--accent-yellow)', '#84cc16'];
+/**
+ * Chart paints: the five segment tokens, in order, then one muted everything-else.
+ *
+ * *** THIS WAS EIGHT COLOURS CHOSEN BY NOBODY. *** Two `--accent-*` tokens
+ * mixed with five raw hexes (`#a855f7`, `#f97316`, `#ec4899`, `#06b6d4`,
+ * `#84cc16`) and a blue that came from Recharts' own defaults — so the same
+ * category was one colour in a chart here and a different one in a budget row,
+ * a category dot or a spending group. The mockup's point
+ * (`coins/pages-web-3.html`) is that this page needed a decision rather than a
+ * refresh.
+ *
+ * `--kt-seg-1…5` already existed in `finpal-theme.css` and are the paints the
+ * budget rows, category dots and spending groups use, with a measured dark
+ * variant. So one colour means one thing across the product, and a theme switch
+ * takes the charts with it — which the raw hexes never did.
+ *
+ * *** SIX, NOT EIGHT, AND THE SIXTH IS DELIBERATELY DULL. *** Beyond five
+ * slices a pie stops being readable, and `--text-muted` for the remainder says
+ * "everything else" rather than pretending the sixth category is as
+ * distinguishable as the first. A category beyond the sixth reuses the ramp
+ * rather than inventing a colour.
+ */
+const CATEGORY_COLORS = [
+  'var(--kt-seg-1)', 'var(--kt-seg-2)', 'var(--kt-seg-3)',
+  'var(--kt-seg-4)', 'var(--kt-seg-5)', 'var(--text-muted)',
+];
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 const tooltipBoxStyle: React.CSSProperties = { background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' };

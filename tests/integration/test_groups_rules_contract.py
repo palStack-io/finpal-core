@@ -109,10 +109,23 @@ def test_group_list_shape(client, headers, group_id, slash):
     assert set(group) == {
         'id', 'name', 'description', 'created_by', 'default_split_method',
         'default_payer', 'auto_include_all', 'created_at', 'member_count',
+        # *** ADDED 2026-09-15, DELIBERATELY, AND THIS TEST IS WHY IT IS
+        # DOCUMENTED. *** The Groups page rendered "2 members · View balances"
+        # on a group with nothing in it, promising a page with nothing on it —
+        # D-77's shape, which has hidden three defects here. The client cannot
+        # say "nothing recorded yet" without being told, and this payload was
+        # the only thing it reads.
+        #
+        # Served as one `GROUP BY` for all the caller's groups rather than a
+        # count per group, and always present: zero is a real answer, not an
+        # omission.
+        'expense_count',
         'members',
     }
     assert set(group['members'][0]) == {'id', 'email', 'name'}
     assert group['member_count'] == len(group['members'])
+    # An int, never None — the client compares it to 0.
+    assert isinstance(group['expense_count'], int)
 
 
 @BOTH_SPELLINGS

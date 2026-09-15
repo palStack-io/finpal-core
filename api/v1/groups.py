@@ -125,8 +125,26 @@ class GroupList(Resource):
         try:
             identity = get_jwt_identity()
 
+            groups = list(group_service.get_all_groups(identity))
+
+            # *** ONE AGGREGATE, NOT ONE QUERY PER GROUP. *** The client needs to
+            # know whether a group has anything in it — a row that says
+            # "2 members · View balances" on an empty group promises a page with
+            # nothing on it, which is D-77's shape and has hidden three defects
+            # here before. Counting inside the loop would be N+1 for a figure
+            # that is one `GROUP BY`.
+            counts = {}
+            if groups:
+                from sqlalchemy import func
+                from src.models.transaction import Expense
+                rows = (db.session.query(Expense.group_id, func.count(Expense.id))
+                        .filter(Expense.group_id.in_([g.id for g in groups]))
+                        .group_by(Expense.group_id)
+                        .all())
+                counts = {gid: n for gid, n in rows}
+
             groups_data = []
-            for group in group_service.get_all_groups(identity):
+            for group in groups:
                 groups_data.append({
                     'id': group.id,
                     'name': group.name,
@@ -138,6 +156,10 @@ class GroupList(Resource):
                     'created_at': (group.created_at.isoformat()
                                    if group.created_at else None),
                     'member_count': len(group.members),
+                    # Zero is a real answer and the client renders it as
+                    # "nothing recorded yet", so this is always present rather
+                    # than omitted when empty.
+                    'expense_count': counts.get(group.id, 0),
                     'members': _member_rows(group),
                 })
 
