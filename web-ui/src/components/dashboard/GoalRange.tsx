@@ -1,4 +1,5 @@
 import React from 'react';
+import { ScrollPane } from '../ScrollPane';
 
 import {
   RANGE_SILHOUETTES, RANGE_UNMEASURED, MIN_RANGE_HEIGHT,
@@ -149,7 +150,7 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
   const offset = (width - contentWidth) / 2;
 
   return (
-    <div style={{ overflowX: 'auto', padding: '4px 0 0' }}>
+    <ScrollPane label="Your goals drawn as a mountain range" axis="x" style={{ padding: '4px 0 0' }}>
       {/* *** A FIXED HEIGHT PLUS `width: 100%` DESTROYED THIS ON A PHONE, AND
           THE DESKTOP CAPTURE COULD NOT SHOW IT. *** With `height={250}` and a
           1100-wide viewBox, `meet` scaled the content to fit 340px of phone
@@ -331,7 +332,7 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
           );
         })()}
       </svg>
-    </div>
+    </ScrollPane>
   );
 };
 

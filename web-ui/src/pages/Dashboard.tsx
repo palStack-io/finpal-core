@@ -17,6 +17,7 @@ import {
   type SpendingGroup,
 } from '../services/api/spendingSummary';
 import { SectionCard } from '../components/SectionCard';
+import { ScrollPane } from '../components/ScrollPane';
 import { GoalRange } from '../components/dashboard/GoalRange';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { goalService } from '../services/goalService';
@@ -704,7 +705,7 @@ export const Dashboard = () => {
         {/* Monthly Expense Breakdown */}
         <SectionCard title="Monthly Expense Breakdown" subtitle="View expenses grouped by month, category, and account">
           {monthlyAggregation.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
+            <ScrollPane label="Monthly expense breakdown table" axis="x">
               <table style={tableStyle}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
@@ -830,15 +831,21 @@ export const Dashboard = () => {
                           <tr>
                             <td colSpan={5} style={{ padding: '0', background: 'var(--bg-primary)' }}>
                               <div style={{ padding: '16px', borderTop: '1px solid var(--border-light)' }}>
-                                {/* h4, not h5: the nearest heading above this
-                                    is SectionCard's h3, and skipping a level
-                                    breaks the outline a screen reader navigates
-                                    by. The size is inline, so the tag change is
-                                    invisible on screen. */}
-                                <h4 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                {/* h3, not h4: the heading above this is
+                                    SectionCard's h2, so an h4 here jumps a
+                                    level and breaks the outline a screen
+                                    reader navigates by — the E2E heading check
+                                    caught exactly that. This comment said "h3"
+                                    while the tag said h4, which is how the
+                                    skip survived review. The size is inline,
+                                    so the tag change is invisible on screen. */}
+                                <h3 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                                   Individual Transactions ({month.transactions.length})
-                                </h4>
-                                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                </h3>
+                                <ScrollPane
+                                  label={`Individual transactions for ${monthLabelLong(month.month)}`}
+                                  maxHeight={300}
+                                >
                                   <table style={tableStyle}>
                                     <thead>
                                       <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -869,7 +876,7 @@ export const Dashboard = () => {
                                       ))}
                                     </tbody>
                                   </table>
-                                </div>
+                                </ScrollPane>
                               </div>
                             </td>
                           </tr>
@@ -887,7 +894,7 @@ export const Dashboard = () => {
               >
                 View All Transactions
               </button>
-            </div>
+            </ScrollPane>
           ) : (
             <div style={emptyStateStyle}>No expense data found</div>
           )}
