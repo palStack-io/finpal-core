@@ -74,7 +74,26 @@ export const Analytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
-  const rangeLabel = timeRange === 'week' ? 'Last 7 days' : timeRange === 'year' ? 'Last 12 months' : 'This month';
+  /**
+   * *** "LAST 30 DAYS", NOT "THIS MONTH", AND THE WINDOW IS WHY. ***
+   * `windowsFor` computes a ROLLING window — `now - 30` to `now` — deliberately,
+   * because comparing the first four days of a calendar month against a full
+   * previous month would understate every figure on the page and that error
+   * would look like real news. The label was the only part that had not caught
+   * up, and its two siblings were already honest: 'Last 7 days' for 7 days and
+   * 'Last 12 months' for 365.
+   *
+   * Measured on the live demo before changing it: the card read
+   * "Spending by Category · This month" over **$3,159.36**, while September's
+   * actual spending is **$2,359.72** and August's is $2,892.52 — the window
+   * spans mid-August to mid-September and belongs to neither. So the dashboard
+   * and this page named one month with two different totals, which is exactly
+   * the consequence D-206 had on one screen.
+   *
+   * The fix is the label, not the window: changing the window would break the
+   * like-for-like comparison the note above exists to protect.
+   */
+  const rangeLabel = timeRange === 'week' ? 'Last 7 days' : timeRange === 'year' ? 'Last 12 months' : 'Last 30 days';
 
   // Data state
   const [cashFlowMonthly, setCashFlowMonthly] = useState<Array<{
