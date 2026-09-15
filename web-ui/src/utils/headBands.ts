@@ -69,6 +69,24 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
     d: 'M0,52 L110,32 L200,52 L320,26 L430,52 L560,34 L680,52 L820,24 L920,52 L1040,36 L1100,52 Z',
     opacity: 0.34,
   },
+  /* Review is the way up: the sharpest ridge in the set, because clearing it is
+     what makes every other figure in the app worth reading. */
+  review: {
+    d: 'M0,52 L120,28 L210,52 L320,18 L430,52 L560,30 L660,52 L800,22 L900,52 L1100,34 L1100,52 Z',
+    opacity: 0.4,
+  },
+  /* Budgets: coverage is its headline, so a broad even ridge rather than a
+     dramatic one. */
+  budgets: {
+    d: 'M0,52 L140,30 L250,52 L380,24 L500,52 L640,30 L760,52 L900,26 L1000,52 L1100,40 L1100,52 Z',
+    opacity: 0.38,
+  },
+  /* The dashboard's own band is the quietest of all: the goal range sits
+     directly below it and two ranges competing is one too many. */
+  dashboard: {
+    d: 'M0,52 L160,36 L280,52 L420,30 L540,52 L700,34 L820,52 L960,30 L1060,52 L1100,44 L1100,52 Z',
+    opacity: 0.26,
+  },
   /* Rules is a list of things the user taught it — a plain ridge, mid weight. */
   rules: {
     d: 'M0,52 L130,28 L240,52 L370,22 L480,52 L620,32 L740,52 L880,24 L980,52 L1100,38 L1100,52 Z',

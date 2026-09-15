@@ -81,8 +81,73 @@ describe('the shells are actually used', () => {
   const usages = (name: string) =>
     Object.entries(sources).filter(([, s]) => s.includes(`className="${name}"`));
 
-  it('page-title is on several pages', () => {
-    expect(usages('page-title').length).toBeGreaterThanOrEqual(5);
+  /**
+   * *** THIS WAS A COUNT AND THE COUNT BECAME THE WRONG QUESTION. ***
+   * It asserted `.page-title` appeared on at least five pages, which was the
+   * right gate while every page hand-rolled its own head. Pages now render
+   * `PageHead`, which carries `className="page-title"` once on behalf of all of
+   * them — so the count fell as the adoption rose, and a gate that goes red
+   * because a shared component replaced eight copies is measuring the opposite
+   * of what it means to.
+   *
+   * The property that actually matters is unchanged and is now asserted
+   * directly: the rule is referenced, and **no page invents its own page
+   * title**. A page either renders `PageHead` or uses the class; either way
+   * `.page-title` has a consumer, which is the condition that keeps it from
+   * drifting away from the app unnoticed (it once declared 28px where every
+   * page rendered 32px).
+   */
+  it('page-title has a consumer, and no page hand-rolls a title instead', () => {
+    const viaHead = Object.entries(sources).filter(([, src]) => src.includes('<PageHead'));
+    const direct = usages('page-title');
+    expect(viaHead.length + direct.length,
+      'nothing references .page-title any more').toBeGreaterThanOrEqual(5);
+
+    // A page with neither is either title-less or drawing its own, and both are
+    // the drift this file exists to prevent.
+    /**
+     * *** THE PRE-LOGIN PAGES ARE NOT APP PAGES, AND THAT IS THE WHOLE
+     * EXEMPTION. *** They render outside the sidebar shell, with no page head,
+     * no member filter and no ridge band — Landing's h1 is a marketing hero and
+     * the four auth screens' are form titles. Holding them to the in-app head
+     * would mean giving a signed-out page a "Show figures for" slot.
+     *
+     * This is deliberately the SAME set `authPagesUseBrandColours.test.ts`
+     * governs (minus its OIDC callback, which renders no heading), because two
+     * different ideas of "the pages before login" is how a gate ends up
+     * exempting something nobody meant it to. Listed rather than pattern-matched
+     * so a sixth entry costs a visible diff.
+     */
+    const NOT_AN_APP_PAGE = [
+      'Landing.tsx', 'Login.tsx', 'Register.tsx',
+      'ForgotPassword.tsx', 'ResetPassword.tsx', 'OidcCallback.tsx',
+      // The first-run flow is full-screen panels with their own progress
+      // chrome, reached before the sidebar exists. Its h1 is a panel heading
+      // that changes per step, not a page title.
+      'Onboarding.tsx',
+      /**
+       * *** SETTINGS IS EXEMPT FOR NOW, AND THIS ENTRY IS A TODO WITH A
+       * REASON. *** It is a genuine app page, but it has a TWO-PANE shell of
+       * its own — a nav rail beside a content column — and its h1 is the
+       * rail's own 18px title, not a page head. Dropping `PageHead` in would
+       * put a 27px title and a 52px ridge band inside a 240px rail.
+       *
+       * It is the largest page in the app by element count and it has no
+       * mockup; what its head should be is a design decision, not a
+       * conversion. Remove this line when that mockup exists.
+       */
+      'Settings.tsx',
+    ];
+
+    for (const [file, src] of Object.entries(sources)) {
+      if (NOT_AN_APP_PAGE.some((name) => file.endsWith(name))) continue;
+      // Pages that are not a top-level route shell have no page title at all.
+      if (!/<h1/.test(src) && !src.includes('<PageHead')) continue;
+      expect(
+        src.includes('<PageHead') || src.includes('className="page-title"'),
+        `${file} renders an h1 without PageHead or .page-title`,
+      ).toBe(true);
+    }
   });
 
   it('page-container is on several pages', () => {

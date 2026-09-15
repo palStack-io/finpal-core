@@ -37,6 +37,7 @@ import { useReviewStore } from '../store/reviewStore';
 import { GROUP_LABELS, GROUP_ORDER, UNSORTED_LABEL } from '../utils/spendingGroups';
 import { formatMoney } from '../styles/money';
 import { pageContainerStyle } from '../styles/layoutStyles';
+import { PageHead } from '../components/PageHead';
 
 /**
  * The account types the API actually accepts.
@@ -316,13 +317,11 @@ export default function Review() {
   return (
     <div style={pageContainerStyle}>
       <div className="page-container">
-        <div style={{ marginBottom: 24 }}>
-          <h1 className="page-title">Review</h1>
-          <p className="fp-hint">
-            finPal filled some of this in for you. Nothing here is wrong — it is
-            just a guess, and you are the one who knows.
-          </p>
-        </div>
+        <PageHead
+          band="review"
+          title="Review"
+          subtitle="Everything finPal had to guess. Confirm it or correct it — either way it stops being a guess."
+        />
 
         {loadError && (
           <div style={{ ...sectionCardStyle, padding: 16, color: '#ef4444' }}>
@@ -515,6 +514,45 @@ export default function Review() {
                 </div>
               );
             })}
+
+            {/* *** THE CONSEQUENCE, WHICH THE SECTION NEVER STATED. ***
+                The list said what was uncategorised and not what leaving it
+                alone costs. On the demo all six rows are the same transfer
+                into a savings account, every one recorded as `income` — so
+                $1,900.00 of moving money between your own accounts is sitting
+                inside what finPal believes you EARN, and every income figure
+                on the dashboard, Analytics and the reports is built on it.
+
+                *** COMPUTED FROM THE ROWS, NOT WRITTEN AS A SENTENCE. ***
+                Only rows this payload actually carries, only the ones typed
+                `income`, and only when there are some — a page that hardcoded
+                "$1,900" would be wrong for every user but this demo, which is
+                the fabricated-figure habit this project has already found ten
+                sites of.
+
+                NOT "and then income drops to X": that would need to know which
+                of these the user will reclassify, and the honest version of
+                that sentence is the one they produce by acting. */}
+            {(() => {
+              const inflating = payload.sections.uncategorised.rows
+                .filter((row) => row.transaction_type === 'income' && row.amount !== null);
+              if (!inflating.length) return null;
+              const total = inflating.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+              return (
+                <p className="fp-hint" style={{
+                  margin: 0, padding: '14px 16px',
+                  borderTop: '1px solid var(--border-light)',
+                  lineHeight: 1.6,
+                }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(total)}</strong>
+                  {' '}across {inflating.length}{' '}
+                  {inflating.length === 1 ? 'row is' : 'rows are'} recorded as money
+                  coming in. Until you say otherwise, that counts as income
+                  everywhere in finPal — so anything moved between your own
+                  accounts is inflating what you appear to earn.
+                </p>
+              );
+            })()}
           </section>
         )}
 

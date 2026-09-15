@@ -16,6 +16,7 @@ import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
 import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
 import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
+import { PageHead } from '../components/PageHead';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -823,22 +824,22 @@ const BudgetsMinimal = () => {
       <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div className="page-container">
 
-          {/* Simple Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h1 style={{
-                fontSize: '32px',
-                fontWeight: 700,
-                marginBottom: '8px',
-                color: 'var(--text-primary)'
-              }}>
-                Budgets
-              </h1>
-              <p style={secondaryBodyStyle}>
-                Track your spending against your budgets
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {/* *** THIS PAGE HAND-ROLLED ITS OWN h1 AND WAS THE LAST ONE DOING IT.
+              *** A 32px inline title with neither `PageHead` nor
+              `.page-title` — which `pageShells.test.ts` found the moment its
+              assertion was changed from "the class appears on five pages" to
+              "no page invents its own title". The old count could not see this,
+              because four other pages still carried the class and kept the
+              number up.
+
+              The mockup's sentence, too: a limit is only useful for the part of
+              your spending that can move, which is the whole reason this page
+              groups by spending type. */}
+          <PageHead
+            band="budgets"
+            title="Budgets"
+            subtitle="A limit is only useful for the part of your spending that can move."
+            right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               {/* Compact Month Navigator */}
               <div style={{
                 display: 'flex',
@@ -943,8 +944,8 @@ const BudgetsMinimal = () => {
               >
                 <Plus size={18} /> New Budget
               </button>
-            </div>
-          </div>
+            </div>}
+          />
 
           {/* Top Stats */}
           {(() => {

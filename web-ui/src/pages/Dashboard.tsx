@@ -18,6 +18,7 @@ import {
 } from '../services/api/spendingSummary';
 import { SectionCard } from '../components/SectionCard';
 import { ScrollPane } from '../components/ScrollPane';
+import { PageHead } from '../components/PageHead';
 import { GoalRange } from '../components/dashboard/GoalRange';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { goalService } from '../services/goalService';
@@ -437,19 +438,22 @@ export const Dashboard = () => {
     <>
       <div style={pageContainerStyle}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '32px' }}>
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-primary)' }}>Dashboard</h1>
-            <p className="fp-hint">
-              {selectedMember
-                ? `${selectedMember.name}'s money`
-                : 'Everyone sharing this finPal instance'}
-            </p>
-          </div>
-          {/* Top of page, not beside the cards: this narrows the WHOLE page, and
-              a control that sits next to one figure reads as belonging to it. */}
-          <MemberFilter
+        {/* *** THE DASHBOARD WAS THE LAST PAGE HAND-ROLLING ITS OWN HEAD, AND I
+            WROTE THAT HEAD MYSELF EARLIER TODAY. *** A 28px inline h1 with
+            neither `PageHead` nor `.page-title`, which `pageShells.test.ts`
+            could not see while it counted class usages rather than asking
+            whether any page invents a title. Now the same component as every
+            other page, which is what "everything else does the same" asked
+            for. */}
+        <PageHead
+          band="dashboard"
+          title="Dashboard"
+          subtitle={selectedMember
+            ? `${selectedMember.name}'s money`
+            : 'Everyone sharing this finPal instance'}
+          /* Top of page, not beside the cards: this narrows the WHOLE page, and
+             a control that sits next to one figure reads as belonging to it. */
+          right={<MemberFilter
             members={members}
             value={memberId}
             onChange={setMemberId}
@@ -459,8 +463,8 @@ export const Dashboard = () => {
                budgets and goals accept no member filter, which is a limit of
                those endpoints rather than of this control. */
             label="Show figures for"
-          />
-        </div>
+          />}
+        />
 
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
