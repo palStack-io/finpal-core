@@ -87,6 +87,11 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
     d: 'M0,52 L160,36 L280,52 L420,30 L540,52 L700,34 L820,52 L960,30 L1060,52 L1100,44 L1100,52 Z',
     opacity: 0.26,
   },
+  /* Groups: shared costs, so an even social ridge rather than a dramatic one. */
+  groups: {
+    d: 'M0,52 L150,32 L270,52 L400,26 L520,52 L670,30 L790,52 L930,24 L1030,52 L1100,38 L1100,52 Z',
+    opacity: 0.34,
+  },
   /* Rules is a list of things the user taught it — a plain ridge, mid weight. */
   rules: {
     d: 'M0,52 L130,28 L240,52 L370,22 L480,52 L620,32 L740,52 L880,24 L980,52 L1100,38 L1100,52 Z',

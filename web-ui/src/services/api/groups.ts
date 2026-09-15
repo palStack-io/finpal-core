@@ -53,7 +53,33 @@ export interface GroupsResponse {
   groups: Group[];
 }
 
+/**
+ * One line of a group's settlement: who pays whom, and how much.
+ *
+ * *** `from_id`/`to_id` ARE WHY THIS IS USABLE AT ALL. *** The endpoint used to
+ * return `from`/`to` as display NAMES only, and `Groups.tsx` recorded that as
+ * the reason it could not total "you owe" across groups — two members can share
+ * a name, so matching on one attributes a debt to the wrong person. The ids
+ * were added server-side (they were already in scope in
+ * `calculate_group_balances`); the names stay for rendering.
+ */
+export interface GroupBalance {
+  from: string;
+  to: string;
+  /** Present on any server new enough to send it; absent on an older deployment. */
+  from_id?: string;
+  to_id?: string;
+  amount: number;
+}
+
 export const groupsApi = {
+  /** Who owes whom in one group, already netted by the server. */
+  balances: async (id: number): Promise<GroupBalance[]> => {
+    const response = await api.get<{ balances: GroupBalance[] }>(
+      `/api/v1/groups/${id}/balances`);
+    return response.data.balances || [];
+  },
+
   // Get all groups
   getAll: async (): Promise<GroupsResponse> => {
     const response = await api.get<GroupsResponse>('/api/v1/groups');

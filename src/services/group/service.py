@@ -389,9 +389,31 @@ class GroupService:
                     debtor = db.session.get(User, debtor_id)
                     creditor = db.session.get(User, creditor_id)
 
+                    # *** THE IDS SHIP ALONGSIDE THE NAMES, AND THIS FUNCTION
+                    # ALREADY HAD THEM. ***
+                    # `from`/`to` are display names, which is fine for rendering
+                    # one group's settlement and useless for anything that has
+                    # to recognise a PERSON. web-ui's Groups page wanted a "you
+                    # owe" total across groups and could not build it: a
+                    # previous pass recorded the reason in `Groups.tsx` — the
+                    # payload "returns simplified debts keyed by display name,
+                    # not user id, so aggregating them across groups needs a
+                    # backend change first" — and removed two cards that had
+                    # been rendering a confident $0.00 whatever the balances
+                    # were.
+                    #
+                    # Matching on the name instead would be the defect, not the
+                    # shortcut: two members can share a display name, and the
+                    # client would silently attribute one person's debt to
+                    # another. The ids were in scope the whole time.
+                    #
+                    # Added rather than substituted: `from`/`to` stay exactly as
+                    # they were, so every existing consumer is untouched.
                     simplified_debts.append({
                         'from': debtor.name if debtor and hasattr(debtor, 'name') else debtor_id,
                         'to': creditor.name if creditor and hasattr(creditor, 'name') else creditor_id,
+                        'from_id': debtor_id,
+                        'to_id': creditor_id,
                         'amount': round(amount_to_settle, 2)
                     })
 
