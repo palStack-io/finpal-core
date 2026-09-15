@@ -222,27 +222,27 @@ const GoalRow: React.FC<GoalRowProps> = ({
           `aria-hidden`, and it never carries a fact on its own -- every number it
           stands behind is also written out in the subline. Absent entirely when
           `peak` is, so a card from a pre-mountain backend is untouched. */}
-      <div style={{ position: 'relative' }}>
-        {peak && (
-          <div
-            aria-hidden="true"
-            data-testid={`goal-peak-${goal.id}`}
-            style={{
-              position: 'absolute', right: 0, bottom: 0,
-              pointerEvents: 'none', lineHeight: 0,
-            }}
-          >
-            <MountainSilhouette
-              band={peak.band}
-              height={peakHeight}
-              scale={peak.scale}
-              unmeasured={peak.unmeasured}
-              maxPixelHeight={116}
-              decorative
-              style={{ opacity: 'var(--peak-backdrop-opacity)' } as React.CSSProperties}
-            />
-          </div>
-        )}
+      {/* *** THE MOUNTAIN HAS ITS OWN COLUMN NOW, AND THAT IS WHY IT CAN BE
+          SEEN. *** It used to be absolutely positioned UNDER the figures at
+          `--peak-backdrop-opacity` (0.16). The faintness was not a style
+          choice, it was a constraint: anything stronger and the progress
+          figures sitting on top lost contrast, which the comment above records
+          discovering by rendering it. Measured on the live page, the peaks came
+          out between 46x14 and 104x68 — at 14px the Holiday fund's was not a
+          mountain, it was a smudge.
+
+          The mockup's answer is not a higher opacity, it is to stop putting
+          text over it at all. Text and artwork are now two columns of one flex
+          row, so the peak draws at full strength at whatever size it needs and
+          contends with nothing. The card's height is unchanged because the text
+          column was always the taller of the two.
+
+          Still `aria-hidden`: every figure the picture stands for is written in
+          the subline beside it, so a screen reader loses nothing. Absent
+          entirely when `peak` is, so a card from a pre-mountain backend is
+          untouched. */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -398,7 +398,27 @@ const GoalRow: React.FC<GoalRowProps> = ({
           {/* The server's percentage, rounded for display and nothing else. */}
           <span>{percentLabel(goal.progress)}</span>
         </div>
-      </div>
+        </div>
+        </div>
+
+        {/* The artwork column. Flush to the card's right edge, standing on the
+            same baseline as the progress bar, with nothing on top of it. */}
+        {peak && (
+          <div
+            aria-hidden="true"
+            data-testid={`goal-peak-${goal.id}`}
+            style={{ flexShrink: 0, lineHeight: 0, pointerEvents: 'none' }}
+          >
+            <MountainSilhouette
+              band={peak.band}
+              height={peakHeight}
+              scale={peak.scale}
+              unmeasured={peak.unmeasured}
+              maxPixelHeight={116}
+              decorative
+            />
+          </div>
+        )}
       </div>
 
       {strip && <GoalStrip strip={strip} goalId={goal.id} />}
