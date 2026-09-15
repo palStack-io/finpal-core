@@ -6,8 +6,8 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from './budgets/SpendingTypeControl';
-import { StatCard } from './StatCard';
 import { PageHead } from './PageHead';
+import { TotalsRow } from './dashboard/TotalsRow';
 import { formatMoney } from '../styles/money';
 import { analyticsService } from '../services/analyticsService';
 import { lastFullMonth } from '../utils/monthKeys';
@@ -570,63 +570,73 @@ export const CategoryManagement: React.FC = () => {
           `splitSpendByGroup` refuses an ambiguous name rather than guessing,
           and anything it could not attribute is named below rather than
           quietly missing from a total. */}
+      {/* *** RENDERED THROUGH `TotalsRow`, NOT A FOURTH HAND-ROLLED GRID. ***
+          I wrote this as its own `display: grid` with hairline borders first,
+          which is `TotalsRow` re-implemented — and `sidebarAndStatCardsMeasured`
+          failed it, correctly: the gate's whole subject is that a page's stat
+          row goes through the one shared shell, because this file and Rules
+          once drifted 19px apart doing exactly this. The component was written
+          for the dashboard and its own header says it is meant to be reused
+          for "the same shape of header and four of its own figures".
+
+          Every number here is joined from two payloads by category NAME,
+          because `/analytics/categories/top` carries no id. Names can collide —
+          the demo has six duplicates, one resolving to two different types — so
+          `splitSpendByGroup` refuses an ambiguous name rather than guessing,
+          and anything it could not attribute is named below rather than
+          quietly missing from a total. */}
       {split && (
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1px',
-          background: 'var(--border-light)',
+          background: 'var(--bg-card)',
           border: '1px solid var(--border-light)',
           borderRadius: '12px',
           overflow: 'hidden',
           marginBottom: '24px',
         }}>
-          {([
-            ['Fixed', split.fixed, 'var(--text-primary)', 'arrives whatever you do'],
-            ['Flexible', split.flexible, 'var(--g-ink)', 'yours to move'],
-            // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
-            // FILLS. `--kt-seg-4` is #B8884D, which measures **3.06:1** on the
-            // card in light theme — the contrast walk failed this exact pair,
-            // and `coins/_kit.css` already carries the warning with the same
-            // number on it: "#B8884D survives as --seg-4, which is a FILL and
-            // never carries a label". A gold that reads perfectly gold and
-            // fails AA is why this project measures a colour instead of
-            // matching one.
-            ['Non-monthly', split.non_monthly, 'var(--au-ink)', 'lands some months and not others'],
-          ] as const).map(([label, value, colour, note]) => (
-            <div key={label} style={{ background: 'var(--bg-card)', padding: '18px 20px' }}>
-              <div style={{
-                fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: 'var(--text-secondary)', fontWeight: 600,
-              }}>{label}</div>
-              <div style={{
-                fontSize: '22px', fontWeight: 600, marginTop: '3px', color: colour,
-                fontVariantNumeric: 'tabular-nums',
-              }}>{formatMoney(value)}</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {/* A zero is a fact about the month, not a gap to apologise
-                    for: nothing non-monthly landed in August. */}
-                {value === 0 ? `nothing landed in ${split.label.split(' ')[0]}` : note}
-              </div>
-            </div>
-          ))}
-          {split.unsorted > 0 && (
-            <div style={{ background: 'var(--bg-card)', padding: '18px 20px' }}>
-              <div style={{
-                fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: 'var(--text-secondary)', fontWeight: 600,
-              }}>Not sorted yet</div>
-              <div style={{
-                fontSize: '22px', fontWeight: 600, marginTop: '3px',
-                color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums',
-              }}>{formatMoney(split.unsorted)}</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {/* NOT folded into flexible. Unsorted means finPal does not
-                    know; calling it movable would claim the user said so. */}
-                finPal cannot say which of the three this is
-              </div>
-            </div>
-          )}
+          <TotalsRow
+            cells={[
+              {
+                label: 'Fixed',
+                value: formatMoney(split.fixed),
+                note: split.fixed === 0
+                  ? `nothing landed in ${split.label.split(' ')[0]}`
+                  : 'arrives whatever you do',
+              },
+              {
+                label: 'Flexible',
+                value: formatMoney(split.flexible),
+                valueColor: 'var(--g-ink)',
+                note: split.flexible === 0
+                  ? `nothing landed in ${split.label.split(' ')[0]}`
+                  : 'yours to move',
+              },
+              {
+                label: 'Non-monthly',
+                // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
+                // FILLS. `--kt-seg-4` is #B8884D, which measures 3.06:1 on the
+                // card in light — the contrast walk failed this exact pair, and
+                // `coins/_kit.css` carries the same warning with the same
+                // number: it "survives as --seg-4, which is a FILL and never
+                // carries a label".
+                value: formatMoney(split.non_monthly),
+                valueColor: 'var(--au-ink)',
+                note: split.non_monthly === 0
+                  ? `nothing landed in ${split.label.split(' ')[0]}`
+                  : 'lands some months and not others',
+              },
+              // Only when there is some: a zero here would invite sorting work
+              // that is already done, and "Not sorted yet — $0.00" reads as a
+              // problem rather than as finished.
+              ...(split.unsorted > 0 ? [{
+                label: 'Not sorted yet',
+                value: formatMoney(split.unsorted),
+                valueColor: 'var(--text-secondary)',
+                // NOT folded into flexible. Unsorted means finPal does not
+                // know; calling it movable would claim the user said so.
+                note: 'finPal cannot say which of the three this is',
+              }] : []),
+            ]}
+          />
         </div>
       )}
       {split && split.unattributable.length > 0 && (
@@ -637,41 +647,27 @@ export const CategoryManagement: React.FC = () => {
         </p>
       )}
 
-      {/* Stats
+      {/* *** THE THREE COUNT CARDS ARE GONE, AND THE SPLIT ABOVE IS WHY. ***
+          They said Main Categories 19, Subcategories 128, Total Items 147 —
+          inventory, not insight. With the fixed/flexible figures now sitting
+          directly above them the page carried TWO stacked three-column rows
+          saying different kinds of thing, which is the 'everything looks out
+          of place' shape the dashboard was just rewritten to remove, and the
+          mockup has only the money row.
 
-          `StatCard`, not three hand-rolled copies. Dashboard, Transactions, Budgets and
-          Accounts already used the shared component; this page and Rules each kept their
-          own, and the two had drifted — measured on the deployed app, this row rendered
-          **132px** here and **113px** on Rules, because Categories wrapped its icon in a
-          40x40 tinted box and Rules used a bare 20px glyph. Same role, same declared
-          padding, 19px apart, which is what "the spacing looks weird between these pages"
-          turned out to mean. A shell nothing shares is a shell nothing keeps in step. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <StatCard
-          label="Main Categories"
-          value={String(parentCategories.length)}
-          accentColor="var(--accent-blue)"
-          icon={<Folder size={24} style={{ color: 'var(--accent-blue)' }} />}
-        />
-        <StatCard
-          label="Subcategories"
-          value={String(categories.filter(c => c.parent_id).length)}
-          accentColor="#a855f7"
-          icon={<Tag size={24} style={{ color: '#a855f7' }} />}
-        />
-        <StatCard
-          label="Total Items"
-          value={String(categories.length)}
-          accentColor="var(--brand-green-glow)"
-          /* *** THE INK, NOT THE BRAND VALUE. *** `--brand-green-glow`
-             measured 2.21:1 here against the 3:1 non-text floor: it is a
-             SURFACE colour that reads as a glow on dark and vanishes on the
-             near-white card. `--g-ink` is the token that exists so an accent
-             can move as a mark without dragging the surfaces it paints with
-             it (D-103). */
-          icon={<Search size={24} style={{ color: 'var(--g-ink)' }} />}
-        />
-      </div>
+          The one count that prompts an action survives in the line below,
+          without a denominator: '19 categories have no spending group yet'.
+          '19 of 147' would be the '16 of 19 lessons' shape the spec took off
+          the dashboard — a total finPal chose rather than one the user did.
+
+          The `StatCard` import goes with them: this was its only use here, and
+          an import with no JSX behind it is the same false claim a comment can
+          make. (I wrote "still used by this file's other row" first, checked,
+          and there is no other row — D-221 was exactly a comment describing a
+          world that had moved on.) `sidebarAndStatCardsMeasured` is about not
+          hand-rolling a stat shell, not about how many pages use the shared
+          one, so dropping a usage is not a regression — and the split above
+          renders no `bigStatStyle`, which is the thing that gate looks for. */}
 
       {/* Search */}
       <div style={{ marginBottom: '24px' }}>
