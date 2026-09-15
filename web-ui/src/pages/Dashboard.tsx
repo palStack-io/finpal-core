@@ -10,7 +10,6 @@ import { formatMoney, Money, moneyStyle, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
 import { useTheme } from '../contexts/ThemeContext';
 import { CHART_COLORS } from '../config/theme';
-import { StatCard } from '../components/StatCard';
 import { ShareBar } from '../components/dashboard/ShareBar';
 import {
   spendingSummaryApi,
@@ -19,6 +18,7 @@ import {
 } from '../services/api/spendingSummary';
 import { SectionCard } from '../components/SectionCard';
 import { GoalRange } from '../components/dashboard/GoalRange';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { goalService } from '../services/goalService';
 import type { Goal } from '../types/goal';
 import { monthLabelLong, monthLabelShort } from '../utils/monthKeys';
@@ -141,7 +141,21 @@ export const Dashboard = () => {
       .catch(() => setByPerson([]));
   }, [members.length]);
   const [monthlyAggregation, setMonthlyAggregation] = useState<any[]>([]);
-  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  /*
+   * *** THE CURRENT MONTH STARTS OPEN AND EVERY OTHER MONTH STARTS SHUT. ***
+   * Every month rendered all of its category and account chips unconditionally,
+   * so three months of history was a wall of forty chips and the month totals —
+   * the thing somebody actually scans for — were lost inside it. The mockup
+   * shows summary rows with the current month open.
+   *
+   * Built from local parts, not from `toISOString()`, which is UTC: west of UTC
+   * that would open LAST month for the first hours of every day. Same bug as
+   * D-206, one line over.
+   */
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(() => {
+    const now = new Date();
+    return new Set([`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`]);
+  });
 
   const COLORS = CHART_COLORS;
 
@@ -354,6 +368,47 @@ export const Dashboard = () => {
    * the container, because a wrong guess here degrades a corner and the old
    * behaviour deleted the entire series.
    */
+  /**
+   * The four headline figures. Built here because this is where the data and
+   * the currency are; `TotalsRow` knows nothing about what a savings rate is.
+   */
+  // Labels keep their original capitalisation. `textTransform: uppercase` in
+  // the row makes them read the same on screen either way, but the DOM text is
+  // what the suite and a screen reader see, and three tests anchor on
+  // "Net Worth" to know the page has finished loading.
+  const totalsCells = [
+    {
+      label: 'Net Worth',
+      value: formatCurrency(netWorth),
+      note: 'Accounts and investments',
+    },
+    {
+      label: 'Monthly Income',
+      value: formatCurrency(monthlyIncome),
+      note: 'Current month earnings',
+    },
+    {
+      label: 'Monthly Expenses',
+      value: formatCurrency(monthlyExpenses),
+      valueColor: 'var(--status-over)',
+      note: 'Spending this month',
+    },
+    {
+      label: 'Savings Rate',
+      // D-206's sibling: `null` is not zero. No income recorded means there is
+      // no rate, and a clamped 0.0% was a figure finPal invented.
+      value: savingsRate === null ? '—' : `${savingsRate.toFixed(1)}%`,
+      valueColor: savingsRate === null
+        ? 'var(--text-muted)'
+        : savingsRate < 0 ? 'var(--status-over)' : undefined,
+      note: savingsRate === null
+        ? 'No income recorded this month yet'
+        : savingsRate < 0
+          ? 'You spent more than you earned this month'
+          : 'Of income, after expenses',
+    },
+  ];
+
   const cashFlowBarRadius: [number, number, number, number] =
     cashFlowData.length > 12 ? [2, 2, 0, 0] : [8, 8, 0, 0];
 
@@ -418,91 +473,63 @@ export const Dashboard = () => {
             Renders nothing at all when there are no goals with peaks, which is
             deliberate: an empty frame here would be decoration standing in for
             a fact, and the "you have nothing yet" case belongs to base camp. */}
-        {goals.length > 0 && (
+        {/* *** THE TOP OF THE PAGE IS ONE OBJECT NOW, NOT FIVE. *** It was a
+            range panel followed by four stat cards, each with its own border,
+            shadow, icon chip and padding — three competing headers before any
+            content, which is what "everything looks out of place" meant. The
+            mockup puts the totals inside the range's own card, divided by
+            hairlines. `TotalsRow` is deliberately dumb so Analytics can reuse
+            it: the caller owns the formatting and the colours.
+
+            *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
+            GROUND". *** The ground is a monthly recurring total, and the only
+            place it is computed today is learnPal's range endpoint — reading it
+            here would make the core dashboard depend on a module a self-hoster
+            can switch off, which is D-187's shape. Deriving it from
+            `/recurring/` in core is the right fix and is its own change. */}
+        {goals.length > 0 ? (
           <SectionCard title="Your range" subtitle="What you are climbing, and the ground you stand on while you climb.">
             <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
+            <TotalsRow cells={totalsCells} />
+          </SectionCard>
+        ) : (
+          /* No goals yet: the figures still have to be somewhere, so the row
+             stands on its own card rather than vanishing with the range. */
+          <SectionCard title="Where you stand">
+            <TotalsRow cells={totalsCells} />
           </SectionCard>
         )}
 
-        {/* The share bar — "what is this month made of?".
+        {/* *** THE SPEND BAR IS A SECTION NOW, NOT A LOOSE STRIP. *** It sat
+            between the range card and the stat cards with a bare sentence for a
+            heading, which is half of why the page read as a pile of unrelated
+            things. The mockup gives it a title naming the month and the period
+            it covers, and the bar itself carries the per-category amounts — so
+            this is the ONLY place on the page that says where the money went,
+            after the duplicate donut was removed.
+
             One user slices by category, two or more by person with a toggle,
             and a month with no spending renders NOTHING rather than an empty
-            track. See ShareBar's own docstring for why that is not a detail. */}
-        <ShareBar
-          memberCount={members.length}
-          byCategory={byCategory}
-          byPerson={byPerson}
-          currency={user?.default_currency_code || 'USD'}
-        />
-
-        {/* Stat Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          {/* **No per-figure scope tags any more — D-18 item E.** They existed
-              because this one payload used to carry the caller's own net worth
-              and expense share alongside the household's income, so no single
-              caption was true for the page. Every figure now follows the member
-              filter above together, which answers the question once instead of
-              four times. `utils/scope.ts` keeps the vocabulary for the surfaces
-              that still need it. */}
-          <StatCard
-            label="Net Worth"
-            value={formatCurrency(netWorth)}
-            accentColor="#22c55e"
-            icon={<Wallet size={24} color="#22c55e" />}
-            /* "Accounts and investments" and "Spending this month" are DESCRIPTIONS of
-                what the figure is, not statuses. Colouring them was the same
-                over-claim O1 retired on the ledger — and measured, the green was
-                2.21:1 and the red 3.65:1 on the card, so they were illegible as
-                well as wrong. The ICONS keep their colour; they are decorative
-                and carry no text. */
-            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Accounts and investments</span></>}
-          />
-          <StatCard
-            label="Monthly Income"
-            value={formatCurrency(monthlyIncome)}
-            accentColor="#3b82f6"
-            icon={<TrendingUp size={24} color="#3b82f6" />}
-            subtitle={<span className="fp-hint">Current month earnings</span>}
-          />
-          <StatCard
-            label="Monthly Expenses"
-            value={formatCurrency(monthlyExpenses)}
-            accentColor="#ef4444"
-            icon={<TrendingDown size={24} color="#ef4444" />}
-            subtitle={<><TrendingDown size={16} color="#ef4444" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Spending this month</span></>}
-          />
-          {/* Still no congratulation. The subtitle used to read "Great job
-              saving!" unconditionally — praise for a number that read 100% for a
-              member who had entered nothing and 0% for someone with no income at
-              all. The 100% case is fixed (D-18 item E: both terms now describe
-              the same people), the 0%-without-income case is not, and an
-              unconditional compliment is wrong either way. */}
-          {(() => {
-            // Colour follows the fact, not the brand: money going the wrong way
-            // wears the direction's clay, the same token an over-budget row uses.
-            const rateColor = savingsRate === null
-              ? 'var(--text-muted)'
-              : savingsRate < 0 ? 'var(--status-over)' : '#fbbf24';
-            return (
-              <StatCard
-                label="Savings Rate"
-                value={savingsRate === null ? '—' : `${savingsRate.toFixed(1)}%`}
-                accentColor={rateColor}
-                valueColor={rateColor}
-                icon={<PiggyBank size={24} color={rateColor} />}
-                subtitle={
-                  <span className="fp-hint">
-                    {savingsRate === null
-                      ? 'No income recorded this month yet'
-                      : savingsRate < 0
-                        ? 'You spent more than you earned this month'
-                        : 'Of income, after expenses'}
-                  </span>
-                }
+            track — see ShareBar's own docstring for why that is not a detail.
+            Which is also why the card is conditional: a titled card wrapping a
+            component that renders null is an empty panel. */}
+        {(byCategory.length > 0 || byPerson.length > 0) && (
+          <div style={{ marginBottom: '24px' }}>
+            <SectionCard
+              title={`Where ${new Date().toLocaleDateString('en-US', { month: 'long' })} went`}
+              subtitle={`${formatCurrency(monthlyExpenses)} out · day ${new Date().getDate()} of the month`}
+              action={<ViewAllBtn href="/transactions" />}
+            >
+              <ShareBar
+                memberCount={members.length}
+                byCategory={byCategory}
+                byPerson={byPerson}
+                currency={user?.default_currency_code || 'USD'}
+                hideTitle
               />
-            );
-          })()}
-        </div>
+            </SectionCard>
+          </div>
+        )}
 
         {/* *** ONE CARD IN A TWO-COLUMN GRID LEAVES HALF THE ROW EMPTY. ***
             Removing the duplicate category donut left Cash Flow alone in an
@@ -704,36 +731,76 @@ export const Dashboard = () => {
                             {formatCurrency(month.total)}
                           </td>
                           <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                            {/* Collapsed, a month states WHAT it holds rather
+                                than nothing — a blank cell reads as missing
+                                data, and the count is the affordance that says
+                                there is something to open. */}
+                            {!isExpanded ? (
+                              <span className="fp-hint" style={{ fontSize: '13px' }}>
+                                {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+                              </span>
+                            ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               {categories.map((cat: any) => (
                                 <div key={cat.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                                  {/* *** EVERY ONE OF THESE CHIPS FAILED WCAG AA,
+                                      AND "Pharmacy" MEASURED 1.06:1. *** The label
+                                      was painted in the raw category colour on a
+                                      12.5% tint of that same colour over a near-white
+                                      card: a pale cyan category rendered pale cyan on
+                                      pale cyan. Measured on the running page, 11 of 11
+                                      chips were under 4.5:1 and the worst was
+                                      effectively invisible.
+
+                                      The colour now lives where colour can be pale —
+                                      the tint and the border — and the label takes ink,
+                                      which is how every other categorised row in this
+                                      app already does it. The category is still
+                                      identifiable at a glance and is now also readable.
+
+                                      *** WHY THE CONTRAST WALK MISSED IT: *** it walks
+                                      `/dashboard`, but its fixture produces no monthly
+                                      aggregation, so these chips have never existed in
+                                      a captured page. D-165's shape — a fixture that
+                                      cannot produce the real case. */}
                                   <span style={{
                                     fontSize: '13px', fontWeight: '500', padding: '4px 10px', borderRadius: '6px',
                                     background: cat.color ? `color-mix(in srgb, ${cat.color} 12.5%, transparent)` : 'rgba(107,114,128,0.2)',
-                                    color: cat.color || 'var(--text-secondary)',
-                                    border: `1px solid color-mix(in srgb, ${cat.color || 'var(--text-secondary)'} 25%, transparent)`,
+                                    color: 'var(--text-primary)',
+                                    border: `1px solid color-mix(in srgb, ${cat.color || 'var(--text-secondary)'} 45%, transparent)`,
                                     display: 'inline-block'
                                   }}>{cat.name}</span>
                                   <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(cat.total)}</span>
                                 </div>
                               ))}
                             </div>
+                            )}
                           </td>
                           <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                            {!isExpanded ? (
+                              <span className="fp-hint" style={{ fontSize: '13px' }}>
+                                {monthAccounts.length} {monthAccounts.length === 1 ? 'account' : 'accounts'}
+                              </span>
+                            ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               {monthAccounts.map((acc: any) => (
                                 <div key={acc.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                                  {/* The account chips are the same construction and
+                                      the same defect — fixed together, because leaving
+                                      one is how the next reader concludes the pattern
+                                      is fine. */}
                                   <span style={{
                                     fontSize: '13px', fontWeight: '500', padding: '4px 10px', borderRadius: '6px',
                                     background: acc.color ? `color-mix(in srgb, ${acc.color} 12.5%, transparent)` : 'rgba(107,114,128,0.2)',
-                                    color: acc.color || 'var(--text-secondary)',
-                                    border: `1px solid color-mix(in srgb, ${acc.color || 'var(--text-secondary)'} 25%, transparent)`,
+                                    color: 'var(--text-primary)',
+                                    border: `1px solid color-mix(in srgb, ${acc.color || 'var(--text-secondary)'} 45%, transparent)`,
                                     display: 'inline-block'
                                   }}>{acc.name}</span>
                                   <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(acc.total)}</span>
                                 </div>
                               ))}
                             </div>
+                            )}
                           </td>
                           <td style={{ padding: '16px 12px', textAlign: 'center', verticalAlign: 'top' }}>
                             <button
