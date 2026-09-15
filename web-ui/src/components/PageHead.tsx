@@ -65,6 +65,10 @@ export const PageHead: React.FC<PageHeadProps> = ({ title, subtitle, right, band
         aria-hidden="true"
         focusable="false"
       >
+        {/* The base first, so the ridge sits in front of it. */}
+        {ridge.base && (
+          <path d={ridge.base.d} fill="var(--head-ridge)" opacity={ridge.base.opacity} />
+        )}
         <path d={ridge.d} fill="var(--head-ridge)" opacity={ridge.opacity} />
       </svg>
     </div>

@@ -7,6 +7,9 @@ import { Modal } from './Modal';
 import { formActionsStyle, labelStyle } from '../styles/formStyles';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney } from '../styles/money';
+import { PageHead } from './PageHead';
+import { monthlyEquivalent, isConvertible, monthlyLabel } from '../utils/recurringMonthly';
+import { groundHeight } from '../utils/mountainGeometry';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 
@@ -363,20 +366,15 @@ export const RecurringTransactions: React.FC = () => {
        The import comes from a shared barrel, so a page can look like it adopted
        the shell while rendering a bare div. */
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' , flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          {/* h1, not h2 — this is the PAGE's own title and everything under it is
-              a section, so the document outline started at level 2 with no h1
-              at all. Size stays inline; nothing moves on screen. Found by
-              `every-page.spec.ts`, which walks all 21 routes — the older h1
-              check walked six and this page was not one of them. */}
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
-            Recurring Transactions
-          </h1>
-          <p className="fp-hint">
-            Manage automatic recurring transactions and detect patterns
-          </p>
-        </div>
+      {/* The only band in the set with a base: a solid bar along the bottom,
+          because this page IS the ground. `PageHead` also supplies the single
+          h1 the outline needs — this page had none until the widened heading
+          check found it. */}
+      <PageHead
+        band="recurring"
+        title="Recurring"
+        subtitle="What arrives every month before you decide anything. This is the ground you stand on."
+        right={<>
         <button
           onClick={handleDetectPatterns}
           disabled={detectingPatterns}
@@ -423,8 +421,8 @@ export const RecurringTransactions: React.FC = () => {
         >
           <Plus size={16} />
           New Recurring
-        </button>
-      </div>
+        </button></>}
+      />
 
       {showAddModal && (
         <AddRecurringModal
@@ -683,6 +681,34 @@ export const RecurringTransactions: React.FC = () => {
                   <span style={metaTextStyle}>
                     Frequency: <strong style={{ color: 'var(--g-ink)' }}>{getFrequencyLabel(item.frequency)}</strong>
                   </span>
+                  {/* *** WHAT THIS ROW COSTS PER MONTH, WHICH IS NOT ALWAYS ITS
+                      AMOUNT. *** The demo's £15 weekly shop is £65 a month and
+                      its £132 yearly insurance is £11 — so a reader adding the
+                      printed column up gets £1,659 against a true £1,588. The
+                      figure is only shown when it DIFFERS: repeating "£1,200 /
+                      mo" beside a monthly £1,200 is noise, and noise is what
+                      stops the two rows that matter from standing out.
+
+                      When finPal cannot convert the frequency it says so
+                      rather than printing a number — `monthlyEquivalent`
+                      returns null for anything outside the four values the
+                      model documents, because defaulting an unknown to
+                      "monthly" would put a wrong figure inside what a user
+                      reads as their fixed cost. */}
+                  {monthlyEquivalent(item.amount, item.frequency) !== item.amount && (
+                    isConvertible(item.frequency) ? (
+                      <span style={metaTextStyle}>
+                        Per month: <strong style={{ color: 'var(--g-ink)' }}>
+                          {monthlyLabel(item.amount, item.frequency,
+                            (n) => money(n, item.currency_code))?.replace(' / mo', '')}
+                        </strong>
+                      </span>
+                    ) : (
+                      <span style={metaTextStyle}>
+                        finPal cannot work out what “{item.frequency}” costs in a month
+                      </span>
+                    )
+                  )}
                   <span style={metaTextStyle}>
                     Type: <strong style={{ color: 'var(--g-ink)' }}>{item.transaction_type}</strong>
                   </span>
@@ -738,6 +764,66 @@ export const RecurringTransactions: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {/* *** THE GROUND: WHAT LEAVES EVERY MONTH BEFORE ANY DECISION. ***
+              The dashboard's range draws a ground line and this is the figure
+              under it, so the two screens are telling one story — which is
+              only true because the ADDING is done by `groundHeight()` in
+              `mountainGeometry.ts` rather than by a second sum written here.
+              That helper had a test file and NO production caller at all until
+              now; a parallel total would have been D-101, two places computing
+              one presentation, which is exactly how two screens drift apart.
+
+              *** AND ROWS IT CANNOT CONVERT ARE NAMED, NOT SILENTLY DROPPED.
+              *** `frequency` is an unconstrained column, so a fifth value can
+              exist. Excluding one without saying so would print a ground that
+              is quietly too low — a figure the user would have no way to
+              question. */}
+          {recurring.length > 0 && (() => {
+            const convertible = recurring
+              .filter((item) => item.active && item.transaction_type !== 'income')
+              .map((item) => ({ item, monthly: monthlyEquivalent(item.amount, item.frequency) }));
+            const known = convertible.filter((r) => r.monthly !== null);
+            const unknown = convertible.filter((r) => r.monthly === null);
+            if (!known.length) return null;
+            const ground = groundHeight({ recurringMonthly: known.map((r) => r.monthly as number) });
+            const currency = known[0].item.currency_code;
+
+            return (
+              <div style={{
+                marginTop: '4px',
+                padding: '20px 24px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-light)',
+                borderRadius: '12px',
+              }}>
+                <div className="fp-hint" style={{
+                  fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                  fontWeight: 600, margin: 0,
+                }}>
+                  The ground
+                </div>
+                <div style={{
+                  fontSize: '23px', fontWeight: 600, marginTop: '3px',
+                  color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {money(ground, currency)}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  a month before you climb anything
+                  {/* Only the rows that are ON count: an inactive row is not
+                      leaving your account, and income is not ground. */}
+                  {' · '}from {known.length} active {known.length === 1 ? 'row' : 'rows'}
+                </div>
+                {unknown.length > 0 && (
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                    Not counted, because finPal cannot turn their schedule into a
+                    monthly figure: {unknown.map((r) => r.item.description).join(', ')}.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

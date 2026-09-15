@@ -58,11 +58,37 @@ describe('PageHead', () => {
   });
 
   it('every band in the set is claimed by a page, and every adopter names a real band', () => {
-    const pages = readdirSync(join(SRC, 'pages')).filter((f) => f.endsWith('.tsx'));
+    /**
+     * *** THE SWEEP COVERS `components/` TOO, AND THE FIRST VERSION DID NOT. ***
+     * It read `pages/` only, which is a fair guess and wrong about this app:
+     * Recurring and Rules have no page file at all — the component IS the
+     * route, `App.tsx` renders `RecurringTransactions` and `TransactionRules`
+     * directly. So adopting the head on those two turned this assertion red
+     * while the adoption was real, which is a gate keyed to a layout
+     * convention rather than to the thing it means to check.
+     */
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === '__tests__') continue;
+          walk(full);
+        } else if (entry.name.endsWith('.tsx')) {
+          files.push(full);
+        }
+      }
+    };
+    walk(join(SRC, 'pages'));
+    walk(join(SRC, 'components'));
+    walk(join(SRC, 'modules'));
+
     const named = new Set<string>();
     let adopters = 0;
-    for (const file of pages) {
-      const src = readFileSync(join(SRC, 'pages', file), 'utf8');
+    for (const full of files) {
+      const src = readFileSync(full, 'utf8');
+      // The component's own definition is not an adoption of it.
+      if (full.endsWith('PageHead.tsx')) continue;
       if (!src.includes('<PageHead')) continue;
       adopters += 1;
       for (const m of src.matchAll(/band="([a-z-]+)"/g)) named.add(m[1]);
@@ -71,6 +97,6 @@ describe('PageHead', () => {
     // geometry that cannot be wrong, so nothing keeps it right.
     expect([...Object.keys(HEAD_BANDS)].sort()).toEqual([...named].sort());
     for (const band of named) expect(HEAD_BANDS[band], `band="${band}"`).toBeTruthy();
-    expect(adopters, 'pages rendering PageHead').toBeGreaterThanOrEqual(3);
+    expect(adopters, 'surfaces rendering PageHead').toBeGreaterThanOrEqual(5);
   });
 });

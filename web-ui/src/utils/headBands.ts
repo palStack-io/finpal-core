@@ -24,6 +24,12 @@ export interface HeadBand {
   d: string;
   /** How present the ridge is. Denser pages get a quieter band. */
   opacity: number;
+  /**
+   * An optional second path, drawn UNDER the ridge. Only Recurring uses one,
+   * and it is not decoration: a solid bar along the bottom is the ground, which
+   * is what that page is about. A page whose band says something gets to say it.
+   */
+  base?: { d: string; opacity: number };
 }
 
 export const HEAD_BANDS: Record<string, HeadBand> = {
@@ -43,5 +49,17 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
   goals: {
     d: 'M0,52 L90,22 L160,52 L250,30 L330,52 L440,14 L540,52 L660,26 L750,52 L880,32 L970,52 L1100,36 L1100,52 Z',
     opacity: 0.45,
+  },
+  /* The only band with a base: a solid bar across the bottom, because this page
+     IS the ground. The ridges sit behind it, quieter than anywhere else. */
+  recurring: {
+    d: 'M0,52 L150,30 L260,52 L400,24 L520,52 L660,32 L780,52 L920,26 L1020,52 L1100,42 L1100,52 Z',
+    opacity: 0.3,
+    base: { d: 'M0,44 L1100,44 L1100,52 L0,52 Z', opacity: 0.5 },
+  },
+  /* Rules is a list of things the user taught it — a plain ridge, mid weight. */
+  rules: {
+    d: 'M0,52 L130,28 L240,52 L370,22 L480,52 L620,32 L740,52 L880,24 L980,52 L1100,38 L1100,52 Z',
+    opacity: 0.36,
   },
 };
