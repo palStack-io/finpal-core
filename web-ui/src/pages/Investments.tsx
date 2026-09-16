@@ -457,10 +457,23 @@ export const Investments: React.FC = () => {
                   </thead>
                   <tbody>
                     {holdings.map((holding) => {
-                      const marketValue = holding.current_price * holding.shares;
-                      const costBasis = holding.purchase_price * holding.shares;
-                      const gain = marketValue - costBasis;
-                      const gainPercent = costBasis > 0 ? (gain / costBasis) * 100 : 0;
+                      /* *** THE SERVER'S FIGURES, NOT A FOURTH COPY OF ITS
+                         ARITHMETIC. *** These four lines used to read
+                           marketValue = current_price * shares
+                           costBasis   = purchase_price * shares
+                           gain        = marketValue - costBasis
+                           gainPercent = gain / costBasis * 100
+                         which is exactly what `src/models/investment.py`
+                         computes as `@property` and sends as `current_value`,
+                         `cost_basis`, `gain_loss` and `gain_loss_percentage`.
+                         The D-101 duplication was removed from the page TOTALS
+                         and was still live here, one level down, per row — so
+                         the fix had been half-done. Measured against the live
+                         payload the two agree to the cent on both holdings, so
+                         no figure on screen changes. */
+                      const marketValue = holding.current_value;
+                      const gain = holding.gain_loss;
+                      const gainPercent = holding.gain_loss_percentage;
 
                       return (
                         <tr
