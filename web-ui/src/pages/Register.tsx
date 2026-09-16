@@ -252,8 +252,19 @@ export const Register: React.FC = () => {
             }}>
               Create Account
             </h1>
+            {/* *** finPal, NOT DollarPal — AND THIS FILE NEVER IMPORTED `getBranding`. ***
+                `DollarPal` is a real feature: `config/branding.ts` brands the app by
+                the reader's currency (DollarPal, EuroPal, PoundPal, RupeePal...), and
+                `Landing.tsx` advertises exactly that. But it was HARDCODED here, so
+                every prospective user in the world was invited to join the US one.
+                And at signup there is no currency yet to brand with — the account
+                does not exist — so no branded name is correct and the unbranded
+                product name is the only honest option.
+                `Onboarding.tsx` already carries this rule in a comment: "never
+                `brandingMap.USD`'s fallback, which would label every unbranded
+                currency DollarPal". Same mistake, one screen earlier. */}
             <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-              Join DollarPal today
+              Join finPal today
             </p>
           </div>
 

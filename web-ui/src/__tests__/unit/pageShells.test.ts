@@ -74,9 +74,28 @@ describe('the shells are actually used', () => {
    * condition that let `.page-title` drift away from the app unnoticed. A rule
    * nothing references cannot be wrong, so nothing keeps it right.
    */
-  const sources = import.meta.glob('../../pages/*.tsx', {
-    query: '?raw', import: 'default', eager: true,
-  }) as Record<string, string>;
+  /*
+   * *** THE GLOB READ `pages/*.tsx` ONLY, SO IT WAS BLIND TO ALL EIGHT MODULE
+   * PAGES — AND ONE OF THEM HAND-ROLLS ITS OWN HEAD. *** learnPal contributes
+   * three routed pages and pointsPal five, every one of them a top-level route
+   * in `App.tsx`'s module manifests, and `pointspal/pages/Redeem.tsx` defines a
+   * local `PageHeader` component and renders it twice. The property below —
+   * "no page hand-rolls a title instead" — is exactly what should have caught
+   * that, and could not see the file. D-222's lesson a second time: a gate's
+   * coverage is a lower bound on the shapes it can see, so the question to ask
+   * of any sweep is which files it OMITS.
+   */
+  const sources = {
+    ...import.meta.glob('../../pages/*.tsx', {
+      query: '?raw', import: 'default', eager: true,
+    }) as Record<string, string>,
+    ...import.meta.glob('../../modules/*/pages/*.tsx', {
+      query: '?raw', import: 'default', eager: true,
+    }) as Record<string, string>,
+    ...import.meta.glob('../../modules/*/*.tsx', {
+      query: '?raw', import: 'default', eager: true,
+    }) as Record<string, string>,
+  } as Record<string, string>;
 
   const usages = (name: string) =>
     Object.entries(sources).filter(([, s]) => s.includes(`className="${name}"`));
@@ -98,7 +117,15 @@ describe('the shells are actually used', () => {
    * page rendered 32px).
    */
   it('page-title has a consumer, and no page hand-rolls a title instead', () => {
-    const viaHead = Object.entries(sources).filter(([, src]) => src.includes('<PageHead'));
+    /* *** `includes('<PageHead')` ALSO MATCHES `<PageHeader />`, AND THAT IS
+       NOT A TYPO — `pointspal/pages/Redeem.tsx` DEFINES ITS OWN LOCAL
+       `PageHeader` COMPONENT AND RENDERS IT TWICE. *** So the file passed this
+       gate for hand-rolling precisely the thing the gate forbids, by a prefix
+       collision in the needle. This project's own lesson: guards keyed to a
+       spelling go blind. Matched on the closing punctuation instead, so only a
+       real `<PageHead ...>` or `<PageHead/>` counts. */
+    const RENDERS_PAGE_HEAD = /<PageHead[\s/>]/;
+    const viaHead = Object.entries(sources).filter(([, src]) => RENDERS_PAGE_HEAD.test(src));
     const direct = usages('page-title');
     expect(viaHead.length + direct.length,
       'nothing references .page-title any more').toBeGreaterThanOrEqual(5);
@@ -146,14 +173,48 @@ describe('the shells are actually used', () => {
        * a recorded design decision with a drawn alternative behind it.
        */
       'Settings.tsx',
+      /**
+       * *** THE FOUR pointsPal PAGES ARE EXEMPT PENDING A DESIGN DECISION THAT
+       * IS NOT THIS SESSION'S TO TAKE. *** Widening this sweep from
+       * `pages/*.tsx` to include `modules/` is what surfaced them: Overview,
+       * CapTracker, MyCards and BestCard each render
+       * `<h1 style={{ fontFamily: "'Bricolage Grotesque'", fontWeight: 800,
+       * fontSize: 22, color: 'var(--ink)' }}>` — a deliberate, self-consistent
+       * type treatment at 22px, which is NOT the app's 27px `.page-title`.
+       * `--ink` is a real token, so nothing here is broken; it is a different
+       * design language.
+       *
+       * They belong to `feat/coins-and-gear`, whose spec is written and
+       * AWAITING OWNER REVIEW, and `docs/mockups/coins/pages-web-2.html` draws
+       * pointsPal as part of that. Converting them now would pre-empt a
+       * decision the owner has not taken, so they are named here rather than
+       * silently passing or silently failing.
+       *
+       * learnPal's three pages are NOT exempt and do not need to be — Home,
+       * Lessons and Range all already use `className="page-title"`.
+       *
+       * REMOVE THESE FOUR when the coins spec is approved and pointsPal is
+       * redrawn, or when a decision says pointsPal keeps its own type scale.
+       */
+      'pointspal/pages/Overview.tsx',
+      'pointspal/pages/CapTracker.tsx',
+      'pointspal/pages/MyCards.tsx',
+      'pointspal/pages/BestCard.tsx',
+      /* *** Redeem IS THE ONE THE OLD SUBSTRING CHECK HID, AND IT IS THE PROOF
+         THAT FIXING THE NEEDLE MATTERED. *** It passed for years by rendering
+         its own local `<PageHeader />` — a prefix match on `'<PageHead'` — and
+         goes red the moment the match is made precise. Same pointsPal design
+         decision as the four above; its local `PageHeader` is where that
+         module's own head lives. */
+      'pointspal/pages/Redeem.tsx',
     ];
 
     for (const [file, src] of Object.entries(sources)) {
       if (NOT_AN_APP_PAGE.some((name) => file.endsWith(name))) continue;
       // Pages that are not a top-level route shell have no page title at all.
-      if (!/<h1/.test(src) && !src.includes('<PageHead')) continue;
+      if (!/<h1/.test(src) && !RENDERS_PAGE_HEAD.test(src)) continue;
       expect(
-        src.includes('<PageHead') || src.includes('className="page-title"'),
+        RENDERS_PAGE_HEAD.test(src) || src.includes('className="page-title"'),
         `${file} renders an h1 without PageHead or .page-title`,
       ).toBe(true);
     }
