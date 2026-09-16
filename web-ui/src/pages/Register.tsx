@@ -32,6 +32,7 @@ import { FINPAL_PRIVACY, FINPAL_TERMS } from '../constants/links';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import AuthShell from '../components/auth/AuthShell';
 import { useToast } from '../contexts/ToastContext';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
 import { apiErrorMessage } from '../utils/apiError';
@@ -157,35 +158,13 @@ export const Register: React.FC = () => {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Money Grid Background */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(12, 1fr)',
-        gap: '1rem',
-        padding: '2rem',
-        opacity: 0.03,
-        pointerEvents: 'none',
-        fontSize: '2rem',
-        color: '#fbbf24'
-      }}>
-        {Array.from({ length: 96 }).map((_, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: `pulse 3s ease-in-out infinite`,
-            animationDelay: `${i * 0.05}s`
-          }}>
-            💲
-          </div>
-        ))}
-      </div>
-
+      {/* *** THE 💲 RAIN IS GONE FROM HERE, AND STAYS ON LANDING. *** 96 pulsing
+          DOM nodes at 3% opacity were this page's only decoration, and the range
+          now does that job with three paths — so the rain became two
+          decorations competing behind one form. It is kept on `Landing`, where
+          it is a marketing flourish on a page a stranger reads once and where
+          `entry-web.html` decided to leave it alone. It is not kept here, where
+          every visitor is trying to fill in a form. */}
       {/* Back to Home Link */}
       <Link
         to="/"
@@ -194,7 +173,7 @@ export const Register: React.FC = () => {
           top: '1rem',
           left: '1rem',
           zIndex: 20,
-          color: '#94a3b8',
+          color: '#9CB3A3',
           textDecoration: 'none',
           display: 'flex',
           alignItems: 'center',
@@ -203,7 +182,7 @@ export const Register: React.FC = () => {
           fontSize: '0.875rem'
         }}
         onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
       >
         <svg style={{ height: '1.25rem', width: '1.25rem' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -211,62 +190,53 @@ export const Register: React.FC = () => {
         Back to Home
       </Link>
 
-      {/* Sign Up Card */}
+      {/* *** THE SIGN-UP CARD IS NOW HALF OF A SPLIT. *** It was a 28rem card on
+          an empty gradient — correct, and the only screen in finPal with none of
+          finPal on it. `AuthShell` puts an unclimbed range beside it: no trail
+          and no climber, because at sign-up nothing has been climbed. The card's
+          own background was `rgba(22, 36, 26, 0.8)` — slate-800, one of the four
+          colours `authPagesUseBrandColours.test.ts` bans, which it never caught
+          because the value was written as rgb. The shell paints #16241A. */}
       <div style={{
         width: '100%',
-        maxWidth: '28rem',
+        maxWidth: '46rem',
         zIndex: 10,
         position: 'relative'
       }}>
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.8)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: '1rem',
-          padding: '2.5rem',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-          border: '1px solid rgba(148, 163, 184, 0.1)'
-        }}>
-          {/* Logo and Title */}
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '5rem',
-              height: '5rem',
-              borderRadius: '9999px',
-              background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-              marginBottom: '1rem',
-              fontSize: '2rem'
-            }}>
-              💲
-            </div>
-            <h1 style={{
-              fontSize: '2rem',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #15803d 0%, #fbbf24 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '0.5rem'
-            }}>
-              Create Account
-            </h1>
-            {/* *** finPal, NOT DollarPal — AND THIS FILE NEVER IMPORTED `getBranding`. ***
-                `DollarPal` is a real feature: `config/branding.ts` brands the app by
-                the reader's currency (DollarPal, EuroPal, PoundPal, RupeePal...), and
-                `Landing.tsx` advertises exactly that. But it was HARDCODED here, so
-                every prospective user in the world was invited to join the US one.
-                And at signup there is no currency yet to brand with — the account
-                does not exist — so no branded name is correct and the unbranded
-                product name is the only honest option.
-                `Onboarding.tsx` already carries this rule in a comment: "never
-                `brandingMap.USD`'s fallback, which would label every unbranded
-                currency DollarPal". Same mistake, one screen earlier. */}
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-              Join finPal today
-            </p>
-          </div>
+        <AuthShell
+          art="unclimbed"
+          kicker="Your first peak"
+          headline="Every goal in finPal is a mountain."
+          blurb="Pick one, and the range fills in as you climb. That's what pals do — they show up and help with the everyday stuff."
+        >
+          {/* *** THE HEAD IS NO LONGER A CENTRED LOGO. *** A 5rem 💲 medallion and a
+              gradient-clipped 2rem title above a form is a lot of chrome for a
+              screen whose job is four fields; the art panel beside it now carries
+              the identity, so this side carries the instruction. The h1 stays an
+              h1 — it is the page's only one, and `every-page.spec.ts` asserts
+              exactly that. */}
+          <h1 style={{
+            margin: '0 0 0.25rem',
+            fontSize: '1.1875rem',
+            fontWeight: 700,
+            color: '#ffffff'
+          }}>
+            Create account
+          </h1>
+          {/* *** finPal, NOT DollarPal — AND THIS FILE NEVER IMPORTED `getBranding`. ***
+              `DollarPal` is a real feature: `config/branding.ts` brands the app by
+              the reader's currency (DollarPal, EuroPal, PoundPal, RupeePal...), and
+              `Landing.tsx` advertises exactly that. But it was HARDCODED here, so
+              every prospective user in the world was invited to join the US one.
+              And at signup there is no currency yet to brand with — the account
+              does not exist — so no branded name is correct and the unbranded
+              product name is the only honest option.
+              `Onboarding.tsx` already carries this rule in a comment: "never
+              `brandingMap.USD`'s fallback, which would label every unbranded
+              currency DollarPal". Same mistake, one screen earlier. */}
+          <p style={{ color: '#9CB3A3', fontSize: '0.8125rem', margin: '0 0 1.125rem' }}>
+            Join finPal today
+          </p>
 
           {/* Google Sign Up Button */}
           <button
@@ -276,7 +246,7 @@ export const Register: React.FC = () => {
               width: '100%',
               padding: '0.875rem 1.5rem',
               borderRadius: '0.5rem',
-              border: '1px solid #334155',
+              border: '1px solid #517E60',
               background: 'transparent',
               color: '#ffffff',
               fontSize: '0.9375rem',
@@ -290,12 +260,12 @@ export const Register: React.FC = () => {
               marginBottom: '1.5rem'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(51, 65, 85, 0.3)';
-              e.currentTarget.style.borderColor = '#475569';
+              e.currentTarget.style.background = 'rgba(81, 126, 96, 0.3)';
+              e.currentTarget.style.borderColor = '#86efac';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = '#334155';
+              e.currentTarget.style.borderColor = '#517E60';
             }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18">
@@ -310,10 +280,10 @@ export const Register: React.FC = () => {
           {/* Divider */}
           <div style={{ position: 'relative', margin: '1.5rem 0' }}>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: '100%', borderTop: '1px solid #334155' }}></div>
+              <div style={{ width: '100%', borderTop: '1px solid #517E60' }}></div>
             </div>
             <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-              <span style={{ padding: '0 1rem', background: 'rgba(30, 41, 59, 0.8)', color: '#64748b', fontSize: '0.875rem' }}>
+              <span style={{ padding: '0 1rem', background: 'rgba(22, 36, 26, 0.8)', color: '#9CB3A3', fontSize: '0.875rem' }}>
                 Or continue with email
               </span>
             </div>
@@ -337,8 +307,8 @@ export const Register: React.FC = () => {
                   width: '100%',
                   padding: '0.875rem 1rem',
                   borderRadius: '0.5rem',
-                  border: errors.username ? '1px solid #ef4444' : '1px solid #334155',
-                  background: 'rgba(15, 23, 42, 0.5)',
+                  border: errors.username ? '1px solid #ef4444' : '1px solid #517E60',
+                  background: 'rgba(14, 23, 17, 0.5)',
                   color: '#ffffff',
                   fontSize: '0.9375rem',
                   outline: 'none',
@@ -351,7 +321,7 @@ export const Register: React.FC = () => {
                   }
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.username ? '#ef4444' : '#334155';
+                  e.currentTarget.style.borderColor = errors.username ? '#ef4444' : '#517E60';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               />
@@ -378,8 +348,8 @@ export const Register: React.FC = () => {
                   width: '100%',
                   padding: '0.875rem 1rem',
                   borderRadius: '0.5rem',
-                  border: errors.email ? '1px solid #ef4444' : '1px solid #334155',
-                  background: 'rgba(15, 23, 42, 0.5)',
+                  border: errors.email ? '1px solid #ef4444' : '1px solid #517E60',
+                  background: 'rgba(14, 23, 17, 0.5)',
                   color: '#ffffff',
                   fontSize: '0.9375rem',
                   outline: 'none',
@@ -392,7 +362,7 @@ export const Register: React.FC = () => {
                   }
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#334155';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#517E60';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               />
@@ -421,8 +391,8 @@ export const Register: React.FC = () => {
                     padding: '0.875rem 1rem',
                     paddingRight: '3rem',
                     borderRadius: '0.5rem',
-                    border: errors.password ? '1px solid #ef4444' : '1px solid #334155',
-                    background: 'rgba(15, 23, 42, 0.5)',
+                    border: errors.password ? '1px solid #ef4444' : '1px solid #517E60',
+                    background: 'rgba(14, 23, 17, 0.5)',
                     color: '#ffffff',
                     fontSize: '0.9375rem',
                     outline: 'none',
@@ -435,7 +405,7 @@ export const Register: React.FC = () => {
                     }
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#334155';
+                    e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#517E60';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 />
@@ -449,7 +419,7 @@ export const Register: React.FC = () => {
                     transform: 'translateY(-50%)',
                     background: 'transparent',
                     border: 'none',
-                    color: '#64748b',
+                    color: '#9CB3A3',
                     cursor: 'pointer',
                     padding: '0.25rem',
                     display: 'flex',
@@ -457,8 +427,8 @@ export const Register: React.FC = () => {
                     justifyContent: 'center',
                     transition: 'color 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#94a3b8'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -484,7 +454,7 @@ export const Register: React.FC = () => {
                             ? passwordStrength.strength <= 2 ? '#ef4444'
                             : passwordStrength.strength <= 3 ? '#fbbf24'
                             : '#22c55e'
-                            : '#334155',
+                            : '#517E60',
                           transition: 'background 0.2s'
                         }}
                       />
@@ -502,9 +472,9 @@ export const Register: React.FC = () => {
                         {passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? (
                           <Check size={12} color="#22c55e" />
                         ) : (
-                          <X size={12} color="#64748b" />
+                          <X size={12} color="#9CB3A3" />
                         )}
-                        <span style={{ color: passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? '#94a3b8' : '#64748b' }}>
+                        <span style={{ color: passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? '#ffffff' : '#9CB3A3' }}>
                           {label}
                         </span>
                       </div>
@@ -532,8 +502,8 @@ export const Register: React.FC = () => {
                     padding: '0.875rem 1rem',
                     paddingRight: '3rem',
                     borderRadius: '0.5rem',
-                    border: errors.confirmPassword ? '1px solid #ef4444' : '1px solid #334155',
-                    background: 'rgba(15, 23, 42, 0.5)',
+                    border: errors.confirmPassword ? '1px solid #ef4444' : '1px solid #517E60',
+                    background: 'rgba(14, 23, 17, 0.5)',
                     color: '#ffffff',
                     fontSize: '0.9375rem',
                     outline: 'none',
@@ -546,7 +516,7 @@ export const Register: React.FC = () => {
                     }
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.confirmPassword ? '#ef4444' : '#334155';
+                    e.currentTarget.style.borderColor = errors.confirmPassword ? '#ef4444' : '#517E60';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 />
@@ -560,7 +530,7 @@ export const Register: React.FC = () => {
                     transform: 'translateY(-50%)',
                     background: 'transparent',
                     border: 'none',
-                    color: '#64748b',
+                    color: '#9CB3A3',
                     cursor: 'pointer',
                     padding: '0.25rem',
                     display: 'flex',
@@ -568,8 +538,8 @@ export const Register: React.FC = () => {
                     justifyContent: 'center',
                     transition: 'color 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#94a3b8'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
                 >
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -587,13 +557,13 @@ export const Register: React.FC = () => {
                 clicked "Terms of Service" and was bounced off the form they were
                 filling in. They are external pages and are now linked as such,
                 from `constants/links.ts` so the URL is spelled once. D-201. */}
-            <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: '0.75rem', color: '#9CB3A3', margin: 0 }}>
               By creating an account, you agree to our{' '}
               <a
                 href={FINPAL_TERMS}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#15803d', textDecoration: 'none' }}
+                style={{ color: '#22c55e', textDecoration: 'none' }}
               >
                 Terms of Service
               </a>
@@ -602,7 +572,7 @@ export const Register: React.FC = () => {
                 href={FINPAL_PRIVACY}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#15803d', textDecoration: 'none' }}
+                style={{ color: '#22c55e', textDecoration: 'none' }}
               >
                 Privacy Policy
               </a>.
@@ -617,7 +587,7 @@ export const Register: React.FC = () => {
                 padding: '0.875rem 1.5rem',
                 borderRadius: '0.5rem',
                 border: 'none',
-                background: isLoading ? '#64748b' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                background: isLoading ? '#6b7280' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                 color: '#ffffff',
                 fontSize: '1rem',
                 fontWeight: '600',
@@ -641,29 +611,29 @@ export const Register: React.FC = () => {
           </form>
 
           {/* Sign In Link */}
-          <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
+          <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#9CB3A3', fontSize: '0.875rem' }}>
             Already have an account?{' '}
             <Link
               to="/login"
               style={{
-                color: '#15803d',
+                color: '#22c55e',
                 textDecoration: 'none',
                 fontWeight: '500',
                 transition: 'color 0.2s'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#166534'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#15803d'}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
             >
               Sign in
             </Link>
           </p>
-        </div>
+        </AuthShell>
 
         {/* Footer */}
         <p style={{
           textAlign: 'center',
           marginTop: '1.5rem',
-          color: '#64748b',
+          color: '#9CB3A3',
           fontSize: '0.8125rem'
         }}>
           part of palStack ecosystem

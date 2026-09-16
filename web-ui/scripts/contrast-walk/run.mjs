@@ -40,6 +40,38 @@ const CAPTURES = capArg > -1
       .sort()
       .map((f) => join(HERE, 'captured', f));
 
+/**
+ * The text-bearing element floor per page, where 20 is the wrong number.
+ *
+ * *** THIS IS THE SAME OVER-TUNING THE COMMENT AT THE GUARD DESCRIBES, ONE
+ * NOTCH DOWN. *** That floor was 100, calibrated on Transactions' fifty rows,
+ * and it called every smaller page a stub; it was lowered to 20, which is right
+ * for a page of cards. It is still wrong for a screen that IS a form. Measured
+ * 2026-09-16: `forgot-password` resolves NINE text-bearing elements when it is
+ * complete — a kicker, a headline, a sentence, an h1, a subtitle, a field
+ * label, a button and a link — and the walk exited 2 calling that a stub.
+ *
+ * So the floors are per page with a reason, not one number for a directory
+ * holding both a 50-row ledger and a single-field form. A page absent from this
+ * map keeps the shared floor, which is what should happen: this is an exemption
+ * list, and an empty one is the goal.
+ */
+const TEXT_FLOORS = {
+  /* A 404 at its most complete, MEASURED RATHER THAN COUNTED FROM THE SOURCE:
+     the figure, a heading, a sentence and ONE destination = 4. It looks like it
+     should be five, because the page also renders a Back button -- but that
+     button is conditional on window.history.length > 1, and the walk loads each
+     capture into a fresh tab where there is no history to go back to. So 4 is
+     this page COMPLETE, and a floor of 5 failed a correct render. */
+  notfound: 4,
+  // One field, one button, one way back.
+  'forgot-password': 8,
+  // Two fields, a rule line and a button.
+  'reset-password': 10,
+};
+
+const DEFAULT_TEXT_FLOOR = 20;
+
 const CHROME_CANDIDATES = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/usr/bin/google-chrome',
@@ -158,8 +190,10 @@ for (const CAPTURED of CAPTURES) {
   // ~46 because it is cards and a chart. A page-count floor calibrated on the
   // biggest page reports every smaller page as a stub. 20 still catches a
   // spinner, which has fewer than ten.
-  if (out.total < 20) {
-    console.error(`[${theme}] only ${out.total} elements: the walk is inspecting a stub, not the page`);
+  const floor = TEXT_FLOORS[pageName] ?? DEFAULT_TEXT_FLOOR;
+  if (out.total < floor) {
+    console.error(`[${theme}] only ${out.total} text-bearing elements against a `
+      + `floor of ${floor}: the walk is inspecting a stub, not the page`);
     process.exit(2);
   }
   if (!out.failures.length) {

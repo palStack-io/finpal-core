@@ -1,5 +1,5 @@
 /*
- * PRE-AUTH BRAND PALETTE. Four things about the colours in this file:
+ * PRE-AUTH BRAND PALETTE, and the six things that have been wrong about the colours here.
  *
  * 1. They are HARDCODED HEX, and that is deliberate. Every pre-auth page — Landing, Login,
  *    Register, ForgotPassword, ResetPassword — is dark in BOTH themes and uses zero CSS
@@ -32,19 +32,36 @@
  *    mode that resolves to #9CB3A3 and reads at 8.17:1. In LIGHT mode it resolves to
  *    #56685D, and on this page's dark gradient that is **3.00:1 — below AA**. So every
  *    light-mode user read the password-reset instructions at 3:1, and no gate saw it
- *    because the token is legible against the surface the theme THINKS it is on. Nobody
- *    reported it; it was found by resolving the token by hand while fixing the brand green.
- *    The dark-mode values are inlined, so the page's surface and its text can no longer
- *    disagree. `--accent-red` becomes #f87171 (the theme's own dark red ink, 6.61:1)
- *    rather than #EF4444, which is 4.29:1 on the card and would have been a fix that
- *    still failed.
+ *    because the token is legible against the surface the theme THINKS it is on.
+ *
+ * 6. *** AND THE GATE THAT PINS ALL OF THE ABOVE WAS BLIND TO HALF OF WHAT IT BANS. ***
+ *    It matched the four banned colours as HEX only. Written as rgb they went straight
+ *    through. Measured across the five pre-auth pages: **21 occurrences of four banned
+ *    colours**, every one of them in rgb form — emerald-500 as `rgba(16, 185, 129, …)`
+ *    here and in ForgotPassword, slate-900/800 as `rgba(15, 23, 42, …)` / `rgba(30, 41,
+ *    59, …)` in Login and Register, blue-500 as `rgba(59, 130, 246, …)` in Login. All of
+ *    it behind a green test whose entire job was to remove exactly those four values. The
+ *    gate now matches both spellings. Third time a guard keyed to a spelling has gone
+ *    blind in this repo; D-59's rule again.
+ *
+ *    The hover handlers had the same shape of bug in the small: `onMouseLeave` restored
+ *    **#94a3b8**, slate-400, not the #9CB3A3 the link actually started as — so passing the
+ *    mouse over "Back to sign in" once left it a different grey for the rest of the visit.
  */
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
-import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { apiErrorMessage } from '../utils/apiError';
+import AuthShell from '../components/auth/AuthShell';
+
+const PAGE = 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)';
+const INK = '#ffffff';
+const SOFT = '#9CB3A3';
+const FIELD_INK = '#e2e8f0';
+const RED = '#f87171';
+const FIELD_LINE = '#517E60';
 
 export const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -142,292 +159,203 @@ export const ResetPassword: React.FC = () => {
     }
   };
 
-  if (resetSuccess) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-      }}>
-        <div style={{
-          maxWidth: '450px',
-          width: '100%',
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '3rem 2rem',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            borderRadius: '50%',
-            background: 'rgba(16, 185, 129, 0.2)',
-            border: '3px solid #22c55e',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1.5rem'
-          }}>
-            <CheckCircle size={48} style={{ color: '#22c55e' }} />
-          </div>
-          <h2 style={{
-            fontSize: '1.875rem',
-            fontWeight: '700',
-            color: '#ffffff',
-            marginBottom: '0.75rem'
-          }}>
-            Password Reset Successful!
-          </h2>
-          <p style={{
-            fontSize: '1rem',
-            color: '#9CB3A3',
-            lineHeight: '1.75',
-            marginBottom: '2rem'
-          }}>
-            Your password has been reset successfully. You can now sign in with your new password.
-          </p>
-          <Link to="/login" style={{ textDecoration: 'none' }}>
-            <button style={{
-              width: '100%',
-              padding: '0.875rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#ffffff',
-              background: '#15803d',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#166534'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#15803d'}>
-              Continue to Login
-            </button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+  const page = (children: React.ReactNode) => (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
+      background: PAGE,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '1rem',
     }}>
-      <div style={{
-        maxWidth: '450px',
-        width: '100%',
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '3rem 2rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            padding: '1rem',
-            background: 'rgba(16, 185, 129, 0.1)',
-            borderRadius: '16px',
-            marginBottom: '1rem'
-          }}>
-            <Lock size={32} style={{ color: '#22c55e' }} />
-          </div>
-          <h2 style={{
-            fontSize: '1.875rem',
-            fontWeight: '700',
-            color: '#ffffff',
-            marginBottom: '0.5rem'
-          }}>
-            Reset Password
-          </h2>
-          <p style={{
-            fontSize: '1rem',
-            color: '#9CB3A3',
-            lineHeight: '1.75'
-          }}>
-            Enter a new password for your account
-          </p>
-          {email && (
-            <div style={{
-              marginTop: '1rem',
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '8px',
-              display: 'inline-block'
-            }}>
-              <span style={{ color: '#22c55e', fontSize: '0.875rem', fontWeight: '600' }}>{email}</span>
-            </div>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              color: '#e2e8f0',
-              marginBottom: '0.5rem'
-            }}>
-              New Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter new password"
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 2.5rem 0.875rem 0.875rem',
-                  fontSize: '1rem',
-                  color: '#ffffff',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: `1px solid ${errors.password ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}`,
-                  borderRadius: '12px',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : '#22c55e'}
-                onBlur={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                  color: '#9CB3A3'
-                }}>
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            {errors.password && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#f87171' }}>
-                {errors.password}
-              </p>
-            )}
-            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#9CB3A3' }}>
-              Must be at least 8 characters with uppercase, lowercase, and number
-            </p>
-          </div>
-
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              color: '#e2e8f0',
-              marginBottom: '0.5rem'
-            }}>
-              Confirm Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm new password"
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 2.5rem 0.875rem 0.875rem',
-                  fontSize: '1rem',
-                  color: '#ffffff',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: `1px solid ${errors.confirmPassword ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}`,
-                  borderRadius: '12px',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={(e) => e.target.style.borderColor = errors.confirmPassword ? '#ef4444' : '#22c55e'}
-                onBlur={(e) => e.target.style.borderColor = errors.confirmPassword ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                  color: '#9CB3A3'
-                }}>
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            {errors.confirmPassword && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#f87171' }}>
-                {errors.confirmPassword}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#ffffff',
-              background: isLoading ? '#6b7280' : '#15803d',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              marginTop: '0.5rem'
-            }}
-            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#166534')}
-            onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#15803d')}>
-            {isLoading ? 'Resetting Password...' : 'Reset Password'}
-          </button>
-
-          <Link to="/login" style={{ textDecoration: 'none', textAlign: 'center' }}>
-            <button type="button" style={{
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#9CB3A3',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              padding: '0.5rem'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
-              Back to Login
-            </button>
-          </Link>
-        </form>
-      </div>
+      <div style={{ width: '100%', maxWidth: '46rem' }}>{children}</div>
     </div>
   );
+
+  const primaryButton: React.CSSProperties = {
+    width: '100%',
+    padding: '0.75rem 1.5rem',
+    fontSize: '0.9375rem',
+    fontWeight: 600,
+    color: INK,
+    background: isLoading ? '#6b7280' : '#15803d',
+    border: 'none',
+    borderRadius: '10px',
+    cursor: isLoading ? 'not-allowed' : 'pointer',
+    transition: 'all 0.2s',
+    marginTop: '0.25rem',
+  };
+
+  const backLink: React.CSSProperties = {
+    display: 'block',
+    marginTop: '0.9375rem',
+    textAlign: 'center',
+    fontSize: '0.8125rem',
+    fontWeight: 600,
+    color: SOFT,
+    textDecoration: 'none',
+    transition: 'color 0.2s',
+  };
+
+  const fieldStyle = (bad: boolean): React.CSSProperties => ({
+    width: '100%',
+    padding: '0.6875rem 2.25rem 0.6875rem 0.75rem',
+    fontSize: '0.9375rem',
+    color: INK,
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: `1px solid ${bad ? RED : FIELD_LINE}`,
+    borderRadius: '10px',
+    outline: 'none',
+    transition: 'all 0.2s',
+    boxSizing: 'border-box',
+  });
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: FIELD_INK,
+    marginBottom: '0.3125rem',
+  };
+
+  const revealStyle: React.CSSProperties = {
+    position: 'absolute',
+    right: '0.625rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '0.25rem',
+    color: SOFT,
+    display: 'flex',
+  };
+
+  if (resetSuccess) {
+    return page(
+      <AuthShell
+        art="rejoined"
+        kicker="Back on the trail"
+        headline="You are back in."
+        blurb="The trail joins up again. Your figures are exactly where you left them."
+        short
+      >
+        <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.1875rem', fontWeight: 700, color: INK }}>
+          Your password is set
+        </h1>
+        <p style={{ margin: '0 0 1.125rem', fontSize: '0.8125rem', color: SOFT, lineHeight: 1.6 }}>
+          Sign in with the new one. The link you just used is now spent — a further
+          change would be a fresh request.
+        </p>
+        <Link to="/login" style={{ textDecoration: 'none' }}>
+          <button type="button" style={primaryButton}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#166534'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#15803d'; }}>
+            Continue to sign in
+          </button>
+        </Link>
+      </AuthShell>,
+    );
+  }
+
+  return page(
+    <AuthShell
+      art="rejoined"
+      kicker="Back on the trail"
+      headline="Pick a new one and keep climbing."
+      blurb="This link is now used up. The next one would be a fresh request."
+    >
+      {/* *** AN h1, WHERE BOTH STATES OF THIS PAGE OPENED AT h2 AND HAD NO h1.
+          *** `every-page.spec.ts` asserts exactly one h1 per route but skips the
+          signed-out pages by name, so this outline was never measured. */}
+      <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.1875rem', fontWeight: 700, color: INK }}>
+        Choose a new password
+      </h1>
+      <p style={{ margin: '0 0 1.125rem', fontSize: '0.8125rem', color: SOFT, lineHeight: 1.6 }}>
+        {/* The address comes from the link, so saying it back is a check the
+            reader can make: a link for somebody else's account is visible here
+            rather than after the password has been changed. */}
+        For <span style={{ color: FIELD_INK, fontWeight: 600 }}>{email}</span>
+      </p>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+        <label htmlFor="reset-password" style={labelStyle}>New password</label>
+        <div style={{ position: 'relative' }}>
+          <input
+            id="reset-password"
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Enter new password"
+            autoComplete="new-password"
+            style={fieldStyle(Boolean(errors.password))}
+            onFocus={(e) => { e.target.style.borderColor = errors.password ? RED : '#22c55e'; }}
+            onBlur={(e) => { e.target.style.borderColor = errors.password ? RED : FIELD_LINE; }}
+          />
+          <button
+            type="button"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            onClick={() => setShowPassword(!showPassword)}
+            style={revealStyle}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+        {errors.password && (
+          <p style={{ margin: '0.4375rem 0 0', fontSize: '0.8125rem', color: RED }}>
+            {errors.password}
+          </p>
+        )}
+        <p style={{ margin: '0.4375rem 0 0.8125rem', fontSize: '0.71875rem', color: SOFT }}>
+          At least 8 characters, with an uppercase letter, a lowercase letter and a number.
+        </p>
+
+        <label htmlFor="reset-confirm" style={labelStyle}>Confirm</label>
+        <div style={{ position: 'relative' }}>
+          <input
+            id="reset-confirm"
+            type={showConfirmPassword ? 'text' : 'password'}
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm new password"
+            autoComplete="new-password"
+            style={fieldStyle(Boolean(errors.confirmPassword))}
+            onFocus={(e) => {
+              e.target.style.borderColor = errors.confirmPassword ? RED : '#22c55e';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = errors.confirmPassword ? RED : FIELD_LINE;
+            }}
+          />
+          <button
+            type="button"
+            aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            style={revealStyle}>
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+        {errors.confirmPassword && (
+          <p style={{ margin: '0.4375rem 0 0', fontSize: '0.8125rem', color: RED }}>
+            {errors.confirmPassword}
+          </p>
+        )}
+
+        <button type="submit" disabled={isLoading} style={{ ...primaryButton, marginTop: '0.875rem' }}
+          onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#166534')}
+          onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#15803d')}>
+          {isLoading ? 'Setting password…' : 'Set password and sign in'}
+        </button>
+
+        <Link to="/login" style={backLink}
+          onMouseEnter={(e) => { e.currentTarget.style.color = INK; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = SOFT; }}>
+          Back to sign in
+        </Link>
+      </form>
+    </AuthShell>,
+  );
 };
+
+export default ResetPassword;

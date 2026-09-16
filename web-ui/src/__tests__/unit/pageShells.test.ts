@@ -174,6 +174,19 @@ describe('the shells are actually used', () => {
        */
       'Settings.tsx',
       /**
+       * *** THE 404 IS NOT A SUBJECT, SO IT HAS NO SUBJECT LINE. *** `PageHead`
+       * is a title, a sentence saying what the page is FOR, an action slot and a
+       * ridge band — the opening of a page about one thing. A page that does not
+       * exist is not about one thing; it is an answer to a mistake. It renders
+       * its own centred panel with the `404`, an h1, one sentence and two
+       * destinations, and a ridge band over that would be decoration on an
+       * error.
+       *
+       * Listed here rather than given a head, deliberately, and the alternative
+       * was drawn first: `docs/mockups/entry-web.html`.
+       */
+      'NotFound.tsx',
+      /**
        * *** THE FOUR pointsPal PAGES ARE EXEMPT PENDING A DESIGN DECISION THAT
        * IS NOT THIS SESSION'S TO TAKE. *** Widening this sweep from
        * `pages/*.tsx` to include `modules/` is what surfaced them: Overview,

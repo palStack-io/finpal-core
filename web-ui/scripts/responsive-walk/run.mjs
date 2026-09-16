@@ -239,6 +239,31 @@ let hardErrors = 0;
  * the modal above it computes `overflow-x: auto` as a side effect of its own
  * `overflow-y` — by accident, at the wrong scroll container.
  */
+/**
+ * The laid-out element floor per page, where 20 is the wrong number for it.
+ *
+ * *** THE SAME OVER-TUNED FLOOR AS THE CONTRAST WALK'S, AND THE THIRD PLACE IT
+ * HAD TO BE FIXED. *** 20 is right for a page of cards and a table; it is wrong
+ * for a page that is one panel. `NotFound` lays out NINE elements when it is
+ * complete, and all three stub guards in this repo — the capture's, the contrast
+ * walk's and this one — failed it on 2026-09-16 for being small rather than for
+ * being unfinished.
+ *
+ * Worth saying plainly, because a shared floor is a reasonable idea that goes
+ * wrong in one specific way: it encodes an assumption about how big a page is,
+ * which was true of every page in the directory when it was written. Adding a
+ * small page does not break the guard; it reveals that the guard was a guess.
+ * A per-page number with a reason cannot make that mistake silently.
+ */
+const LAID_OUT_FLOORS = {
+  // The panel, the figure, the heading, the sentence, one destination and the
+  // unmeasured ridge. Nine at 1440 and nine at 390 — it does not reflow,
+  // because there is nothing in it to reflow.
+  notfound: 9,
+};
+
+const DEFAULT_LAID_OUT_FLOOR = 20;
+
 const MUST_SCROLL_AT_390 = {
   'pointspal-mycards': 'the manual earn-rates table (130px 52px 90px 90px 52px)',
   investments: 'the holdings <table>',
@@ -274,8 +299,9 @@ for (const page of PAGES) {
       // The stub guard, same purpose as contrast-walk's: a page captured before its
       // data arrived serializes perfectly and overflows nowhere, and a measurement
       // that undercounts looks exactly like a measurement that passes.
-      if (out.total < 20) {
-        console.error(`[${name}/${theme}/${width}] only ${out.total} laid-out elements — walking a stub, not a page`);
+      const floor = LAID_OUT_FLOORS[name] ?? DEFAULT_LAID_OUT_FLOOR;
+      if (out.total < floor) {
+        console.error(`[${name}/${theme}/${width}] only ${out.total} laid-out elements against a floor of ${floor} — walking a stub, not a page`);
         hardErrors += 1;
         continue;
       }

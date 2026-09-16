@@ -31,6 +31,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import AuthShell from '../components/auth/AuthShell';
 import { demoService, DemoAccount, DemoStatus } from '../services/demoService';
 import { useToast } from '../contexts/ToastContext';
 import { Eye, EyeOff, Clock, User as UserIcon } from 'lucide-react';
@@ -193,34 +194,15 @@ export const Login: React.FC = () => {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Money Grid Background */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(12, 1fr)',
-        gap: '1rem',
-        padding: '2rem',
-        opacity: 0.03,
-        pointerEvents: 'none',
-        fontSize: '2rem',
-        color: '#fbbf24'
-      }}>
-        {Array.from({ length: 96 }).map((_, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: `pulse 3s ease-in-out infinite`,
-            animationDelay: `${i * 0.05}s`
-          }}>
-          </div>
-        ))}
-      </div>
-
+      {/* *** THE BACKGROUND GRID IS GONE, AND IT RENDERED NOTHING. *** 96 divs on
+          a 12-column grid, each with a 3s pulse animation and an
+          `animationDelay`, at `opacity: 0.03` — and an EMPTY body. Register's
+          copy of this block puts a 💲 in each cell; this one lost the character
+          at some point and nobody noticed, because 96 invisible boxes pulsing at
+          3% opacity look exactly like 96 empty boxes. So the page was paying for
+          an animation with no content and the whole of it was decoration that
+          decorated nothing. The range replaces it with four paths and no
+          animation, which also stops ignoring `prefers-reduced-motion`. */}
       {/* Back to Home Link */}
       <Link
         to="/"
@@ -229,7 +211,7 @@ export const Login: React.FC = () => {
           top: '1rem',
           left: '1rem',
           zIndex: 20,
-          color: '#94a3b8',
+          color: '#9CB3A3',
           textDecoration: 'none',
           display: 'flex',
           alignItems: 'center',
@@ -238,7 +220,7 @@ export const Login: React.FC = () => {
           fontSize: '0.875rem'
         }}
         onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
       >
         <svg style={{ height: '1.25rem', width: '1.25rem' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -246,206 +228,45 @@ export const Login: React.FC = () => {
         Back to Home
       </Link>
 
-      {/* Main Content - Two Column Layout when Demo Mode is enabled */}
+      {/* *** ONE WIDTH NOW, AND THE DEMO PANEL IS NO LONGER A COLUMN. *** This
+          wrapper was `maxWidth: demoStatus?.enabled ? '56rem' : '28rem'` — the
+          demo personas were a SECOND COLUMN beside the form, so the page had a
+          different layout depending on a server flag. An art panel on top of
+          that would have been a third column crushing all three; a page head
+          covered by its own actions was D-223, and this is the same failure one
+          layer out. So the personas moved INSIDE the form column, under the
+          form, where they read as "or try it with sample data" rather than as a
+          peer of signing in — which is what they are. `demoStatus` no longer
+          decides the layout. */}
       <div style={{
-        display: 'flex',
-        gap: '2rem',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
         zIndex: 10,
         position: 'relative',
-        flexWrap: 'wrap',
-        maxWidth: demoStatus?.enabled ? '56rem' : '28rem',
+        maxWidth: '46rem',
         width: '100%',
       }}>
-        {/* Demo Accounts Panel - Only show when demo mode is enabled */}
-        {demoStatus?.enabled && !isDemoLoading && demoAccounts.length > 0 && (
-          <div style={{
-            width: '100%',
-            maxWidth: '24rem',
-            zIndex: 10,
+        <AuthShell
+          art="partway"
+          kicker="Welcome back"
+          headline="You left partway up."
+          blurb="Pick up where you stopped. Nothing moved while you were away."
+        >
+          {/* *** THE HEAD IS NO LONGER A 5rem LOGO AND A GRADIENT-CLIPPED TITLE. ***
+              The art panel beside this carries the identity now, so this side
+              carries the instruction. The old h1 also set
+              `WebkitTextFillColor: 'transparent'` to paint itself with a
+              gradient, which is a heading whose text has no computed colour for
+              any contrast tool to measure. */}
+          <h1 style={{
+            margin: '0 0 0.25rem',
+            fontSize: '1.1875rem',
+            fontWeight: 700,
+            color: '#ffffff'
           }}>
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(12px)',
-              borderRadius: '1rem',
-              padding: '1.5rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-              border: '1px solid rgba(59, 130, 246, 0.3)'
-            }}>
-              {/* Demo Header */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                marginBottom: '1rem',
-                paddingBottom: '1rem',
-                borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
-              }}>
-                <div style={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  borderRadius: '0.5rem',
-                  background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                  <UserIcon size={20} color="#ffffff" />
-                </div>
-                <div>
-                  <h2 style={{
-                    color: '#ffffff',
-                    fontSize: '1.125rem',
-                    fontWeight: 600,
-                    margin: 0
-                  }}>
-                    Demo Mode
-                  </h2>
-                  <p style={{
-                    color: '#94a3b8',
-                    fontSize: '0.75rem',
-                    margin: 0
-                  }}>
-                    Try finPal with sample data
-                  </p>
-                </div>
-              </div>
-
-              {/* Time Limit Notice */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem',
-                background: 'rgba(59, 130, 246, 0.1)',
-                borderRadius: '0.5rem',
-                marginBottom: '1rem',
-                border: '1px solid rgba(59, 130, 246, 0.2)'
-              }}>
-                <Clock size={16} color="#60a5fa" />
-                <span style={{ color: '#93c5fd', fontSize: '0.8125rem' }}>
-                  {demoStatus.timeout_minutes} minute session limit
-                </span>
-              </div>
-
-              {/* Demo Accounts List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {demoAccounts.map((account) => (
-                  <button
-                    key={account.email}
-                    onClick={() => handleDemoLogin(account)}
-                    disabled={isLoading}
-                    style={{
-                      width: '100%',
-                      padding: '0.875rem 1rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #334155',
-                      background: 'rgba(15, 23, 42, 0.5)',
-                      color: '#e2e8f0',
-                      fontSize: '0.875rem',
-                      cursor: isLoading ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.25rem',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isLoading) {
-                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                        e.currentTarget.style.borderColor = '#22c55e';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
-                      e.currentTarget.style.borderColor = '#334155';
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      width: '100%'
-                    }}>
-                      <span style={{ fontWeight: 600 }}>{account.name}</span>
-                      <span style={{
-                        fontSize: '0.75rem',
-                        color: '#64748b',
-                        background: 'rgba(100, 116, 139, 0.2)',
-                        padding: '0.125rem 0.5rem',
-                        borderRadius: '9999px'
-                      }}>
-                        {account.currency}
-                      </span>
-                    </div>
-                    <span style={{
-                      color: '#94a3b8',
-                      fontSize: '0.75rem'
-                    }}>
-                      {account.persona}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Restrictions Note */}
-              <p style={{
-                marginTop: '1rem',
-                padding: '0.75rem',
-                background: 'rgba(251, 191, 36, 0.1)',
-                borderRadius: '0.5rem',
-                border: '1px solid rgba(251, 191, 36, 0.2)',
-                color: '#fcd34d',
-                fontSize: '0.75rem',
-                margin: '1rem 0 0 0'
-              }}>
-                Note: CSV import and API key settings are disabled in demo mode.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Sign In Card */}
-        <div style={{
-          width: '100%',
-          maxWidth: '28rem',
-          zIndex: 10,
-        }}>
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.8)',
-            backdropFilter: 'blur(12px)',
-            borderRadius: '1rem',
-            padding: '2.5rem',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-            border: '1px solid rgba(148, 163, 184, 0.1)'
-          }}>
-            {/* Logo and Title */}
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <img
-                src="/finPal.png"
-                alt="finPal"
-                style={{
-                  height: '5rem',
-                  width: 'auto',
-                  marginBottom: '1rem'
-                }}
-              />
-              <h1 style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                background: 'linear-gradient(135deg, #15803d 0%, #fbbf24 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                marginBottom: '0.5rem'
-              }}>
-                Welcome Back
-              </h1>
-              <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-                Sign in to finPal
-              </p>
-            </div>
+            Welcome back
+          </h1>
+          <p style={{ color: '#9CB3A3', fontSize: '0.8125rem', margin: '0 0 1.125rem' }}>
+            Sign in to finPal
+          </p>
 
             {/* Google Sign In Button */}
             <button
@@ -455,7 +276,7 @@ export const Login: React.FC = () => {
                 width: '100%',
                 padding: '0.875rem 1.5rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #334155',
+                border: '1px solid #517E60',
                 background: 'transparent',
                 color: '#ffffff',
                 fontSize: '0.9375rem',
@@ -469,12 +290,12 @@ export const Login: React.FC = () => {
                 marginBottom: '1.5rem'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(51, 65, 85, 0.3)';
-                e.currentTarget.style.borderColor = '#475569';
+                e.currentTarget.style.background = 'rgba(81, 126, 96, 0.3)';
+                e.currentTarget.style.borderColor = '#86efac';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.borderColor = '#334155';
+                e.currentTarget.style.borderColor = '#517E60';
               }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
@@ -489,10 +310,10 @@ export const Login: React.FC = () => {
             {/* Divider */}
             <div style={{ position: 'relative', margin: '1.5rem 0' }}>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: '100%', borderTop: '1px solid #334155' }}></div>
+                <div style={{ width: '100%', borderTop: '1px solid #517E60' }}></div>
               </div>
               <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                <span style={{ padding: '0 1rem', background: 'rgba(30, 41, 59, 0.8)', color: '#64748b', fontSize: '0.875rem' }}>
+                <span style={{ padding: '0 1rem', background: 'rgba(22, 36, 26, 0.8)', color: '#9CB3A3', fontSize: '0.875rem' }}>
                   Or continue with email
                 </span>
               </div>
@@ -516,8 +337,8 @@ export const Login: React.FC = () => {
                     width: '100%',
                     padding: '0.875rem 1rem',
                     borderRadius: '0.5rem',
-                    border: errors.email ? '1px solid #ef4444' : '1px solid #334155',
-                    background: 'rgba(15, 23, 42, 0.5)',
+                    border: errors.email ? '1px solid #ef4444' : '1px solid #517E60',
+                    background: 'rgba(14, 23, 17, 0.5)',
                     color: '#ffffff',
                     fontSize: '0.9375rem',
                     outline: 'none',
@@ -530,7 +351,7 @@ export const Login: React.FC = () => {
                     }
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#334155';
+                    e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#517E60';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 />
@@ -559,8 +380,8 @@ export const Login: React.FC = () => {
                       padding: '0.875rem 1rem',
                       paddingRight: '3rem',
                       borderRadius: '0.5rem',
-                      border: errors.password ? '1px solid #ef4444' : '1px solid #334155',
-                      background: 'rgba(15, 23, 42, 0.5)',
+                      border: errors.password ? '1px solid #ef4444' : '1px solid #517E60',
+                      background: 'rgba(14, 23, 17, 0.5)',
                       color: '#ffffff',
                       fontSize: '0.9375rem',
                       outline: 'none',
@@ -573,7 +394,7 @@ export const Login: React.FC = () => {
                       }
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#334155';
+                      e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#517E60';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   />
@@ -587,7 +408,7 @@ export const Login: React.FC = () => {
                       transform: 'translateY(-50%)',
                       background: 'transparent',
                       border: 'none',
-                      color: '#64748b',
+                      color: '#9CB3A3',
                       cursor: 'pointer',
                       padding: '0.25rem',
                       display: 'flex',
@@ -595,8 +416,8 @@ export const Login: React.FC = () => {
                       justifyContent: 'center',
                       transition: 'color 0.2s'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#94a3b8'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -610,14 +431,14 @@ export const Login: React.FC = () => {
 
               {/* Remember Me & Forgot Password */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9CB3A3', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     style={{
                       width: '1rem',
                       height: '1rem',
                       borderRadius: '0.25rem',
-                      border: '1px solid #334155',
+                      border: '1px solid #517E60',
                       cursor: 'pointer'
                     }}
                   />
@@ -626,12 +447,12 @@ export const Login: React.FC = () => {
                 <Link
                   to="/forgot-password"
                   style={{
-                    color: '#15803d',
+                    color: '#22c55e',
                     textDecoration: 'none',
                     transition: 'color 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#166534'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#15803d'}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
                 >
                   Forgot password?
                 </Link>
@@ -646,7 +467,7 @@ export const Login: React.FC = () => {
                   padding: '0.875rem 1.5rem',
                   borderRadius: '0.5rem',
                   border: 'none',
-                  background: isLoading ? '#64748b' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                  background: isLoading ? '#6b7280' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
                   color: '#ffffff',
                   fontSize: '1rem',
                   fontWeight: '600',
@@ -679,7 +500,7 @@ export const Login: React.FC = () => {
               }}>
                 <div style={{
                   width: '100%',
-                  borderTop: '1px solid #334155'
+                  borderTop: '1px solid #517E60'
                 }} />
               </div>
               <div style={{
@@ -693,7 +514,7 @@ export const Login: React.FC = () => {
                 <span style={{
                   background: '#16241A',
                   padding: '0 0.75rem',
-                  color: '#64748b'
+                  color: '#9CB3A3'
                 }}>
                   Or continue with
                 </span>
@@ -711,8 +532,8 @@ export const Login: React.FC = () => {
                 width: '100%',
                 padding: '0.875rem 1.5rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #334155',
-                background: 'rgba(15, 23, 42, 0.5)',
+                border: '1px solid #517E60',
+                background: 'rgba(14, 23, 17, 0.5)',
                 color: '#e2e8f0',
                 fontSize: '0.9375rem',
                 fontWeight: '500',
@@ -724,12 +545,12 @@ export const Login: React.FC = () => {
                 gap: '0.625rem'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(15, 23, 42, 0.8)';
+                e.currentTarget.style.background = 'rgba(14, 23, 17, 0.8)';
                 e.currentTarget.style.borderColor = '#15803d';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(15, 23, 42, 0.5)';
-                e.currentTarget.style.borderColor = '#334155';
+                e.currentTarget.style.background = 'rgba(14, 23, 17, 0.5)';
+                e.currentTarget.style.borderColor = '#517E60';
               }}
             >
               <svg
@@ -750,34 +571,182 @@ export const Login: React.FC = () => {
             </button>
 
             {/* Sign Up Link */}
-            <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
+            <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#9CB3A3', fontSize: '0.875rem' }}>
               Don't have an account?{' '}
               <Link
                 to="/register"
                 style={{
-                  color: '#15803d',
+                  color: '#22c55e',
                   textDecoration: 'none',
                   fontWeight: '500',
                   transition: 'color 0.2s'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#166534'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#15803d'}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
               >
                 Sign up for free
               </Link>
             </p>
-          </div>
 
-          {/* Footer */}
-          <p style={{
-            textAlign: 'center',
+          {/* *** THE DEMO PERSONAS, NOW PART OF THE FORM COLUMN. *** Their card
+              chrome is gone — a card inside a card reads as a mistake — and a
+              hairline replaces it, which says "also this" rather than "instead
+              of that". The personas themselves are UNCHANGED, including the
+              session-limit line: AUDIT D-232 measures that claim at 120 minutes
+              against a token whose iat→exp is 86400s, and records that NOTHING
+              in the codebase enforces either figure — `session_timeout.py`
+              registers no request hook and has zero production callers on all
+              four of its methods. Making the promise true and withdrawing it are
+              both owner calls on a live public demo, so this pass restyled
+              around the line and did not quietly delete it. */}
+          {demoStatus?.enabled && !isDemoLoading && demoAccounts.length > 0 && (
+          <div style={{
             marginTop: '1.5rem',
-            color: '#64748b',
-            fontSize: '0.8125rem'
+            paddingTop: '1.25rem',
+            borderTop: '1px solid #517E60'
           }}>
-            part of palStack ecosystem
-          </p>
-        </div>
+            {/* Demo Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '1rem',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid rgba(81, 126, 96, 0.1)'
+            }}>
+              <div style={{
+                width: '2.5rem',
+                height: '2.5rem',
+                borderRadius: '0.5rem',
+                background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <UserIcon size={20} color="#ffffff" />
+              </div>
+              <div>
+                <h2 style={{
+                  color: '#ffffff',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  margin: 0
+                }}>
+                  Demo Mode
+                </h2>
+                <p style={{
+                  color: '#9CB3A3',
+                  fontSize: '0.75rem',
+                  margin: 0
+                }}>
+                  Try finPal with sample data
+                </p>
+              </div>
+            </div>
+
+            {/* Time Limit Notice */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem',
+              background: 'rgba(34, 197, 94, 0.1)',
+              borderRadius: '0.5rem',
+              marginBottom: '1rem',
+              border: '1px solid rgba(34, 197, 94, 0.2)'
+            }}>
+              <Clock size={16} color="#60a5fa" />
+              <span style={{ color: '#93c5fd', fontSize: '0.8125rem' }}>
+                {demoStatus.timeout_minutes} minute session limit
+              </span>
+            </div>
+
+            {/* Demo Accounts List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {demoAccounts.map((account) => (
+                <button
+                  key={account.email}
+                  onClick={() => handleDemoLogin(account)}
+                  disabled={isLoading}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #517E60',
+                    background: 'rgba(14, 23, 17, 0.5)',
+                    color: '#e2e8f0',
+                    fontSize: '0.875rem',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'left',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isLoading) {
+                      e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                      e.currentTarget.style.borderColor = '#22c55e';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(14, 23, 17, 0.5)';
+                    e.currentTarget.style.borderColor = '#517E60';
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%'
+                  }}>
+                    <span style={{ fontWeight: 600 }}>{account.name}</span>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      color: '#9CB3A3',
+                      background: 'rgba(100, 116, 139, 0.2)',
+                      padding: '0.125rem 0.5rem',
+                      borderRadius: '9999px'
+                    }}>
+                      {account.currency}
+                    </span>
+                  </div>
+                  <span style={{
+                    color: '#9CB3A3',
+                    fontSize: '0.75rem'
+                  }}>
+                    {account.persona}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Restrictions Note */}
+            <p style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: 'rgba(251, 191, 36, 0.1)',
+              borderRadius: '0.5rem',
+              border: '1px solid rgba(251, 191, 36, 0.2)',
+              color: '#fcd34d',
+              fontSize: '0.75rem',
+              margin: '1rem 0 0 0'
+            }}>
+              Note: CSV import and API key settings are disabled in demo mode.
+            </p>
+          </div>
+          )}
+        </AuthShell>
+
+        {/* Footer */}
+        <p style={{
+          textAlign: 'center',
+          marginTop: '1.5rem',
+          color: '#9CB3A3',
+          fontSize: '0.8125rem'
+        }}>
+          part of palStack ecosystem
+        </p>
       </div>
     </div>
   );

@@ -59,8 +59,14 @@ const FIXED_BY_DESIGN: Record<string, string> = {
   // (D-104), so its entry is gone from this map**; the sentence stays because the
   // failure it records is about reading a spec written from a dead file, which is
   // the reason these four were missing in the first place.
-  'pages/Login.tsx|repeat(12, 1fr)': 'decorative 96-glyph wallpaper, opacity 0.03, pointer-events none',
-  'pages/Register.tsx|repeat(12, 1fr)': 'decorative 96-glyph wallpaper, opacity 0.03, pointer-events none',
+  // *** BOTH AUTH ENTRIES ARE GONE BECAUSE THE WALLPAPER IS GONE (2026-09-16).
+  // *** They exempted a `repeat(12, 1fr)` grid of 96 pulsing cells at
+  // `opacity: 0.03` behind each auth form. `AuthShell` replaced it with a range
+  // drawn in four paths, so there is no fixed-column grid on either page to
+  // excuse — and Login's copy of the block had lost its glyph at some point and
+  // was rendering 96 EMPTY divs, which is what a 3%-opacity exemption makes
+  // invisible. The staleness check below is what made this diff necessary
+  // rather than optional.
   'pages/Landing.tsx|repeat(10, 1fr)': 'decorative 100-glyph wallpaper, opacity 0.05, pointer-events none',
   // Onboarding has TWO grids with this template: the wallpaper, and the 24-emoji
   // profile picker below it. Both are exempt, for the two different reasons here.

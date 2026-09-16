@@ -1541,3 +1541,60 @@ body {
   .range-sides { flex-direction: column; gap: 22px; }
   .range-sides > [aria-hidden='true'] { display: none; }
 }
+
+/* ── The pre-auth split shell ────────────────────────────────────────────────
+   LAYOUT ONLY, AND THAT SPLIT IS THE POINT. `AuthShell.tsx` keeps every colour
+   inline and hardcoded, because the pre-auth pages are dark in BOTH themes and
+   a token here would resolve to light values on a background that never
+   changes — the defect `authPagesUseBrandColours.test.ts` pins. What cannot be
+   done inline is a width query, so the grid lives here and nothing else does.
+
+   *** AND IT STACKS RATHER THAN NARROWING. *** Two columns at 390px gives an
+   art panel too small to hold a sentence beside a form too narrow to hold an
+   email field. Stacked, the art becomes a 132px band above the form, which is
+   what it is on a phone: a header. The peaks keep their own aspect via
+   `preserveAspectRatio="none"`, so the band shortens without clipping. */
+.auth-split {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  border-radius: 16px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.auth-split-art {
+  position: relative;
+  /* The bottom padding is the peaks' room: the svg is absolutely positioned on
+     the floor of this panel, so the copy has to stop above it. */
+  padding: 28px 30px 104px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.auth-split-art > svg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.auth-split-form {
+  padding: 28px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Without this a long unbroken string in a field label pushes the grid wider
+     than its container instead of wrapping — `minmax(auto, …)`'s default floor
+     is the content's min size, not zero. */
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .auth-split { grid-template-columns: 1fr; }
+  .auth-split-art { padding: 20px 22px 72px; min-height: 132px; }
+  .auth-split-form { padding: 22px; }
+}

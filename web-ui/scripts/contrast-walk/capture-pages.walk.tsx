@@ -8,7 +8,7 @@
 import { it, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { http, HttpResponse } from 'msw';
@@ -29,6 +29,12 @@ import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
 import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
+import GroupDetail from '../../src/pages/GroupDetail';
+import NotFound from '../../src/pages/NotFound';
+import { Login } from '../../src/pages/Login';
+import { Register } from '../../src/pages/Register';
+import { ForgotPassword } from '../../src/pages/ForgotPassword';
+import { ResetPassword } from '../../src/pages/ResetPassword';
 import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { RecurringTransactions } from '../../src/components/RecurringTransactions';
 import { TransactionRules } from '../../src/components/TransactionRules';
@@ -1045,6 +1051,70 @@ beforeEach(() => {
         },
       },
     })),
+    // ── the six surfaces added 2026-09-16 ──────────────────────────────────
+    /*
+     * *** THE GROUP FIXTURE CARRIES `expense_count`, AND THAT FIELD IS THE
+     * POINT. *** The walk fixture for holdings once omitted `cost_basis`, so
+     * both browser gates measured an Investments page reporting $0.00 — a page
+     * in a defect's own shape, reported green. GroupDetail's head now shows
+     * "Recorded: N expenses" from `expense_count`, and the settlement from
+     * `simplified_debts` with BOTH ids: a fixture missing the ids would make
+     * `settlementFor` refuse the group and capture the "this server does not
+     * say who owes whom" state, which is a real state and not the one being
+     * designed.
+     *
+     * The amount is `178.02` on purpose — the figure from the live demo that
+     * disagreed with the members list's 178.03 (D-235).
+     */
+    http.get('*/api/v1/groups/1', () => HttpResponse.json({
+      group: {
+        id: 1, name: 'Apartment Roommates',
+        description: 'Shared apartment expenses',
+        created_by: 'alice@test.com',
+        default_split_method: 'equal', default_payer: null,
+        auto_include_all: false,
+        expense_count: 2,
+        members: [
+          { id: 'alice@test.com', name: 'Alice', email: 'alice@test.com',
+            balance: -178.025 },
+          { id: 'jordan@test.com', name: 'Jordan Demo',
+            email: 'jordan@test.com', balance: 178.025 },
+        ],
+      },
+    })),
+    http.get('*/api/v1/groups/1/balances', () => HttpResponse.json({
+      balances: [{
+        from: 'Alice', to: 'Jordan Demo',
+        from_id: 'alice@test.com', to_id: 'jordan@test.com',
+        amount: 178.02,
+      }],
+    })),
+    /*
+     * *** ZERO ROWS, WHICH IS THE LIVE BEHAVIOUR AND THE WHOLE OF D-236. ***
+     * `/transactions/?group_id=1` returns nothing on the demo while the group
+     * has two expenses. Returning rows here would capture a page nobody has,
+     * and would hide the honest empty state this pass wrote.
+     */
+    http.get('*/api/v1/transactions/', () =>
+      HttpResponse.json({ transactions: [] })),
+    /*
+     * Demo mode ON, so Login is captured in the state a visitor to the public
+     * demo actually sees — the personas are the widest content in its form
+     * column and the reason its layout was two different widths.
+     */
+    http.get('*/api/v1/demo/status', () => HttpResponse.json({
+      enabled: true, timeout_minutes: 120,
+    })),
+    http.get('*/api/v1/demo/accounts', () => HttpResponse.json([
+      { email: 'demo1@finpal.demo', name: 'Alex Demo', password: 'x',
+        currency: 'USD', persona: 'personal finances' },
+      { email: 'demo2@finpal.demo', name: 'Morgan Demo', password: 'x',
+        currency: 'EUR', persona: 'international spending' },
+      { email: 'demo3@finpal.demo', name: 'Jordan Demo', password: 'x',
+        currency: 'USD', persona: 'group expenses' },
+      { email: 'demo4@finpal.demo', name: 'Taylor Demo', password: 'x',
+        currency: 'GBP', persona: 'investments' },
+    ])),
   );
 });
 
@@ -1054,10 +1124,84 @@ beforeEach(() => {
  * `<table>` elements Tier 3 covers — is behind a form submit, so capturing the page
  * as it first paints captures the empty state and measures nothing.
  */
-type Case = [string, React.FC, ((c: HTMLElement) => Promise<void>)?];
+/**
+ * A fourth element, `entry`, for the pages that read the URL.
+ *
+ * *** SIX SURFACES CHANGED ON 2026-09-16 AND THIS WALK COULD SEE NONE OF THEM.
+ * *** `captured/` held eighteen pages and not one of them was `/groups/:id`,
+ * the 404, or any of the five pre-auth screens — so a redesign of all of those
+ * could be reported "walks green" having been measured nowhere. That is the
+ * gate-coverage failure this repo keeps paying for: a walk's scope list is a
+ * lower bound on what it can notice, and nothing in the walk says what it is
+ * blind to.
+ *
+ * `/groups/:id` needs a real id in the path, and `ResetPassword` bounces to
+ * `/login` without a `token` and an `email` in the query, so those two are
+ * rendered through a `<Routes>` at a concrete URL rather than as a bare
+ * component at `/`.
+ */
+type Case = [
+  string,
+  React.FC,
+  ((c: HTMLElement) => Promise<void>)?,
+  { pattern: string; url: string }?,
+  /**
+   * The element floor for THIS page, when 50 is the wrong number for it.
+   *
+   * *** THE 50 FLOOR EXISTS TO CATCH A STUB, AND ON A SMALL PAGE IT CATCHES THE
+   * PAGE. *** It was set when every scope was a data-dense app page: the
+   * Investments capture once raced its fetch and serialized a two-element stub,
+   * and a stub overflows nowhere and has no contrast pairs, so both walks
+   * reported it clean. 50 is a good floor for a table of holdings.
+   *
+   * It is a bad floor for a 404. `NotFound` renders nine elements when it is
+   * COMPLETE — a panel, a figure, a heading, a sentence, two destinations and a
+   * ridge — and ForgotPassword is twenty-four with every field present. Given
+   * as a per-page number with a reason rather than by lowering the shared
+   * floor, because lowering it would blind the guard on the eighteen pages it
+   * was written for.
+   */
+  number?,
+];
 
 const cases: Case[] = [
   ['dashboard', Dashboard as React.FC],
+  /**
+   * *** THE SIX SCOPES ADDED 2026-09-16, ALL OF WHICH WERE REDESIGNED WHILE
+   * INVISIBLE TO BOTH WALKS. *** Grouped here rather than scattered, because
+   * the useful fact about them is that they are a set: `/groups/:id`, the new
+   * 404, and the five pre-auth screens. `AuthShell` paints more pre-auth pixels
+   * than any of the pages does, and until this list grew, nothing in either
+   * walk had ever rendered it.
+   */
+  ['groupdetail', GroupDetail as React.FC, undefined,
+    { pattern: '/groups/:id', url: '/groups/1' }],
+  // Nine elements is this page COMPLETE: a panel, the figure, a heading, a
+  // sentence, two destinations and the unmeasured ridge. See `Case`'s `floor`.
+  ['notfound', NotFound as React.FC, undefined,
+    { pattern: '*', url: '/a-link-that-went-stale' }, 8],
+  /*
+   * The pre-auth screens are dark in BOTH themes and use no CSS variables, so
+   * the walk will measure two identical captures — and that is exactly the
+   * assertion worth having: a `var(--…)` leaking into one of these files would
+   * resolve to LIGHT values on a background that never changes, which is the
+   * 3.00:1 defect `authPagesUseBrandColours.test.ts` was written for. The walk
+   * resolves colours against their ACTUAL background, so it can see that where
+   * a source scan cannot.
+   */
+  ['login', Login as React.FC],
+  ['register', Register as React.FC],
+  // One field and one button, which is the whole screen. 24 when complete.
+  ['forgot-password', ForgotPassword as React.FC, undefined, undefined, 22],
+  /*
+   * `ResetPassword` navigates to `/login` without both query params — captured
+   * without them, this scope would serialize whatever `/login` renders under a
+   * file named `reset-password.html`, which is worse than not capturing it.
+   */
+  // Two fields, two reveal toggles and a button. 35 when complete.
+  ['reset-password', ResetPassword as React.FC, undefined,
+    { pattern: '/reset-password', url: '/reset-password?token=walk&email=demo1%40finpal.demo' },
+    32],
   /**
    * *** CAPTURED AFTER TOUCHING A GROUP CONTROL, NOT AS IT FIRST PAINTS. ***
    * Same reason goals is captured with its panel open. The `<select>` carries
@@ -1221,9 +1365,17 @@ const cases: Case[] = [
   }],
 ];
 
-it.each(cases)('captures %s', async (name, Page, drive) => {
+it.each(cases)('captures %s', async (name, Page, drive, entry, floor) => {
+  // 50 unless the page says otherwise; see the `floor` note on `Case`.
+  const minElements = floor ?? 50;
   const { container } = render(
-    <MemoryRouter><ThemeProvider><ToastProvider><Page /></ToastProvider></ThemeProvider></MemoryRouter>
+    <MemoryRouter initialEntries={[entry?.url ?? '/']}>
+      <ThemeProvider><ToastProvider>
+        {entry
+          ? <Routes><Route path={entry.pattern} element={<Page />} /></Routes>
+          : <Page />}
+      </ToastProvider></ThemeProvider>
+    </MemoryRouter>
   );
   // Wait for the loading spinner to go, or we capture a spinner and report zero.
   /**
@@ -1247,7 +1399,8 @@ it.each(cases)('captures %s', async (name, Page, drive) => {
   // final bar here — BestCard's empty state is a form and no results — so the full
   // threshold cannot be applied until after the drive.
   await waitFor(() => {
-    expect(container.querySelectorAll('*').length).toBeGreaterThanOrEqual(20);
+    expect(container.querySelectorAll('*').length)
+      .toBeGreaterThanOrEqual(Math.min(20, minElements));
     expect(container.querySelector('.animate-spin')).toBeNull();
   }, { timeout: 6000 });
 
@@ -1255,11 +1408,16 @@ it.each(cases)('captures %s', async (name, Page, drive) => {
 
   // The real readiness gate, applied to every page once it is in its final state.
   await waitFor(() => {
-    expect(container.querySelectorAll('*').length).toBeGreaterThanOrEqual(50);
+    expect(container.querySelectorAll('*').length)
+      .toBeGreaterThanOrEqual(minElements);
   }, { timeout: 6000 });
 
   const painted = container.querySelectorAll('*').length;
-  if (painted < 50) throw new Error(`${name}: only ${painted} elements — captured a stub`);
+  if (painted < minElements) {
+    throw new Error(
+      `${name}: only ${painted} elements against a floor of ${minElements} — `
+      + 'captured a stub');
+  }
 
   /*
    * *** AN EMPTY HEADING IS A NAME THAT DID NOT RESOLVE, AND NOTHING ELSE FAILS
