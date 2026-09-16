@@ -125,7 +125,7 @@ export function formatRowDate(iso: string | null): string {
 const selectStyle: React.CSSProperties = {
   padding: '7px 10px', borderRadius: 8,
   border: '1px solid var(--border-medium)',
-  background: 'var(--bg-input)', color: 'var(--text-primary)',
+  background: 'var(--input-bg)', color: 'var(--text-primary)',
   fontSize: 14,
 };
 

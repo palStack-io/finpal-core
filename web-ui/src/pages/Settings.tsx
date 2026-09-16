@@ -63,7 +63,7 @@ const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 16,
       padding: '16px 20px', borderRadius: 12,
-      background: 'var(--card-bg)', border: '1px solid var(--border-color)',
+      background: 'var(--bg-card)', border: '1px solid var(--border-light)',
     }}>
       <span style={{ fontSize: 24 }}>{manifest.icon}</span>
       <div style={{ flex: 1 }}>
@@ -91,7 +91,7 @@ const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
           style={{
             width: 44, height: 24, borderRadius: 12, padding: 0, border: 'none',
             cursor: saving ? 'wait' : 'pointer',
-            background: hidden ? 'var(--border-color)' : 'var(--g500)',
+            background: hidden ? 'var(--border-light)' : 'var(--g500)',
             position: 'relative', transition: 'background 0.2s',
             opacity: saving ? 0.6 : 1,
           }}
