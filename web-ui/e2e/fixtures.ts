@@ -17,6 +17,23 @@ export const DEMO_USER = {
   name: 'Alex Demo',
 };
 
+/**
+ * The Dashboard's h1, in ONE place.
+ *
+ * *** IT WAS IN FOUR, AND CHANGING THE PAGE BROKE THREE OF THEM. *** The
+ * dashboard's head opened on the word "Dashboard" until 2026-09-16; the owner
+ * asked for it to start on "Your range" instead, and the expectation was
+ * hardcoded separately in `every-page.spec.ts`, `standards.spec.ts` (twice) and
+ * `goals.spec.ts`. Updating one left three red — and `every-page.spec.ts`'s own
+ * docstring complains about exactly this shape of duplication in the page it
+ * inherited from: *"its own hand-typed list of six pages"*.
+ *
+ * So it is a constant. One fact, one place — D-101's rule, applied to the suite
+ * that enforces it. `Where you stand` is the same head for a user with no
+ * goals, which is a real state this regex has to cover.
+ */
+export const DASHBOARD_HEADING = /Your range|Where you stand/;
+
 export const STORAGE_STATE = path.join(process.cwd(), 'e2e/.auth/demo1.json');
 
 /**

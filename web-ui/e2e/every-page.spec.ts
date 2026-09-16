@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, pageIsLoaded } from './fixtures';
+import { DASHBOARD_HEADING, expect, pageIsLoaded, test } from './fixtures';
 
 /**
  * Every page in the app, in both themes — and the route list is DERIVED, not typed.
@@ -84,7 +84,7 @@ const HEADINGS: Record<string, RegExp> = {
   // the owner asked for it to go. A shared /.*/ regex here would have absorbed
   // that silently; a named expectation makes the rename a visible diff, which
   // is the whole argument in this file's own docstring.
-  '/dashboard': /Your range|Where you stand/,
+  '/dashboard': DASHBOARD_HEADING,
   '/transactions': /Transactions/,
   '/accounts': /Accounts/,
   '/budgets': /Budget/,

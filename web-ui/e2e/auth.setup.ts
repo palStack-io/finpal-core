@@ -23,12 +23,25 @@ import { DEMO_USER, STORAGE_STATE } from './fixtures';
 setup('authenticate as the demo user', async ({ page }) => {
   await page.goto('/login');
 
-  await page.locator('input[type="email"]').fill(DEMO_USER.email);
-  await page.locator('input[type="password"]').fill(DEMO_USER.password);
-  // `exact` — the page also has "Sign in with SSO", and a loose /sign in/i
-  // matches both. Playwright's strict mode is right to refuse that: a click on
-  // "whichever matched first" is a test that asserts nothing reliable.
-  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  /*
+   * *** THE SETUP CLICKS A PERSONA NOW, BECAUSE THAT IS WHAT A DEMO VISITOR
+   * DOES. *** Owner decision 2026-09-16: with `DEMO_MODE` on, the login page
+   * leads with the four demo personas and the credential form moves behind a
+   * disclosure. `scripts/e2e/run.sh` sets `DEMO_MODE=true` — that flag is what
+   * runs the seeder this whole suite reads — so this setup was about to be
+   * driving a form that is no longer the first thing on the page.
+   *
+   * Clicking the persona is the better path anyway, and not only because it
+   * still works: this file is the setup for every other spec, so what it drives
+   * should be the way people actually get in. `auth.spec.ts` keeps driving the
+   * FORM, through the disclosure, so the two ways in are covered separately
+   * rather than one of them twice.
+   *
+   * Keyed to the persona's NAME rather than its email: the button renders
+   * `{account.name}` and a name is what a human clicks. If the seed ever renames
+   * Alex Demo, this fails loudly here instead of every spec failing vaguely.
+   */
+  await page.getByRole('button', { name: new RegExp(DEMO_USER.name) }).click();
 
   await expect(page).toHaveURL(/\/(dashboard|onboarding)/, { timeout: 20_000 });
   // Not just the URL: a page can route and still have failed to load. Waiting on

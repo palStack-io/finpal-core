@@ -25,6 +25,17 @@ test('a signed-out visitor cannot reach a protected page', async ({ page }) => {
 test('the demo user can sign in through the form', async ({ page }) => {
   await page.goto('/login');
 
+  // *** THE FORM IS BEHIND A DISCLOSURE WHEN DEMO MODE IS ON, AND THIS SUITE
+  // RUNS WITH IT ON. *** Owner decision 2026-09-16: the demo offers the demo way
+  // in, and the credential block is one click away. Opening it here is the point
+  // of this file — `auth.setup.ts` covers the persona path, and this one keeps
+  // covering the form, including the wrong-password case a persona button cannot
+  // express. Tolerant of the button being absent so the spec still passes on an
+  // instance with DEMO_MODE off, where the form is already the first thing.
+  const disclose = page.getByRole('button', { name: /email and password instead/i });
+  if (await disclose.count()) await disclose.click();
+
+
   await page.locator('input[type="email"]').fill(DEMO_USER.email);
   await page.locator('input[type="password"]').fill(DEMO_USER.password);
   // `exact` — the page also has "Sign in with SSO", and a loose match resolves
@@ -42,6 +53,17 @@ test('a wrong password is refused and does not sign anybody in', async ({ page }
   // this way (D-79, D-81): a login test that only tries the correct password
   // passes just as well against a server that accepts anything.
   await page.goto('/login');
+
+  // *** THE FORM IS BEHIND A DISCLOSURE WHEN DEMO MODE IS ON, AND THIS SUITE
+  // RUNS WITH IT ON. *** Owner decision 2026-09-16: the demo offers the demo way
+  // in, and the credential block is one click away. Opening it here is the point
+  // of this file — `auth.setup.ts` covers the persona path, and this one keeps
+  // covering the form, including the wrong-password case a persona button cannot
+  // express. Tolerant of the button being absent so the spec still passes on an
+  // instance with DEMO_MODE off, where the form is already the first thing.
+  const disclose = page.getByRole('button', { name: /email and password instead/i });
+  if (await disclose.count()) await disclose.click();
+
 
   await page.locator('input[type="email"]').fill(DEMO_USER.email);
   await page.locator('input[type="password"]').fill('definitely-not-the-password');
