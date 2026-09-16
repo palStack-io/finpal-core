@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Loader2, Lock } from 'lucide-react';
 import { MountainSilhouette } from '../../../components/MountainSilhouette';
 import { GearIcon } from '../../../components/GearIcon';
+import { useLessonReader, type LessonReaderApi } from '../LessonReader';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
 import { learnpalService } from '../service';
 import { apiErrorMessage } from '../../../utils/apiError';
@@ -153,11 +154,36 @@ const HighestCard: React.FC<{ stats: LearnStats }> = ({ stats }) => {
   );
 };
 
-const RecentRow: React.FC<{ row: StatsRecent }> = ({ row }) => (
-  <li style={{
-    display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0',
-    borderTop: '1px solid var(--border-light)',
-  }}>
+/**
+ * *** THESE ROWS WERE NOT CLICKABLE AND THEY SHOULD ALWAYS HAVE BEEN. ***
+ * Owner, 2026-09-16: *"on learnpal, i cant seem to click on my recently
+ * finished lessons. we should be able to do that"*. They were plain `<li>`s
+ * with a gear icon and two lines of text — the one list on the app that names
+ * lessons you have EARNED, with no way to read any of them, while `Lessons`
+ * had a working reader one file away.
+ *
+ * The row itself is the trigger rather than a "Read" button on the end, because
+ * this list is short and every row in it is already yours: a button would be a
+ * second thing to aim at for an action the whole row means. `Lessons` keeps its
+ * button, because there a row can be LOCKED and the button is what distinguishes
+ * the ones you can open.
+ *
+ * *** A ROW WITH NO WRITE-UP IS NOT A TRIGGER, AND THAT IS NOT AN OVERSIGHT. ***
+ * Eleven approved drafts are unseeded and four lessons are deliberately
+ * unwritten, so an earned lesson with nothing to read is expected. It still says
+ * "no write-up yet" and it renders as a plain `<li>` — a button onto blank space
+ * looks broken, which is the same call `Lessons` already made via `has_body`.
+ * `reader.canOpen` is that rule, in one place now.
+ */
+const RecentRow: React.FC<{
+  row: StatsRecent;
+  reader: LessonReaderApi;
+}> = ({ row, reader }) => {
+  const openable = reader.canOpen(row);
+  const busy = reader.opening === row.slug;
+
+  const body = (
+    <>
     <span style={{ lineHeight: 0, marginTop: 2 }}>
       <GearIcon slug={row.gear_slug ?? row.slug} size={20} />
     </span>
@@ -178,10 +204,45 @@ const RecentRow: React.FC<{ row: StatsRecent }> = ({ row }) => (
             seeded and four are deliberately unwritten, so an earned lesson
             with nothing to read is expected. */}
         {!row.has_body && <> · <em>no write-up yet</em></>}
+        {busy && <> · opening…</>}
       </div>
     </div>
-  </li>
-);
+    </>
+  );
+
+  const shell: React.CSSProperties = {
+    display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0',
+    borderTop: '1px solid var(--border-light)',
+  };
+
+  if (!openable) return <li style={shell}>{body}</li>;
+
+  return (
+    <li style={{ ...shell, padding: 0, borderTop: 'none' }}>
+      {/* A real `<button>`, not a div with an onClick: this is keyboard
+          reachable, it announces itself, and `every-page.spec.ts`'s axe run
+          would have caught the alternative. Full width and left-aligned so the
+          hit area is the row a reader is already looking at. */}
+      <button
+        type="button"
+        onClick={() => reader.open(row)}
+        disabled={busy}
+        aria-label={`Read: ${row.title}`}
+        style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          width: '100%', padding: '10px 0', textAlign: 'left',
+          borderTop: '1px solid var(--border-light)',
+          borderLeft: 'none', borderRight: 'none', borderBottom: 'none',
+          background: 'transparent',
+          cursor: busy ? 'default' : 'pointer',
+          font: 'inherit', color: 'inherit',
+        }}
+      >
+        {body}
+      </button>
+    </li>
+  );
+};
 
 const NextRow: React.FC<{ row: StatsNext }> = ({ row }) => (
   <li style={{
@@ -220,6 +281,9 @@ export const Home: React.FC = () => {
   const [stats, setStats] = useState<LearnStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /* Shared with `Lessons`, so a lesson opens the same way from either screen
+     and the `has_body` rule lives in one place. See `LessonReader`. */
+  const reader = useLessonReader();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -283,7 +347,11 @@ export const Home: React.FC = () => {
         subtitle="Lessons unlocked by your own figures rather than by a schedule, and the mountains your goals turned out to be."
       />
 
-      {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}
+      {/* The reader's own failure goes where this page's failures go, rather
+          than into a second alert region a screen reader would have to find. */}
+      {(error || reader.error) && (
+        <div role="alert" style={{ color: 'var(--danger-text)' }}>{error || reader.error}</div>
+      )}
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <Tally
@@ -312,7 +380,9 @@ export const Home: React.FC = () => {
             </p>
           ) : (
             <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
-              {stats.recent.map((row) => <RecentRow key={row.slug} row={row} />)}
+              {stats.recent.map((row) => (
+                <RecentRow key={row.slug} row={row} reader={reader} />
+              ))}
             </ul>
           )}
         </section>
@@ -333,6 +403,8 @@ export const Home: React.FC = () => {
           )}
         </section>
       </div>
+
+      {reader.panel}
 
       <div style={{
         marginTop: 18, display: 'flex', gap: 16, alignItems: 'center',
