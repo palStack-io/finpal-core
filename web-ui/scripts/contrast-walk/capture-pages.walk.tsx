@@ -29,6 +29,20 @@ import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
 import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
+import { Sidebar } from '../../src/components/layout/Sidebar';
+
+/**
+ * The rail in the ONE state a phone user can ever see it in.
+ *
+ * *** CAPTURED WITH `isOpen`, BECAUSE WITHOUT IT THE 390px WALK MEASURES AN
+ * ELEMENT DESIGNED TO BE INVISIBLE. *** Below `--bp-phone` the sidebar is
+ * `transform: translateX(-100%)` and `isOpen` is what lifts the `is-open` class
+ * that undoes it. Rendered closed, the responsive walk reported eighteen
+ * "clipped" nav icons at 390px with **+0px of overflow** — every one of them
+ * correct, and every one of them about a drawer that is shut. Above 767px the
+ * class is inert, so one capture is valid at all four widths.
+ */
+const SidebarOpen: React.FC = () => <Sidebar isOpen onClose={() => {}} />;
 import GroupDetail from '../../src/pages/GroupDetail';
 import NotFound from '../../src/pages/NotFound';
 import { Login } from '../../src/pages/Login';
@@ -90,7 +104,16 @@ beforeAll(() => {
 beforeAll(() => { api.defaults.adapter = 'http'; });
 beforeEach(() => {
   useAuthStore.setState({
-    user: { id: 'alice@test.com', name: 'Alice', default_currency_code: 'GBP' } as any,
+    /* *** `modules` IS HERE FOR THE SIDEBAR SCOPE AND IT IS LOAD-BEARING. ***
+       The rail renders a module section only for a slug in `user.modules`, and
+       the two AA failures that prompted adding this scope were IN that section.
+       Without these, the capture would serialize a rail with no module rows and
+       the walk would measure it clean — the walk-fixture trap that made both
+       browser gates report a $0.00 Investments page as green (D-227). */
+    user: {
+      id: 'alice@test.com', name: 'Alice', default_currency_code: 'GBP',
+      modules: ['pointspal', 'learnpal'],
+    } as any,
     token: 'tok', refreshToken: 'r', isAuthenticated: true,
   });
 });
@@ -1176,6 +1199,33 @@ const cases: Case[] = [
    */
   ['groupdetail', GroupDetail as React.FC, undefined,
     { pattern: '/groups/:id', url: '/groups/1' }],
+  /**
+   * *** THE SIDEBAR, WHICH IS NOT A PAGE AND HELD TWO AA FAILURES. ***
+   * Every capture here renders a page component ALONE, without `AppLayout`, so
+   * the rail — on screen on all 21 signed-in routes — had never been measured
+   * by either walk. Reported by the owner as "on the sidenav the look like its
+   * disabled", and it was: the module rows were 2.13:1 and the section headings
+   * 1.52:1 in light.
+   *
+   * Captured with its module sections EXPANDED. Collapsed is the default for a
+   * new visitor and it hides the sub-links entirely, which is exactly the shape
+   * of capture that measures a page it is not looking at.
+   */
+  ['sidebar', SidebarOpen, async () => {
+    // Both module headers, by name — clicking by index would silently click
+    // the same row twice if the registry order changed.
+    for (const label of ['pointsPal', 'learnPal']) {
+      const row = await screen.findByText(label);
+      await userEvent.click(row);
+    }
+    // A nav-link label, not a page heading: 'Redemption Optimizer' is what
+    // /pointspal/redeem is TITLED, and the rail says 'Redeem'. Waiting on the
+    // wrong string made this capture fail rather than pass quietly, which is
+    // the right direction — but it is the same class of mistake as guessing a
+    // heading from a route (MODULE_HEADINGS in every-page.spec.ts).
+    await screen.findByText('Redeem');
+    await screen.findByText('Your range');
+  }, undefined, 40],
   // Nine elements is this page COMPLETE: a panel, the figure, a heading, a
   // sentence, two destinations and the unmeasured ridge. See `Case`'s `floor`.
   ['notfound', NotFound as React.FC, undefined,
