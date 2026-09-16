@@ -34,7 +34,7 @@ import { authService } from '../services/authService';
 import AuthShell from '../components/auth/AuthShell';
 import { demoService, DemoAccount, DemoStatus } from '../services/demoService';
 import { useToast } from '../contexts/ToastContext';
-import { Eye, EyeOff, Clock, User as UserIcon } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon } from 'lucide-react';
 import { apiErrorMessage } from '../utils/apiError';
 
 export const Login: React.FC = () => {
@@ -644,22 +644,40 @@ export const Login: React.FC = () => {
               </div>
             </div>
 
-            {/* Time Limit Notice */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem',
-              background: 'rgba(34, 197, 94, 0.1)',
-              borderRadius: '0.5rem',
-              marginBottom: '1rem',
-              border: '1px solid rgba(34, 197, 94, 0.2)'
-            }}>
-              <Clock size={16} color="#60a5fa" />
-              <span style={{ color: '#93c5fd', fontSize: '0.8125rem' }}>
-                {demoStatus.timeout_minutes} minute session limit
-              </span>
-            </div>
+            {/* *** THE "N MINUTE SESSION LIMIT" NOTICE IS GONE — D-232, OWNER
+                DECISION 2026-09-16. ***
+
+                It rendered `{demoStatus.timeout_minutes} minute session limit`,
+                and the server really does send that number, so the client was
+                never at fault. The problem is that NOTHING ENFORCES IT.
+                Measured from a real token issued by the live demo: `iat → exp`
+                is **86400 seconds — 24 hours** — against the 7200 the page
+                claimed. A 12x overstatement of a security property, on a public
+                service.
+
+                `src/utils/session_timeout.py` is 92 lines with **zero**
+                occurrences of `before_request`, `after_request`, `abort(` or
+                `401`: it registers no request hook, so nothing can expire
+                anything. `init_app` sets three config defaults and stashes
+                itself in `app.extensions`, and that is all it does. Every one
+                of its four methods has **zero production callers**. D-187's
+                shape (an engine with no callers while two docstrings asserted
+                the call site) and D-197's (a guard whose precondition is
+                unreachable cannot fire), on a claim about security.
+
+                Two fixes were possible and they are not equivalent:
+                implementing expiry changes behaviour for every demo visitor and
+                is outward-facing security work; withdrawing the claim is honest
+                and removes a promise that was never kept. The owner chose to
+                withdraw it, so the sentence goes.
+
+                *** `timeout_minutes` IS STILL IN THE PAYLOAD, DELIBERATELY. ***
+                Removing it from `/api/v1/demo/status` is a contract change for
+                any self-hoster's client, and the decision taken was to stop
+                MAKING the claim rather than to delete a config field. The field
+                is now documented at the place that serves it as a value nothing
+                enforces, so the next person to read it does not assume
+                otherwise. */}
 
             {/* Demo Accounts List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
