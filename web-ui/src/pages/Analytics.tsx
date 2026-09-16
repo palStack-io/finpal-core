@@ -7,6 +7,8 @@ import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { formatMoney, tabular } from '../styles/money';
+import { incomeFlow, type FlowCategory } from '../utils/incomeFlow';
+import IncomeFlowChart from '../components/analytics/IncomeFlowChart';
 import { MemberFilter } from '../components/MemberFilter';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
@@ -27,10 +29,11 @@ import {
   Target,
   PieChart as PieChartIcon,
   BarChart3,
+  GitBranch,
 } from 'lucide-react';
 
 // Tab types
-type AnalyticsTab = 'overview' | 'cashflow' | 'spending' | 'health';
+type AnalyticsTab = 'overview' | 'cashflow' | 'flow' | 'spending' | 'health';
 
 // Color palette for categories
 /**
@@ -184,6 +187,16 @@ export const Analytics: React.FC = () => {
    * default the owner specified; `MemberFilter` renders nothing for a solo
    * household, where there is nobody to narrow to.
    */
+  /* *** THE FULL LISTS, NOT THE EIGHT THE DONUT DRAWS. ***
+     `categorySpending` and `incomeSources` below are `.slice(0, 8)`, which is a
+     chart decision and a correct one for a donut. A flow diagram claims
+     conservation — the width entering a node is the width leaving it — so
+     feeding it a truncated list produces a picture that silently does not add
+     up, with no visual symptom. The comment beside `expenseTotal` says exactly
+     this about using the slice for a total. `utils/incomeFlow.ts` bundles the
+     tail into a node that says how many categories it stands for. */
+  const [flowIncome, setFlowIncome] = useState<FlowCategory[]>([]);
+  const [flowExpenses, setFlowExpenses] = useState<FlowCategory[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [memberId, setMemberId] = useState<string | null>(null);
   const selectedMember = members.find((m) => m.id === memberId) || null;
@@ -302,6 +315,12 @@ export const Analytics: React.FC = () => {
         // charts down, and showing zeroes instead would be a claim.
         setMovable(null);
       }
+
+      // Kept whole, beside the sliced copies rather than instead of them: the
+      // donut wants eight and the flow wants all of them, and they are the same
+      // fetch. `limit=50` above is what makes both possible.
+      setFlowIncome(currentIncome);
+      setFlowExpenses(currentExpenses);
 
       setCategorySpending(currentExpenses.slice(0, 8).map((cat, idx) => ({
         name: cat.name || 'Uncategorised',
@@ -450,6 +469,11 @@ export const Analytics: React.FC = () => {
   const tabs = [
     { id: 'overview' as const, label: 'Overview', icon: <BarChart3 size={18} /> },
     { id: 'cashflow' as const, label: 'Cash Flow', icon: <Activity size={18} /> },
+    /* *** "WHERE IT WENT", NOT "SANKEY". *** Owner, 2026-09-16: "can we provide
+       an option for sankey? so users can see how their income got dispersed?".
+       The chart type is the implementation; the question it answers is the
+       label. Nobody opens a money app looking for a Sankey diagram. */
+    { id: 'flow' as const, label: 'Where It Went', icon: <GitBranch size={18} /> },
     { id: 'spending' as const, label: 'Spending Analysis', icon: <PieChartIcon size={18} /> },
     { id: 'health' as const, label: 'Financial Health', icon: <Target size={18} /> },
   ];
@@ -853,6 +877,84 @@ export const Analytics: React.FC = () => {
                 </AreaChart>
               </ResponsiveContainer>
               )}
+            </ChartCard>
+          </div>
+        )}
+
+        {/* *** WHERE IT WENT — THE FLOW TAB. ***
+            Owner, 2026-09-16: *"can we provide an option for sankey? so users
+            can see how their income got dispersed?"*.
+
+            *** IT ADDS NO REQUEST. *** `loadAnalytics` already fetches income
+            and expenses by category at `limit=50` with the member filter
+            applied, because the savings-rate figures need every category rather
+            than the eight the donut draws. So this tab is a second reading of
+            data the page has, which also means it cannot disagree with the
+            Overview tab's totals — they are the same two arrays.
+
+            *** AND IT SAYS WHY IT IS EMPTY RATHER THAN DRAWING AN EMPTY FRAME.
+            *** `incomeFlow` returns null when nothing came in and nothing went
+            out; a Sankey outline with no bands is decoration standing in for a
+            fact, which is the same call `GoalRange` makes. */}
+        {activeTab === 'flow' && (
+          <div>
+            <ChartCard
+              title="Where it went"
+              subtitle={rangeLabel}
+            >
+              {(() => {
+                const flow = incomeFlow(flowIncome, flowExpenses);
+                if (!flow) {
+                  return (
+                    <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      No income and no spending recorded in this period, so there
+                      is no flow to draw.
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <IncomeFlowChart
+                      flow={flow}
+                      format={(amount) => formatMoney(amount, { currency })}
+                    />
+                    {/* *** THE SENTENCE UNDERNEATH IS DERIVED FROM THE SAME
+                        NUMBERS THE CHART WAS DRAWN FROM, WHICH IS THE WHOLE
+                        POINT. *** D-102 is this project's row for a caption
+                        telling users their net worth rose 43% while the line
+                        fell. There is no second computation here to drift. */}
+                    <p style={{
+                      margin: '16px 0 0',
+                      fontSize: '13.5px',
+                      lineHeight: 1.6,
+                      color: 'var(--text-secondary)',
+                    }}>
+                      {flow.net >= 0 ? (
+                        <>
+                          {formatMoney(flow.earned, { currency })} came in and{' '}
+                          {formatMoney(flow.spent, { currency })} went out, leaving{' '}
+                          <strong style={{ color: 'var(--g-ink)' }}>
+                            {formatMoney(flow.net, { currency })}
+                          </strong>{' '}
+                          unspent.
+                        </>
+                      ) : (
+                        <>
+                          {formatMoney(flow.spent, { currency })} went out against{' '}
+                          {formatMoney(flow.earned, { currency })} in, so{' '}
+                          <strong style={{ color: 'var(--re-ink)' }}>
+                            {formatMoney(-flow.net, { currency })}
+                          </strong>{' '}
+                          of it did not come from this period's income — it came
+                          from savings, a credit card or an overdraft. finPal
+                          cannot tell which from these transactions alone, so it
+                          says what it knows.
+                        </>
+                      )}
+                    </p>
+                  </>
+                );
+              })()}
             </ChartCard>
           </div>
         )}

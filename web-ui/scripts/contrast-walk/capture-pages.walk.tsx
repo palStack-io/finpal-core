@@ -30,6 +30,8 @@ import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
 import { Sidebar } from '../../src/components/layout/Sidebar';
+import IncomeFlowChart from '../../src/components/analytics/IncomeFlowChart';
+import { incomeFlow } from '../../src/utils/incomeFlow';
 
 /**
  * The rail in the ONE state a phone user can ever see it in.
@@ -43,6 +45,56 @@ import { Sidebar } from '../../src/components/layout/Sidebar';
  * class is inert, so one capture is valid at all four widths.
  */
 const SidebarOpen: React.FC = () => <Sidebar isOpen onClose={() => {}} />;
+
+/**
+ * The flow chart, on the live demo's own figures.
+ *
+ * *** CAPTURED AS THE COMPONENT, NOT THE PAGE, AND THAT IS A STATED LIMIT
+ * RATHER THAN A SHORTCUT. *** `/analytics` reads seven endpoints and is not in
+ * the capture at all — it is one of the five surfaces this walk still does not
+ * cover. Wiring all seven fixtures to reach one tab would be a bigger change
+ * than the chart, and leaving the chart UNMEASURED because the page is
+ * unmeasured is how the six surfaces in D-243 stayed invisible.
+ *
+ * So this measures what is new: the bands, the three ink roles, and whether
+ * eight labelled nodes fit at 390px. The page around it is still uncovered and
+ * the roadmap says so.
+ *
+ * *** AND IT USES THE OVERSPENT CASE. *** The demo's September is 250.00 in
+ * against 2,359.72 out, which is the state that adds a red "From savings or
+ * credit" inflow and relabels the middle node — the widest content and the only
+ * place `--re-ink` appears on this chart. Capturing the comfortable case would
+ * measure the version of the chart nobody has a problem with.
+ */
+const FlowChartFixture: React.FC = () => {
+  const flow = incomeFlow(
+    [{ name: 'Income', amount: 9000 }, { name: 'Uncategorised', amount: 1900 }],
+    [
+      { name: 'Housing', amount: 12400 }, { name: 'Groceries', amount: 500.49 },
+      { name: 'Shopping', amount: 357.11 }, { name: 'Transportation', amount: 215.5 },
+      { name: 'Health & Fitness', amount: 149.97 }, { name: 'Electricity', amount: 134.5 },
+      { name: 'Food & Dining', amount: 99.24 }, { name: 'Internet', amount: 79.99 },
+      { name: 'Phone', amount: 60 }, { name: 'Subscriptions', amount: 45.99 },
+    ],
+  )!;
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+      borderRadius: 16, padding: 24,
+    }}>
+      <h1 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+        Where it went
+      </h1>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '4px 0 20px' }}>
+        Last 30 days
+      </p>
+      <IncomeFlowChart
+        flow={flow}
+        format={(a) => `£${a.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+      />
+    </div>
+  );
+};
 import GroupDetail from '../../src/pages/GroupDetail';
 import NotFound from '../../src/pages/NotFound';
 import { Login } from '../../src/pages/Login';
@@ -1211,6 +1263,7 @@ const cases: Case[] = [
    * new visitor and it hides the sub-links entirely, which is exactly the shape
    * of capture that measures a page it is not looking at.
    */
+  ['analytics-flow', FlowChartFixture],
   ['sidebar', SidebarOpen, async () => {
     // Both module headers, by name — clicking by index would silently click
     // the same row twice if the registry order changed.
