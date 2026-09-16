@@ -9,11 +9,19 @@
  *   npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
  */
 import { execFileSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdtempSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
+import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+/* One throwaway Chrome profile for the whole run — see the long note at the
+   launch below. Removed on the way out so a hung run cannot leave a lock for
+   the next one to inherit, which is the failure this replaces. */
+const CHROME_PROFILE = mkdtempSync(join(tmpdir(), 'finpal-contrast-walk-'));
+const cleanUpProfile = () => { try { rmSync(CHROME_PROFILE, { recursive: true, force: true }); } catch { /* best effort */ } };
+process.on('exit', cleanUpProfile);
 const WEB_UI = join(HERE, '..', '..');
 const capArg = process.argv.indexOf('--capture');
 /**
@@ -93,11 +101,44 @@ for (const CAPTURED of CAPTURES) {
     ? page.replace('<!doctype html>', '<!doctype html><html data-theme="dark">')
     : page);
 
-  const dom = execFileSync(chrome(), [
-    '--headless=new', '--disable-gpu', '--allow-file-access-from-files',
-    '--virtual-time-budget=6000', '--hide-scrollbars',
-    '--window-size=1400,3000', '--dump-dom', `file://${file}`,
-  ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+  /*
+   * *** THIS WALK USED TO HANG, NOT FAIL, AND BOTH CAUSES WERE IN THIS CALL. ***
+   * Measured 2026-09-15: it stalled mid-run four times, at four DIFFERENT
+   * scopes (4 of 36, then 19, then 12), with headless Chrome sitting at 0.7%
+   * CPU and the process never returning. Once it was killed by hand the step
+   * reported `✗`, which read as a contrast failure and was not one.
+   *
+   * **1. `--user-data-dir`.** Without it every one of these 36 launches uses
+   * Chrome's DEFAULT profile and serialises on its lock. That directory really
+   * does hold a `SingletonLock` on this machine, left behind whether or not a
+   * browser is running, so a launch can block on a lock nothing will release.
+   * It also means the walk was reading the owner's real profile — extensions
+   * and all — when the whole point is a clean, reproducible render. A fresh
+   * temp profile per run removes the contention AND the shared state. This is
+   * also why "kill every Chrome and re-run" appeared to be the cure and then
+   * was not: killing a browser clears the live lock, not the stale file.
+   *
+   * **2. `timeout`.** `execFileSync` with no timeout waits forever, so the only
+   * thing that ever ended a stall was `preflight.sh`'s own 900s step limit —
+   * fifteen minutes to learn nothing. 60s is many times the ~1.5s a scope
+   * actually takes, so it cannot fire on a slow machine, and a hung scope now
+   * THROWS with a name attached instead of silently costing the whole run.
+   */
+  let dom;
+  try {
+    dom = execFileSync(chrome(), [
+      '--headless=new', '--disable-gpu', '--allow-file-access-from-files',
+      '--virtual-time-budget=6000', '--hide-scrollbars',
+      `--user-data-dir=${CHROME_PROFILE}`, '--no-first-run', '--no-default-browser-check',
+      '--window-size=1400,3000', '--dump-dom', `file://${file}`,
+    ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'], timeout: 60_000 });
+  } catch (err) {
+    // ETIMEDOUT is the hang; anything else is Chrome refusing to start. Both
+    // are reported against the scope that caused them, which is the thing the
+    // silent version never told anybody.
+    console.error(`[${key}] chrome did not return: ${err.code ?? err.message}`);
+    process.exit(2);
+  }
 
   const m = dom.match(/WALK::([\s\S]*?)::END/);
   if (!m) {

@@ -282,13 +282,20 @@ beforeEach(() => {
     })),
     http.get('*/api/v1/investments/holdings', () => HttpResponse.json({
       success: true,
+      /* `cost_basis` and `last_update` are sent by the real endpoint and were
+         missing here — see the longer note in the contrast walk's copy of this
+         fixture. No modal in this file reads them today, so nothing was broken;
+         they are added because a fixture that does not match the payload is the
+         trap, not the symptom. `cost_basis` is `shares * purchase_price`. */
       holdings: [
         { id: 1, symbol: 'VWRP', name: 'Vanguard FTSE All-World Acc', shares: 210,
           purchase_price: 98.4, current_price: 121.2, current_value: 25452,
-          gain_loss: 4788, gain_loss_percentage: 23.2, portfolio_id: 1 },
+          cost_basis: 20664, gain_loss: 4788, gain_loss_percentage: 23.2,
+          last_update: '2026-09-16T04:09:22.458182', portfolio_id: 1 },
         { id: 2, symbol: 'AAPL', name: 'Apple Inc.', shares: 60, purchase_price: 168.2,
-          current_price: 224.9, current_value: 13494, gain_loss: 3402,
-          gain_loss_percentage: 33.7, portfolio_id: 1 },
+          current_price: 224.9, current_value: 13494, cost_basis: 10092,
+          gain_loss: 3402, gain_loss_percentage: 33.7,
+          last_update: '2026-09-16T04:09:22.631104', portfolio_id: 1 },
       ],
     })),
     http.get('*/api/v1/groups', () => HttpResponse.json({ success: true, groups: [] })),
