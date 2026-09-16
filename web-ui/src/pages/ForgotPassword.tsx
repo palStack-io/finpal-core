@@ -135,18 +135,19 @@ export const ForgotPassword: React.FC = () => {
     transition: 'color 0.2s',
   };
 
-  const page = (children: React.ReactNode) => (
-    <div style={{
-      minHeight: '100vh',
-      background: PAGE,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem',
-    }}>
-      <div style={{ width: '100%', maxWidth: '46rem' }}>{children}</div>
-    </div>
-  );
+  /**
+   * *** THE SHELL OWNS THE PAGE NOW, SO THIS IS A PASSTHROUGH. ***
+   * It used to paint the 100vh wash and centre a 46rem column, because
+   * `AuthShell` was a card that needed a page around it. `AuthShell` IS the
+   * page now — full-bleed, with the frieze positioned against its own box — so
+   * a wrapper here would nest a viewport inside a viewport and put the horizon
+   * 1rem from the bottom of a centred card instead of on the floor.
+   *
+   * Kept as a function rather than deleted at both call sites: the two states
+   * of this screen both go through it, and a named seam is where the next
+   * page-level decision goes.
+   */
+  const page = (children: React.ReactNode) => <>{children}</>;
 
   if (emailSent) {
     return page(

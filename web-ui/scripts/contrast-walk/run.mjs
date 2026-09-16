@@ -57,6 +57,22 @@ const CAPTURES = capArg > -1
  * list, and an empty one is the goal.
  */
 const TEXT_FLOORS = {
+  /* *** THE FIVE PRE-AUTH SCREENS ARE A FAMILY OF SMALL PAGES, AND THE SHARED
+     FLOOR OF 20 WAS NEVER RIGHT FOR ANY OF THEM. *** Named as a group rather
+     than added one at a time as each wobbles, because that is the actual fact:
+     these pages are a sentence, a few fields and a button. Measured complete —
+     login 19 (four personas and a disclosure on a demo instance, where most of
+     its text USED to be the form), register 19, reset-password 14,
+     forgot-password 9. Each floor below sits a few under its measured value so
+     a copy edit does not redden the walk, and every one of them still catches a
+     spinner, which resolves fewer than ten.
+
+     This is the third place the same over-tuned floor has had to be fixed
+     (D-244 covers the other two). The lesson is that a shared floor encodes an
+     assumption about how big a page is, and it was written when every scope was
+     a data-dense app page. */
+  login: 15,
+  register: 15,
   /* A 404 at its most complete, MEASURED RATHER THAN COUNTED FROM THE SOURCE:
      the figure, a heading, a sentence and ONE destination = 4. It looks like it
      should be five, because the page also renders a Back button -- but that
@@ -65,9 +81,9 @@ const TEXT_FLOORS = {
      this page COMPLETE, and a floor of 5 failed a correct render. */
   notfound: 4,
   // One field, one button, one way back.
-  'forgot-password': 8,
+  'forgot-password': 7,
   // Two fields, a rule line and a button.
-  'reset-password': 10,
+  'reset-password': 11,
 };
 
 const DEFAULT_TEXT_FLOOR = 20;

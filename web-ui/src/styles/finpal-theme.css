@@ -1552,59 +1552,98 @@ body {
   .range-sides > [aria-hidden='true'] { display: none; }
 }
 
-/* ── The pre-auth split shell ────────────────────────────────────────────────
+/* ── The pre-auth entry ──────────────────────────────────────────────────────
    LAYOUT ONLY, AND THAT SPLIT IS THE POINT. `AuthShell.tsx` keeps every colour
    inline and hardcoded, because the pre-auth pages are dark in BOTH themes and
    a token here would resolve to light values on a background that never
    changes — the defect `authPagesUseBrandColours.test.ts` pins. What cannot be
    done inline is a width query, so the grid lives here and nothing else does.
 
-   *** AND IT STACKS RATHER THAN NARROWING. *** Two columns at 390px gives an
-   art panel too small to hold a sentence beside a form too narrow to hold an
-   email field. Stacked, the art becomes a 132px band above the form, which is
-   what it is on a phone: a header. The peaks keep their own aspect via
-   `preserveAspectRatio="none"`, so the band shortens without clipping. */
-.auth-split {
-  display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  border-radius: 16px;
-  overflow: hidden;
-  width: 100%;
-}
-
-.auth-split-art {
+   *** THIS REPLACED `.auth-split`, WHICH PUT THE RANGE IN A COLUMN. *** The
+   range is a horizon and a horizon belongs on a ground line, so it moved to the
+   bottom of the page and the left column became copy — see `AuthShell`'s own
+   header and `docs/mockups/entry-pantrypal-treatment-web.html`. */
+.auth-entry {
   position: relative;
-  /* The bottom padding is the peaks' room: the svg is absolutely positioned on
-     the floor of this panel, so the copy has to stop above it. */
-  padding: 28px 30px 104px;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  padding: 40px 52px 0;
+  /* The frieze is absolutely positioned against this box, and `isolation`
+     keeps its stacking context local so a page can still portal a modal over
+     the whole thing without fighting the z-indexes below. */
+  isolation: isolate;
+  overflow: hidden;
+  align-items: center;
 }
 
-.auth-split-art > svg {
+.auth-entry-back {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-entry-hero {
+  /* Bottom padding is the frieze's room: the hero sits in the left column and
+     the horizon runs under BOTH columns, so the copy has to stop above it.
+     *** 120px RATHER THAN 150: THE FRIEZE HAS TO BE ABOVE THE FOLD OR IT IS
+     NOT THE FLOOR OF ANYTHING. *** On the demo-mode login — four personas, a
+     note and a disclosure — the panel is the tallest thing on the page, and at
+     1440x900 the original budget pushed the horizon just past the bottom of
+     the viewport. A page-bottom decoration you have to scroll to find is a page
+     without it, which is the whole thing this treatment was for. */
+  padding-bottom: 120px;
+  min-width: 0;
+  z-index: 2;
+}
+
+.auth-entry-panel {
+  border-radius: 18px;
+  padding: 26px 24px;
+  justify-self: stretch;
+  z-index: 2;
+  min-width: 0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+.auth-entry-frieze {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   width: 100%;
-  height: auto;
+  height: 150px;
+  z-index: 1;
   pointer-events: none;
 }
 
-.auth-split-form {
-  padding: 28px 30px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  /* Without this a long unbroken string in a field label pushes the grid wider
-     than its container instead of wrapping — `minmax(auto, …)`'s default floor
-     is the content's min size, not zero. */
-  min-width: 0;
+/* *** IT STACKS RATHER THAN NARROWING, AND THE HERO GOES FIRST. *** Two columns
+   at 390px gives a headline too cramped to land beside a form too narrow to
+   hold an email field. Stacked, the copy introduces the product and the panel
+   follows it, which is the order a phone reader wants anyway. The frieze
+   shortens to 104px and stays at the bottom of the page — on a phone it is a
+   footer band, which is what a horizon is when there is no room for a view. */
+@media (max-width: 767px) {
+  .auth-entry {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 64px 20px 0;
+    align-items: start;
+  }
+  .auth-entry-hero { padding-bottom: 0; }
+  .auth-entry-panel { padding: 22px; margin-bottom: 128px !important; }
+  .auth-entry-frieze { height: 104px; }
 }
 
-@media (max-width: 767px) {
-  .auth-split { grid-template-columns: 1fr; }
-  .auth-split-art { padding: 20px 22px 72px; min-height: 132px; }
-  .auth-split-form { padding: 22px; }
+@media (max-width: 1023px) and (min-width: 768px) {
+  .auth-entry { padding: 48px 32px 0; gap: 28px; }
+  .auth-entry-hero { padding-bottom: 130px; }
 }

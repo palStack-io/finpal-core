@@ -21,7 +21,15 @@ import { DEMO_USER, STORAGE_STATE } from './fixtures';
  * cannot drift from what the app expects, because the app is what produced it.
  */
 setup('authenticate as the demo user', async ({ page }) => {
+  /* Same race as `auth.spec.ts`: the page paints the credential form until
+     `/demo/status` lands and then swaps to the personas, so the persona button
+     this setup clicks does not exist yet at `goto` time. Playwright's locator
+     would auto-wait for it anyway — the explicit wait is here so a FAILURE
+     points at the fetch rather than at a missing button, which is the
+     difference between a one-minute diagnosis and an afternoon. */
+  const demoStatus = page.waitForResponse((r) => r.url().includes('/api/v1/demo/status'));
   await page.goto('/login');
+  await demoStatus;
 
   /*
    * *** THE SETUP CLICKS A PERSONA NOW, BECAUSE THAT IS WHAT A DEMO VISITOR

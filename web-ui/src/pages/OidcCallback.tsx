@@ -77,16 +77,10 @@ export const OidcCallback: React.FC = () => {
   }, []);
 
   if (failure) {
+    /* No wrapper: `AuthShell` is the page now — full-bleed, with the frieze
+       positioned against its own box. A 100vh div around it would nest a
+       viewport in a viewport and put the horizon inside a centred card. */
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: PAGE,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-      }}>
-        <div style={{ width: '100%', maxWidth: '46rem' }}>
           <AuthShell
             art="clouded"
             kicker="Sign-in did not finish"
@@ -145,8 +139,6 @@ export const OidcCallback: React.FC = () => {
               Use email and password instead
             </button>
           </AuthShell>
-        </div>
-      </div>
     );
   }
 

@@ -224,993 +224,928 @@ export const Login: React.FC = () => {
     showToast('Google Sign-In coming soon!', 'info');
   };
 
+  /*
+   * *** THE SHELL IS THE PAGE NOW, SO THIS RETURN IS ONE ELEMENT. ***
+   *
+   * This used to open a 100vh wash, paint a background grid inside it, position
+   * its own "Back to Home", and centre a 46rem column — all of which existed
+   * because `AuthShell` was a CARD that needed a page around it. It IS the page
+   * now: full-bleed, with the frieze positioned against its own box. Nesting it
+   * in a centred column would put the horizon inside the card instead of on the
+   * floor.
+   *
+   * "Back to Home" and the palStack footer moved INTO the shell, because both
+   * were duplicated verbatim here and on the other sign-in screen, and three of
+   * the five pre-auth pages had no way home at all.
+   *
+   * (Written as a JS comment rather than a JSX one deliberately: `{/* … *\/}`
+   * immediately after `return (` is not a comment, it is an object-literal
+   * expression sitting beside the root element, and JSX has no two roots. That
+   * was the first version of this, and `tsc` was right to refuse it.)
+   */
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* *** THE BACKGROUND GRID IS GONE, AND IT RENDERED NOTHING. *** 96 divs on
-          a 12-column grid, each with a 3s pulse animation and an
-          `animationDelay`, at `opacity: 0.03` — and an EMPTY body. Register's
-          copy of this block puts a 💲 in each cell; this one lost the character
-          at some point and nobody noticed, because 96 invisible boxes pulsing at
-          3% opacity look exactly like 96 empty boxes. So the page was paying for
-          an animation with no content and the whole of it was decoration that
-          decorated nothing. The range replaces it with four paths and no
-          animation, which also stops ignoring `prefers-reduced-motion`. */}
-      {/* Back to Home Link */}
-      <Link
-        to="/"
-        style={{
-          position: 'absolute',
-          top: '1rem',
-          left: '1rem',
-          zIndex: 20,
-          color: '#9CB3A3',
-          textDecoration: 'none',
+    <AuthShell
+      art="partway"
+      kicker={demoFirst ? 'Have a look round' : 'Welcome back'}
+      headline={demoFirst
+        ? 'Every goal in finPal is a mountain.'
+        : 'You left partway up.'}
+      blurb={demoFirst
+        ? 'Pick an account below and the whole app is already full of somebody\'s figures — accounts, budgets, goals and a shared bill or two.'
+        : 'Pick up where you stopped. Nothing moved while you were away.'}
+    >
+      {/* *** THE HEAD IS NO LONGER A 5rem LOGO AND A GRADIENT-CLIPPED TITLE. ***
+          The art panel beside this carries the identity now, so this side
+          carries the instruction. The old h1 also set
+          `WebkitTextFillColor: 'transparent'` to paint itself with a
+          gradient, which is a heading whose text has no computed colour for
+          any contrast tool to measure. */}
+      {/* "Welcome back" to somebody who has never been here is the same
+          mismatch as the hero's, one column over. The h1 follows the offer
+          too. Nothing in `e2e/` or the unit suite asserts this string —
+          checked, because a heading is exactly the kind of thing a spec
+          pins by text. */}
+      <h1 style={{
+        margin: '0 0 0.25rem',
+        fontSize: '1.1875rem',
+        fontWeight: 700,
+        color: '#ffffff'
+      }}>
+        {demoFirst ? 'Try finPal' : 'Welcome back'}
+      </h1>
+      {/* The sentence under the title says what this screen is OFFERING,
+          and with the demo leading that is no longer "sign in". */}
+      <p style={{ color: '#9CB3A3', fontSize: '0.8125rem', margin: '0 0 1.125rem' }}>
+        {demoFirst
+          ? 'Pick someone to explore as — no sign-up needed.'
+          : 'Sign in to finPal'}
+      </p>
+
+      {/* *** WHEN DEMO MODE IS ON, THE DEMO IS THE OFFER. ***
+          Owner, 2026-09-16: *"cna we make it so when demo is on, only demo
+          login is availble?"*. That settles a question both
+          `docs/mockups/auth-web.html` and the pantryPal sheet explicitly
+          recorded as the owner's rather than a redesign's: *"the credential
+          form stays, unlike the other three palStack demos which hide it…
+          it is a larger decision than a redesign."* This is that decision.
+
+          So with `DEMO_MODE` on, a visitor sees the four personas and
+          nothing else. The credential block — Google, the email/password
+          form, SSO and the sign-up link — moves behind a quiet disclosure.
+
+          *** IT IS A DISCLOSURE AND NOT A DELETION, FOR TWO REASONS, AND
+          BOTH ARE THE KIND THAT ONLY SHOW UP IF YOU GO LOOKING. ***
+
+          1. `DEMO_MODE=true` IS NOT ONLY THE PUBLIC DEMO. It is the flag a
+             self-hoster sets to show their own instance to somebody, and it
+             is also what runs the seeder. Deleting the form would lock that
+             person out of their own admin account on their own server with
+             no way back in from the UI. A one-line disclosure cannot.
+
+          2. `e2e/auth.setup.ts` SIGNS IN THROUGH THIS FORM AND IT IS THE
+             SETUP FOR ALL 75 e2e TESTS — and `scripts/e2e/run.sh` sets
+             `DEMO_MODE=true`, because that is what runs the seeder the whole
+             suite reads. A deletion would have left the entire suite unable
+             to authenticate. The setup now clicks a PERSONA, which is what a
+             real demo visitor does, and `auth.spec.ts` still drives the form
+             through the disclosure — so the two ways in are covered
+             separately instead of one being covered twice.
+
+          *** AND HIDING A FORM IS NOT CLOSING A DOOR — D-99. *** The API
+          still answers `POST /api/v1/auth/login` for any valid credentials,
+          and it should: *"deleting an affordance is not removing a
+          capability"* is this project's own recorded lesson, from a pass
+          that removed a field from web-ui and called the defect fixed while
+          the endpoint kept answering 201. What this changes is what the demo
+          OFFERS. Making non-demo login impossible would be a server-side
+          refusal and a separate, security-sensitive decision — the same
+          shape as D-232. Registration is already refused there:
+          `POST /auth/register` answers **403**, measured, because it is
+          invitation-gated (D-119). */}
+      {demoFirst ? (
+        <>
+      {demoStatus?.enabled && !isDemoLoading && demoAccounts.length > 0 && (
+      /* *** THE HAIRLINE IS ONLY DRAWN WHEN THERE IS SOMETHING ABOVE IT TO
+         SEPARATE FROM. *** It was added when the personas sat UNDER the
+         credential form, where it said "also this" rather than "instead of
+         that". With the demo leading there is nothing above them, so the
+         same line becomes a divider to nowhere — a border on the first
+         element in a column, which is the tell of chrome that outlived its
+         reason. Seen in the render, not in the diff. */
+      <div style={demoFirst ? { marginTop: '0.25rem' } : {
+        marginTop: '1.5rem',
+        paddingTop: '1.25rem',
+        borderTop: '1px solid #517E60'
+      }}>
+        {/* Demo Header */}
+        <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          transition: 'color 0.2s',
-          fontSize: '0.875rem'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
-      >
-        <svg style={{ height: '1.25rem', width: '1.25rem' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Back to Home
-      </Link>
-
-      {/* *** ONE WIDTH NOW, AND THE DEMO PANEL IS NO LONGER A COLUMN. *** This
-          wrapper was `maxWidth: demoStatus?.enabled ? '56rem' : '28rem'` — the
-          demo personas were a SECOND COLUMN beside the form, so the page had a
-          different layout depending on a server flag. An art panel on top of
-          that would have been a third column crushing all three; a page head
-          covered by its own actions was D-223, and this is the same failure one
-          layer out. So the personas moved INSIDE the form column, under the
-          form, where they read as "or try it with sample data" rather than as a
-          peer of signing in — which is what they are. `demoStatus` no longer
-          decides the layout. */}
-      <div style={{
-        zIndex: 10,
-        position: 'relative',
-        maxWidth: '46rem',
-        width: '100%',
-      }}>
-        {/* *** THE HERO FOLLOWS THE OFFER, BECAUSE "YOU LEFT PARTWAY UP" IS
-            NOT TRUE OF A STRANGER CLICKING A DEMO PERSONA. *** With the demo
-            leading, the person reading this has left nothing partway up and
-            nothing of theirs moved while they were away — the sentence was
-            written for a returning user and it is addressed to the wrong
-            person the moment the personas are the offer. Caught by rendering
-            the page after the reorder, not by the reorder itself.
-
-            The ART is the same either way, deliberately: `partway` is FIXED
-            decoration, identical for every visitor, because at sign-in finPal
-            does not know who you are. Only the words change, and words are
-            allowed to know which offer the page is making. */}
-        <AuthShell
-          art="partway"
-          kicker={demoFirst ? 'Have a look round' : 'Welcome back'}
-          headline={demoFirst
-            ? 'Every goal in finPal is a mountain.'
-            : 'You left partway up.'}
-          blurb={demoFirst
-            ? 'Pick an account below and the whole app is already full of somebody\'s figures — accounts, budgets, goals and a shared bill or two.'
-            : 'Pick up where you stopped. Nothing moved while you were away.'}
-        >
-          {/* *** THE HEAD IS NO LONGER A 5rem LOGO AND A GRADIENT-CLIPPED TITLE. ***
-              The art panel beside this carries the identity now, so this side
-              carries the instruction. The old h1 also set
-              `WebkitTextFillColor: 'transparent'` to paint itself with a
-              gradient, which is a heading whose text has no computed colour for
-              any contrast tool to measure. */}
-          {/* "Welcome back" to somebody who has never been here is the same
-              mismatch as the hero's, one column over. The h1 follows the offer
-              too. Nothing in `e2e/` or the unit suite asserts this string —
-              checked, because a heading is exactly the kind of thing a spec
-              pins by text. */}
-          <h1 style={{
-            margin: '0 0 0.25rem',
-            fontSize: '1.1875rem',
-            fontWeight: 700,
-            color: '#ffffff'
+          gap: '0.75rem',
+          marginBottom: '1rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid rgba(81, 126, 96, 0.1)'
+        }}>
+          <div style={{
+            width: '2.5rem',
+            height: '2.5rem',
+            borderRadius: '0.5rem',
+            background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}>
-            {demoFirst ? 'Try finPal' : 'Welcome back'}
-          </h1>
-          {/* The sentence under the title says what this screen is OFFERING,
-              and with the demo leading that is no longer "sign in". */}
-          <p style={{ color: '#9CB3A3', fontSize: '0.8125rem', margin: '0 0 1.125rem' }}>
-            {demoFirst
-              ? 'Pick someone to explore as — no sign-up needed.'
-              : 'Sign in to finPal'}
-          </p>
-
-          {/* *** WHEN DEMO MODE IS ON, THE DEMO IS THE OFFER. ***
-              Owner, 2026-09-16: *"cna we make it so when demo is on, only demo
-              login is availble?"*. That settles a question both
-              `docs/mockups/auth-web.html` and the pantryPal sheet explicitly
-              recorded as the owner's rather than a redesign's: *"the credential
-              form stays, unlike the other three palStack demos which hide it…
-              it is a larger decision than a redesign."* This is that decision.
-
-              So with `DEMO_MODE` on, a visitor sees the four personas and
-              nothing else. The credential block — Google, the email/password
-              form, SSO and the sign-up link — moves behind a quiet disclosure.
-
-              *** IT IS A DISCLOSURE AND NOT A DELETION, FOR TWO REASONS, AND
-              BOTH ARE THE KIND THAT ONLY SHOW UP IF YOU GO LOOKING. ***
-
-              1. `DEMO_MODE=true` IS NOT ONLY THE PUBLIC DEMO. It is the flag a
-                 self-hoster sets to show their own instance to somebody, and it
-                 is also what runs the seeder. Deleting the form would lock that
-                 person out of their own admin account on their own server with
-                 no way back in from the UI. A one-line disclosure cannot.
-
-              2. `e2e/auth.setup.ts` SIGNS IN THROUGH THIS FORM AND IT IS THE
-                 SETUP FOR ALL 75 e2e TESTS — and `scripts/e2e/run.sh` sets
-                 `DEMO_MODE=true`, because that is what runs the seeder the whole
-                 suite reads. A deletion would have left the entire suite unable
-                 to authenticate. The setup now clicks a PERSONA, which is what a
-                 real demo visitor does, and `auth.spec.ts` still drives the form
-                 through the disclosure — so the two ways in are covered
-                 separately instead of one being covered twice.
-
-              *** AND HIDING A FORM IS NOT CLOSING A DOOR — D-99. *** The API
-              still answers `POST /api/v1/auth/login` for any valid credentials,
-              and it should: *"deleting an affordance is not removing a
-              capability"* is this project's own recorded lesson, from a pass
-              that removed a field from web-ui and called the defect fixed while
-              the endpoint kept answering 201. What this changes is what the demo
-              OFFERS. Making non-demo login impossible would be a server-side
-              refusal and a separate, security-sensitive decision — the same
-              shape as D-232. Registration is already refused there:
-              `POST /auth/register` answers **403**, measured, because it is
-              invitation-gated (D-119). */}
-          {demoFirst ? (
-            <>
-          {demoStatus?.enabled && !isDemoLoading && demoAccounts.length > 0 && (
-          /* *** THE HAIRLINE IS ONLY DRAWN WHEN THERE IS SOMETHING ABOVE IT TO
-             SEPARATE FROM. *** It was added when the personas sat UNDER the
-             credential form, where it said "also this" rather than "instead of
-             that". With the demo leading there is nothing above them, so the
-             same line becomes a divider to nowhere — a border on the first
-             element in a column, which is the tell of chrome that outlived its
-             reason. Seen in the render, not in the diff. */
-          <div style={demoFirst ? { marginTop: '0.25rem' } : {
-            marginTop: '1.5rem',
-            paddingTop: '1.25rem',
-            borderTop: '1px solid #517E60'
-          }}>
-            {/* Demo Header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1rem',
-              paddingBottom: '1rem',
-              borderBottom: '1px solid rgba(81, 126, 96, 0.1)'
+            <UserIcon size={20} color="#ffffff" />
+          </div>
+          <div>
+            <h2 style={{
+              color: '#ffffff',
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              margin: 0
             }}>
-              <div style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: '0.5rem',
-                background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <UserIcon size={20} color="#ffffff" />
-              </div>
-              <div>
-                <h2 style={{
-                  color: '#ffffff',
-                  fontSize: '1.125rem',
-                  fontWeight: 600,
-                  margin: 0
-                }}>
-                  Demo Mode
-                </h2>
-                <p style={{
-                  color: '#9CB3A3',
-                  fontSize: '0.75rem',
-                  margin: 0
-                }}>
-                  Try finPal with sample data
-                </p>
-              </div>
-            </div>
-
-            {/* *** THE "N MINUTE SESSION LIMIT" NOTICE IS GONE — D-232, OWNER
-                DECISION 2026-09-16. ***
-
-                It rendered `{demoStatus.timeout_minutes} minute session limit`,
-                and the server really does send that number, so the client was
-                never at fault. The problem is that NOTHING ENFORCES IT.
-                Measured from a real token issued by the live demo: `iat → exp`
-                is **86400 seconds — 24 hours** — against the 7200 the page
-                claimed. A 12x overstatement of a security property, on a public
-                service.
-
-                `src/utils/session_timeout.py` is 92 lines with **zero**
-                occurrences of `before_request`, `after_request`, `abort(` or
-                `401`: it registers no request hook, so nothing can expire
-                anything. `init_app` sets three config defaults and stashes
-                itself in `app.extensions`, and that is all it does. Every one
-                of its four methods has **zero production callers**. D-187's
-                shape (an engine with no callers while two docstrings asserted
-                the call site) and D-197's (a guard whose precondition is
-                unreachable cannot fire), on a claim about security.
-
-                Two fixes were possible and they are not equivalent:
-                implementing expiry changes behaviour for every demo visitor and
-                is outward-facing security work; withdrawing the claim is honest
-                and removes a promise that was never kept. The owner chose to
-                withdraw it, so the sentence goes.
-
-                *** `timeout_minutes` IS STILL IN THE PAYLOAD, DELIBERATELY. ***
-                Removing it from `/api/v1/demo/status` is a contract change for
-                any self-hoster's client, and the decision taken was to stop
-                MAKING the claim rather than to delete a config field. The field
-                is now documented at the place that serves it as a value nothing
-                enforces, so the next person to read it does not assume
-                otherwise. */}
-
-            {/* Demo Accounts List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {demoAccounts.map((account) => (
-                <button
-                  key={account.email}
-                  onClick={() => handleDemoLogin(account)}
-                  disabled={isLoading}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #517E60',
-                    background: 'rgba(14, 23, 17, 0.5)',
-                    color: '#e2e8f0',
-                    fontSize: '0.875rem',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s',
-                    textAlign: 'left',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.25rem',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isLoading) {
-                      e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
-                      e.currentTarget.style.borderColor = '#22c55e';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(14, 23, 17, 0.5)';
-                    e.currentTarget.style.borderColor = '#517E60';
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    width: '100%'
-                  }}>
-                    <span style={{ fontWeight: 600 }}>{account.name}</span>
-                    <span style={{
-                      fontSize: '0.75rem',
-                      color: '#9CB3A3',
-                      background: 'rgba(134, 239, 172, 0.12)',
-                      padding: '0.125rem 0.5rem',
-                      borderRadius: '9999px'
-                    }}>
-                      {account.currency}
-                    </span>
-                  </div>
-                  <span style={{
-                    color: '#9CB3A3',
-                    fontSize: '0.75rem'
-                  }}>
-                    {account.persona}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Restrictions Note */}
+              Demo Mode
+            </h2>
             <p style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              background: 'rgba(251, 191, 36, 0.1)',
-              borderRadius: '0.5rem',
-              border: '1px solid rgba(251, 191, 36, 0.2)',
-              color: '#fcd34d',
+              color: '#9CB3A3',
               fontSize: '0.75rem',
-              margin: '1rem 0 0 0'
+              margin: 0
             }}>
-              Note: CSV import and API key settings are disabled in demo mode.
+              Try finPal with sample data
             </p>
           </div>
-          )}
+        </div>
 
-              {!showCredentials && (
-                <button
-                  type="button"
-                  onClick={() => setShowCredentials(true)}
-                  style={emailInsteadStyle}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#9CB3A3'; }}
-                >
-                  Use an email and password instead
-                </button>
-              )}
+        {/* *** THE "N MINUTE SESSION LIMIT" NOTICE IS GONE — D-232, OWNER
+            DECISION 2026-09-16. ***
 
-              {showCredentials && (
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #517E60' }}>
-            {/* Google Sign In Button */}
+            It rendered `{demoStatus.timeout_minutes} minute session limit`,
+            and the server really does send that number, so the client was
+            never at fault. The problem is that NOTHING ENFORCES IT.
+            Measured from a real token issued by the live demo: `iat → exp`
+            is **86400 seconds — 24 hours** — against the 7200 the page
+            claimed. A 12x overstatement of a security property, on a public
+            service.
+
+            `src/utils/session_timeout.py` is 92 lines with **zero**
+            occurrences of `before_request`, `after_request`, `abort(` or
+            `401`: it registers no request hook, so nothing can expire
+            anything. `init_app` sets three config defaults and stashes
+            itself in `app.extensions`, and that is all it does. Every one
+            of its four methods has **zero production callers**. D-187's
+            shape (an engine with no callers while two docstrings asserted
+            the call site) and D-197's (a guard whose precondition is
+            unreachable cannot fire), on a claim about security.
+
+            Two fixes were possible and they are not equivalent:
+            implementing expiry changes behaviour for every demo visitor and
+            is outward-facing security work; withdrawing the claim is honest
+            and removes a promise that was never kept. The owner chose to
+            withdraw it, so the sentence goes.
+
+            *** `timeout_minutes` IS STILL IN THE PAYLOAD, DELIBERATELY. ***
+            Removing it from `/api/v1/demo/status` is a contract change for
+            any self-hoster's client, and the decision taken was to stop
+            MAKING the claim rather than to delete a config field. The field
+            is now documented at the place that serves it as a value nothing
+            enforces, so the next person to read it does not assume
+            otherwise. */}
+
+        {/* Demo Accounts List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {demoAccounts.map((account) => (
             <button
-              type="button"
-              onClick={handleGoogleSignIn}
+              key={account.email}
+              onClick={() => handleDemoLogin(account)}
+              disabled={isLoading}
               style={{
                 width: '100%',
-                padding: '0.875rem 1.5rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #517E60',
-                background: 'transparent',
-                color: '#ffffff',
-                fontSize: '0.9375rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.75rem',
-                transition: 'all 0.2s',
-                marginBottom: '1.5rem'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(81, 126, 96, 0.3)';
-                e.currentTarget.style.borderColor = '#86efac';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.borderColor = '#517E60';
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18">
-                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-                <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
-                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-              </svg>
-              Continue with Google
-            </button>
-
-            {/* Divider */}
-            <div style={{ position: 'relative', margin: '1.5rem 0' }}>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: '100%', borderTop: '1px solid #517E60' }}></div>
-              </div>
-              <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                <span style={{ padding: '0 1rem', background: 'rgba(22, 36, 26, 0.8)', color: '#9CB3A3', fontSize: '0.875rem' }}>
-                  Or continue with email
-                </span>
-              </div>
-            </div>
-
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Email Input */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  autoComplete="email"
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    borderRadius: '0.5rem',
-                    border: errors.email ? '1px solid #ef4444' : '1px solid #517E60',
-                    background: 'rgba(14, 23, 17, 0.5)',
-                    color: '#ffffff',
-                    fontSize: '0.9375rem',
-                    outline: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                  onFocus={(e) => {
-                    if (!errors.email) {
-                      e.currentTarget.style.borderColor = '#15803d';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                    }
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#517E60';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                />
-                {errors.email && (
-                  <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                    {errors.email}
-                  </p>
-                )}
-              </div>
-
-              {/* Password Input */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                  Password
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    placeholder="********"
-                    value={formData.password}
-                    onChange={handleChange}
-                    autoComplete="current-password"
-                    style={{
-                      width: '100%',
-                      padding: '0.875rem 1rem',
-                      paddingRight: '3rem',
-                      borderRadius: '0.5rem',
-                      border: errors.password ? '1px solid #ef4444' : '1px solid #517E60',
-                      background: 'rgba(14, 23, 17, 0.5)',
-                      color: '#ffffff',
-                      fontSize: '0.9375rem',
-                      outline: 'none',
-                      transition: 'all 0.2s'
-                    }}
-                    onFocus={(e) => {
-                      if (!errors.password) {
-                        e.currentTarget.style.borderColor = '#15803d';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                      }
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#517E60';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '1rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#9CB3A3',
-                      cursor: 'pointer',
-                      padding: '0.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'color 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                    {errors.password}
-                  </p>
-                )}
-              </div>
-
-              {/* Remember Me & Forgot Password */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9CB3A3', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    style={{
-                      width: '1rem',
-                      height: '1rem',
-                      borderRadius: '0.25rem',
-                      border: '1px solid #517E60',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  <span>Remember me</span>
-                </label>
-                <Link
-                  to="/forgot-password"
-                  style={{
-                    color: '#22c55e',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              {/* Sign In Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.5rem',
-                  borderRadius: '0.5rem',
-                  border: 'none',
-                  background: isLoading ? '#6b7280' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-                  color: '#ffffff',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoading) {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-                }}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div style={{ position: 'relative', margin: '1.5rem 0' }}>
-              <div style={{
-                position: 'absolute',
-                inset: '0',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <div style={{
-                  width: '100%',
-                  borderTop: '1px solid #517E60'
-                }} />
-              </div>
-              <div style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center',
-                fontSize: '0.75rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}>
-                <span style={{
-                  background: '#16241A',
-                  padding: '0 0.75rem',
-                  color: '#9CB3A3'
-                }}>
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            {/* OIDC Sign In Button */}
-            <button
-              type="button"
-              onClick={() => {
-                // Redirect to backend OIDC login endpoint
-                window.location.href = '/login/oidc';
-              }}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.5rem',
+                padding: '0.875rem 1rem',
                 borderRadius: '0.5rem',
                 border: '1px solid #517E60',
                 background: 'rgba(14, 23, 17, 0.5)',
                 color: '#e2e8f0',
-                fontSize: '0.9375rem',
-                fontWeight: '500',
-                cursor: 'pointer',
+                fontSize: '0.875rem',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
+                textAlign: 'left',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.625rem'
+                flexDirection: 'column',
+                gap: '0.25rem',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(14, 23, 17, 0.8)';
-                e.currentTarget.style.borderColor = '#15803d';
+                if (!isLoading) {
+                  e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                  e.currentTarget.style.borderColor = '#22c55e';
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(14, 23, 17, 0.5)';
                 e.currentTarget.style.borderColor = '#517E60';
               }}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 16v-4"/>
-                <path d="M12 8h.01"/>
-              </svg>
-              Sign in with SSO
-            </button>
-
-            {/* Sign Up Link */}
-            <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#9CB3A3', fontSize: '0.875rem' }}>
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                style={{
-                  color: '#22c55e',
-                  textDecoration: 'none',
-                  fontWeight: '500',
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
-              >
-                Sign up for free
-              </Link>
-            </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-            {/* Google Sign In Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.5rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #517E60',
-                background: 'transparent',
-                color: '#ffffff',
-                fontSize: '0.9375rem',
-                fontWeight: '500',
-                cursor: 'pointer',
+              <div style={{
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.75rem',
-                transition: 'all 0.2s',
-                marginBottom: '1.5rem'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(81, 126, 96, 0.3)';
-                e.currentTarget.style.borderColor = '#86efac';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.borderColor = '#517E60';
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18">
-                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-                <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
-                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-              </svg>
-              Continue with Google
-            </button>
-
-            {/* Divider */}
-            <div style={{ position: 'relative', margin: '1.5rem 0' }}>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: '100%', borderTop: '1px solid #517E60' }}></div>
-              </div>
-              <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                <span style={{ padding: '0 1rem', background: 'rgba(22, 36, 26, 0.8)', color: '#9CB3A3', fontSize: '0.875rem' }}>
-                  Or continue with email
-                </span>
-              </div>
-            </div>
-
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Email Input */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  autoComplete="email"
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    borderRadius: '0.5rem',
-                    border: errors.email ? '1px solid #ef4444' : '1px solid #517E60',
-                    background: 'rgba(14, 23, 17, 0.5)',
-                    color: '#ffffff',
-                    fontSize: '0.9375rem',
-                    outline: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                  onFocus={(e) => {
-                    if (!errors.email) {
-                      e.currentTarget.style.borderColor = '#15803d';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                    }
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#517E60';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                />
-                {errors.email && (
-                  <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                    {errors.email}
-                  </p>
-                )}
-              </div>
-
-              {/* Password Input */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                  Password
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    placeholder="********"
-                    value={formData.password}
-                    onChange={handleChange}
-                    autoComplete="current-password"
-                    style={{
-                      width: '100%',
-                      padding: '0.875rem 1rem',
-                      paddingRight: '3rem',
-                      borderRadius: '0.5rem',
-                      border: errors.password ? '1px solid #ef4444' : '1px solid #517E60',
-                      background: 'rgba(14, 23, 17, 0.5)',
-                      color: '#ffffff',
-                      fontSize: '0.9375rem',
-                      outline: 'none',
-                      transition: 'all 0.2s'
-                    }}
-                    onFocus={(e) => {
-                      if (!errors.password) {
-                        e.currentTarget.style.borderColor = '#15803d';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                      }
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#517E60';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '1rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#9CB3A3',
-                      cursor: 'pointer',
-                      padding: '0.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'color 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                    {errors.password}
-                  </p>
-                )}
-              </div>
-
-              {/* Remember Me & Forgot Password */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9CB3A3', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    style={{
-                      width: '1rem',
-                      height: '1rem',
-                      borderRadius: '0.25rem',
-                      border: '1px solid #517E60',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  <span>Remember me</span>
-                </label>
-                <Link
-                  to="/forgot-password"
-                  style={{
-                    color: '#22c55e',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              {/* Sign In Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.5rem',
-                  borderRadius: '0.5rem',
-                  border: 'none',
-                  background: isLoading ? '#6b7280' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-                  color: '#ffffff',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoading) {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-                }}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div style={{ position: 'relative', margin: '1.5rem 0' }}>
-              <div style={{
-                position: 'absolute',
-                inset: '0',
-                display: 'flex',
-                alignItems: 'center'
+                width: '100%'
               }}>
-                <div style={{
-                  width: '100%',
-                  borderTop: '1px solid #517E60'
-                }} />
-              </div>
-              <div style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center',
-                fontSize: '0.75rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}>
+                <span style={{ fontWeight: 600 }}>{account.name}</span>
                 <span style={{
-                  background: '#16241A',
-                  padding: '0 0.75rem',
-                  color: '#9CB3A3'
+                  fontSize: '0.75rem',
+                  color: '#9CB3A3',
+                  background: 'rgba(134, 239, 172, 0.12)',
+                  padding: '0.125rem 0.5rem',
+                  borderRadius: '9999px'
                 }}>
-                  Or continue with
+                  {account.currency}
                 </span>
               </div>
-            </div>
-
-            {/* OIDC Sign In Button */}
-            <button
-              type="button"
-              onClick={() => {
-                // Redirect to backend OIDC login endpoint
-                window.location.href = '/login/oidc';
-              }}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.5rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #517E60',
-                background: 'rgba(14, 23, 17, 0.5)',
-                color: '#e2e8f0',
-                fontSize: '0.9375rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.625rem'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(14, 23, 17, 0.8)';
-                e.currentTarget.style.borderColor = '#15803d';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(14, 23, 17, 0.5)';
-                e.currentTarget.style.borderColor = '#517E60';
-              }}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 16v-4"/>
-                <path d="M12 8h.01"/>
-              </svg>
-              Sign in with SSO
+              <span style={{
+                color: '#9CB3A3',
+                fontSize: '0.75rem'
+              }}>
+                {account.persona}
+              </span>
             </button>
+          ))}
+        </div>
 
-            {/* Sign Up Link */}
-            <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#9CB3A3', fontSize: '0.875rem' }}>
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                style={{
-                  color: '#22c55e',
-                  textDecoration: 'none',
-                  fontWeight: '500',
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
-              >
-                Sign up for free
-              </Link>
-            </p>
-            </>
-          )}
-        </AuthShell>
-
-        {/* Footer */}
+        {/* Restrictions Note */}
         <p style={{
-          textAlign: 'center',
-          marginTop: '1.5rem',
-          color: '#9CB3A3',
-          fontSize: '0.8125rem'
+          marginTop: '1rem',
+          padding: '0.75rem',
+          background: 'rgba(251, 191, 36, 0.1)',
+          borderRadius: '0.5rem',
+          border: '1px solid rgba(251, 191, 36, 0.2)',
+          color: '#fcd34d',
+          fontSize: '0.75rem',
+          margin: '1rem 0 0 0'
         }}>
-          part of palStack ecosystem
+          Note: CSV import and API key settings are disabled in demo mode.
         </p>
       </div>
-    </div>
+      )}
+
+          {!showCredentials && (
+            <button
+              type="button"
+              onClick={() => setShowCredentials(true)}
+              style={emailInsteadStyle}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#9CB3A3'; }}
+            >
+              Use an email and password instead
+            </button>
+          )}
+
+          {showCredentials && (
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #517E60' }}>
+        {/* Google Sign In Button */}
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          style={{
+            width: '100%',
+            padding: '0.875rem 1.5rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #517E60',
+            background: 'transparent',
+            color: '#ffffff',
+            fontSize: '0.9375rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.75rem',
+            transition: 'all 0.2s',
+            marginBottom: '1.5rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(81, 126, 96, 0.3)';
+            e.currentTarget.style.borderColor = '#86efac';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.borderColor = '#517E60';
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        {/* Divider */}
+        <div style={{ position: 'relative', margin: '1.5rem 0' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: '100%', borderTop: '1px solid #517E60' }}></div>
+          </div>
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+            <span style={{ padding: '0 1rem', background: 'rgba(22, 36, 26, 0.8)', color: '#9CB3A3', fontSize: '0.875rem' }}>
+              Or continue with email
+            </span>
+          </div>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Email Input */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="email"
+              style={{
+                width: '100%',
+                padding: '0.875rem 1rem',
+                borderRadius: '0.5rem',
+                border: errors.email ? '1px solid #ef4444' : '1px solid #517E60',
+                background: 'rgba(14, 23, 17, 0.5)',
+                color: '#ffffff',
+                fontSize: '0.9375rem',
+                outline: 'none',
+                transition: 'all 0.2s'
+              }}
+              onFocus={(e) => {
+                if (!errors.email) {
+                  e.currentTarget.style.borderColor = '#15803d';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+                }
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#517E60';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+            {errors.email && (
+              <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+                {errors.email}
+              </p>
+            )}
+          </div>
+
+          {/* Password Input */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+              Password
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                placeholder="********"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+                style={{
+                  width: '100%',
+                  padding: '0.875rem 1rem',
+                  paddingRight: '3rem',
+                  borderRadius: '0.5rem',
+                  border: errors.password ? '1px solid #ef4444' : '1px solid #517E60',
+                  background: 'rgba(14, 23, 17, 0.5)',
+                  color: '#ffffff',
+                  fontSize: '0.9375rem',
+                  outline: 'none',
+                  transition: 'all 0.2s'
+                }}
+                onFocus={(e) => {
+                  if (!errors.password) {
+                    e.currentTarget.style.borderColor = '#15803d';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+                  }
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#517E60';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#9CB3A3',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {errors.password && (
+              <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+                {errors.password}
+              </p>
+            )}
+          </div>
+
+          {/* Remember Me & Forgot Password */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9CB3A3', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                style={{
+                  width: '1rem',
+                  height: '1rem',
+                  borderRadius: '0.25rem',
+                  border: '1px solid #517E60',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>Remember me</span>
+            </label>
+            <Link
+              to="/forgot-password"
+              style={{
+                color: '#22c55e',
+                textDecoration: 'none',
+                transition: 'color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
+            >
+              Forgot password?
+            </Link>
+          </div>
+
+          {/* Sign In Button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '0.875rem 1.5rem',
+              borderRadius: '0.5rem',
+              border: 'none',
+              background: isLoading ? '#6b7280' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+              color: '#ffffff',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+            }}
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div style={{ position: 'relative', margin: '1.5rem 0' }}>
+          <div style={{
+            position: 'absolute',
+            inset: '0',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              width: '100%',
+              borderTop: '1px solid #517E60'
+            }} />
+          </div>
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            <span style={{
+              background: '#16241A',
+              padding: '0 0.75rem',
+              color: '#9CB3A3'
+            }}>
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        {/* OIDC Sign In Button */}
+        <button
+          type="button"
+          onClick={() => {
+            // Redirect to backend OIDC login endpoint
+            window.location.href = '/login/oidc';
+          }}
+          style={{
+            width: '100%',
+            padding: '0.875rem 1.5rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #517E60',
+            background: 'rgba(14, 23, 17, 0.5)',
+            color: '#e2e8f0',
+            fontSize: '0.9375rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.625rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(14, 23, 17, 0.8)';
+            e.currentTarget.style.borderColor = '#15803d';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(14, 23, 17, 0.5)';
+            e.currentTarget.style.borderColor = '#517E60';
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4"/>
+            <path d="M12 8h.01"/>
+          </svg>
+          Sign in with SSO
+        </button>
+
+        {/* Sign Up Link */}
+        <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#9CB3A3', fontSize: '0.875rem' }}>
+          Don't have an account?{' '}
+          <Link
+            to="/register"
+            style={{
+              color: '#22c55e',
+              textDecoration: 'none',
+              fontWeight: '500',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
+          >
+            Sign up for free
+          </Link>
+        </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+        {/* Google Sign In Button */}
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          style={{
+            width: '100%',
+            padding: '0.875rem 1.5rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #517E60',
+            background: 'transparent',
+            color: '#ffffff',
+            fontSize: '0.9375rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.75rem',
+            transition: 'all 0.2s',
+            marginBottom: '1.5rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(81, 126, 96, 0.3)';
+            e.currentTarget.style.borderColor = '#86efac';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.borderColor = '#517E60';
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        {/* Divider */}
+        <div style={{ position: 'relative', margin: '1.5rem 0' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: '100%', borderTop: '1px solid #517E60' }}></div>
+          </div>
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+            <span style={{ padding: '0 1rem', background: 'rgba(22, 36, 26, 0.8)', color: '#9CB3A3', fontSize: '0.875rem' }}>
+              Or continue with email
+            </span>
+          </div>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Email Input */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="email"
+              style={{
+                width: '100%',
+                padding: '0.875rem 1rem',
+                borderRadius: '0.5rem',
+                border: errors.email ? '1px solid #ef4444' : '1px solid #517E60',
+                background: 'rgba(14, 23, 17, 0.5)',
+                color: '#ffffff',
+                fontSize: '0.9375rem',
+                outline: 'none',
+                transition: 'all 0.2s'
+              }}
+              onFocus={(e) => {
+                if (!errors.email) {
+                  e.currentTarget.style.borderColor = '#15803d';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+                }
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#517E60';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+            {errors.email && (
+              <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+                {errors.email}
+              </p>
+            )}
+          </div>
+
+          {/* Password Input */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+              Password
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                placeholder="********"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+                style={{
+                  width: '100%',
+                  padding: '0.875rem 1rem',
+                  paddingRight: '3rem',
+                  borderRadius: '0.5rem',
+                  border: errors.password ? '1px solid #ef4444' : '1px solid #517E60',
+                  background: 'rgba(14, 23, 17, 0.5)',
+                  color: '#ffffff',
+                  fontSize: '0.9375rem',
+                  outline: 'none',
+                  transition: 'all 0.2s'
+                }}
+                onFocus={(e) => {
+                  if (!errors.password) {
+                    e.currentTarget.style.borderColor = '#15803d';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+                  }
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#517E60';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#9CB3A3',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {errors.password && (
+              <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+                {errors.password}
+              </p>
+            )}
+          </div>
+
+          {/* Remember Me & Forgot Password */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9CB3A3', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                style={{
+                  width: '1rem',
+                  height: '1rem',
+                  borderRadius: '0.25rem',
+                  border: '1px solid #517E60',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>Remember me</span>
+            </label>
+            <Link
+              to="/forgot-password"
+              style={{
+                color: '#22c55e',
+                textDecoration: 'none',
+                transition: 'color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
+            >
+              Forgot password?
+            </Link>
+          </div>
+
+          {/* Sign In Button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '0.875rem 1.5rem',
+              borderRadius: '0.5rem',
+              border: 'none',
+              background: isLoading ? '#6b7280' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+              color: '#ffffff',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+            }}
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div style={{ position: 'relative', margin: '1.5rem 0' }}>
+          <div style={{
+            position: 'absolute',
+            inset: '0',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              width: '100%',
+              borderTop: '1px solid #517E60'
+            }} />
+          </div>
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            <span style={{
+              background: '#16241A',
+              padding: '0 0.75rem',
+              color: '#9CB3A3'
+            }}>
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        {/* OIDC Sign In Button */}
+        <button
+          type="button"
+          onClick={() => {
+            // Redirect to backend OIDC login endpoint
+            window.location.href = '/login/oidc';
+          }}
+          style={{
+            width: '100%',
+            padding: '0.875rem 1.5rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #517E60',
+            background: 'rgba(14, 23, 17, 0.5)',
+            color: '#e2e8f0',
+            fontSize: '0.9375rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.625rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(14, 23, 17, 0.8)';
+            e.currentTarget.style.borderColor = '#15803d';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(14, 23, 17, 0.5)';
+            e.currentTarget.style.borderColor = '#517E60';
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4"/>
+            <path d="M12 8h.01"/>
+          </svg>
+          Sign in with SSO
+        </button>
+
+        {/* Sign Up Link */}
+        <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#9CB3A3', fontSize: '0.875rem' }}>
+          Don't have an account?{' '}
+          <Link
+            to="/register"
+            style={{
+              color: '#22c55e',
+              textDecoration: 'none',
+              fontWeight: '500',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
+          >
+            Sign up for free
+          </Link>
+        </p>
+        </>
+      )}
+    </AuthShell>
   );
 };

@@ -23,15 +23,28 @@ test('a signed-out visitor cannot reach a protected page', async ({ page }) => {
 });
 
 test('the demo user can sign in through the form', async ({ page }) => {
+  const demoStatus = page.waitForResponse((r) => r.url().includes('/api/v1/demo/status'));
   await page.goto('/login');
+  await demoStatus;
 
-  // *** THE FORM IS BEHIND A DISCLOSURE WHEN DEMO MODE IS ON, AND THIS SUITE
-  // RUNS WITH IT ON. *** Owner decision 2026-09-16: the demo offers the demo way
-  // in, and the credential block is one click away. Opening it here is the point
-  // of this file — `auth.setup.ts` covers the persona path, and this one keeps
-  // covering the form, including the wrong-password case a persona button cannot
-  // express. Tolerant of the button being absent so the spec still passes on an
-  // instance with DEMO_MODE off, where the form is already the first thing.
+  /*
+   * *** THE FORM IS BEHIND A DISCLOSURE WHEN DEMO MODE IS ON, AND THIS SUITE
+   * RUNS WITH IT ON. *** Owner decision 2026-09-16: the demo offers the demo
+   * way in, and the credential block is one click away. Opening it here is the
+   * point of this file — `auth.setup.ts` covers the persona path, and this one
+   * keeps covering the form, including the wrong-password case a persona button
+   * cannot express.
+   *
+   * *** AND THE WAIT ABOVE IS LOAD-BEARING, NOT DEFENSIVE. *** `demoFirst`
+   * needs `isDemoLoading` to be false, and it starts true — so the page ALWAYS
+   * paints the form first and swaps to the personas when `/demo/status` lands.
+   * Without waiting for that response, this spec could fill in a form that was
+   * about to unmount underneath it: it passed run after run in isolation and
+   * failed once in the full suite, which is the signature of exactly that race.
+   * A flaky auth spec is the worst kind, so the wait is explicit rather than a
+   * `networkidle` guess, and it is armed BEFORE `goto` so a fast response
+   * cannot land before the listener exists.
+   */
   const disclose = page.getByRole('button', { name: /email and password instead/i });
   if (await disclose.count()) await disclose.click();
 
@@ -52,15 +65,28 @@ test('a wrong password is refused and does not sign anybody in', async ({ page }
   // The inverse of the symptom. Two unreported sandbox leaks were found exactly
   // this way (D-79, D-81): a login test that only tries the correct password
   // passes just as well against a server that accepts anything.
+  const demoStatus = page.waitForResponse((r) => r.url().includes('/api/v1/demo/status'));
   await page.goto('/login');
+  await demoStatus;
 
-  // *** THE FORM IS BEHIND A DISCLOSURE WHEN DEMO MODE IS ON, AND THIS SUITE
-  // RUNS WITH IT ON. *** Owner decision 2026-09-16: the demo offers the demo way
-  // in, and the credential block is one click away. Opening it here is the point
-  // of this file — `auth.setup.ts` covers the persona path, and this one keeps
-  // covering the form, including the wrong-password case a persona button cannot
-  // express. Tolerant of the button being absent so the spec still passes on an
-  // instance with DEMO_MODE off, where the form is already the first thing.
+  /*
+   * *** THE FORM IS BEHIND A DISCLOSURE WHEN DEMO MODE IS ON, AND THIS SUITE
+   * RUNS WITH IT ON. *** Owner decision 2026-09-16: the demo offers the demo
+   * way in, and the credential block is one click away. Opening it here is the
+   * point of this file — `auth.setup.ts` covers the persona path, and this one
+   * keeps covering the form, including the wrong-password case a persona button
+   * cannot express.
+   *
+   * *** AND THE WAIT ABOVE IS LOAD-BEARING, NOT DEFENSIVE. *** `demoFirst`
+   * needs `isDemoLoading` to be false, and it starts true — so the page ALWAYS
+   * paints the form first and swaps to the personas when `/demo/status` lands.
+   * Without waiting for that response, this spec could fill in a form that was
+   * about to unmount underneath it: it passed run after run in isolation and
+   * failed once in the full suite, which is the signature of exactly that race.
+   * A flaky auth spec is the worst kind, so the wait is explicit rather than a
+   * `networkidle` guess, and it is armed BEFORE `goto` so a fast response
+   * cannot land before the listener exists.
+   */
   const disclose = page.getByRole('button', { name: /email and password instead/i });
   if (await disclose.count()) await disclose.click();
 

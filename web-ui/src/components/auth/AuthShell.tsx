@@ -1,6 +1,24 @@
 /**
- * The shell every pre-auth screen sits in: a range on the left, the form on the
- * right.
+ * The shell every pre-auth screen sits in: a full-bleed dark page, the copy on
+ * the left, the form on the right, and a range along the bottom.
+ *
+ * *** THE RANGE MOVED FROM A LEFT PANEL TO THE GROUND LINE, AND THAT IS THE
+ * WHOLE OF THIS REVISION. *** Drawn in
+ * `docs/mockups/entry-pantrypal-treatment-web.html` (§9d) after the owner said
+ * they liked pantryPal's index page, *"especially those pantry items at the
+ * bottom"*.
+ *
+ * pantryPal's shelf of jars works because the jars ARE its subject and a shelf
+ * IS at the bottom — the product's own object, in the place that object belongs,
+ * at a weight that reads as architecture rather than illustration. Translate the
+ * TEXTURE and you get finPal with jars on it. Translate the RELATIONSHIP and you
+ * get a range along the bottom, which is what these peaks already are everywhere
+ * else in the app: the dashboard's `GoalRange`, learnPal's range, a goal card.
+ *
+ * So the peaks stop being a picture BESIDE the form and become the floor UNDER
+ * it. The first version of this shell put them in a `1.05fr` column and that
+ * worked; this is better, and the reason is that a range is a horizon and a
+ * horizon belongs on a ground line.
  *
  * *** THESE FIVE SCREENS WERE THE ONLY PLACE IN finPal THAT DID NOT LOOK LIKE
  * finPal. *** Goals are mountains, the dashboard opens on a range, a goal card
@@ -36,6 +54,7 @@
  */
 
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { RANGE_SILHOUETTES, type RangeSilhouette } from '../../utils/rangeSilhouettes';
 
 /**
@@ -74,6 +93,53 @@ const CLOUD = 'M28,30 Q40,18 54,24 Q66,14 78,26 Q92,24 92,34 L20,34 Q20,26 28,30
 /** Where the climber is, in the peak's coordinates — a point ON `TRAIL`. */
 const CLIMBER = { x: 38, y: 66 };
 
+/* ── the frieze's own layout ───────────────────────────────────────────────
+ * One `0 0 1200 170` box, `preserveAspectRatio="none"`, so the horizon stretches
+ * to whatever width the page is. y=GROUND is the shelf edge.
+ *
+ * *** EVERY PEAK'S BASE LANDS ON THE SAME LINE, COMPUTED RATHER THAN NUDGED. ***
+ * The mockup's first draft set these transforms by eye, and the taller peaks'
+ * bases fell past the bottom of the box and were clipped — which put the ground
+ * line UNDER them and made the row look like it was floating in front of the
+ * page instead of standing on it. Standing on something is the entire reason
+ * pantryPal's shelf works. `translateY` is therefore always
+ * `GROUND - 100 * scaleY`, because every silhouette is authored on a 0..100 box.
+ */
+const FRIEZE_W = 1200;
+const FRIEZE_H = 150;
+const GROUND = 140;
+
+/** `[x, scaleX, scaleY, band]`, back row then front row. */
+type Peak = [number, number, number, number];
+
+/* Two rows, because pantryPal's shelf has jars BEHIND jars and that overlap is
+   most of why it reads as depth rather than as a border pattern. A single row of
+   evenly spaced peaks reads as a repeating motif. */
+const FAR: Peak[] = [
+  [-30, 1.15, 0.80, 0], [140, 1.40, 0.94, 1], [340, 1.05, 0.76, 2],
+  [520, 1.35, 0.88, 0], [720, 1.20, 0.80, 1], [900, 1.30, 0.90, 2],
+  [1080, 1.45, 0.84, 0],
+];
+const NEAR: Peak[] = [
+  [40, 0.95, 0.60, 2], [230, 0.72, 0.52, 0], [420, 1.00, 0.64, 1],
+  [620, 0.74, 0.50, 2], [810, 1.00, 0.60, 0], [1000, 0.82, 0.54, 1],
+  [1140, 0.92, 0.58, 2],
+];
+
+/**
+ * The one peak the per-screen state is drawn on.
+ *
+ * *** THE STATE NEEDS A HOME, AND SPREADING IT ACROSS THE ROW WOULD MAKE IT
+ * TEXTURE. *** A trail on every peak is a hatching pattern; a trail up ONE peak
+ * is a trail. So the five states — unclimbed, partway, lost, rejoined, clouded —
+ * all attach here, in this peak's own 0..100 coordinates, which is why the
+ * geometry constants below did not have to change when the layout did.
+ *
+ * Scaled larger than its neighbours on purpose: it is the peak the eye is meant
+ * to read, and at the frieze's near-row scale a dashed trail is illegible.
+ */
+const FEATURE: Peak = [500, 1.70, 1.28, 1];
+
 /* ── colour, measured ──────────────────────────────────────────────────────
  * Ratios against the art panel's darkest surface `#1B3024`, computed rather
  * than eyeballed: INK 14.05:1, SOFT 6.28:1, KICK 10.00:1. Neither browser walk
@@ -84,9 +150,22 @@ const CLIMBER = { x: 38, y: 66 };
 const INK = '#ffffff';
 const SOFT = '#9CB3A3';
 const KICK = '#86efac';
+/*
+ * *** THE PAGE GOES DARKER THAN THE OLD AUTH GRADIENT, AND THAT IS WHAT GIVES
+ * THE FRIEZE ROOM. *** `#0B120D` against the previous `#0E1711 → #16241A`. A
+ * horizon drawn at 22% opacity needs a surface dark enough for 22% to be
+ * visible; on the old wash the far row disappeared. Measured on it: #ffffff
+ * 18.98:1, #E9F0E6 16.33, #9CB3A3 8.49, #86efac 13.52, #E0B968 10.22 — every
+ * text colour on this shell clears AA with room to spare, and the ratios are
+ * pinned in `authShellArtIsImported.test.ts`.
+ */
+const PAGE = '#0B120D';
+const PANEL = '#16241A';
 /** Brand dark. The peaks are decorative, so these carry opacity, not contrast. */
 const PEAK = '#166534';
 const PEAK_SHADE = '#0f4a26';
+/** The front row, one step lighter so the overlap reads as depth. */
+const PEAK_LIT = '#15803d';
 
 interface PeakProps {
   peak: RangeSilhouette;
@@ -117,49 +196,73 @@ function Peak({ peak, transform, bodyOpacity, shadeOpacity, children }: PeakProp
   );
 }
 
+/** One silhouette placed so its base lands exactly on `GROUND`. */
+function placed(peak: Peak) {
+  const [x, sx, sy] = peak;
+  return `translate(${x},${GROUND - 100 * sy}) scale(${sx},${sy})`;
+}
+
 /**
- * The range for one state.
+ * The horizon the page stands on, and the per-screen state drawn on one peak.
  *
  * `preserveAspectRatio="none"` is deliberate and is the one place this file
- * departs from the dashboard's rule about never distorting a path: here the
- * peaks are a background band whose width is the panel's and whose height is
- * fixed, and a uniformly-scaled range would either overflow a narrow panel or
- * leave a gap in a wide one. They read as a horizon, not as a measurement.
+ * departs from the dashboard's rule about never distorting a silhouette: here
+ * the peaks are a horizon whose width is the viewport's and whose height is
+ * fixed. They read as ground, not as a measurement — and `GoalRange`, which
+ * DOES carry figures, keeps its uniform scaling for exactly that reason.
  */
-function RangeArt({ state }: { state: AuthArt }) {
-  const near = RANGE_SILHOUETTES[1];  // Ben Nevis — one summit, a light cap
-  const far = RANGE_SILHOUETTES[0];   // Table Mountain — the flat-topped backdrop
+function Frieze({ state }: { state: AuthArt }) {
+  const near = RANGE_SILHOUETTES[1];
   const dimmed = state === 'clouded';
 
   return (
-    <svg viewBox="0 0 200 104" preserveAspectRatio="none" aria-hidden="true">
-      <Peak
-        peak={near}
-        transform="translate(90,4) scale(1.06,1)"
-        bodyOpacity={dimmed ? 0.22 : 0.3}
-        shadeOpacity={dimmed ? 0.18 : 0.26}
-      >
+    <svg
+      className="auth-entry-frieze"
+      viewBox={`0 0 ${FRIEZE_W} ${FRIEZE_H}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {/* Back row. Quietest, and partly hidden by the front one. */}
+      <g fill={PEAK} opacity={dimmed ? 0.16 : 0.22}>
+        {FAR.map((peak, i) => (
+          <path key={`f${i}`} d={RANGE_SILHOUETTES[peak[3]].body} transform={placed(peak)} />
+        ))}
+      </g>
+
+      {/* The feature peak, between the rows, carrying this screen's state. */}
+      <g transform={placed(FEATURE)}>
+        <path d={near.body} fill={PEAK} opacity={dimmed ? 0.26 : 0.36} />
+        {near.shade && (
+          <path d={near.shade} fill={PEAK_SHADE} opacity={dimmed ? 0.2 : 0.3} />
+        )}
+        {near.snow && (
+          <path d={near.snow} fill={INK} opacity={(near.snowOpacity ?? 0.5) * 0.4} />
+        )}
+
         {(state === 'partway' || state === 'rejoined') && (
           <path
             d={TRAIL}
             fill="none"
-            stroke={PEAK_SHADE}
-            strokeWidth={1.6}
+            stroke={KICK}
+            strokeWidth={1.4}
             strokeDasharray="3 3"
-            opacity={state === 'rejoined' ? 0.62 : 0.55}
+            opacity={state === 'rejoined' ? 0.5 : 0.42}
+            vectorEffect="non-scaling-stroke"
           />
         )}
         {state === 'partway' && (
           <>
-            <circle cx={CLIMBER.x} cy={CLIMBER.y} r={3.1} fill={PEAK} />
+            <circle cx={CLIMBER.x} cy={CLIMBER.y} r={2.4} fill={KICK} opacity={0.75} />
             <circle
               cx={CLIMBER.x}
               cy={CLIMBER.y}
-              r={5.4}
+              r={4.6}
               fill="none"
-              stroke={PEAK}
-              strokeWidth={1}
-              opacity={0.45}
+              stroke={KICK}
+              strokeWidth={0.8}
+              opacity={0.4}
+              vectorEffect="non-scaling-stroke"
             />
           </>
         )}
@@ -168,39 +271,42 @@ function RangeArt({ state }: { state: AuthArt }) {
             <path
               d={TRAIL_STUB}
               fill="none"
-              stroke={PEAK_SHADE}
-              strokeWidth={1.6}
+              stroke={KICK}
+              strokeWidth={1.4}
               strokeDasharray="3 3"
-              opacity={0.55}
+              opacity={0.42}
+              vectorEffect="non-scaling-stroke"
             />
             <path
               d={TRAIL_FADED}
               fill="none"
-              stroke={PEAK_SHADE}
-              strokeWidth={1.6}
+              stroke={KICK}
+              strokeWidth={1.4}
               strokeDasharray="2 6"
-              opacity={0.22}
+              opacity={0.16}
+              vectorEffect="non-scaling-stroke"
             />
-            <path d={MARKER_POST} stroke={PEAK} strokeWidth={1.4} />
-            <path d={MARKER_FLAG} fill={PEAK} />
+            <path d={MARKER_POST} stroke={KICK} strokeWidth={1.2} opacity={0.6}
+              vectorEffect="non-scaling-stroke" />
+            <path d={MARKER_FLAG} fill={KICK} opacity={0.6} />
           </>
         )}
-        {dimmed && <path d={CLOUD} fill={INK} opacity={0.55} />}
-      </Peak>
-      {/* The far peak is dropped on the two shortest panels rather than
-          squeezed: at 330px tall a second range crowds the copy it sits under. */}
-      {(state === 'unclimbed' || state === 'partway') && (
-        <Peak
-          peak={far}
-          transform={
-            state === 'unclimbed'
-              ? 'translate(6,26) scale(.78,.74)'
-              : 'translate(2,30) scale(.74,.70)'
-          }
-          bodyOpacity={state === 'unclimbed' ? 0.2 : 0.18}
-          shadeOpacity={0.18}
-        />
-      )}
+        {dimmed && <path d={CLOUD} fill={INK} opacity={0.4} />}
+      </g>
+
+      {/* Front row, a shade stronger, overlapping the back one. */}
+      <g fill={PEAK_LIT} opacity={dimmed ? 0.24 : 0.34}>
+        {NEAR.map((peak, i) => (
+          <path key={`n${i}`} d={RANGE_SILHOUETTES[peak[3]].body} transform={placed(peak)} />
+        ))}
+      </g>
+
+      {/* *** THE SHELF EDGE, DRAWN LAST. *** pantryPal's jars stand on a line,
+          and without one a row of silhouettes floats. This is the single
+          element that makes the frieze read as objects standing somewhere
+          rather than as a decorative border — and it goes last so it sits in
+          front of every base rather than behind them. */}
+      <rect x={0} y={GROUND} width={FRIEZE_W} height={4} fill={KICK} opacity={0.2} />
     </svg>
   );
 }
@@ -234,22 +340,27 @@ export default function AuthShell({
   short = false,
 }: AuthShellProps) {
   return (
-    <div
-      className="auth-split"
-      style={{
-        background: '#16241A',
-        border: '1px solid rgba(134, 239, 172, 0.16)',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-        minHeight: short ? '22rem' : '27rem',
-      }}
-    >
-      <div
-        className="auth-split-art"
-        style={{ background: 'linear-gradient(176deg, #12211A 0%, #16281D 62%, #1B3024 100%)' }}
-      >
+    <div className="auth-entry" style={{ background: PAGE }}>
+      {/* *** THE WAY BACK LIVES IN THE SHELL NOW. *** Login and Register each
+          carried their own identical absolutely-positioned "Back to Home" link,
+          and ForgotPassword, ResetPassword and the OIDC failure had none — so
+          three of the five screens were a dead end unless you knew the logo was
+          not a link. One copy, on all five. */}
+      <Link to="/" className="auth-entry-back" style={{ color: SOFT }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = INK; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = SOFT; }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          aria-hidden="true" focusable="false">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Home
+      </Link>
+
+      <div className="auth-entry-hero">
         <span
           style={{
-            fontSize: '0.656rem',
+            fontSize: '0.6875rem',
             letterSpacing: '0.11em',
             textTransform: 'uppercase',
             fontWeight: 700,
@@ -258,25 +369,59 @@ export default function AuthShell({
         >
           {kicker}
         </span>
+        {/* *** STILL A `<p>`, NOT A HEADING. *** It is now the largest text on
+            the page, which makes the temptation to promote it to an `h1`
+            stronger rather than weaker — and `every-page.spec.ts` asserts
+            exactly one `h1` per route. The form owns it. */}
         <p
           style={{
-            margin: '0.5rem 0 0.375rem',
-            fontSize: '1.4375rem',
+            margin: '1rem 0 0.75rem',
+            fontSize: '2.375rem',
             fontWeight: 800,
-            letterSpacing: '-0.012em',
-            lineHeight: 1.16,
-            maxWidth: '16ch',
+            letterSpacing: '-0.026em',
+            lineHeight: 1.08,
+            maxWidth: '15ch',
             color: INK,
           }}
         >
           {headline}
         </p>
-        <p style={{ margin: 0, fontSize: '0.8125rem', maxWidth: '30ch', color: SOFT }}>
+        <p style={{ margin: 0, fontSize: '0.96875rem', lineHeight: 1.55, maxWidth: '34ch', color: SOFT }}>
           {blurb}
         </p>
-        <RangeArt state={art} />
       </div>
-      <div className="auth-split-form">{children}</div>
+
+      <div
+        className="auth-entry-panel"
+        style={{
+          background: PANEL,
+          border: '1px solid rgba(134, 239, 172, 0.16)',
+          /* `short` no longer sets a minimum height — the panel is sized by its
+             own content now that the page, not the panel, owns the viewport.
+             The prop is kept because all five pages pass it and it still says
+             something true about the screen: a short one gets less air above
+             the frieze. */
+          marginBottom: short ? '1.5rem' : '2.5rem',
+        }}
+      >
+        {children}
+        {/* *** THE palStack FOOTER MOVED IN HERE TOO. *** Login and Register
+            each carried an identical copy and the other three screens had
+            none — the same duplication as "Back to Home", one element lower.
+            Inside the panel column rather than centred across the page: the
+            frieze owns the bottom of the page now, and a line of text over a
+            horizon is a line of text in the sky. */}
+        <p style={{
+          margin: '1.25rem 0 0',
+          textAlign: 'center',
+          color: SOFT,
+          fontSize: '0.8125rem',
+        }}>
+          part of palStack ecosystem
+        </p>
+      </div>
+
+      <Frieze state={art} />
     </div>
   );
 }
