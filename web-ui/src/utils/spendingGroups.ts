@@ -76,3 +76,74 @@ export function effectiveSpendingType(
   if (parent === undefined) return null;
   return isSpendingType(parent.spending_type) ? parent.spending_type : null;
 }
+
+/**
+ * What a month's spending actually split into — fixed, flexible, non-monthly.
+ *
+ * *** THE JOIN IS BY NAME, BECAUSE THE PAYLOAD GIVES NOTHING ELSE. ***
+ * `GET /analytics/categories/top` returns `{name, amount, color, icon}` and no
+ * category id, so spend can only be matched to a spending type through the
+ * category's name. That is not safe in general, and it is measurably not safe
+ * here: the demo has **six duplicated category names**, and one of them
+ * ("Business") resolves to two DIFFERENT effective spending types.
+ *
+ * So a name that is ambiguous is refused rather than guessed. Silently taking
+ * whichever category the map happened to hold last would put someone's spend
+ * in the wrong column of a figure they are meant to make a decision from, and
+ * they would have no way to see it happened. The caller gets the ambiguous
+ * names back so it can say so on screen.
+ *
+ * (The real fix is an id on that payload. Until then this is the honest shape,
+ * and the refusal is what makes the gap visible instead of invisible.)
+ */
+export type SpendSplit = {
+  fixed: number;
+  flexible: number;
+  non_monthly: number;
+  /** Spend in categories that have no spending type yet, directly or inherited. */
+  unsorted: number;
+  /** Category names whose spend could not be attributed at all. */
+  unattributable: string[];
+};
+
+/** Effective spending type per category NAME, or `'ambiguous'` where names disagree. */
+export function spendingTypeByName(
+  categories: GroupableCategory[],
+): Map<string, SpendingType | null | 'ambiguous'> {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const out = new Map<string, SpendingType | null | 'ambiguous'>();
+  for (const category of categories) {
+    const type = effectiveSpendingType(category, byId);
+    if (!out.has(category.name)) {
+      out.set(category.name, type);
+      continue;
+    }
+    const seen = out.get(category.name);
+    if (seen === 'ambiguous') continue;
+    // Two categories of the same name agreeing is not ambiguity — it is just a
+    // duplicate name, and the answer is the same either way.
+    if (seen !== type) out.set(category.name, 'ambiguous');
+  }
+  return out;
+}
+
+export function splitSpendByGroup(
+  rows: Array<{ name: string; amount: number }>,
+  typeByName: Map<string, SpendingType | null | 'ambiguous'>,
+): SpendSplit {
+  const split: SpendSplit = {
+    fixed: 0, flexible: 0, non_monthly: 0, unsorted: 0, unattributable: [],
+  };
+  for (const row of rows) {
+    const type = typeByName.get(row.name);
+    if (type === 'ambiguous' || type === undefined) {
+      // `undefined` means the spend names a category the payload did not carry
+      // — a filter or a deletion. Also not attributable, also said out loud.
+      split.unattributable.push(row.name);
+      continue;
+    }
+    if (type === null) split.unsorted += row.amount;
+    else split[type] += row.amount;
+  }
+  return split;
+}

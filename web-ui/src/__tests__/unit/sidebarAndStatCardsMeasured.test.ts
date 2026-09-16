@@ -47,6 +47,25 @@ import { join } from 'path';
 const read = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8');
 
 const THEME = 'src/styles/finpal-theme.css';
+/*
+ * *** THE RULE IS "NO PAGE HAND-ROLLS ITS STAT ROW", NOT "EVERY PAGE IMPORTS
+ * StatCard". *** Those were the same sentence while there was one shared
+ * component; they stopped being the same when the dashboard's four cards became
+ * `TotalsRow` — hairline-separated cells inside the range's own card, because
+ * four bordered panels under a panel is what "everything looks out of place"
+ * meant (2026-09-15).
+ *
+ * `TotalsRow` is shared, is measured once, and is the thing Analytics will
+ * adopt next. So the assertion now accepts EITHER shared component and still
+ * fails a page that styles its own figures inline, which is the defect this
+ * guard was written for: the same stat row measured 132px on Categories and
+ * 113px on Rules because each built its own.
+ *
+ * Widening a guard is exactly how one goes blind, so the widening is bounded to
+ * a named list of two components rather than to "imports something".
+ */
+const SHARED_STAT_COMPONENTS = ['StatCard', 'TotalsRow'];
+
 const PAGES_USING_STATCARD = [
   'src/pages/Dashboard.tsx',
   'src/pages/Transactions.tsx',
@@ -99,8 +118,12 @@ describe('the sidebar rail says when it is clipped', () => {
 });
 
 describe('every page renders its stat row through the one shared component', () => {
-  it.each(PAGES_USING_STATCARD)('%s imports StatCard', (rel) => {
-    expect(read(rel)).toMatch(/import \{[^}]*StatCard[^}]*\}/);
+  it.each(PAGES_USING_STATCARD)('%s renders its figures through a shared component', (rel) => {
+    const src = read(rel);
+    const adopted = SHARED_STAT_COMPONENTS.filter(
+      (name) => new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\}`).test(src));
+    expect(adopted, `${rel} imports none of ${SHARED_STAT_COMPONENTS.join(', ')}`)
+      .not.toEqual([]);
   });
 
   it.each(['src/components/CategoryManagement.tsx', 'src/components/TransactionRules.tsx'])(

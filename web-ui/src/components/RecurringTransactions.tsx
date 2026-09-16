@@ -7,6 +7,9 @@ import { Modal } from './Modal';
 import { formActionsStyle, labelStyle } from '../styles/formStyles';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney } from '../styles/money';
+import { PageHead } from './PageHead';
+import { monthlyEquivalent, isConvertible, monthlyLabel } from '../utils/recurringMonthly';
+import { groundHeight } from '../utils/mountainGeometry';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 
@@ -363,20 +366,15 @@ export const RecurringTransactions: React.FC = () => {
        The import comes from a shared barrel, so a page can look like it adopted
        the shell while rendering a bare div. */
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' , flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          {/* h1, not h2 — this is the PAGE's own title and everything under it is
-              a section, so the document outline started at level 2 with no h1
-              at all. Size stays inline; nothing moves on screen. Found by
-              `every-page.spec.ts`, which walks all 21 routes — the older h1
-              check walked six and this page was not one of them. */}
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
-            Recurring Transactions
-          </h1>
-          <p className="fp-hint">
-            Manage automatic recurring transactions and detect patterns
-          </p>
-        </div>
+      {/* The only band in the set with a base: a solid bar along the bottom,
+          because this page IS the ground. `PageHead` also supplies the single
+          h1 the outline needs — this page had none until the widened heading
+          check found it. */}
+      <PageHead
+        band="recurring"
+        title="Recurring"
+        subtitle="What arrives every month before you decide anything. This is the ground you stand on."
+        right={<>
         <button
           onClick={handleDetectPatterns}
           disabled={detectingPatterns}
@@ -423,8 +421,8 @@ export const RecurringTransactions: React.FC = () => {
         >
           <Plus size={16} />
           New Recurring
-        </button>
-      </div>
+        </button></>}
+      />
 
       {showAddModal && (
         <AddRecurringModal
@@ -479,9 +477,16 @@ export const RecurringTransactions: React.FC = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <Sparkles size={24} style={{ color: 'var(--au-ink)' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+            {/* h2, not h3. This sits directly under the page's single h1 with no
+                section heading between, so an h3 here jumps a level and breaks
+                the outline a screen reader navigates by. Found by widening
+                `every-page.spec.ts`'s heading check from the six pages
+                `standards.spec.ts` listed to all 21 derived routes — four pages
+                were doing this and nothing said so. The size is inline, so the
+                tag change is invisible on screen. */}
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
               Detected Patterns ({patterns.length})
-            </h3>
+            </h2>
           </div>
           <p className="fp-hint-block">
             We found these recurring transaction patterns. Create automatic recurring transactions or ignore them.
@@ -500,9 +505,11 @@ export const RecurringTransactions: React.FC = () => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <h4 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                  {/* h3: one level under the "Detected Patterns" h2 above,
+                      which moved from h3 to h2 in the same change. */}
+                  <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
                     {pattern.description}
-                  </h4>
+                  </h3>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     <span style={metaTextStyle}>
                       {/* *** THE `$` HERE WAS A LITERAL CHARACTER IN JSX TEXT, NOT A
@@ -590,6 +597,38 @@ export const RecurringTransactions: React.FC = () => {
         </div>
       ) : (
         <div style={flexColGap12}>
+          {/* *** "NOTHING HERE IS INCOME" IS THE ACT THIS PAGE IS FOR, AND THE
+              PAGE NEVER SAID IT. *** demo1 has eight recurring rows and every
+              one is an expense, so `has_recurring_income` is false — which
+              makes this the only honest place to raise it. Every figure on this
+              page is what leaves before any decision is made; without one
+              income row there is nothing for it to be measured against.
+
+              *** RENDERED ONLY WHEN IT IS TRUE, AND NEVER AS A SCOLD. *** Gated
+              on there being rows but no income row: an empty page already has
+              its own empty state, and someone who has recorded income must
+              never see this. `POST /recurring` has accepted
+              `transaction_type: 'income'` since #133 — see this file's header —
+              so the thing it asks for is actually possible.
+
+              No coin figure, unlike the mockup's "+200 coins": `/coins`
+              returns coins EARNED, not a price for finishing, and promising a
+              number nobody has committed to is the one thing these screens
+              must not do. */}
+          {recurring.length > 0
+            && !recurring.some((item) => item.transaction_type === 'income') && (
+            <div style={{
+              padding: '14px 18px',
+              background: 'var(--surface-hover)',
+              border: '1px solid var(--border-light)',
+              borderRadius: '12px',
+              fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6,
+            }}>
+              <strong>Nothing here is income.</strong> Everything on this page is
+              what leaves before you decide anything. Add what arrives and every
+              figure here gets something to be measured against.
+            </div>
+          )}
           {recurring.map((item) => (
             <div
               key={item.id}
@@ -607,9 +646,16 @@ export const RecurringTransactions: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                   <Repeat size={20} style={{ color: item.active ? 'var(--g-ink)' : 'var(--text-muted)' }} />
-                  <h3 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                  {/* h2, not h3. This sits directly under the page's single h1 with no
+                      section heading between, so an h3 here jumps a level and breaks
+                      the outline a screen reader navigates by. Found by widening
+                      `every-page.spec.ts`'s heading check from the six pages
+                      `standards.spec.ts` listed to all 21 derived routes — four pages
+                      were doing this and nothing said so. The size is inline, so the
+                      tag change is invisible on screen. */}
+                  <h2 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600', margin: 0 }}>
                     {item.description}
-                  </h3>
+                  </h2>
                   {!item.active && (
                     <span style={{
                       padding: '2px 8px',
@@ -635,6 +681,34 @@ export const RecurringTransactions: React.FC = () => {
                   <span style={metaTextStyle}>
                     Frequency: <strong style={{ color: 'var(--g-ink)' }}>{getFrequencyLabel(item.frequency)}</strong>
                   </span>
+                  {/* *** WHAT THIS ROW COSTS PER MONTH, WHICH IS NOT ALWAYS ITS
+                      AMOUNT. *** The demo's £15 weekly shop is £65 a month and
+                      its £132 yearly insurance is £11 — so a reader adding the
+                      printed column up gets £1,659 against a true £1,588. The
+                      figure is only shown when it DIFFERS: repeating "£1,200 /
+                      mo" beside a monthly £1,200 is noise, and noise is what
+                      stops the two rows that matter from standing out.
+
+                      When finPal cannot convert the frequency it says so
+                      rather than printing a number — `monthlyEquivalent`
+                      returns null for anything outside the four values the
+                      model documents, because defaulting an unknown to
+                      "monthly" would put a wrong figure inside what a user
+                      reads as their fixed cost. */}
+                  {monthlyEquivalent(item.amount, item.frequency) !== item.amount && (
+                    isConvertible(item.frequency) ? (
+                      <span style={metaTextStyle}>
+                        Per month: <strong style={{ color: 'var(--g-ink)' }}>
+                          {monthlyLabel(item.amount, item.frequency,
+                            (n) => money(n, item.currency_code))?.replace(' / mo', '')}
+                        </strong>
+                      </span>
+                    ) : (
+                      <span style={metaTextStyle}>
+                        finPal cannot work out what “{item.frequency}” costs in a month
+                      </span>
+                    )
+                  )}
                   <span style={metaTextStyle}>
                     Type: <strong style={{ color: 'var(--g-ink)' }}>{item.transaction_type}</strong>
                   </span>
@@ -690,6 +764,66 @@ export const RecurringTransactions: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {/* *** THE GROUND: WHAT LEAVES EVERY MONTH BEFORE ANY DECISION. ***
+              The dashboard's range draws a ground line and this is the figure
+              under it, so the two screens are telling one story — which is
+              only true because the ADDING is done by `groundHeight()` in
+              `mountainGeometry.ts` rather than by a second sum written here.
+              That helper had a test file and NO production caller at all until
+              now; a parallel total would have been D-101, two places computing
+              one presentation, which is exactly how two screens drift apart.
+
+              *** AND ROWS IT CANNOT CONVERT ARE NAMED, NOT SILENTLY DROPPED.
+              *** `frequency` is an unconstrained column, so a fifth value can
+              exist. Excluding one without saying so would print a ground that
+              is quietly too low — a figure the user would have no way to
+              question. */}
+          {recurring.length > 0 && (() => {
+            const convertible = recurring
+              .filter((item) => item.active && item.transaction_type !== 'income')
+              .map((item) => ({ item, monthly: monthlyEquivalent(item.amount, item.frequency) }));
+            const known = convertible.filter((r) => r.monthly !== null);
+            const unknown = convertible.filter((r) => r.monthly === null);
+            if (!known.length) return null;
+            const ground = groundHeight({ recurringMonthly: known.map((r) => r.monthly as number) });
+            const currency = known[0].item.currency_code;
+
+            return (
+              <div style={{
+                marginTop: '4px',
+                padding: '20px 24px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-light)',
+                borderRadius: '12px',
+              }}>
+                <div className="fp-hint" style={{
+                  fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                  fontWeight: 600, margin: 0,
+                }}>
+                  The ground
+                </div>
+                <div style={{
+                  fontSize: '23px', fontWeight: 600, marginTop: '3px',
+                  color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {money(ground, currency)}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  a month before you climb anything
+                  {/* Only the rows that are ON count: an inactive row is not
+                      leaving your account, and income is not ground. */}
+                  {' · '}from {known.length} active {known.length === 1 ? 'row' : 'rows'}
+                </div>
+                {unknown.length > 0 && (
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                    Not counted, because finPal cannot turn their schedule into a
+                    monthly figure: {unknown.map((r) => r.item.description).join(', ')}.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

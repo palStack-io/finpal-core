@@ -179,20 +179,36 @@ describe('the Dashboard states its scope with a filter, not with four tags', () 
     expect(screen.queryByText(/Of household income, after your expenses/)).not.toBeInTheDocument();
   });
 
-  it('sends member_id to BOTH endpoints the page reads, not just one', async () => {
-    const { analyticsCalls, transactionCalls } = mockDashboard();
+  it('sends member_id to every read on the page that accepts it', async () => {
+    const { analyticsCalls } = mockDashboard();
     renderPage();
 
     await waitFor(() => expect(screen.getByText('Net Worth')).toBeInTheDocument());
-    await userEvent.selectOptions(screen.getByLabelText('Show transactions for'), BOB.id);
+    await userEvent.selectOptions(screen.getByLabelText('Show figures for'), BOB.id);
 
-    // **This is the D-51 assertion.** One control, two endpoints; a page whose
-    // figures followed the filter while its recent strip did not would describe
-    // two different sets of people at once, which is what happened last time.
+    /*
+     * *** THIS WAS "BOTH endpoints" AND NOW THERE IS ONE, WHICH IS A CHANGE OF
+     * SUBJECT RATHER THAN A WEAKENING. *** D-51's rule is that whoever the
+     * filter names, it names for the whole page — a page whose figures follow
+     * the filter while some other part of it does not describes two sets of
+     * people at once.
+     *
+     * The second endpoint was `/transactions/`, read only to fill the
+     * recent-transactions strip. That strip was removed (it duplicated Monthly
+     * Expense Breakdown directly below it) and the request went with it, so
+     * there is nothing left for it to disagree with.
+     *
+     * *** AND THE REST OF THE PAGE CANNOT BE FILTERED AT ALL, WHICH IS WORTH
+     * WRITING DOWN RATHER THAN LEAVING AS A GAP IN A TEST. *** Checked against
+     * the server: `api/v1/accounts.py`, `budgets.py` and `goals.py` contain no
+     * `member_id` anywhere. The Accounts card, Budget Progress and the range
+     * therefore always show the whole household. That is a limitation of those
+     * endpoints, it predates this change, and the filter's label now says
+     * "figures" so it does not claim otherwise.
+     */
     await waitFor(() =>
       expect(analyticsCalls.at(-1)?.searchParams.get('member_id')).toBe(BOB.id)
     );
-    expect(transactionCalls.at(-1)?.searchParams.get('member_id')).toBe(BOB.id);
   });
 
   it('moves the rendered figures, not just the request', async () => {
@@ -200,7 +216,7 @@ describe('the Dashboard states its scope with a filter, not with four tags', () 
     renderPage();
 
     await waitFor(() => expect(screen.getByText('$9,000.00')).toBeInTheDocument());
-    await userEvent.selectOptions(screen.getByLabelText('Show transactions for'), BOB.id);
+    await userEvent.selectOptions(screen.getByLabelText('Show figures for'), BOB.id);
 
     // Read off the screen, because a request carrying the right parameter and a
     // page that ignores the response are indistinguishable from the network side.
@@ -209,19 +225,15 @@ describe('the Dashboard states its scope with a filter, not with four tags', () 
     expect(screen.getByText("Bob's money")).toBeInTheDocument();
   });
 
-  it('narrows the recent strip with the same control', async () => {
-    mockDashboard();
-    renderPage();
-
-    await waitFor(() => expect(screen.getByText('Alice groceries')).toBeInTheDocument());
-    await userEvent.selectOptions(screen.getByLabelText('Show transactions for'), BOB.id);
-
-    await waitFor(() =>
-      expect(screen.queryByText('Alice groceries')).not.toBeInTheDocument()
-    );
-    expect(screen.getByText('Bob petrol')).toBeInTheDocument();
-  });
-
+  /*
+   * *** "narrows the recent strip with the same control" IS DELETED, NOT
+   * SKIPPED. *** The strip is gone. What it proved — that the filter moves
+   * RENDERED output and not merely the request — is still proved by
+   * "moves the rendered figures, not just the request" immediately below,
+   * which asserts on the Net Worth figure. A test whose subject was removed is
+   * a deletion; a test whose rule moved elsewhere would not be, and that is
+   * the distinction checked before removing it.
+   */
   it('offers no filter at all to a household of one', async () => {
     mockDashboard({ members: [ALICE] });
     renderPage();

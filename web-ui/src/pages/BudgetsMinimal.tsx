@@ -16,6 +16,7 @@ import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
 import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
 import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
+import { PageHead } from '../components/PageHead';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -823,22 +824,22 @@ const BudgetsMinimal = () => {
       <div style={{ minHeight: '100vh', padding: '24px' }}>
         <div className="page-container">
 
-          {/* Simple Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h1 style={{
-                fontSize: '32px',
-                fontWeight: 700,
-                marginBottom: '8px',
-                color: 'var(--text-primary)'
-              }}>
-                Budgets
-              </h1>
-              <p style={secondaryBodyStyle}>
-                Track your spending against your budgets
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {/* *** THIS PAGE HAND-ROLLED ITS OWN h1 AND WAS THE LAST ONE DOING IT.
+              *** A 32px inline title with neither `PageHead` nor
+              `.page-title` — which `pageShells.test.ts` found the moment its
+              assertion was changed from "the class appears on five pages" to
+              "no page invents its own title". The old count could not see this,
+              because four other pages still carried the class and kept the
+              number up.
+
+              The mockup's sentence, too: a limit is only useful for the part of
+              your spending that can move, which is the whole reason this page
+              groups by spending type. */}
+          <PageHead
+            band="budgets"
+            title="Budgets"
+            subtitle="A limit is only useful for the part of your spending that can move."
+            right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               {/* Compact Month Navigator */}
               <div style={{
                 display: 'flex',
@@ -943,8 +944,8 @@ const BudgetsMinimal = () => {
               >
                 <Plus size={18} /> New Budget
               </button>
-            </div>
-          </div>
+            </div>}
+          />
 
           {/* Top Stats */}
           {(() => {
@@ -1018,18 +1019,41 @@ const BudgetsMinimal = () => {
                     </span>
                   }
                 />
-                {/* Budget Health — custom layout, not a simple stat */}
-                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
+                {/* *** FIVE CARDS IN AN auto-fit GRID IS FOUR AND A LONELY
+                    ONE. *** At 1440px this grid computes four 273px columns, so
+                    the fifth card sat by itself on a second row with ~880px of
+                    empty space beside it — measured on the live page, and the
+                    first thing anyone notices about this screen.
+
+                    Spanning it is the fix rather than narrowing `minmax`:
+                    Budget Health is a BAR, it reads better wide than boxed, and
+                    a width that happens to fit five cards at one viewport
+                    breaks again at the next one. `1 / -1` is correct at every
+                    width, including the single-column phone layout where it is
+                    a no-op. */}
+                <div style={{ gridColumn: '1 / -1', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
                   <p className="fp-hint-block">Budget Health</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '10px' }}>
                     <span style={{ color: 'var(--status-ok)' }}>{onTrack} on track</span>
                     <span style={{ color: 'var(--status-warn)' }}>{warning} at risk</span>
                     <span style={{ color: 'var(--status-over)' }}>{over} over</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '2px', height: '20px', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{ flex: onTrack || 0.1, background: 'var(--status-ok)' }} />
-                    <div style={{ flex: warning || 0.1, background: 'var(--status-warn)' }} />
-                    <div style={{ flex: over || 0.1, background: 'var(--status-over)' }} />
+                  {/* *** A ZERO COUNT DREW A VISIBLE SLIVER, SO THE BAR
+                      CONTRADICTED THE NUMBERS PRINTED DIRECTLY ABOVE IT. ***
+                      `flex: warning || 0.1` gave every empty band a floor, and
+                      on the live demo "0 at risk / 0 over" rendered 5.2px of
+                      amber and 5.2px of clay — measured, not guessed. A user
+                      reads a picture faster than a label, so the picture was
+                      telling them something was wrong when nothing was.
+
+                      Bands are now rendered only when they hold something. The
+                      `|| 0.1` existed so a flex child with no basis would not
+                      collapse; omitting the child entirely answers that without
+                      inventing a quantity. */}
+                  <div style={{ display: 'flex', gap: '2px', height: '20px', borderRadius: '6px', overflow: 'hidden', background: 'var(--progress-track)' }}>
+                    {onTrack > 0 && <div style={{ flex: onTrack, background: 'var(--status-ok)' }} />}
+                    {warning > 0 && <div style={{ flex: warning, background: 'var(--status-warn)' }} />}
+                    {over > 0 && <div style={{ flex: over, background: 'var(--status-over)' }} />}
                   </div>
                 </div>
               </div>

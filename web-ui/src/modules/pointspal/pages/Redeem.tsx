@@ -76,7 +76,13 @@ const Redeem: React.FC = () => {
    * sign twice: to decide the figure AND to decide the label. Computing it in
    * two places is how the two come to disagree.
    */
-  const uplift = data.max_redeemable_usd - data.total_value_usd;
+  /* `upliftUsd`, not `uplift`: it is the difference of two `_usd` figures, so
+     the hardcoded `$` beside it is correct and `money()` would be the bug —
+     that renders in the READER's currency without converting, which would
+     print "£501" on 501 dollars. The name is what says so, and
+     `noNullRenderedAsMoney` reads the name rather than carrying an exemption
+     for this line. */
+  const upliftUsd = data.max_redeemable_usd - data.total_value_usd;
 
   return (
     <div style={{ padding: '24px 28px', background: 'var(--bg)', minHeight: '100%' }}>
@@ -141,12 +147,12 @@ const Redeem: React.FC = () => {
               legibility. D-103 / D-102's family. */}
           <div>
             <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: '#fff' }}>
-              {uplift > 0
-                ? `+$${uplift.toLocaleString()}`
+              {upliftUsd > 0
+                ? `+$${upliftUsd.toLocaleString()}`
                 : '—'}
             </div>
             <div style={{ fontSize: 11, color: '#fff' }}>
-              {uplift > 0 ? 'Potential uplift via transfers' : 'No uplift from transfers right now'}
+              {upliftUsd > 0 ? 'Potential upliftUsd via transfers' : 'No upliftUsd from transfers right now'}
             </div>
           </div>
         </div>

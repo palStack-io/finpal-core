@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { PageHead } from '../components/PageHead';
+import { categoriesApi } from '../services/api/categories';
+import { spendingTypeByName, splitSpendByGroup } from '../utils/spendingGroups';
 import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -30,7 +33,32 @@ import {
 type AnalyticsTab = 'overview' | 'cashflow' | 'spending' | 'health';
 
 // Color palette for categories
-const CATEGORY_COLORS = ['var(--accent-blue)', '#a855f7', 'var(--accent-green)', '#f97316', '#ec4899', '#06b6d4', 'var(--accent-yellow)', '#84cc16'];
+/**
+ * Chart paints: the five segment tokens, in order, then one muted everything-else.
+ *
+ * *** THIS WAS EIGHT COLOURS CHOSEN BY NOBODY. *** Two `--accent-*` tokens
+ * mixed with five raw hexes (`#a855f7`, `#f97316`, `#ec4899`, `#06b6d4`,
+ * `#84cc16`) and a blue that came from Recharts' own defaults — so the same
+ * category was one colour in a chart here and a different one in a budget row,
+ * a category dot or a spending group. The mockup's point
+ * (`coins/pages-web-3.html`) is that this page needed a decision rather than a
+ * refresh.
+ *
+ * `--kt-seg-1…5` already existed in `finpal-theme.css` and are the paints the
+ * budget rows, category dots and spending groups use, with a measured dark
+ * variant. So one colour means one thing across the product, and a theme switch
+ * takes the charts with it — which the raw hexes never did.
+ *
+ * *** SIX, NOT EIGHT, AND THE SIXTH IS DELIBERATELY DULL. *** Beyond five
+ * slices a pie stops being readable, and `--text-muted` for the remainder says
+ * "everything else" rather than pretending the sixth category is as
+ * distinguishable as the first. A category beyond the sixth reuses the ramp
+ * rather than inventing a colour.
+ */
+const CATEGORY_COLORS = [
+  'var(--kt-seg-1)', 'var(--kt-seg-2)', 'var(--kt-seg-3)',
+  'var(--kt-seg-4)', 'var(--kt-seg-5)', 'var(--text-muted)',
+];
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 const tooltipBoxStyle: React.CSSProperties = { background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' };
@@ -46,7 +74,26 @@ export const Analytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
-  const rangeLabel = timeRange === 'week' ? 'Last 7 days' : timeRange === 'year' ? 'Last 12 months' : 'This month';
+  /**
+   * *** "LAST 30 DAYS", NOT "THIS MONTH", AND THE WINDOW IS WHY. ***
+   * `windowsFor` computes a ROLLING window — `now - 30` to `now` — deliberately,
+   * because comparing the first four days of a calendar month against a full
+   * previous month would understate every figure on the page and that error
+   * would look like real news. The label was the only part that had not caught
+   * up, and its two siblings were already honest: 'Last 7 days' for 7 days and
+   * 'Last 12 months' for 365.
+   *
+   * Measured on the live demo before changing it: the card read
+   * "Spending by Category · This month" over **$3,159.36**, while September's
+   * actual spending is **$2,359.72** and August's is $2,892.52 — the window
+   * spans mid-August to mid-September and belongs to neither. So the dashboard
+   * and this page named one month with two different totals, which is exactly
+   * the consequence D-206 had on one screen.
+   *
+   * The fix is the label, not the window: changing the window would break the
+   * like-for-like comparison the note above exists to protect.
+   */
+  const rangeLabel = timeRange === 'week' ? 'Last 7 days' : timeRange === 'year' ? 'Last 12 months' : 'Last 30 days';
 
   // Data state
   const [cashFlowMonthly, setCashFlowMonthly] = useState<Array<{
@@ -55,6 +102,22 @@ export const Analytics: React.FC = () => {
     expenses: number;
     savings: number;
   }>>([]);
+
+  /**
+   * *** WHAT OF THIS MONTH'S SPENDING WAS ACTUALLY YOURS TO MOVE. ***
+   * A donut says where money went and cannot say whether any of it was a
+   * choice — 76% of the demo's September was rent, and a page that shows a big
+   * housing wedge without saying so invites someone to conclude they overspend
+   * on housing when the honest reading is that the ground is expensive. That
+   * distinction is the spec's voice rule 11, and the data for it already
+   * exists: `Category.spending_type`, the same field the Categories page sets.
+   *
+   * Null until the categories load, because the sentence is unsayable without
+   * them — never a zero, which would read as "nothing was movable".
+   */
+  const [movable, setMovable] = useState<
+    { fixed: number; flexible: number; total: number; unattributable: string[] } | null
+  >(null);
 
   const [categorySpending, setCategorySpending] = useState<Array<{
     name: string;
@@ -213,6 +276,33 @@ export const Analytics: React.FC = () => {
       setPrevious(summarise(sumAmounts(priorIncome), sumAmounts(priorExpenses)));
 
       const expenseTotal = sumAmounts(currentExpenses);
+
+      // *** OVER THE WHOLE EXPENSE LIST, NOT THE EIGHT THE DONUT DRAWS. ***
+      // `slice(0, 8)` below is a chart decision; using it here would leave
+      // everything past the eighth category out of a figure presented as the
+      // month's total, which is the silent-undercount shape that has bitten
+      // this project before.
+      try {
+        const { categories: table } = await categoriesApi.getAll();
+        const byName = spendingTypeByName((table || []).map((c) => ({
+          id: c.id, name: c.name, parent_id: c.parent_id ?? null,
+          spending_type: (c.spending_type ?? null) as never,
+        })));
+        const split = splitSpendByGroup(
+          currentExpenses.map((cat) => ({ name: cat.name || '', amount: cat.amount || 0 })),
+          byName);
+        setMovable({
+          fixed: split.fixed,
+          flexible: split.flexible,
+          total: expenseTotal,
+          unattributable: split.unattributable,
+        });
+      } catch {
+        // The sentence is an extra. A category-table failure must not take the
+        // charts down, and showing zeroes instead would be a claim.
+        setMovable(null);
+      }
+
       setCategorySpending(currentExpenses.slice(0, 8).map((cat, idx) => ({
         name: cat.name || 'Uncategorised',
         value: cat.amount || 0,
@@ -368,31 +458,18 @@ export const Analytics: React.FC = () => {
     <>
       <div style={pageContainerStyle}>
         <div className="page-container">
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '32px',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: '32px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              marginBottom: '8px'
-            }}>
-              Analytics Dashboard
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-              {selectedMember
-                ? `${selectedMember.name}'s money`
-                : 'Everyone sharing this finPal instance'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {/* "Analytics", not "Analytics Dashboard" — the app has a Dashboard and
+            it is a different page. The mockup's sentence says what this one is
+            for, and the member filter still qualifies whose money it is. */}
+        <PageHead
+          band="analytics"
+          title="Analytics"
+          subtitle={<>
+            Where it went, and how that compares with the months behind it.
+            {' '}
+            {selectedMember ? `${selectedMember.name}'s money.` : 'Everyone sharing this finPal instance.'}
+          </>}
+          right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Beside the range selector: both narrow the whole page, so they
                 belong together rather than beside any one chart. */}
             <MemberFilter members={members} value={memberId} onChange={setMemberId} />
@@ -437,8 +514,8 @@ export const Analytics: React.FC = () => {
               <Download size={16} />
               Export
             </button>
-          </div>
-        </div>
+          </div>}
+        />
 
         {/* A failed load used to be console.error only, leaving every figure at
             its initial 0 while the health ratios reported "good" — an outage that
@@ -649,6 +726,45 @@ export const Analytics: React.FC = () => {
                         </div>
                       ))}
                     </div>
+
+                    {/* *** THE ONE SENTENCE A DONUT CANNOT SAY. ***
+                        A big housing wedge invites the reading "I overspend on
+                        housing". The honest reading is usually the opposite —
+                        the ground is expensive, and rent was never the part
+                        that could have gone differently. `spending_type` is
+                        what lets the page tell those apart, and it is the same
+                        field the Categories page sets, so sorting categories
+                        changes this sentence. That is voice rule 11 made
+                        structural rather than written as a paragraph.
+
+                        Shown only when finPal can actually attribute the
+                        month: `movable` is null until the category table
+                        arrives, and a zero here would read as "nothing was
+                        yours to move". */}
+                    {movable && movable.total > 0 && movable.fixed > 0 && (
+                      <p style={{
+                        marginTop: '18px', paddingTop: '16px',
+                        borderTop: '1px solid var(--border-light)',
+                        fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.6,
+                      }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>
+                          {(movable.fixed / movable.total * 100).toFixed(1)}% of what went out
+                          arrives whatever you do
+                        </strong>
+                        {' '}— so it is not the part you could have spent differently. What was
+                        actually yours to move was{' '}
+                        <strong style={{ color: 'var(--text-primary)' }}>
+                          {formatMoney(movable.flexible)}
+                        </strong>.
+                        {movable.unattributable.length > 0 && (
+                          <>
+                            {' '}Left out of that split, because more than one category shares
+                            the name and they are sorted differently:{' '}
+                            {movable.unattributable.join(', ')}.
+                          </>
+                        )}
+                      </p>
+                    )}
                   </>
                 ) : (
                   <div style={emptyStateStyle}>No spending data</div>

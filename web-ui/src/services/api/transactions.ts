@@ -12,6 +12,17 @@ export interface Transaction {
     id: number;
     name: string;
     icon?: string;
+    /**
+     * The category's colour, which the server has always sent and this type
+     * has never declared — so no caller could read it without a cast.
+     *
+     * The same shape as `hasCompletedOnboarding` on the auth response
+     * (D-214): an undeclared field is a field nobody can use. Declared
+     * rather than cast, because the question "which side is wrong" has an
+     * answer and it is the type. Optional, because a category row predating
+     * the column has none.
+     */
+    color?: string;
   };
   category_id?: number;
   type?: 'income' | 'expense';

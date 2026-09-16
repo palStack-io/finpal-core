@@ -291,8 +291,18 @@ for (const page of PAGES) {
         scrollProof[`${name}:${theme}`] = out.scrollers;
       }
 
+      // Tier 4: text covered inside a page head. Its own line, because it is
+      // not an overflow and reading it as one would send somebody looking for a
+      // width that is fine.
+      const collided = out.collisions || [];
+      for (const c of collided) {
+        console.log(`  FAIL ${scope.padEnd(38)} page head: ${JSON.stringify(c.a)} is covered by ${JSON.stringify(c.b)} over ${c.over}px`);
+        seen[scope] = seen[scope] || new Set();
+        seen[scope].add(`COLLISION:${c.a}`);
+      }
+
       const head = `${scope.padEnd(38)} main ${String(out.main.content).padStart(5)}/${String(out.main.box).padStart(4)}  doc ${out.doc.content}/${out.doc.box}`;
-      if (!out.offenders.length && !out.docOverflows) {
+      if (!out.offenders.length && !out.docOverflows && !collided.length) {
         console.log(`  ok   ${head}`);
       } else {
         console.log(`  FAIL ${head}`);
@@ -383,11 +393,14 @@ if (WRITE_BASELINE) {
 if (!existsSync(baselinePath)) {
   const n = Object.values(serialised).reduce((a, b) => a + b.length, 0);
   if (n) {
-    console.error(`\n${n} overflowing element(s) across ${Object.keys(serialised).length} scope(s), and no baseline.json to excuse them.`);
+    // "finding", not "overflowing element": Tier 4 reports text covered by
+    // something on top of it, which overflows nothing and would send a reader
+    // looking for a width that is fine.
+    console.error(`\n${n} finding(s) across ${Object.keys(serialised).length} scope(s), and no baseline.json to excuse them.`);
     console.error('Fix them, or record them deliberately with --write-baseline and say why in the commit.');
     process.exit(1);
   }
-  console.log('\nno horizontal overflow at any width, in either theme.');
+  console.log('\nno horizontal overflow at any width, in either theme, and nothing covered in a page head.');
   process.exit(0);
 }
 

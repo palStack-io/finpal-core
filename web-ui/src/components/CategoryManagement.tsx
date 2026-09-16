@@ -6,7 +6,12 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from './budgets/SpendingTypeControl';
-import { StatCard } from './StatCard';
+import { PageHead } from './PageHead';
+import { TotalsRow } from './dashboard/TotalsRow';
+import { formatMoney } from '../styles/money';
+import { analyticsService } from '../services/analyticsService';
+import { lastFullMonth } from '../utils/monthKeys';
+import { spendingTypeByName, splitSpendByGroup, SpendSplit } from '../utils/spendingGroups';
 
 /**
  * Where the "Hide these" choice for the suggested-categories panel lives (#125). A per-user
@@ -343,9 +348,52 @@ export const CategoryManagement: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [addingSubcategoryTo, setAddingSubcategoryTo] = useState<number | null>(null);
 
+  /**
+   * *** WHAT LAST MONTH'S SPENDING ACTUALLY SPLIT INTO. ***
+   * The page has always been able to say how categories are CLASSIFIED and
+   * never what that classification is worth, so the three-way control had no
+   * payoff on screen: a user could sort 128 categories and see no figure
+   * change anywhere. This is that figure — and it is the last COMPLETE month,
+   * because on the 3rd rent has landed and the month's groceries have not, so
+   * "fixed" would read as almost all of spending and tell the reader nothing
+   * is theirs to move.
+   *
+   * Loaded in its own effect, not folded into `loadCategories`: it is a
+   * different endpoint with a different failure mode, and a spend request that
+   * 500s must not take the category list down with it. The split simply does
+   * not render.
+   */
+  const [split, setSplit] = useState<(SpendSplit & { label: string }) | null>(null);
+
   useEffect(() => {
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    if (!categories.length) return;
+    let cancelled = false;
+    (async () => {
+      const month = lastFullMonth();
+      try {
+        // 200, not 5: this is a total, and a "top 5" would silently make every
+        // figure on the row too small. The endpoint's default is 5.
+        const rows = await analyticsService.getTopSpendingCategories(
+          200, month.start, month.end, 'expense');
+        if (cancelled) return;
+        const byName = spendingTypeByName(categories.map((c) => ({
+          id: c.id, name: c.name, parent_id: c.parent_id ?? null,
+          spending_type: (c.spending_type ?? null) as never,
+        })));
+        setSplit({ ...splitSpendByGroup(rows, byName), label: month.label });
+      } catch {
+        // Silent on purpose: the split is an extra, and an error banner over a
+        // working category list would be the page shouting about the wrong
+        // thing. `uiHonesty` forbids showing a zero here instead.
+        if (!cancelled) setSplit(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [categories]);
 
   const loadCategories = async () => {
     try {
@@ -469,17 +517,13 @@ export const CategoryManagement: React.FC = () => {
        *** THIS FILE ALREADY IMPORTED `pageContainerStyle` AND NEVER USED IT. ***
        A shared barrel import makes a page look like it adopted the shell. */
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          {/* h1, not h2 — this is the PAGE's own title and everything under it is
-              a section, so the document outline started at level 2 with no h1
-              at all. Size stays inline; nothing moves on screen. Found by
-              `every-page.spec.ts`, which walks all 21 routes — the older h1
-              check walked six and this page was not one of them. */}
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Categories</h1>
-          <p style={bodyTextStyle}>Organize your transactions with categories and subcategories</p>
-        </div>
-        <button
+      <PageHead
+        band="categories"
+        title="Categories"
+        subtitle={split
+          ? `${split.label}, your last full month. Fixed is what arrives whatever you do; flexible is what is actually yours to move.`
+          : 'Fixed is what arrives whatever you do; flexible is what is actually yours to move.'}
+        right={<button
           onClick={handleAddCategory}
           style={{
             padding: '12px 20px',
@@ -511,44 +555,119 @@ export const CategoryManagement: React.FC = () => {
         >
           <Plus size={20} />
           Add Category
-        </button>
-      </div>
+        </button>}
+      />
 
-      {/* Stats
+      {/* *** THE PAYOFF FOR SORTING THEM, WHICH THIS PAGE NEVER SHOWED. ***
+          Three figures, from the last full month, in the same three groups the
+          per-row control sets. Fixed first because it is the one the reader
+          cannot change; flexible second because it is the answer to "what is
+          actually mine to move".
 
-          `StatCard`, not three hand-rolled copies. Dashboard, Transactions, Budgets and
-          Accounts already used the shared component; this page and Rules each kept their
-          own, and the two had drifted — measured on the deployed app, this row rendered
-          **132px** here and **113px** on Rules, because Categories wrapped its icon in a
-          40x40 tinted box and Rules used a bare 20px glyph. Same role, same declared
-          padding, 19px apart, which is what "the spacing looks weird between these pages"
-          turned out to mean. A shell nothing shares is a shell nothing keeps in step. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <StatCard
-          label="Main Categories"
-          value={String(parentCategories.length)}
-          accentColor="var(--accent-blue)"
-          icon={<Folder size={24} style={{ color: 'var(--accent-blue)' }} />}
-        />
-        <StatCard
-          label="Subcategories"
-          value={String(categories.filter(c => c.parent_id).length)}
-          accentColor="#a855f7"
-          icon={<Tag size={24} style={{ color: '#a855f7' }} />}
-        />
-        <StatCard
-          label="Total Items"
-          value={String(categories.length)}
-          accentColor="var(--brand-green-glow)"
-          /* *** THE INK, NOT THE BRAND VALUE. *** `--brand-green-glow`
-             measured 2.21:1 here against the 3:1 non-text floor: it is a
-             SURFACE colour that reads as a glow on dark and vanishes on the
-             near-white card. `--g-ink` is the token that exists so an accent
-             can move as a mark without dragging the surfaces it paints with
-             it (D-103). */
-          icon={<Search size={24} style={{ color: 'var(--g-ink)' }} />}
-        />
-      </div>
+          Every number here is joined from two payloads by category NAME,
+          because `/analytics/categories/top` carries no id. Names can collide —
+          the demo has six duplicates, one resolving to two different types — so
+          `splitSpendByGroup` refuses an ambiguous name rather than guessing,
+          and anything it could not attribute is named below rather than
+          quietly missing from a total. */}
+      {/* *** RENDERED THROUGH `TotalsRow`, NOT A FOURTH HAND-ROLLED GRID. ***
+          I wrote this as its own `display: grid` with hairline borders first,
+          which is `TotalsRow` re-implemented — and `sidebarAndStatCardsMeasured`
+          failed it, correctly: the gate's whole subject is that a page's stat
+          row goes through the one shared shell, because this file and Rules
+          once drifted 19px apart doing exactly this. The component was written
+          for the dashboard and its own header says it is meant to be reused
+          for "the same shape of header and four of its own figures".
+
+          Every number here is joined from two payloads by category NAME,
+          because `/analytics/categories/top` carries no id. Names can collide —
+          the demo has six duplicates, one resolving to two different types — so
+          `splitSpendByGroup` refuses an ambiguous name rather than guessing,
+          and anything it could not attribute is named below rather than
+          quietly missing from a total. */}
+      {split && (
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-light)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          marginBottom: '24px',
+        }}>
+          <TotalsRow
+            cells={[
+              {
+                label: 'Fixed',
+                value: formatMoney(split.fixed),
+                note: split.fixed === 0
+                  ? `nothing landed in ${split.label.split(' ')[0]}`
+                  : 'arrives whatever you do',
+              },
+              {
+                label: 'Flexible',
+                value: formatMoney(split.flexible),
+                valueColor: 'var(--g-ink)',
+                note: split.flexible === 0
+                  ? `nothing landed in ${split.label.split(' ')[0]}`
+                  : 'yours to move',
+              },
+              {
+                label: 'Non-monthly',
+                // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
+                // FILLS. `--kt-seg-4` is #B8884D, which measures 3.06:1 on the
+                // card in light — the contrast walk failed this exact pair, and
+                // `coins/_kit.css` carries the same warning with the same
+                // number: it "survives as --seg-4, which is a FILL and never
+                // carries a label".
+                value: formatMoney(split.non_monthly),
+                valueColor: 'var(--au-ink)',
+                note: split.non_monthly === 0
+                  ? `nothing landed in ${split.label.split(' ')[0]}`
+                  : 'lands some months and not others',
+              },
+              // Only when there is some: a zero here would invite sorting work
+              // that is already done, and "Not sorted yet — $0.00" reads as a
+              // problem rather than as finished.
+              ...(split.unsorted > 0 ? [{
+                label: 'Not sorted yet',
+                value: formatMoney(split.unsorted),
+                valueColor: 'var(--text-secondary)',
+                // NOT folded into flexible. Unsorted means finPal does not
+                // know; calling it movable would claim the user said so.
+                note: 'finPal cannot say which of the three this is',
+              }] : []),
+            ]}
+          />
+        </div>
+      )}
+      {split && split.unattributable.length > 0 && (
+        <p className="fp-hint" style={{ marginTop: '-12px', marginBottom: '24px' }}>
+          Left out of the figures above, because more than one category shares
+          the name and they are sorted differently:{' '}
+          {split.unattributable.join(', ')}.
+        </p>
+      )}
+
+      {/* *** THE THREE COUNT CARDS ARE GONE, AND THE SPLIT ABOVE IS WHY. ***
+          They said Main Categories 19, Subcategories 128, Total Items 147 —
+          inventory, not insight. With the fixed/flexible figures now sitting
+          directly above them the page carried TWO stacked three-column rows
+          saying different kinds of thing, which is the 'everything looks out
+          of place' shape the dashboard was just rewritten to remove, and the
+          mockup has only the money row.
+
+          The one count that prompts an action survives in the line below,
+          without a denominator: '19 categories have no spending group yet'.
+          '19 of 147' would be the '16 of 19 lessons' shape the spec took off
+          the dashboard — a total finPal chose rather than one the user did.
+
+          The `StatCard` import goes with them: this was its only use here, and
+          an import with no JSX behind it is the same false claim a comment can
+          make. (I wrote "still used by this file's other row" first, checked,
+          and there is no other row — D-221 was exactly a comment describing a
+          world that had moved on.) `sidebarAndStatCardsMeasured` is about not
+          hand-rolling a stat shell, not about how many pages use the shared
+          one, so dropping a usage is not a regression — and the split above
+          renders no `bigStatStyle`, which is the thing that gate looks for. */}
 
       {/* Search */}
       <div style={{ marginBottom: '24px' }}>
@@ -593,6 +712,46 @@ export const CategoryManagement: React.FC = () => {
       </div>
 
       {/* Categories List */}
+      {/* *** THE PAYOFF LINE — the mockup's one addition to this page. *** It
+          lists categories and never says why sorting them matters, so the
+          three-way control reads as admin. What it earns the user is stated
+          here, in their own numbers.
+
+          *** A COUNT OF WHAT IS LEFT, NEVER A FRACTION. *** "128 of 147" is a
+          denominator finPal chose; "36 have no spending group yet" is a fact
+          about their data and it goes down as they work. Decision 5 allows one
+          denominator — a target the user set — and this is not one.
+
+          *** AND NO COIN FIGURE, DELIBERATELY. *** The mockup prints
+          "+300 coins" for finishing, but `/coins` returns coins ALREADY EARNED
+          scaled by coverage, not a price for completion. Promising 300 would be
+          inventing a figure on the screen whose whole job is to be trustworthy.
+          Review shows the earned badge per section, which is the honest half of
+          the same idea. */}
+      {(() => {
+        // `categories` is already FLAT — parents and children together, with
+        // the tree derived from `parent_id` (the stat row above counts
+        // children the same way). My first version recursed into a
+        // `subcategories` field this type does not declare, and the typecheck
+        // said so.
+        const unsorted = categories.filter((c) => !c.spending_type).length;
+        if (unsorted === 0) return null;
+        return (
+          <div style={{
+            marginBottom: '16px', padding: '14px 18px',
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--border-light)',
+            borderRadius: '12px',
+            fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6,
+          }}>
+            <strong>{unsorted.toLocaleString()}</strong>{' '}
+            {unsorted === 1 ? 'category has' : 'categories have'} no spending group yet.
+            Sorting {unsorted === 1 ? 'it' : 'them'} is what lets finPal tell you what is
+            actually yours to move each month, instead of guessing at it.
+          </div>
+        );
+      })()}
+
       <div style={flexColGap16}>
         {parentCategories.length === 0 ? (
           <div style={{
@@ -659,9 +818,16 @@ export const CategoryManagement: React.FC = () => {
                       {categoryIcon(category.icon)}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px', overflowWrap: 'anywhere' }}>
+                      {/* h2, not h3. This sits directly under the page's single h1 with no
+                          section heading between, so an h3 here jumps a level and breaks
+                          the outline a screen reader navigates by. Found by widening
+                          `every-page.spec.ts`'s heading check from the six pages
+                          `standards.spec.ts` listed to all 21 derived routes — four pages
+                          were doing this and nothing said so. The size is inline, so the
+                          tag change is invisible on screen. */}
+                      <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px', overflowWrap: 'anywhere' }}>
                         {category.name}
-                      </h3>
+                      </h2>
                       <p style={bodyTextStyle}>
                         {subcategories.length} subcategor{subcategories.length === 1 ? 'y' : 'ies'}
                       </p>
@@ -875,9 +1041,9 @@ export const CategoryManagement: React.FC = () => {
           borderRadius: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <h3 className="fp-section-title" style={{ marginBottom: 0 }}>
+            <h2 className="fp-section-title" style={{ marginBottom: 0 }}>
               Suggested Categories
-            </h3>
+            </h2>
             <button
               type="button"
               onClick={dismissSuggestions}

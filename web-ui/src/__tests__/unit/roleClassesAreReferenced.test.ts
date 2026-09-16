@@ -45,6 +45,15 @@ const DELIBERATELY_UNREFERENCED: Record<string, string> = {
     'RECONCILED to what ships (two-stop dark green, white text) but not yet ' +
     'adopted: the 14 primary buttons also carry per-site hover handlers, and ' +
     'moving those is its own slice. It is now SAFE to adopt, which it was not.',
+  'fp-main-aside':
+    'Its only consumer was the dashboard\'s charts row — a main chart with the ' +
+    'category donut as its aside. The donut was removed as a duplicate of the ' +
+    'spend strip, so Cash Flow is full width and the grid is gone. The class ' +
+    'is KEPT rather than deleted because "a wide main with a narrow aside" is ' +
+    'a layout this app will want again (Analytics is the obvious next one) and ' +
+    'it carries a measured responsive breakpoint plus a `> *` min-width rule ' +
+    'that would have to be rediscovered. Delete it if nothing has adopted it ' +
+    'by the time the next two-column page is built.',
 };
 
 function walk(dir: string, out: string[] = []): string[] {

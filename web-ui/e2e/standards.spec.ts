@@ -80,27 +80,31 @@ test('dark mode meets the same standard, not a lower one', async ({ page }) => {
   expect(results.violations.map((v) => v.id)).toEqual([]);
 });
 
-test('every page has exactly one h1 and no skipped heading level', async ({
-  page,
-}) => {
-  // Not an axe rule at AA (`page-has-heading-one` is best-practice, and
-  // `heading-order` is too), but it is the thing that makes a page navigable by
-  // screen reader and it is cheap to assert. Kept separate from the axe run so
-  // that a failure here is legible as a structure problem, not a WCAG citation.
-  for (const [name, path, heading] of PAGES) {
-    await page.goto(path);
-    await pageIsLoaded(page, heading);
-
-    const levels = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'))
-        .filter((h) => (h as HTMLElement).offsetParent !== null)
-        .map((h) => Number(h.tagName[1])));
-
-    expect(levels.filter((l) => l === 1), `${name}: h1 count`).toHaveLength(1);
-    for (let i = 1; i < levels.length; i += 1) {
-      expect(levels[i] - levels[i - 1],
-        `${name}: heading jumps h${levels[i - 1]} -> h${levels[i]}`)
-        .toBeLessThanOrEqual(1);
-    }
-  }
-});
+/**
+ * *** THE HEADING-OUTLINE CHECK MOVED TO `every-page.spec.ts`. ***
+ *
+ * It lived here, over the six-page `PAGES` list above, and that list is exactly
+ * the problem `every-page.spec.ts` was written to fix: six routes audited, the
+ * app has twenty-one. Widening it found **four more pages** jumping `h1 -> h3`
+ * — /categories, /recurring, /rules and /groups — none of which this file could
+ * ever have seen.
+ *
+ * It is not duplicated in both places on purpose. This repo's own rule, written
+ * at the top of this file for colour-contrast: two gates on one criterion means
+ * two places to update and two chances to disagree (D-18). The version over
+ * there is a strict superset of the one that was here AND its route list is
+ * DERIVED from `App.tsx` plus the module manifests, so a page added tomorrow is
+ * checked tomorrow rather than when somebody remembers to type it in.
+ *
+ * *** AND THE SAME ARGUMENT APPLIES TO THE axe RUNS LEFT IN THIS FILE, WHICH IS
+ * SAID HERE RATHER THAN LEFT FOR SOMEBODY TO NOTICE. *** `every-page.spec.ts`
+ * runs axe at the same tags, with `color-contrast` disabled the same way, over
+ * all 21 routes in both themes — so the six `PAGES` tests below and the dark-mode
+ * test are a subset of it too. They are KEPT, deliberately: a failure scoped to
+ * one named page is faster to read than the same failure inside a 40-test walk,
+ * and deleting a working gate is a bigger risk than carrying a redundant one.
+ * That is a judgement, not an oversight, and it is the next thing to consolidate
+ * if this file is touched again. **D-221 was a comment that described a world
+ * that had moved on; a comment that quietly contradicts its own file is the same
+ * defect waiting to happen.**
+ */

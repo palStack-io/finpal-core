@@ -7,6 +7,10 @@ import { groupsApi, type Group } from '../services/api/groups';
 import { SlidePanel } from '../components/SlidePanel';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { PageHead } from '../components/PageHead';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
+import { formatMoney } from '../styles/money';
+import { settlementFor, peopleYouOwe, type Settlement } from '../utils/groupSettlement';
 
 interface GroupFormProps {
   onSuccess: () => void;
@@ -457,9 +461,53 @@ export const Groups: React.FC = () => {
   const branding = getBranding(user?.default_currency_code || 'USD');
 
   const [groups, setGroups] = useState<Group[]>([]);
+  /* The settlement is attributed by user id, never by display name — see
+     `groupSettlement.ts`. Without an identity nothing can be attributed at all,
+     and the helper says so rather than reporting zero.
+     `id` and not `email`: `from_id`/`to_id` in the balances payload are
+     `User.id`, which this schema happens to fill with the email. Comparing
+     `email` works only for as long as that stays true. */
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
   const [loading, setLoading] = useState(true);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  /**
+   * Who owes whom, across every group.
+   *
+   * *** ONE REQUEST PER GROUP, BECAUSE THE ENDPOINT IS PER-GROUP. *** That is
+   * an N+1 and it is stated rather than hidden: three groups on the demo, and
+   * `Promise.allSettled` so one failing group costs its own figure and not the
+   * page. A single endpoint returning every settlement at once would be the
+   * better shape and is a backend change nobody has asked for yet.
+   *
+   * `null` until it has been read: the row must not render a $0.00 before the
+   * answer exists, which is exactly what the cards it replaces used to do.
+   */
+  const [settlement, setSettlement] = useState<Settlement | null>(null);
+
+  useEffect(() => {
+    if (!groups.length) {
+      // No groups is a settled state, not an unread one.
+      setSettlement({ youOwe: 0, youAreOwed: 0, yourDebts: [], unreadable: [] });
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.allSettled(
+        groups.map((group) => groupsApi.balances(group.id)));
+      if (cancelled) return;
+      setSettlement(settlementFor(currentUserId, groups.map((group, i) => {
+        const result = results[i];
+        return {
+          groupId: group.id,
+          groupName: group.name,
+          balances: result.status === 'fulfilled' ? result.value : null,
+        };
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, [groups, currentUserId]);
 
   useEffect(() => {
     loadGroups();
@@ -534,16 +582,11 @@ export const Groups: React.FC = () => {
     <>
       <div style={pageContainerStyle}>
         <div className="page-container">
-          {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h1 className="page-title">
-                  Groups
-                </h1>
-                <p style={bodyTextStyle}>Split shared costs with the people in your household</p>
-              </div>
-              <button
+          <PageHead
+            band="groups"
+            title="Groups"
+            subtitle="Shared costs, and who owes what."
+            right={<button
                 onClick={handleCreateGroup}
                 style={{
                   padding: '10px 20px',
@@ -562,37 +605,76 @@ export const Groups: React.FC = () => {
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-main-green)')}
               >
                 <Plus size={16} /> Create Group
-              </button>
-            </div>
-          </div>
+              </button>}
+          />
 
-          {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 260px))', gap: '16px', marginBottom: '24px' }}>
+          {/* *** "ACTIVE GROUPS: 3" IS A COUNT OF YOUR OWN ROWS, AND THE PAGE
+              EXISTS TO ANSWER A DIFFERENT QUESTION. *** It is replaced by the
+              one this page is for — who owes what — which was only buildable
+              once `/groups/<id>/balances` started sending user ids alongside
+              the display names.
+
+              *** THIS ROW USED TO BE A LIE AND THAT IS WHY IT IS CAREFUL. ***
+              Before it was deleted, "You Owe" and "You Are Owed" were
+              `const totalOwed = 0` with a "mock for now" comment: a confident
+              $0.00 whatever the real balances were. So a group whose balances
+              could not be read is NAMED rather than counted as zero, and a
+              server too old to send ids produces no total at all instead of a
+              wrong one. */}
+          {settlement && (
             <div style={{
-              padding: '20px',
               background: 'var(--bg-card)',
-              backdropFilter: 'blur(8px)',
               border: '1px solid var(--border-light)',
-              borderRadius: '12px'
+              borderRadius: '12px',
+              overflow: 'hidden',
+              marginBottom: '24px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'rgba(59, 130, 246, 0.2)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+              <TotalsRow
+                cells={[
+                  {
+                    label: 'You owe',
+                    value: formatMoney(settlement.youOwe),
+                    valueColor: settlement.youOwe > 0 ? 'var(--accent-red)' : undefined,
+                    note: settlement.youOwe > 0
+                      ? `across ${settlement.yourDebts.length} ${settlement.yourDebts.length === 1 ? 'payment' : 'payments'}`
+                      : 'you are square',
+                  },
+                  {
+                    label: 'You are owed',
+                    value: formatMoney(settlement.youAreOwed),
+                    valueColor: settlement.youAreOwed > 0 ? 'var(--g-ink)' : undefined,
+                    note: settlement.youAreOwed > 0 ? 'waiting on other people' : 'nobody owes you',
+                  },
+                  {
+                    label: 'Settling up',
+                    value: settlement.yourDebts.length
+                      ? `${settlement.yourDebts.length} ${settlement.yourDebts.length === 1 ? 'payment' : 'payments'}`
+                      : 'nothing to settle',
+                    note: settlement.yourDebts.length
+                      ? `to ${peopleYouOwe(settlement)} ${peopleYouOwe(settlement) === 1 ? 'person' : 'people'}`
+                      : 'every group is square',
+                  },
+                ]}
+              />
+              {settlement.unreadable.length > 0 && (
+                <p className="fp-hint" style={{
+                  margin: 0, padding: '12px 22px',
+                  borderTop: '1px solid var(--border-light)',
                 }}>
-                  <Users size={20} color="#3b82f6" />
-                </div>
-                <span style={bodyTextStyle}>Active Groups</span>
-              </div>
-              <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{groups.length}</p>
+                  Not included above, because finPal could not read who owes whom:{' '}
+                  {settlement.unreadable.join(', ')}.
+                </p>
+              )}
+              <p className="fp-hint" style={{
+                margin: 0, padding: '12px 22px',
+                borderTop: '1px solid var(--border-light)',
+              }}>
+                {/* The question the page raises and never answers. */}
+                A bill you are splitting is not money you spent, so none of this
+                touches your budgets or your goals.
+              </p>
             </div>
-
-          </div>
+          )}
 
           {/* Search */}
           <div style={{ marginBottom: '24px' }}>
@@ -647,9 +729,16 @@ export const Groups: React.FC = () => {
               textAlign: 'center'
             }}>
               <Users size={64} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
+              {/* h2, not h3. This sits directly under the page's single h1 with no
+                  section heading between, so an h3 here jumps a level and breaks
+                  the outline a screen reader navigates by. Found by widening
+                  `every-page.spec.ts`'s heading check from the six pages
+                  `standards.spec.ts` listed to all 21 derived routes — four pages
+                  were doing this and nothing said so. The size is inline, so the
+                  tag change is invisible on screen. */}
+              <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
                 {searchTerm ? 'No groups match your search' : 'No groups yet'}
-              </h3>
+              </h2>
               {!searchTerm && (
                 <>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
@@ -719,9 +808,16 @@ export const Groups: React.FC = () => {
                         {group.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {/* h2, not h3. This sits directly under the page's single h1 with no
+                            section heading between, so an h3 here jumps a level and breaks
+                            the outline a screen reader navigates by. Found by widening
+                            `every-page.spec.ts`'s heading check from the six pages
+                            `standards.spec.ts` listed to all 21 derived routes — four pages
+                            were doing this and nothing said so. The size is inline, so the
+                            tag change is invisible on screen. */}
+                        <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
                           {group.name}
-                        </h3>
+                        </h2>
                         <p style={smallMetaStyle}>
                           {group.description || 'No description'}
                         </p>
@@ -738,9 +834,26 @@ export const Groups: React.FC = () => {
                           {group.members?.length || 0} members
                         </span>
                       </div>
+                      {/* *** "View balances" ON AN EMPTY GROUP PROMISES A PAGE
+                          WITH NOTHING ON IT. *** The seeded demo's three groups
+                          hold no expenses at all, so every row invited a click
+                          through to an empty screen — D-77's shape, which has
+                          hidden three defects in this product before, and the
+                          mockup's point about this page: say what it would show
+                          rather than dress it up.
+
+                          `expense_count === undefined` is a server that predates
+                          the field, and that is NOT the same as empty — it keeps
+                          the old label rather than claiming a group is bare. */}
                       <div style={flexRowGap8}>
                         <DollarSign size={16} color="var(--text-muted)" />
-                        <span style={bodyTextStyle}>View balances</span>
+                        <span style={bodyTextStyle}>
+                          {group.expense_count === undefined
+                            ? 'View balances'
+                            : group.expense_count === 0
+                              ? 'Nothing recorded yet'
+                              : `${group.expense_count} ${group.expense_count === 1 ? 'expense' : 'expenses'}`}
+                        </span>
                       </div>
                     </div>
 

@@ -8,6 +8,8 @@ import { formActionsStyle, labelStyle } from '../styles/formStyles';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { StatCard } from './StatCard';
+import { PageHead } from './PageHead';
+import { formatMoney } from '../styles/money';
 
 const accentTextStyle: React.CSSProperties = { fontSize: '14px', color: 'var(--text-secondary)', margin: 0 };
 const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 };
@@ -146,24 +148,14 @@ export const TransactionRules: React.FC = () => {
           `gap` on the outer row too: once it wraps, the heading block and the
           buttons need the space between them that `justify-content` was
           providing on one line. */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          {/* h1, not h2 — this is the PAGE's own title and everything under it is
-              a section, so the document outline started at level 2 with no h1
-              at all. Size stays inline; nothing moves on screen. Found by
-              `every-page.spec.ts`, which walks all 21 routes — the older h1
-              check walked six and this page was not one of them. */}
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Zap size={24} style={{ color: 'var(--au-ink)' }} />
-            Transaction Rules
-          </h1>
-          <p className="fp-hint">
-            Automatically categorize and organize transactions based on patterns
-          </p>
-        </div>
-        {/* The button pair wraps too: at 390 the two together are 285px, which
-            is wider than the viewport's content box on its own. */}
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      {/* No wrapper at all any more: `PageHead` owns the whole head, and the
+          flex row this replaced is the shape that put the actions over the
+          sentence at 390px on Accounts (D-223). */}
+      <PageHead
+        band="rules"
+        title="Rules"
+        subtitle="Teach finPal once and it sorts the same thing for ever."
+        right={<div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             onClick={handleBulkApply}
             disabled={applyingRules || rules.length === 0}
@@ -239,8 +231,8 @@ export const TransactionRules: React.FC = () => {
             <Plus size={20} />
             Add Rule
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* Success Message */}
       {successMessage && (
@@ -311,9 +303,16 @@ export const TransactionRules: React.FC = () => {
                 <div style={{ flex: 1 }}>
                   {/* Rule Name and Status */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>
+                    {/* h2, not h3. This sits directly under the page's single h1 with no
+                        section heading between, so an h3 here jumps a level and breaks
+                        the outline a screen reader navigates by. Found by widening
+                        `every-page.spec.ts`'s heading check from the six pages
+                        `standards.spec.ts` listed to all 21 derived routes — four pages
+                        were doing this and nothing said so. The size is inline, so the
+                        tag change is invisible on screen. */}
+                    <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>
                       {rule.name}
-                    </h3>
+                    </h2>
                     {rule.active ? (
                       <span style={{ padding: '4px 12px', background: 'rgba(134, 239, 172, 0.2)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--g-ink)', fontWeight: '600' }}>
                         Active
@@ -333,12 +332,27 @@ export const TransactionRules: React.FC = () => {
                     <p style={fieldMetaStyle}>
                       <strong>Field:</strong> {rule.pattern_field}
                     </p>
-                    {(rule.amount_min !== undefined || rule.amount_max !== undefined) && (
+                    {/* *** THIS RENDERED "Amount: Min: $null - Max: $null" ON
+                        EVERY RULE CARD, AND IT IS LIVE ON main. *** The guard
+                        tested `!== undefined`; the API sends `null`, and
+                        `null !== undefined` is true — so the line drew for all
+                        52 of the demo's rules with the literal word "null"
+                        formatted as money. `$null` is worse than silence: it
+                        is a figure that cannot be questioned because it is not
+                        a figure.
+
+                        `!= null` is deliberate — the one place loose equality
+                        earns its keep, because it covers null AND undefined —
+                        and the amounts go through `formatMoney` rather than a
+                        `$` template, so they carry the user's own currency
+                        symbol and separators instead of a hardcoded dollar.
+                        Found in a screenshot of the deployed demo. */}
+                    {(rule.amount_min != null || rule.amount_max != null) && (
                       <p style={fieldMetaStyle}>
                         <strong>Amount:</strong>{' '}
-                        {rule.amount_min !== undefined && `Min: $${rule.amount_min}`}
-                        {rule.amount_min !== undefined && rule.amount_max !== undefined && ' - '}
-                        {rule.amount_max !== undefined && `Max: $${rule.amount_max}`}
+                        {rule.amount_min != null && `Min: ${formatMoney(rule.amount_min)}`}
+                        {rule.amount_min != null && rule.amount_max != null && ' - '}
+                        {rule.amount_max != null && `Max: ${formatMoney(rule.amount_max)}`}
                       </p>
                     )}
                     {rule.transaction_type_filter && (
@@ -378,7 +392,30 @@ export const TransactionRules: React.FC = () => {
 
                   {/* Stats */}
                   <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    <span>Matched: {rule.match_count} times</span>
+                    {/* *** "Matched: 0 times" IS ACCURATE AND IT READS AS A
+                        FAILURE. *** demo1 has 52 rules and a total match count
+                        of zero — a seed characteristic, not a defect:
+                        `match_count` increments on import and these
+                        transactions were seeded directly. But a user with a new
+                        rule sees the same zero, and "a rule nobody can see
+                        working is furniture" (mockup, pages-web-2).
+
+                        So a rule that has fired says how often, and one that has
+                        not says what that means rather than printing a zero.
+                        Both are the truth; only one is usable. */}
+                    {/* *** THE EXPLANATION MOVED TO THE PAGE, AND THE ROW KEEPS
+                        THREE WORDS. *** This said "Not matched yet — it will
+                        apply to the next import" on every card. On the demo
+                        ALL FIFTY-TWO rules have `match_count: 0`, so the
+                        sentence appeared 52 times and stopped being a signal —
+                        a line that is always there says nothing about the row
+                        it is on. The reason is now stated once, below the
+                        list, where "every one of them" is the actual fact. */}
+                    <span>
+                      {rule.match_count > 0
+                        ? `Matched ${rule.match_count.toLocaleString()} ${rule.match_count === 1 ? 'time' : 'times'}`
+                        : 'no matches yet'}
+                    </span>
                     <span>Priority: {rule.priority}</span>
                     {rule.last_matched && <span>Last matched: {new Date(rule.last_matched).toLocaleDateString()}</span>}
                   </div>
@@ -444,6 +481,39 @@ export const TransactionRules: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {/* *** SAID ONCE, WHERE IT IS ACTUALLY ABOUT THE WHOLE LIST. ***
+              Every rule card used to carry "Not matched yet — it will apply to
+              the next import". On the demo all 52 rules have `match_count: 0`,
+              so that sentence rendered 52 times: a line that appears on every
+              row tells you nothing about any row, and the reader is left
+              assuming 52 separate things are broken.
+
+              The rows now say "no matches yet" in three words and the reason
+              lives here, once, phrased as the fact it is — a match count rises
+              when transactions are IMPORTED, and a seeded account never
+              imported anything. Shown only when it is true of every rule; the
+              moment one has fired, this disappears and the per-row counts
+              become the information again.
+
+              No coin figure, unlike the mockup's "+150 coins, already earned
+              in full": `/coins` returns what has been earned, not a price for
+              a state, and quoting a number nobody has committed to is what
+              these screens must not do. */}
+          {rules.length > 1 && rules.every((rule) => !rule.match_count) && (
+            <div style={{
+              padding: '14px 18px',
+              background: 'var(--surface-hover)',
+              border: '1px solid var(--border-light)',
+              borderRadius: '12px',
+              fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6,
+            }}>
+              You have taught finPal <strong>{rules.length}</strong> rules and every
+              one of them is still waiting. A rule&apos;s match count rises when
+              transactions are <em>imported</em>, so nothing here has had the chance
+              to fire yet — these will apply to your next import.
+            </div>
+          )}
         </div>
       )}
 
