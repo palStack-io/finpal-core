@@ -940,17 +940,42 @@ beforeEach(() => {
        * pass's overflow numbers — were measured against a page in an error state.
        * Verified against the real endpoint with a token: `purchase_price`,
        * `current_price`, `current_value`, `gain_loss`, `gain_loss_percentage`.
+       *
+       * *** AND THAT LIST WAS ITSELF INCOMPLETE — `cost_basis` AND `last_update`
+       * ARE ALSO SENT, AND WERE MISSING HERE UNTIL 2026-09-15. *** Re-read from
+       * the deployed payload, the holding keys are: `cost_basis`,
+       * `current_price`, `current_value`, `gain_loss`, `gain_loss_percentage`,
+       * `id`, `industry`, `last_update`, `name`, `notes`, `portfolio`,
+       * `portfolio_id`, `purchase_date`, `purchase_price`, `sector`, `shares`,
+       * `symbol`, `transactions`. Their absence was the SAME defect this comment
+       * describes, one field further on: `holdingTotals` refuses a holding whose
+       * `cost_basis` it cannot read, so all three rows landed in "not counted
+       * above" and both walks would have measured a page reporting $0.00 —
+       * an error state that has a contrast ratio and does not overflow.
+       *
+       * `cost_basis` here is `shares * purchase_price`, which is what the server
+       * computes (`src/models/investment.py`, `@property`), and each one
+       * reconciles with this fixture's own `gain_loss`: 25452-20664=4788,
+       * 13494-10092=3402, 9275.2-7282=1993.2. Not invented — derived, then
+       * checked against a figure that was already here.
+       *
+       * `last_update` has NO timezone suffix on purpose. That is the shape the
+       * API sends, and it is what `lastPriceUpdate` has to read as UTC rather
+       * than as local time.
        */
       holdings: [
         { id: 1, symbol: 'VWRP', name: 'Vanguard FTSE All-World Acc', shares: 210,
           purchase_price: 98.4, current_price: 121.2, current_value: 25452,
-          gain_loss: 4788, gain_loss_percentage: 23.2, portfolio_id: 1 },
+          cost_basis: 20664, gain_loss: 4788, gain_loss_percentage: 23.2,
+          last_update: '2026-09-16T04:09:22.458182', portfolio_id: 1 },
         { id: 2, symbol: 'AAPL', name: 'Apple Inc.', shares: 60, purchase_price: 168.2,
-          current_price: 224.9, current_value: 13494, gain_loss: 3402,
-          gain_loss_percentage: 33.7, portfolio_id: 1 },
+          current_price: 224.9, current_value: 13494, cost_basis: 10092,
+          gain_loss: 3402, gain_loss_percentage: 33.7,
+          last_update: '2026-09-16T04:09:22.631104', portfolio_id: 1 },
         { id: 3, symbol: 'MSFT', name: 'Microsoft Corporation', shares: 22,
           purchase_price: 331.0, current_price: 421.6, current_value: 9275.2,
-          gain_loss: 1993.2, gain_loss_percentage: 27.4, portfolio_id: 1 },
+          cost_basis: 7282, gain_loss: 1993.2, gain_loss_percentage: 27.4,
+          last_update: '2026-09-16T04:09:22.702551', portfolio_id: 1 },
       ],
     })),
     /*
