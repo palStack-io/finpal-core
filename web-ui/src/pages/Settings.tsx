@@ -8,6 +8,8 @@ import { getBranding } from '../config/branding';
 import { SimpleFinSettings } from '../components/import/SimpleFinSettings';
 import { InvestmentSettings } from '../components/investment/InvestmentSettings';
 import { TeamManagement } from '../components/settings/TeamManagement';
+import { teamService } from '../services/teamService';
+import { railTag, type RailFacts } from '../utils/settingsRailTags';
 import { ImportSources } from '../components/settings/ImportSources';
 import { AgentAccess } from '../components/settings/AgentAccess';
 import { userService } from '../services/userService';
@@ -108,6 +110,19 @@ const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
 const fieldLabelStyle: React.CSSProperties = { display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' };
 const sectionTitleStyle: React.CSSProperties = { fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' };
 const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
+
+/* The rail's state tag. Pushed to the right of the label by `marginLeft: auto`
+   inside the existing `.nav-item` flex row, so it needs no change to that rule.
+   `--text-muted` on `--bg-card`: quieter than the label on purpose, because the
+   label is what you click and the tag is what you read. */
+const railTagStyle: React.CSSProperties = {
+  marginLeft: 'auto',
+  fontSize: '11px',
+  fontWeight: 600,
+  color: 'var(--text-muted)',
+  letterSpacing: '0.02em',
+  whiteSpace: 'nowrap',
+};
 const redTextStyle: React.CSSProperties = { color: 'var(--accent-red)', fontSize: '14px', margin: 0 };
 const successBannerStyle: React.CSSProperties = { marginTop: '16px', padding: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '8px', color: 'var(--brand-green-glow)', fontSize: '14px' };
 
@@ -220,6 +235,57 @@ export const Settings: React.FC = () => {
   const [deletePassword, setDeletePassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  /**
+   * The household count for the rail's tag, or null.
+   *
+   * *** FETCHED ONLY FOR AN ADMIN, BECAUSE ONLY AN ADMIN HAS THE SECTION. ***
+   * The Household row is filtered out of `tabs` for everyone else — demo1 is
+   * not an admin and never sees it — so requesting the member list for them
+   * would be a round trip for a tag that cannot render.
+   *
+   * `TeamManagement` fetches the same list again when the section opens. That is
+   * deliberate rather than lifted state: this page needs a COUNT on mount and
+   * that component needs the rows plus its own loading and error handling, and
+   * coupling them would make the rail's tag depend on a component being
+   * mounted. A failure here leaves the count null, which renders no tag at all
+   * — never "0 people".
+   */
+  const [householdCount, setHouseholdCount] = useState<number | null>(null);
+
+  /* *** THE RAIL CARRIES EACH SECTION'S STATE, AND THAT IS THE WHOLE CHANGE. ***
+     Settings is nine subjects on one scroll, so the rail was the thing already
+     solving it — except it threw away everything it knew, and you had to open a
+     section to find out whether it was doing anything. `railTag` supplies the
+     fact; see `utils/settingsRailTags.ts` for why each one returns null rather
+     than a zero when it does not have the answer.
+
+     *** THIS PAGE DELIBERATELY DOES NOT GET `PageHead`. *** Every other page
+     opens with a 27px title, a sentence and a 52px ridge band because every
+     other page is ONE subject. Settings has its own two-pane shell, and a band
+     inside a 232px rail would be absurd. That is a recorded design decision,
+     not a page that was missed — `pageShells.test.ts` says so too. */
+  useEffect(() => {
+    if (!user?.is_admin) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const members = await teamService.getMembers();
+        if (!cancelled) setHouseholdCount(members.length);
+      } catch {
+        // Left null on purpose: no tag beats a wrong one, and this is a
+        // decoration on a rail — it must not raise a toast over a section the
+        // user has not asked for.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.is_admin]);
+
+  const railFacts: RailFacts = {
+    memberCount: householdCount,
+    modules: user?.modules,
+    hiddenModules: user?.hidden_modules,
+    currency: user?.default_currency_code,
+  };
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: <User size={18} /> },
@@ -497,6 +563,12 @@ export const Settings: React.FC = () => {
             >
               {tab.icon}
               <span>{tab.label}</span>
+              {/* Rendered only when there IS a tag. `railTag` returns null, and
+                  a null tag must occupy nothing — an empty chip reads as a
+                  value that failed to load. */}
+              {railTag(tab.id, railFacts) !== null && (
+                <span style={railTagStyle}>{railTag(tab.id, railFacts)}</span>
+              )}
             </button>
           ))}
         </nav>

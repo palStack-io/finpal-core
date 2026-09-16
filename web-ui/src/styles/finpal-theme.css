@@ -265,6 +265,16 @@
      white, so it clears both. A fixed hex like --g800 cannot do this job — it does
      not theme, and it measures 1.86:1 on the dark wash. */
   --g-ink: #166534; --au-ink: #b45309; --re-ink: #b91c1c;
+  /* *** OPAQUE ON PURPOSE, BECAUSE THE TRANSLUCENT VERSION FAILED AA THE MOMENT
+     ITS SURFACE CHANGED. *** The secondary green button used
+     `rgba(21, 128, 61, 0.2)`, so what `--g-ink` actually sat on depended on
+     whatever was behind it: measured 2026-09-15, that composite is #cde3d3 on
+     the page card (5.27:1, fine) and #b4d2be on `--head-sky` (**4.38:1, fail**).
+     Moving Investments' actions into `PageHead` changed the surface and the
+     contrast walk caught it as a new failing pair. This value IS the old
+     page-card composite, so nothing looks different — it just no longer
+     re-derives itself from its parent. `--g-ink` on it: 5.27:1. */
+  --g-wash: #cde3d3;
   /* *** A FOURTH INK, FOR THE SAME REASON AS THE OTHER THREE. *** The Edit and
      Delete icon buttons paint a 10% tint of their own accent and put the accent
      itself on top: #3b82f6 on #dbe6eb measures **2.90:1** against a 3:1
@@ -489,6 +499,10 @@
      both themes above and below) and these three keep the brand values, unchanged,
      for the surfaces they paint. */
   --g-ink: #5fce8b;
+  /* The dark twin of `--g-wash` — see the light block. This is the wash's
+     composite over `--head-sky` in dark, where the button now sits.
+     `--g-ink` #5fce8b on it: 6.94:1. */
+  --g-wash: #133421;
   --au-ink: #fbbf24;
   --re-ink: #f87171;
   /* The dark half of `--bl-ink`. #60a5fa measures 5.79 and 5.11 on the two dark
