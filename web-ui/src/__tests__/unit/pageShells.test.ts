@@ -126,15 +126,24 @@ describe('the shells are actually used', () => {
       // that changes per step, not a page title.
       'Onboarding.tsx',
       /**
-       * *** SETTINGS IS EXEMPT FOR NOW, AND THIS ENTRY IS A TODO WITH A
-       * REASON. *** It is a genuine app page, but it has a TWO-PANE shell of
-       * its own — a nav rail beside a content column — and its h1 is the
-       * rail's own 18px title, not a page head. Dropping `PageHead` in would
-       * put a 27px title and a 52px ridge band inside a 240px rail.
+       * *** SETTINGS IS EXEMPT BY DECISION, NOT BY OMISSION — AND THIS ENTRY
+       * STOPPED BEING A TODO ON 2026-09-15. *** It is a genuine app page, but
+       * it has a TWO-PANE shell of its own — a nav rail beside a content
+       * column — and its h1 is the rail's own 18px title, not a page head.
+       * Dropping `PageHead` in would put a 27px title and a 52px ridge band
+       * inside a 232px rail.
        *
-       * It is the largest page in the app by element count and it has no
-       * mockup; what its head should be is a design decision, not a
-       * conversion. Remove this line when that mockup exists.
+       * This entry previously read "a TODO with a reason ... remove this line
+       * when that mockup exists". The mockup now exists
+       * (`docs/mockups/settings-web.html`, outer repo) and it decided the
+       * opposite of what that sentence assumed: Settings is **the one page that
+       * does not get the title and the band**, because every other page opens
+       * that way for being ONE subject and Settings is nine. What the sheet
+       * changed instead is that the rail carries each section's state
+       * (`utils/settingsRailTags.ts`), which is chrome this page already had.
+       *
+       * So the line stays, and removing it would now be the regression. It is
+       * a recorded design decision with a drawn alternative behind it.
        */
       'Settings.tsx',
     ];

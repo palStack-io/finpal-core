@@ -97,4 +97,14 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
     d: 'M0,52 L130,28 L240,52 L370,22 L480,52 L620,32 L740,52 L880,24 L980,52 L1100,38 L1100,52 Z',
     opacity: 0.36,
   },
+  /* Investments RISES left to right — the only band that trends, because the
+     page is about a gap that has grown. Each peak clears the one before it
+     (24 -> 20 -> 16 -> 12) rather than alternating like the others. It is a
+     shape, NOT a claim about this user's return: a portfolio that is down
+     still gets this ridge, because the alternative is a page whose decoration
+     argues with its own figures. */
+  investments: {
+    d: 'M0,52 L140,40 L250,52 L390,32 L500,52 L650,24 L770,52 L910,18 L1020,52 L1100,14 L1100,52 Z',
+    opacity: 0.32,
+  },
 };
