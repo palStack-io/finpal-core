@@ -8,8 +8,18 @@ interface PageHeadProps {
   subtitle?: React.ReactNode;
   /** Actions, filters or the coin purse. Sits beside the title, wrapping under it when narrow. */
   right?: React.ReactNode;
-  /** Which ridge to draw. Keys are in `headBands.ts`. */
-  band: keyof typeof HEAD_BANDS;
+  /**
+   * Which ridge to draw. Keys are in `headBands.ts`.
+   *
+   * *** OPTIONAL, FOR THE ONE PAGE WHOSE CONTENT IS ALREADY A RANGE. *** The
+   * Dashboard opens with `GoalRange` — the user's real goals at their real
+   * elevations — and a decorative 52px ridge above that is the same picture
+   * twice, the second copy meaning nothing. Every other page gets one, and
+   * `pageHeadIsOnePlace.test.ts` asserts that the band SET and the set of bands
+   * pages actually name are equal, so a band nobody asks for is a red gate
+   * rather than dead geometry.
+   */
+  band?: keyof typeof HEAD_BANDS;
   children?: React.ReactNode;
 }
 
@@ -39,7 +49,7 @@ interface PageHeadProps {
  * component referencing it is better than eleven pages referencing it.
  */
 export const PageHead: React.FC<PageHeadProps> = ({ title, subtitle, right, band, children }) => {
-  const ridge = HEAD_BANDS[band];
+  const ridge = band ? HEAD_BANDS[band] : null;
 
   return (
     <div className="fp-page-head">
@@ -58,19 +68,21 @@ export const PageHead: React.FC<PageHeadProps> = ({ title, subtitle, right, band
 
       {children}
 
-      <svg
-        className="fp-page-head-band"
-        viewBox="0 0 1100 52"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-        focusable="false"
-      >
-        {/* The base first, so the ridge sits in front of it. */}
-        {ridge.base && (
-          <path d={ridge.base.d} fill="var(--head-ridge)" opacity={ridge.base.opacity} />
-        )}
-        <path d={ridge.d} fill="var(--head-ridge)" opacity={ridge.opacity} />
-      </svg>
+      {ridge && (
+        <svg
+          className="fp-page-head-band"
+          viewBox="0 0 1100 52"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          {/* The base first, so the ridge sits in front of it. */}
+          {ridge.base && (
+            <path d={ridge.base.d} fill="var(--head-ridge)" opacity={ridge.base.opacity} />
+          )}
+          <path d={ridge.d} fill="var(--head-ridge)" opacity={ridge.opacity} />
+        </svg>
+      )}
     </div>
   );
 };

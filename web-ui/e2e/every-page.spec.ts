@@ -78,7 +78,13 @@ function moduleRoutes(): Array<{ slug: string; path: string }> {
  * in this app has one of those even when its data failed to load.
  */
 const HEADINGS: Record<string, RegExp> = {
-  '/dashboard': /Dashboard|Welcome|Overview/,
+  // *** NOT /Dashboard/ ANY MORE, AND THIS IS WHY THE EXPECTATION IS PER PAGE.
+  // *** The page's head opens on "Your range" (or "Where you stand" for a user
+  // with no goals) — the word "Dashboard" named the route and said nothing, and
+  // the owner asked for it to go. A shared /.*/ regex here would have absorbed
+  // that silently; a named expectation makes the rename a visible diff, which
+  // is the whole argument in this file's own docstring.
+  '/dashboard': /Your range|Where you stand/,
   '/transactions': /Transactions/,
   '/accounts': /Accounts/,
   '/budgets': /Budget/,

@@ -438,19 +438,63 @@ export const Dashboard = () => {
     <>
       <div style={pageContainerStyle}>
 
-        {/* *** THE DASHBOARD WAS THE LAST PAGE HAND-ROLLING ITS OWN HEAD, AND I
-            WROTE THAT HEAD MYSELF EARLIER TODAY. *** A 28px inline h1 with
-            neither `PageHead` nor `.page-title`, which `pageShells.test.ts`
-            could not see while it counted class usages rather than asking
-            whether any page invents a title. Now the same component as every
-            other page, which is what "everything else does the same" asked
-            for. */}
+        {/* *** THE PAGE OPENS ON "YOUR RANGE", NOT ON THE WORD "DASHBOARD". ***
+            Owner, 2026-09-16: *"the dashboard dont need the dashboard header
+            section. i am ok with it starting with your range"*. They are right,
+            and the reason is worth writing down rather than just obeying: a
+            head reading **Dashboard / Everyone sharing this finPal instance**
+            above a card reading **Your range** is two headers before any
+            content, and the first one names the route rather than saying
+            anything. Every other page's head names its ONE subject; this
+            page's subject is the range.
+
+            So the head and that card are now one object — the title, the
+            sentence, the member filter, the range itself and the totals —
+            rather than a head, then a card, then the same figures. It is the
+            same consolidation the mockup already argued for one level in
+            ("the top of the page is one object now, not five"), applied one
+            level out.
+
+            *** AND IT DRAWS NO BAND, WHICH IS WHY `band` IS NOW OPTIONAL. ***
+            `GoalRange` below is a range of the reader's real goals at their
+            real elevations. A decorative 52px ridge above it is the same
+            picture twice, and the second copy means nothing. `HEAD_BANDS` lost
+            its `dashboard` entry in the same change, because
+            `pageHeadIsOnePlace.test.ts` asserts the band set and the set of
+            bands pages name are EQUAL — so a band nobody asks for reddens a
+            gate instead of sitting there as dead geometry.
+
+            The h1 moves with the title, so the page still has exactly one and
+            `every-page.spec.ts` still measures it — the heading expectation for
+            `/dashboard` moved with it. */}
         <PageHead
-          band="dashboard"
-          title="Dashboard"
-          subtitle={selectedMember
-            ? `${selectedMember.name}'s money`
-            : 'Everyone sharing this finPal instance'}
+          title={goals.length > 0 ? 'Your range' : 'Where you stand'}
+          /* *** TWO FACTS, AND MAKING THEM EXCLUSIVE WAS A REGRESSION THE
+             SUITE CAUGHT. *** The first draft of this consolidation put the
+             range sentence here when there were goals and the SCOPE sentence
+             only when there were none — so "Everyone sharing this finPal
+             instance" disappeared for every user who has a goal, which is
+             almost all of them. `DashboardMemberFilter.test.tsx` went red on
+             exactly that, and it is right to: the scope line is not decoration.
+             It replaced four per-card owner tags, and "whose money am I looking
+             at" is the question the filter beside it exists to answer — a
+             filter whose current value is not stated is a filter you have to
+             open to read. Both sentences, always. */
+          subtitle={<>
+            {goals.length > 0 && (
+              <span>What you are climbing, and the ground you stand on while you climb.{' · '}</span>
+            )}
+            {/* Its own element, not a bare string beside another one. A
+                fragment of two text nodes splits the sentence across them, and
+                `getByText('Everyone sharing this finPal instance')` matches a
+                single node's whole text — so the scope became unfindable by the
+                two assertions that exist to check it renders. A `<span>` makes
+                the statement a discrete thing on the page, which is what those
+                tests were always really asserting. */}
+            <span>{selectedMember
+              ? `${selectedMember.name}'s money`
+              : 'Everyone sharing this finPal instance'}</span>
+          </>}
           /* Top of page, not beside the cards: this narrows the WHOLE page, and
              a control that sits next to one figure reads as belonging to it. */
           right={<MemberFilter
@@ -464,7 +508,30 @@ export const Dashboard = () => {
                those endpoints rather than of this control. */
             label="Show figures for"
           />}
-        />
+        >
+          {/* *** THE RANGE EARNS THE TOP OF THE PAGE — spec variant B. *** The
+              user's own goals, drawn at their real named elevations, above the
+              totals rather than below them. A dashboard that opens with four
+              figures opens the same way every money app does; this one opens
+              with the thing that belongs to the person reading it.
+
+              Renders nothing at all when there are no goals with peaks, which
+              is deliberate: an empty frame here would be decoration standing in
+              for a fact, and the "you have nothing yet" case belongs to base
+              camp — which is why the title above changes rather than this
+              rendering an empty range. */}
+          {goals.length > 0 && (
+            <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
+          )}
+          {/* *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
+              GROUND". *** The ground is a monthly recurring total, and the only
+              place it is computed today is learnPal's range endpoint — reading
+              it here would make the core dashboard depend on a module a
+              self-hoster can switch off, which is D-187's shape. Deriving it
+              from `/recurring/` in core is the right fix and is its own
+              change. */}
+          <TotalsRow cells={totalsCells} />
+        </PageHead>
 
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
@@ -492,19 +559,6 @@ export const Dashboard = () => {
             here would make the core dashboard depend on a module a self-hoster
             can switch off, which is D-187's shape. Deriving it from
             `/recurring/` in core is the right fix and is its own change. */}
-        {goals.length > 0 ? (
-          <SectionCard title="Your range" subtitle="What you are climbing, and the ground you stand on while you climb.">
-            <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
-            <TotalsRow cells={totalsCells} />
-          </SectionCard>
-        ) : (
-          /* No goals yet: the figures still have to be somewhere, so the row
-             stands on its own card rather than vanishing with the range. */
-          <SectionCard title="Where you stand">
-            <TotalsRow cells={totalsCells} />
-          </SectionCard>
-        )}
-
         {/* *** THE SPEND BAR IS A SECTION NOW, NOT A LOOSE STRIP. *** It sat
             between the range card and the stat cards with a bare sentence for a
             heading, which is half of why the page read as a pile of unrelated
