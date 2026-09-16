@@ -103,4 +103,27 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
     d: 'M0,52 L140,40 L250,52 L390,32 L500,52 L650,24 L770,52 L910,18 L1020,52 L1100,14 L1100,52 Z',
     opacity: 0.32,
   },
+  /* *** learnPal's BAND IS A STAIRCASE, AND THAT IS THE ONE THING ITS PAGES
+     ARE ABOUT. *** Every other ridge here is a range: peaks at whatever heights
+     the page's character suggests. learnPal is lessons that unlock from your own
+     figures rather than on a schedule, and its own design doc calls the sequence
+     a climb — so the ridge steps UP in even increments (46, 40, 34, 28, 22, 16,
+     10) instead of wandering. It reads as progress rather than as scenery, which
+     is the distinction the module exists to make.
+
+     Quieter than Investments at 0.26: these pages carry a tally row and a long
+     prose card, and a busy page gets a quieter band — the rule stated at
+     `HeadBand.opacity`. */
+  learnpal: {
+    /* *** 0.34, NOT 0.26, AND THE STEPS ARE DEEPER THAN THE FIRST DRAFT. ***
+       Rendered at 0.26 with a 46->10 rise, the staircase read as a vague
+       horizon: `--head-ridge` (#B7CBBC) on `--head-sky` (#DCE7DE) is a quiet
+       pair by design, and a shallow shape in a quiet pair is no shape at all.
+       A band that is meant to SAY something has to be legible enough to say it,
+       which is the difference between this one and the ridges that are only
+       scenery. Seen by rendering the capture, not decided from the numbers. */
+    d: 'M0,52 L110,50 L220,50 L240,42 L370,42 L390,34 L520,34 L540,26 L670,26 '
+      + 'L690,18 L820,18 L840,10 L970,10 L990,4 L1100,4 L1100,52 Z',
+    opacity: 0.34,
+  },
 };

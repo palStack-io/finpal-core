@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { PageHead } from '../../../components/PageHead';
 import { Loader2 } from 'lucide-react';
 import { GearIcon } from '../../../components/GearIcon';
 import { SlidePanel } from '../../../components/SlidePanel';
@@ -96,24 +97,44 @@ export const Lessons: React.FC = () => {
   if (!rows) {
     return (
       <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-        <h1 className="page-title">Lessons</h1>
-        <p className="fp-hint">learnPal is not enabled on this instance.</p>
+        {/* The module being absent is not an error, and it still gets a real
+            head: a bare sentence on an empty page reads as a failure rather
+            than as an answer. */}
+        <PageHead
+          band="learnpal"
+          title="Lessons"
+          subtitle="learnPal is not enabled on this instance."
+        />
       </div>
     );
   }
 
   return (
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ marginBottom: 18 }}>
-        <h1 className="page-title">Lessons</h1>
-        <p className="fp-hint">
+      {/* *** learnPal'S PAGES NOW OPEN THE WAY EVERY OTHER PAGE DOES. ***
+          Owner, 2026-09-16: *"can we redesign our pointPal and also the
+          learnPal"*. AUDIT D-233 recorded that these three already use
+          `className="page-title"` rather than inventing their own title scale;
+          what they lacked is the head — a hand-rolled `h1` plus `p.fp-hint` in a
+          margin wrapper, the exact shape `PageHead` replaced on eleven core
+          pages.
+
+          *** THE SUBTITLE STAYS JSX HERE, AND THAT IS WHY `subtitle` IS A
+          ReactNode. *** This one carries a live count, so flattening it to a
+          template string would freeze "0 lessons read" into the markup. The
+          other two learnPal pages pass plain strings because they say the same
+          thing to everybody. */}
+      <PageHead
+        band="learnpal"
+        title="Lessons"
+        subtitle={<>
           {counts
             ? `${counts.read} ${counts.read === 1 ? 'lesson' : 'lessons'} read.`
             : null}{' '}
           A lesson opens when your own figures make it relevant — not on a
           schedule, and never because you clicked something.
-        </p>
-      </div>
+        </>}
+      />
 
       {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}
 
