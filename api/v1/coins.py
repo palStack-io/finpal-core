@@ -59,22 +59,40 @@ ack_request = ns.model('CoinAckRequest', {
 })
 
 
-def _render_awards(user_id, pairs):
+def _payoff(user_id, act):
+    """One act's sentence, or `None`. *** FAIL-CLOSED, AND THE ONLY CALLER OF
+    `act.payoff`. *** No computable consequence, no sentence -- four payoffs
+    were caught on 2026-09-14 claiming an act was done beside `coins: 0`, and a
+    fallback anywhere would reinstate that.
+    """
+    if act is None:
+        return None
+    try:
+        return act.payoff(user_id)
+    except Exception:
+        logger.exception('coins: payoff for %r raised — omitted', act.slug)
+        return None
+
+
+def _render_awards(user_id, pairs, revealed_by_slug=None):
     """`[(slug, coins)]` -> the award objects both `/refresh` and `unseen` send.
 
     *** ONE BUILDER, BECAUSE THE FAIL-CLOSED PAYOFF RULE IS LOAD-BEARING. *** A
-    second copy would eventually grow a friendly fallback sentence, and a
-    sentence finPal cannot justify is worse than silence -- four payoffs were
-    caught on 2026-09-14 claiming an act was done beside `coins: 0`.
+    second copy would eventually grow a friendly fallback sentence.
+
+    `revealed_by_slug` lets a caller that has ALREADY computed these sentences
+    hand them over. The wallet has: it walks every act to build `acts`, and
+    `unseen` is a subset of the same list. Payoff functions query the database,
+    so recomputing them was a second round of queries for sentences already in
+    hand.
     """
     out = []
     for slug, coins in pairs:
         act = ACTS.get(slug)
-        try:
-            revealed = act.payoff(user_id) if act else None
-        except Exception:
-            logger.exception('coins: payoff for %r raised — omitted', slug)
-            revealed = None
+        if revealed_by_slug is not None and slug in revealed_by_slug:
+            revealed = revealed_by_slug[slug]
+        else:
+            revealed = _payoff(user_id, act)
         out.append({
             'slug': slug,
             'title': act.title if act else slug,
@@ -96,6 +114,9 @@ def _wallet(user_id):
     owned = repo.owned_gear(user_id)
 
     acts = []
+    # Payoff sentences are database queries. `unseen` is a subset of the acts
+    # walked below, so remember each one rather than asking twice.
+    revealed_by_slug = {}
     for slug, act in ACTS.items():
         row = awarded.get(slug)
         if row is None:
@@ -107,11 +128,8 @@ def _wallet(user_id):
             except Exception:
                 logger.exception('coins: coverage for %r raised — omitted', slug)
                 continue
-        try:
-            revealed = act.payoff(user_id)
-        except Exception:
-            logger.exception('coins: payoff for %r raised — omitted', slug)
-            revealed = None
+        revealed = _payoff(user_id, act)
+        revealed_by_slug[slug] = revealed
         acts.append({
             'slug': slug,
             'title': act.title,
@@ -129,7 +147,8 @@ def _wallet(user_id):
         # 04:30; without this the award simply never happened as far as they
         # could tell. Same objects `/refresh` returns, same builder, so the
         # fail-closed payoff rule cannot drift between the two.
-        'unseen': _render_awards(user_id, repo.unseen(user_id)),
+        'unseen': _render_awards(user_id, repo.unseen(user_id),
+                                 revealed_by_slug),
         'gear': [
             {'slug': slug, 'price': price, 'owned': slug in owned}
             for slug, price in GEAR_PRICES.items()
