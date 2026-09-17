@@ -18,6 +18,7 @@ Every handler returns `{'error': ...}` explicitly rather than letting restx shap
 it: web-ui reads `err.response?.data?.error`, and restx answers `{'message': ...}`.
 """
 import logging
+from decimal import Decimal
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -155,10 +156,37 @@ def _wallet(user_id):
                 continue
         revealed = _payoff(user_id, act)
         revealed_by_slug[slug] = revealed
+
+        # *** `open` IS A BIT, NOT A FRACTION, AND THAT IS WHY IT IS ALLOWED.
+        # *** The cairn needs to know whether there is still something to do on
+        # a page, and the client CANNOT work that out: no ceiling and no
+        # coverage go on the wire, by decision 5, so `coins: 600` is
+        # indistinguishable from finished. One boolean answers it and leaks
+        # nothing — a bit plus an earned total cannot reconstruct a ceiling, so
+        # no client can render "14 of 35" from this.
+        # *** FAIL OPEN, NOT FAIL FINISHED, AND THE FIRST VERSION OF THIS GOT
+        # IT BACKWARDS. *** It set `is_open = False` on a raising predicate
+        # while the comment beside it claimed the opposite — a broken act would
+        # have told the user the job was done. Telling somebody a thing is
+        # finished on the strength of a crash is the one direction that cannot
+        # be recovered from: they never go back to the page. A spurious cairn
+        # costs a wasted visit; a missing one costs the act.
+        try:
+            covered = act.coverage(user_id)
+            is_open = covered is not None and Decimal(str(covered)) < 1
+        except Exception:
+            logger.exception('coins: coverage for %r raised — shown as open',
+                             slug)
+            is_open = True
+
         acts.append({
             'slug': slug,
             'title': act.title,
             'coins': int(row.coins) if row else 0,
+            'open': is_open,
+            # The page identities this act can be worked on. A name, not a
+            # count: the client uses it to place a cairn, never to score.
+            'surfaces': list(act.surfaces),
             # *** THE SENTENCE, NOT A SCORE. *** `None` when finPal cannot
             # compute the consequence, and the client renders nothing.
             'revealed': revealed,
