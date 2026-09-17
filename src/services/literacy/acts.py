@@ -35,6 +35,21 @@ from typing import Callable, Optional
 logger = logging.getLogger(__name__)
 
 
+# *** THE LEGAL SURFACES, SO A TYPO IS A REFUSAL RATHER THAN AN ACT THAT NEVER
+# FIRES. *** These are page IDENTITIES shared by both clients, not URLs: mobile's
+# routes differ from web's and neither client may own this list.
+#
+# *** `settings` IS HERE EVEN THOUGH SPEC §5.2 SAYS SETTINGS EARNS NOTHING, AND
+# THE TWO DO NOT CONFLICT. *** A surface is WHERE A MUTATION CAN MOVE AN ACT, not
+# where an act is advertised. A user connects their bank from
+# `SimpleFinSettings.tsx`, so `bank_connected`'s 2,400 coins have to land where
+# they did it. Settings still shows no act line and no cairn.
+SURFACES = frozenset({
+    'accounts', 'transactions', 'categories', 'budgets', 'recurring',
+    'rules', 'goals', 'review', 'investments', 'groups', 'settings',
+})
+
+
 @dataclass(frozen=True)
 class Act:
     """One earnable act.
@@ -57,6 +72,12 @@ class Act:
     ceiling: int
     coverage: Callable[[str], Optional[Decimal]]
     payoff: Callable[[str], Optional[str]]
+    # *** REQUIRED, AND DELIBERATELY WITHOUT A DEFAULT. *** A default of `()`
+    # would let an act register with nowhere to fire and look perfectly fine.
+    # The boundary is the TYPE, not a rule somebody remembers -- the same move
+    # as `register_act` refusing a duplicate slug, and as `upsert_award` being
+    # ratchet-only.
+    surfaces: tuple
     universal: bool = False
 
 
@@ -66,16 +87,49 @@ ACTS: dict = {}
 
 
 def register_act(act: Act) -> None:
-    """Add an act. *** REFUSES A SLUG ALREADY REGISTERED, RATHER THAN REPLACING
-    IT. *** A module quietly changing what an existing act pays would be
-    invisible from core -- the same surprise `register_check` refuses.
+    """Add an act. Refuses a duplicate slug, an act declaring no surface, and an
+    act naming a surface that does not exist.
+
+    *** REFUSES A SLUG ALREADY REGISTERED, RATHER THAN REPLACING IT. *** A
+    module quietly changing what an existing act pays would be invisible from
+    core -- the same surprise `register_check` refuses.
+
+    *** AND REFUSES AN ACT WITH NOWHERE TO FIRE, BECAUSE THAT FAILURE IS
+    SILENT. *** An act absent from every surface never triggers a refresh: the
+    award component renders nothing, no error is raised, and the nightly pass
+    still pays the coins -- so it looks like it works. That is D-187's shape
+    (a reader with no writer) inside the mechanism built to fix D-187.
+
+    *** REFUSES RATHER THAN RAISING, SO ONE BAD MODULE CANNOT STOP BOOT *** --
+    the same failure isolation `run_check` and `award_for_user` use.
     """
     if act.slug in ACTS:
         logger.warning(
             'literacy: refusing to re-register act %r — it is already defined',
             act.slug)
         return
+    if not act.surfaces:
+        logger.warning(
+            'literacy: refusing act %r — it declares no surface, so no refresh '
+            'would ever fire for it', act.slug)
+        return
+    unknown = [s for s in act.surfaces if s not in SURFACES]
+    if unknown:
+        logger.warning(
+            'literacy: refusing act %r — unknown surface(s) %r',
+            act.slug, unknown)
+        return
     ACTS[act.slug] = act
+
+
+def surface_acts(surface: str) -> list:
+    """Every act a mutation on `surface` could move.
+
+    *** DERIVED, NEVER STORED. *** A second map keyed the other way round is a
+    second thing to keep in step with this one, and drift is this project's
+    recurring failure mode.
+    """
+    return [a for a in ACTS.values() if surface in a.surfaces]
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -99,32 +153,42 @@ def _register_core_acts():
     core = [
         # ---- universal: anyone with any data at all can finish these ----
         Act('bank_connected', 'Connect your bank', 2400,
-            coverage.bank_connected, payoff.bank_connected, universal=True),
+            coverage.bank_connected, payoff.bank_connected,
+            surfaces=('accounts', 'settings'), universal=True),
         Act('transactions_categorised', 'Categorise your spending', 2000,
             coverage.transactions_categorised, payoff.transactions_categorised,
-            universal=True),
+            surfaces=('transactions', 'review'), universal=True),
         Act('categories_classified', 'Sort your categories', 1500,
             coverage.categories_classified, payoff.categories_classified,
-            universal=True),
+            surfaces=('categories', 'review'), universal=True),
         Act('has_a_budget', 'Set a budget', 1000,
-            coverage.has_a_budget, payoff.has_a_budget, universal=True),
+            coverage.has_a_budget, payoff.has_a_budget,
+            surfaces=('budgets',), universal=True),
         Act('accounts_confirmed', 'Confirm what finPal guessed', 800,
-            coverage.accounts_confirmed, payoff.accounts_confirmed, universal=True),
+            coverage.accounts_confirmed, payoff.accounts_confirmed,
+            surfaces=('accounts', 'review'), universal=True),
         Act('income_recorded', 'Record what arrives', 800,
-            coverage.income_recorded, payoff.income_recorded, universal=True),
+            coverage.income_recorded, payoff.income_recorded,
+            surfaces=('recurring',), universal=True),
         Act('taught_a_rule', 'Teach finPal a rule', 700,
-            coverage.taught_a_rule, payoff.taught_a_rule, universal=True),
+            coverage.taught_a_rule, payoff.taught_a_rule,
+            surfaces=('rules',), universal=True),
         Act('has_a_goal', 'Name what you are working toward', 600,
-            coverage.has_a_goal, payoff.has_a_goal, universal=True),
+            coverage.has_a_goal, payoff.has_a_goal,
+            surfaces=('goals',), universal=True),
         # ---- conditional: dormant unless the user's circumstances raise them ----
         Act('debt_rates', 'Know what your debt costs', 1200,
-            coverage.debt_rates, payoff.debt_rates),
+            coverage.debt_rates, payoff.debt_rates,
+            surfaces=('accounts',)),
         Act('transfers_confirmed', 'Confirm your transfers', 800,
-            coverage.transfers_confirmed, payoff.transfers_confirmed),
+            coverage.transfers_confirmed, payoff.transfers_confirmed,
+            surfaces=('transactions', 'review')),
         Act('debt_limits', 'Know your limits', 600,
-            coverage.debt_limits, payoff.debt_limits),
+            coverage.debt_limits, payoff.debt_limits,
+            surfaces=('accounts',)),
         Act('debt_minimums', 'Know your minimums', 400,
-            coverage.debt_minimums, payoff.debt_minimums),
+            coverage.debt_minimums, payoff.debt_minimums,
+            surfaces=('accounts',)),
     ]
     for act in core:
         register_act(act)
