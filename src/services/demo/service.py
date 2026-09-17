@@ -103,7 +103,7 @@ def _coins_reset(user_id):
     `act_events` goes too: its rows name budget and expense ids that the reseed
     replaces, so surviving rows are orphans pointing at data that is gone.
     """
-    from src.models.act_event import ActEvent, TeachingSeen
+    from src.models.act_event import ActEvent, EverestWatermark, TeachingSeen
     from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase
     removed = CoinAward.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
@@ -116,6 +116,13 @@ def _coins_reset(user_id):
     # A reset user who keeps `teaching_seen` is re-taught NOTHING, so the four
     # explanations become unreachable on the demo after the first reset.
     removed += TeachingSeen.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    # *** THE WATERMARK MUST GO TOO, AND IT IS THE LEAST OBVIOUS OF THE FIVE.
+    # *** It is deliberately ratchet-only, so a reset user who keeps it stays
+    # at the altitude their DELETED data earned — Everest would then show a
+    # height nothing on the stack justifies, which is the one thing
+    # `_coins_award` refuses for coins.
+    removed += EverestWatermark.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
     return removed
 

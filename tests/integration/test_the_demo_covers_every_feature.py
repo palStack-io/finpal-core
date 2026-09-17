@@ -58,6 +58,12 @@ NO_DEMO_ROWS_BY_DESIGN = {
     # a demo user who has been TAUGHT nothing is the user who gets the four
     # explanations, which is the state worth demonstrating. Seeding rows here
     # would silence the teaching on the demo.
+    # Written the first time a user's wallet is read, so a freshly seeded demo
+    # that nobody has opened has none. It is a WATERMARK, not a figure to seed:
+    # inventing one would claim an altitude no act produced, which is what
+    # `_coins_award`'s own docstring refuses for coins.
+    'everest_watermarks': 'written on the first wallet read; a freshly seeded '
+                          'demo has not been looked at yet',
     'teaching_seen': 'records which explanations the user has been shown; a '
                      'freshly seeded demo has been shown none, which is what '
                      'makes the teaching panels appear',

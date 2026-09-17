@@ -96,3 +96,40 @@ class TeachingSeen(db.Model):
 
     def __repr__(self):
         return f'<TeachingSeen {self.user_id} {self.topic}>'
+
+
+class EverestWatermark(db.Model):
+    """The highest fraction of Everest a user has ever reached.
+
+    *** A WATERMARK, NOT A CURRENT VALUE, AND THAT IS WHAT MAKES EVEREST OBEY
+    DECISION 1. *** Altitude is coins earned over coins AVAILABLE to the user,
+    and the denominator MOVES: opening a first credit card activates three
+    dormant debt acts and adds 2,200 coins to it, which would drop a user's
+    altitude for doing something sensible. Storing the best-ever fraction means
+    nothing earned is ever taken away -- the same reason `raise_watermark` and
+    `raise_hardest_band` are ratchet-only.
+
+    *** A NEW TABLE, NOT A COLUMN ON `User` — D-121. *** `create_all()` is
+    blind to a new column on an existing model, so a column here would never
+    exist on any deployment that already has users.
+
+    *** `Numeric`, NEVER `Float`. *** It is compared for equality with itself
+    across requests and it decides a displayed figure.
+    """
+
+    __tablename__ = 'everest_watermarks'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', name='uq_everest_watermark_user'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.String(120), db.ForeignKey('users.id', name='fk_everest_user'),
+        nullable=False, index=True)
+    fraction = db.Column(db.Numeric(6, 5), nullable=False, default=0)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow,
+        onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<EverestWatermark {self.user_id} {self.fraction}>'

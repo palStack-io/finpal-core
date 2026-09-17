@@ -28,6 +28,7 @@ from src.extensions import db
 from src.repositories.coins import CoinRepository
 from src.services.literacy.acts import ACTS, award_for_surface
 from src.services.literacy.gear import GEAR_PRICES
+from src.services.literacy.everest import altitude_for
 from src.services.literacy.teaching import ACT_TOPIC, panel_for
 
 logger = logging.getLogger(__name__)
@@ -206,6 +207,17 @@ def _wallet(user_id):
             {'slug': slug, 'price': price, 'owned': slug in owned}
             for slug, price in GEAR_PRICES.items()
         ],
+        # *** EVEREST RIDES ON THE WALLET RATHER THAN ITS OWN ENDPOINT. *** Kit
+        # and the dashboard both already read this payload and both draw the
+        # altitude, so a second round trip would be a latency budget spent on
+        # nothing — the same reasoning this function's own docstring gives.
+        #
+        # *** IT IS THE ONE FIGURE IN THIS PRODUCT ALLOWED A CEILING, AND ONLY
+        # BECAUSE OF WHAT IT MEASURES. *** 8,849 m is a shared public fact,
+        # identical for every user and derived from nobody's money. Decision 5
+        # forbids a denominator finPal chose about the USER'S FINANCES; this one
+        # is about effort and says nothing about anyone's money.
+        'everest': altitude_for(user_id),
     }
 
 
@@ -213,8 +225,17 @@ def _wallet(user_id):
 class Coins(Resource):
     @jwt_required()
     def get(self):
-        """The wallet: coins earned, the acts, and the shop."""
-        return _wallet(get_jwt_identity()), 200
+        """The wallet: coins earned, the acts, the shop and the climb.
+
+        *** A GET THAT WRITES, DELIBERATELY AND NARROWLY. *** `altitude_for`
+        raises Everest's watermark, and a ratchet persisted only by a POST
+        would lose height every time a user merely looked at the page. The
+        write is idempotent and monotonic, so a repeated GET costs nothing and
+        can never lower anything.
+        """
+        payload = _wallet(get_jwt_identity())
+        db.session.commit()
+        return payload, 200
 
 
 @ns.route('/purchase')
