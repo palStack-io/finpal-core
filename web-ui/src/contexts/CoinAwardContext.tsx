@@ -40,6 +40,15 @@ interface CoinAwardContextType {
    * is indistinguishable from finished. `act.open` is one boolean per act.
    */
   openSurfaces: ReadonlySet<string>;
+  /**
+   * Where the user stands on the shared climb, or `null` until loaded.
+   *
+   * *** RATCHETED SERVER-SIDE, SO IT NEVER FALLS. *** The raw fraction
+   * genuinely drops when a user's circumstances widen the denominator —
+   * opening a first credit card activates three dormant debt acts — and the
+   * server stores the best-ever figure rather than today's.
+   */
+  everest: { altitude_m: number; summit_m: number; at_summit: boolean } | null;
 }
 
 const CoinAwardContext = createContext<CoinAwardContextType | undefined>(undefined);
@@ -58,6 +67,9 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [openSurfaces, setOpenSurfaces] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );
+  const [everest, setEverest] = useState<
+    { altitude_m: number; summit_m: number; at_summit: boolean } | null
+  >(null);
 
   // *** A REF, NOT STATE. *** Two mutations in quick succession would both
   // read a stale `queue` from the closure and the second would drop the
@@ -100,6 +112,7 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         for (const surface of act.surfaces ?? []) open.add(surface);
       }
       setOpenSurfaces(open);
+      setEverest(wallet.everest ?? null);
     } catch {
       /* same reasoning as refresh */
     }
@@ -117,7 +130,7 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     <CoinAwardContext.Provider
       value={{
         current: queue[0] ?? null, refresh, dismiss, balance, loadUnseen,
-        openSurfaces,
+        openSurfaces, everest,
       }}
     >
       {children}
@@ -210,4 +223,20 @@ const EMPTY_SURFACES: ReadonlySet<string> = new Set<string>();
 export const useOpenSurfaces = (): ReadonlySet<string> => {
   const context = useContext(CoinAwardContext);
   return context?.openSurfaces ?? EMPTY_SURFACES;
+};
+
+/**
+ * Where the user stands on the shared climb, or `null`.
+ *
+ * *** SAFE WITHOUT A PROVIDER, LIKE EVERY OTHER READ HOOK HERE — AND THIS IS
+ * THE THIRD TIME THAT MATTERED. *** `useSurfaceCoins`, `useCoinBalance` and
+ * `useOpenSurfaces` all degrade for the same reason: page components render in
+ * tests that mount no provider, and a reward feature must never be able to
+ * blank a page it is bolted onto. `useCoinAwards` still throws, because the
+ * award CONTAINER genuinely cannot work without the queue. The convention is:
+ * a READ degrades, the queue does not.
+ */
+export const useEverest = () => {
+  const context = useContext(CoinAwardContext);
+  return context?.everest ?? null;
 };

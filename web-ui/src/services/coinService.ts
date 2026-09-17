@@ -104,6 +104,15 @@ export interface CoinWallet {
    * never happened as far as they could tell.
    */
   unseen: CoinAwardItem[];
+  /**
+   * The shared climb: metres up Everest, and the public summit.
+   *
+   * *** METRES, NOT A PERCENTAGE OF THE USER. *** 8,849 m is a shared public
+   * fact identical for everyone and derived from nobody's money, which is why
+   * it is the one ceiling this product sends. Decision 5 forbids a denominator
+   * finPal chose about the user's FINANCES; this one is about effort.
+   */
+  everest: { altitude_m: number; summit_m: number; at_summit: boolean };
 }
 
 /** One award, as `/coins/refresh` and the wallet's `unseen` both send it. */

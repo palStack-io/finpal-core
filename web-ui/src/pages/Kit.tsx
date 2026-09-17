@@ -4,6 +4,7 @@ import { GearIcon } from '../components/GearIcon';
 import { PageHead } from '../components/PageHead';
 import { CoinPurse } from '../components/coins/CoinPurse';
 import { coinService, type CoinWallet } from '../services/coinService';
+import { pageContainerStyle, pageMaxWidthStyle } from '../styles/layoutStyles';
 
 /**
  * Your kit — where coins go.
@@ -111,7 +112,18 @@ export const Kit: React.FC = () => {
     .sort((a, b) => a.price - b.price)[0];
 
   return (
-    <div>
+    /* *** THE BARE `<div>` HERE WAS THE PADDING BUG THE OWNER SPOTTED ON THE
+       DEMO (2026-09-17). *** Every other content page wraps in
+       `pageContainerStyle` (24px) plus the 1400px max-width, and `.main-content`
+       deliberately carries NO horizontal padding of its own — it only reserves
+       the sidebar's width. So a page that forgets the wrapper renders flush to
+       the viewport edge: the gear grid's last column and every act row's coin
+       figure touched x=1440, while `PageHead` looked correctly inset because it
+       supplies its own padding. That mismatch is exactly what reads as "off".
+       Adopted rather than hand-padded, so this page cannot drift from the
+       others again. */
+    <div style={pageContainerStyle}>
+      <div style={pageMaxWidthStyle}>
       {/* *** THE APP'S HEAD, AND THE PURSE IS WHAT `right` IS FOR. ***
           This page hand-rolled its own flex row with an `h1.page-title`, a
           sentence and the purse pushed to the end — which is `PageHead`'s
@@ -285,6 +297,7 @@ export const Kit: React.FC = () => {
           </div>
         ))}
       </section>
+      </div>
     </div>
   );
 };

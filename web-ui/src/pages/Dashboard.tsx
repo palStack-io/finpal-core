@@ -31,6 +31,7 @@ import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { EverestLine } from '../components/dashboard/EverestLine';
 
 const tableCellMuted: React.CSSProperties = { padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' };
 const tableCellSecondary: React.CSSProperties = { padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' };
@@ -468,6 +469,13 @@ export const Dashboard = () => {
             The h1 moves with the title, so the page still has exactly one and
             `every-page.spec.ts` still measures it — the heading expectation for
             `/dashboard` moved with it. */}
+        {/* *** ONE LINE, UNDER THE RANGE, NOT BESIDE IT AND NOT DRAWN. ***
+            Spec §14.10. Two mountain pictures on one page read as one
+            confusing picture: the range below is the user's OWN peaks from
+            their money, and Everest measures effort. Kit is the only surface
+            that draws it. It renders nothing at 0 m, so a brand-new user is
+            not told they have climbed nothing on the page they came to for
+            reassurance. */}
         <PageHead
           /* *** "Your range" EITHER WAY NOW. *** The title switched to
              "Where you stand" for a user with no goals because there was no
@@ -542,6 +550,16 @@ export const Dashboard = () => {
                full argument. */
             <EmptyRange />
           )}
+
+          {/* *** EVEREST GOES UNDER THE RANGE, AS A FIGURE, FOR BOTH CASES. ***
+              A user with goals sees their own peaks and then their altitude on
+              the shared climb; a user with none sees the invitation and then
+              the climb they are already on, which is the honest thing to put
+              there — they have earned coins from their first acts, where a
+              range of goals they have not set is empty by definition. */}
+          <div style={{ marginTop: 12 }}>
+            <EverestLine />
+          </div>
           {/* *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
               GROUND". *** The ground is a monthly recurring total, and the only
               place it is computed today is learnPal's range endpoint — reading
