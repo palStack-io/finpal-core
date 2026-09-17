@@ -143,3 +143,17 @@ export const useSurfaceCoins = (surface: CoinSurface) => {
 };
 
 export default CoinAwardContext;
+
+/**
+ * The spendable balance for the nav purse, or `null`.
+ *
+ * *** SAFE WITHOUT A PROVIDER, FOR THE SAME REASON `useSurfaceCoins` IS. ***
+ * The sidebar renders in tests that mount no provider, and a purse is not
+ * worth breaking a nav rail over. `null` means "not asked yet" and MUST NOT
+ * render as 0 — the Review badge beside it carries that exact rule, because a
+ * confident zero is a claim the app has not earned.
+ */
+export const useCoinBalance = (): number | null => {
+  const context = useContext(CoinAwardContext);
+  return context?.balance ?? null;
+};

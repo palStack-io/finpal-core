@@ -24,6 +24,7 @@ import { accountService, type Account } from '../services/accountService';
 import type { Goal, GoalContribution } from '../types/goal';
 import { useToast } from '../contexts/ToastContext';
 import { apiErrorMessage } from '../utils/apiError';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 /**
  * Goals.
@@ -479,6 +480,9 @@ const GoalRow: React.FC<GoalRowProps> = ({
 };
 
 export const Goals: React.FC = () => {
+  // Goals is where `has_a_goal` is earned. The page names its surface and
+  // nothing more; the server owns which acts a goals mutation can move.
+  useSurfaceCoins('goals');
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const [goals, setGoals] = useState<Goal[]>([]);

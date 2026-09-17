@@ -25,6 +25,7 @@ import { useAuthStore } from '../../store/authStore';
 import { moduleRegistry } from '../../modules';
 import { useReviewStore } from '../../store/reviewStore';
 import type { ModuleManifest } from '../../modules/registry';
+import { useCoinBalance } from '../../contexts/CoinAwardContext';
 
 /**
  * The nav is grouped by WHAT YOU ARE DOING, and the headings are shared with
@@ -301,6 +302,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
 
   type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }> };
 
+  const coinBalance = useCoinBalance();
+
+
   const renderNavItems = (items: readonly NavItem[]) =>
     items.map((item) => {
       const Icon = item.icon;
@@ -317,6 +321,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
               would nag about a job already done. `null` means "not asked yet"
               and must not render as 0 — claiming an all-clear the app has not
               earned. */}
+          {/* *** THE PURSE, AND IT IS TEXT RATHER THAN A PILL ON PURPOSE. ***
+              The Review badge beside it is a pill because it is an ALERT —
+              something is waiting for you. A balance is ambient information,
+              so it takes no background and invents no colour.
+              `var(--status-warn)` is the amber ROLE token and is MEASURED in
+              both themes: #8A6A2F at 5.02:1 on the light card, #E8B872 at
+              8.9:1 on #16241A. (`--kt-seg-4` used raw in LIGHT is the 3.06:1
+              trap the kit file warns about; this is not that.)
+              Absent when null, and absent at zero — same rule as the badge:
+              null is "not asked yet" and a confident 0 is a claim the app has
+              not earned. */}
+          {item.path === '/kit' && coinBalance !== null && coinBalance > 0 && (
+            <span
+              aria-label={`${coinBalance} coins to spend`}
+              style={{
+                marginLeft: 'auto', fontSize: 12, fontWeight: 700,
+                color: 'var(--status-warn)', letterSpacing: '0.01em',
+              }}
+            >
+              {coinBalance.toLocaleString()}
+            </span>
+          )}
           {item.path === '/review' && reviewTotal !== null && reviewTotal > 0 && (
             <span
               aria-label={`${reviewTotal} to review`}

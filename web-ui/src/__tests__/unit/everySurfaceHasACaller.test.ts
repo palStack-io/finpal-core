@@ -24,12 +24,11 @@ const SERVER_SURFACES = [
 ] as const;
 
 /**
- * `goals` is deliberately absent from the client wiring for now: the Goals
- * page earns `has_a_goal`, and milestone 5 attaches it along with the range
- * and the climber. Listed here so the omission is a recorded decision rather
- * than a hole nobody noticed.
+ * Empty, and it should STAY empty: every surface the server declares now has a
+ * caller. An entry here is a recorded decision to leave one unwired, and the
+ * stale-entry test below refuses to let it rot into a hole nobody noticed.
  */
-const NOT_WIRED_YET = new Set<string>(['goals']);
+const NOT_WIRED_YET = new Set<string>();
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
