@@ -55,6 +55,24 @@ interface RangePeak {
 }
 
 export interface GoalRangeProps {
+  /**
+   * The shared climb, drawn as the CENTRAL peak of the range.
+   *
+   * *** OWNER DECISION 2026-09-17, AND IT IS THE THIRD PLACEMENT. *** First a
+   * compact figure, then its own card below the range, now inside the range
+   * itself: *"this way no matter what mt everest will be present for all users
+   * even those with no goals"*. That reason is the strongest of the three — it
+   * is exactly the hole Everest exists to fill (a user with no goals had no
+   * mountain at all, which is base camp's own audience, D-205).
+   *
+   * *** THE UNITS DO NOT SHARE A SCALE, AND THE LABELS CARRY THAT. *** A goal's
+   * height comes from a money magnitude; Everest's from metres climbed. They
+   * cannot be compared numerically, so nothing tries to: Everest is drawn as
+   * the tallest because it IS (8,849 m against Ben Nevis's 1,345), its label
+   * is in metres, and the goals' labels stay in money. The rock palette keeps
+   * it from being read as a goal.
+   */
+  everest?: { altitude_m: number; summit_m: number; at_summit: boolean } | null;
   goals: Goal[];
   currency: string;
 }
@@ -96,7 +114,7 @@ const intoRangeOrder = <T,>(sortedDescending: T[]): T[] => {
   return [...left, ...right];
 };
 
-export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
+export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }) => {
   /*
    * A goal with no `peak` is skipped. That field is undefined on any backend
    * predating mountains, and drawing a shape for it would be inventing a fact
@@ -117,12 +135,28 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
     })
     .sort((a, b) => b.height - a.height);
 
-  if (peaks.length === 0) return null;
+  /**
+   * *** EVEREST IS PRESENT FOR EVERY USER, SO THE RANGE NO LONGER RETURNS NULL
+   * ON ZERO GOALS. *** That is the whole point of the owner's placement: a user
+   * with no goals used to see no mountain at all, and they are precisely the
+   * population base camp is designed for (D-205).
+   */
+  const climb = everest && everest.altitude_m > 0 ? everest : null;
+  if (peaks.length === 0 && !climb) return null;
 
-  const tallest = Math.max(...peaks.map((p) => p.height));
-  const zoom = tallest > 0 ? 1 / tallest : 0;   // tallest peak -> full band
+  const tallest = peaks.length ? Math.max(...peaks.map((p) => p.height)) : 0;
+  /*
+   * With Everest in the range it takes the full band and the goals top out
+   * below it, because Everest really is the taller mountain. Without it the
+   * tallest goal fills the band as before.
+   */
+  const goalCeiling = climb ? 0.72 : 1;
+  const zoom = tallest > 0 ? goalCeiling / tallest : 0;
 
   const ordered = intoRangeOrder(peaks);
+  /** Where Everest stands: the middle slot, with the goals either side. */
+  const everestSlot = climb ? Math.floor(ordered.length / 2) : -1;
+  const slotCount = ordered.length + (climb ? 1 : 0);
 
   const usable = BOX_HEIGHT - LABEL_BAND - (BOX_HEIGHT - GROUND_Y);
 
@@ -135,7 +169,7 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
    * the near peaks overlap the shoulders of their neighbours.
    */
   const SLOT = Math.round(usable * 0.68);
-  const contentWidth = SLOT * ordered.length + usable * 0.5;
+  const contentWidth = SLOT * slotCount + usable * 0.5;
 
   /*
    * *** THE GROUND LINE HAS TO REACH BOTH EDGES OF THE CARD. ***
@@ -199,10 +233,54 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
           opacity="var(--peak-backdrop-opacity)"
         />
 
+        {/* *** EVEREST: THE CENTRAL PEAK, DRAWN BEFORE THE GOALS SO THEY STAND
+            IN FRONT OF IT. *** It is the tallest and furthest back, which is
+            what a real range looks like and what stops it hiding a goal.
+
+            *** THE ROCK PALETTE IS THE THING THAT KEEPS IT HONEST. *** Goals
+            are clay (cost) or green (build); this is `--text-muted`, so a
+            reader can see at a glance that it is not one of their goals. The
+            concern I raised twice — that one picture blurs money and effort —
+            is answered by the colour and by the labels carrying different
+            units, not by hiding it. */}
+        {climb && (() => {
+          const height = usable;                    // Everest fills the band
+          const sc = height / 100;
+          const w = 100 * sc;
+          const x = offset + everestSlot * SLOT + (SLOT - w) / 2;
+          const y = GROUND_Y - height;
+          const shape = RANGE_SILHOUETTES[RANGE_SILHOUETTES.length - 1];
+          const f = Math.min(1, climb.altitude_m / climb.summit_m);
+          // The climber's y on the peak, measured from the ground up: the same
+          // honest thing the standalone card did, without inventing a route
+          // over a shape whose ridge this code does not know.
+          const climberY = GROUND_Y - height * f;
+          return (
+            <g>
+              <g transform={`translate(${x} ${y}) scale(${sc})`} color="var(--peak-unmeasured)">
+                <path d={shape.body} fill="currentColor" />
+                {shape.shade && <path d={shape.shade} fill="url(#range-shade)" />}
+                {shape.snow && (
+                  <path d={shape.snow} fill="var(--bg-card)"
+                        opacity={shape.snowOpacity ?? 0.9} />
+                )}
+              </g>
+              {/* How far up you are. A marker, not a bar: no track behind it,
+                  because a track is a denominator and the only one this product
+                  prints is the shop price. The summit figure is in the label. */}
+              <circle
+                cx={offset + everestSlot * SLOT + SLOT / 2}
+                cy={climberY} r="5" fill="var(--status-warn)"
+              />
+            </g>
+          );
+        })()}
+
         {/* Tallest first, so shorter peaks are drawn in FRONT of it and the
             range has depth rather than a single flat row. */}
         {[...ordered]
-          .map((peak, slot) => ({ peak, slot }))
+          /* Goals step over Everest's slot, so the centre stays free for it. */
+          .map((peak, i) => ({ peak, slot: i < everestSlot || everestSlot < 0 ? i : i + 1 }))
           .sort((a, b) => b.peak.height - a.peak.height)
           .map(({ peak, slot }) => {
             const shape = peak.unmeasured
@@ -250,7 +328,36 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
             summit with a short leader, clamped so it never leaves the box. Every
             figure the picture carries is written here, which is why the whole
             `<svg>` can carry one `role="img"` label and lose nothing. */}
-        {ordered.map((peak, slot) => {
+        {/* Everest's own label, in METRES — the goals' are in money, and that
+            difference is deliberate: the two are not on one scale and nothing
+            here pretends they are. */}
+        {climb && (() => {
+          const cx = offset + everestSlot * SLOT + SLOT / 2;
+          const top = GROUND_Y - usable;
+          const blockBottom = Math.max(top - 10, 46);
+          const line1 = blockBottom - 28;
+          return (
+            <g>
+              <line x1={cx} y1={blockBottom - 6} x2={cx} y2={top - 3}
+                    stroke="var(--border-light)" strokeWidth="1" />
+              <text x={cx} y={line1} textAnchor="middle"
+                    style={{ fontSize: '12.5px', fontWeight: 600, fill: 'var(--text-primary)' }}>
+                Everest{climb.at_summit ? ' ✓' : ''}
+              </text>
+              <text x={cx} y={line1 + 13} textAnchor="middle"
+                    style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>
+                {climb.summit_m.toLocaleString()} m
+              </text>
+              <text x={cx} y={line1 + 26} textAnchor="middle"
+                    style={{ fontSize: '11px', fill: 'var(--status-warn)', fontWeight: 600 }}>
+                you are at {climb.altitude_m.toLocaleString()} m
+              </text>
+            </g>
+          );
+        })()}
+
+        {ordered.map((peak, i) => {
+          const slot = i < everestSlot || everestSlot < 0 ? i : i + 1;
           const cx = offset + slot * SLOT + SLOT / 2;
           const drawn = Math.max(peak.height * zoom, MIN_RANGE_HEIGHT);
           const top = GROUND_Y - drawn * usable;

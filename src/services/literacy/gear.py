@@ -21,16 +21,33 @@ what tells you.
 # slug -> price in coins. Ordered roughly by when a climber would want the piece,
 # which is also the order the shop lists them in.
 GEAR_PRICES = {
-    'map': 100,
-    'boots': 150,
-    'rope': 200,
-    'gloves': 200,
-    'compass': 250,
-    'headlamp': 300,
-    'water-bottle': 300,
-    'trekking-poles': 350,
-    'guidebook': 350,
-    'signpost': 400,
+    # *** RAISED 2026-09-17 ON OWNER INSTRUCTION: "increase the coins needed
+    # for kits". *** 9,200 -> 9,650, and the curve is STEEPER at the bottom:
+    # the cheapest piece went 100 -> 150 and the dearest 900 -> 1,000, so early
+    # gear stops being nearly free while the top still feels like a summit buy.
+    #
+    # *** 9,800 IS A HARD CEILING AND THIS TABLE SITS 150 UNDER IT. *** §7.2
+    # requires the EIGHT UNIVERSAL acts alone to afford the whole kit, because a
+    # user with no debt, no groups and no investments can never reach a
+    # conditional ceiling — pricing the kit above 9,800 would lock exactly that
+    # user out of it.
+    # `test_the_universal_acts_alone_can_afford_the_whole_kit` is what tells
+    # you, and it is the reason this went up by 450 rather than by 4,500.
+    #
+    # *** GOING FURTHER NEEDS A DECISION, NOT AN EDIT. *** Either raise the
+    # universal act ceilings with it (bigger numbers on both sides, same
+    # difficulty), or accept that a debt-free user cannot finish the kit, which
+    # reverses §7.2. Left to the owner.
+    'map': 150,
+    'boots': 200,
+    'rope': 250,
+    'gloves': 250,
+    'compass': 300,
+    'headlamp': 350,
+    'water-bottle': 350,
+    'trekking-poles': 400,
+    'guidebook': 400,
+    'signpost': 450,
     'ice-axe': 450,
     'carabiner': 450,
     'helmet': 500,
@@ -38,10 +55,10 @@ GEAR_PRICES = {
     'pack-scale': 550,
     'thermometer': 550,
     'alpine-start': 600,
-    'bivvy': 650,
-    'cache': 700,
-    'tent': 750,
-    'oxygen': 900,
+    'bivvy': 600,
+    'cache': 650,
+    'tent': 700,
+    'oxygen': 1000,
 }
 
 # *** THE FINISH SET IS FINITE AND ENUMERABLE — NOT SEASONAL, NOT GENERATED. ***

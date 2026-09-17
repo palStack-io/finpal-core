@@ -94,7 +94,13 @@ def test_buying_gear_writes_a_row_and_moves_the_balance(
 
     assert res.status_code == 200
     assert CoinPurchase.query.filter_by(user_id=USER, gear_slug='map').count() == 1
-    assert CoinRepository().balance(USER) == before - 100
+    # *** THE ACTUAL PRICE, NOT A HARDCODED 100. *** Gear prices are seed data
+    # and §13 says so explicitly: "the exact numbers are open until the UI
+    # exists to look at them". This test broke when the owner raised them on
+    # 2026-09-17, which is a test pinning tuning rather than behaviour. What
+    # matters is that the balance moves by what the piece cost.
+    from src.services.literacy.gear import GEAR_PRICES
+    assert CoinRepository().balance(USER) == before - GEAR_PRICES['map']
     assert CoinRepository().earned(USER) > CoinRepository().balance(USER)
 
 

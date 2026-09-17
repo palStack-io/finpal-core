@@ -31,7 +31,7 @@ import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
-import { EverestPeak } from '../components/dashboard/EverestPeak';
+import { useEverest } from '../contexts/CoinAwardContext';
 
 const tableCellMuted: React.CSSProperties = { padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' };
 const tableCellSecondary: React.CSSProperties = { padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' };
@@ -63,6 +63,9 @@ const ViewAllBtn = ({ href }: { href: string }) => (
 export const Dashboard = () => {
   const { showToast } = useToast();
   const { user } = useAuthStore();
+  /* Everest is drawn INSIDE the range now, so the page reads it and hands it
+     down rather than a separate card fetching it. Safe without a provider. */
+  const everest = useEverest();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -537,8 +540,18 @@ export const Dashboard = () => {
               for a fact, and the "you have nothing yet" case belongs to base
               camp — which is why the title above changes rather than this
               rendering an empty range. */}
-          {goals.length > 0 ? (
-            <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
+          {/* *** EVEREST IS IN THE RANGE, SO A USER WITH NO GOALS GETS A RANGE
+              TOO — owner, 2026-09-17: "no matter what mt everest will be
+              present for all users even those with no goals". That is the hole
+              Everest exists to fill: base camp's own audience had no mountain
+              at all (D-205). `EmptyRange` still carries the invitation when
+              there is neither a goal nor any altitude yet. */}
+          {(goals.length > 0 || (everest && everest.altitude_m > 0)) ? (
+            <GoalRange
+              goals={goals}
+              currency={user?.default_currency_code || 'USD'}
+              everest={everest}
+            />
           ) : (
             /* *** A NEW USER NOW SEES THE SHAPE OF THE THING AND WHAT TO DO
                ABOUT IT. *** Owner, 2026-09-16. This panel used to render
@@ -564,21 +577,6 @@ export const Dashboard = () => {
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
 
-        {/* *** EVEREST, DRAWN, IN THE MIDDLE — OWNER DECISION 2026-09-17,
-            OVERRIDING MY RECOMMENDATION. *** I argued for a figure here and the
-            drawing only on Kit, because two mountain pictures on one page read
-            as one confusing picture. Owner: *"we do need everest on dashboard.
-            we will place everest in the middle"*.
-
-            The concern is answered by making them different OBJECTS rather than
-            by shrinking one: the range above is MANY silhouettes on a ground
-            line at varied heights, from the user's money; this is ONE peak with
-            a route and a climber on it, from their effort. Tellable apart at a
-            glance, which is what keeps the range's meaning intact.
-
-            It sits between the head and the section cards — the page's middle
-            band — and renders nothing at 0 m. */}
-        <EverestPeak />
 
 
         {/* *** THE RANGE EARNS THE TOP OF THE PAGE — spec variant B. *** The
