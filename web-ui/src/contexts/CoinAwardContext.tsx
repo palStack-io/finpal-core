@@ -108,8 +108,37 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
  * `earned()` after a mutation without repeating its own name.
  */
 export const useSurfaceCoins = (surface: CoinSurface) => {
-  const { refresh } = useCoinAwards();
-  const earned = useCallback(() => refresh(surface), [refresh, surface]);
+  // *** DELIBERATELY DOES NOT THROW WITHOUT A PROVIDER, UNLIKE
+  // `useCoinAwards`. *** This hook goes on ELEVEN pages, and a page must never
+  // break because a cross-cutting reward feature is not mounted around it.
+  // That is not a dodge: the design already says a client which fails to call
+  // refresh loses the MOMENT, never the COINS — the 04:30 pass collects them.
+  // So the honest failure mode here is "no award animation", not a blank page.
+  //
+  // *** THE RISK THIS CREATES IS A SILENTLY MISSING PROVIDER, AND
+  // `appMountsTheAwardMoment.test.tsx` IS WHAT COVERS IT. *** Without that
+  // gate this would be D-187 again: a reader with no writer, looking fine.
+  const context = useContext(CoinAwardContext);
+  const refresh = context?.refresh;
+  const earned = useCallback(
+    async () => { if (refresh) await refresh(surface); },
+    [refresh, surface]
+  );
+
+  // *** FIRES ON MOUNT AS WELL AS ON DEMAND, AND THAT IS THE POINT. ***
+  // Hooking only the mutation handlers would mean finding every one of them on
+  // nine large pages, and a handler somebody misses earns coins invisibly —
+  // D-106's shape exactly, where three screens bypassed a helper while 494
+  // tests stayed green. Firing on mount makes the page itself the trigger, so
+  // no mutation can be missed: whatever the user just did, the next paint of
+  // that surface collects it.
+  //
+  // Calling `earned()` after a mutation is then an OPTIMISATION for immediacy,
+  // not the mechanism. Safe either way, because refresh is idempotent.
+  useEffect(() => {
+    void earned();
+  }, [earned]);
+
   return earned;
 };
 

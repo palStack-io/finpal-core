@@ -12,6 +12,7 @@ import { formatMoney } from '../styles/money';
 import { analyticsService } from '../services/analyticsService';
 import { lastFullMonth } from '../utils/monthKeys';
 import { spendingTypeByName, splitSpendByGroup, SpendSplit } from '../utils/spendingGroups';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 /**
  * Where the "Hide these" choice for the suggested-categories panel lives (#125). A per-user
@@ -341,6 +342,12 @@ const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold'
 const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)' };
 
 export const CategoryManagement: React.FC = () => {
+  // *** THE ONLY THING THIS PAGE DECIDES IS ITS OWN NAME. *** The
+  // server owns which acts a `categories` mutation can move; a client-side
+  // map would be a second list to keep in step with `acts.py`. The hook
+  // fires on mount too, so a mutation handler nobody remembered to wire
+  // still gets its moment on the next paint (D-106's shape).
+  useSurfaceCoins('categories');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

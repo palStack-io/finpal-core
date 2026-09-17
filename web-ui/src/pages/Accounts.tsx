@@ -19,6 +19,7 @@ import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 const bodyTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px' };
 const actionBtnStyle: React.CSSProperties = { padding: '10px 16px', background: 'var(--border-light)', border: '1px solid var(--border-medium)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s' };
@@ -72,6 +73,12 @@ const linkButtonStyle: React.CSSProperties = {
 };
 
 export const Accounts = () => {
+  // *** THE ONLY THING THIS PAGE DECIDES IS ITS OWN NAME. *** The
+  // server owns which acts a `accounts` mutation can move; a client-side
+  // map would be a second list to keep in step with `acts.py`. The hook
+  // fires on mount too, so a mutation handler nobody remembered to wire
+  // still gets its moment on the next paint (D-106's shape).
+  useSurfaceCoins('accounts');
   const { showToast } = useToast();
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');

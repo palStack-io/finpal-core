@@ -17,6 +17,7 @@ import { TeamMember } from '../types/team';
 import type { Scope } from '../utils/scope';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 /* The row's second line. 13px/400 — the direction's meta size. The COLOUR is
    unchanged (`--text-muted`, exactly as today): this slice moves structure and
@@ -38,6 +39,12 @@ const pagerButtonStyle = (enabled: boolean): React.CSSProperties => ({
 });
 
 export const Transactions: React.FC = () => {
+  // *** THE ONLY THING THIS PAGE DECIDES IS ITS OWN NAME. *** The
+  // server owns which acts a `transactions` mutation can move; a client-side
+  // map would be a second list to keep in step with `acts.py`. The hook
+  // fires on mount too, so a mutation handler nobody remembered to wire
+  // still gets its moment on the next paint (D-106's shape).
+  useSurfaceCoins('transactions');
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const [searchTerm, setSearchTerm] = useState('');

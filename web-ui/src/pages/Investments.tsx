@@ -29,6 +29,7 @@ import { holdingTotals, valueSplit, lastPriceUpdate } from '../utils/holdingTota
 import { AddHoldingModal } from '../components/investment/AddHoldingModal';
 import { StockDetailModal } from '../components/investment/StockDetailModal';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 interface Portfolio {
   id: number;
@@ -156,6 +157,11 @@ const priceAgeStyle: React.CSSProperties = {
 };
 
 export const Investments: React.FC = () => {
+  // The page names its own surface and nothing more; the server owns
+  // which acts a `investments` mutation can move. Fires on mount as well as
+  // on demand, so an unwired mutation handler still gets its moment.
+  useSurfaceCoins('investments');
+
   const { showToast } = useToast();
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');

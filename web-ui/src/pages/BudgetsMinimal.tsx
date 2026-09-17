@@ -17,6 +17,7 @@ import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
 import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
 import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
 import { PageHead } from '../components/PageHead';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -179,6 +180,10 @@ export const budgetTitle = (budget: {
   || 'Uncategorized';
 
 const BudgetsMinimal = () => {
+  // The page names its own surface and nothing more; the server owns
+  // which acts a `budgets` mutation can move. Fires on mount as well as
+  // on demand, so an unwired mutation handler still gets its moment.
+  useSurfaceCoins('budgets');
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const { showToast } = useToast();

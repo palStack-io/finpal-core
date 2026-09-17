@@ -22,6 +22,7 @@ import { FINPAL_PRIVACY, FINPAL_TERMS } from '../constants/links';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { useToast } from '../contexts/ToastContext';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 // ---------------------------------------------------------------------------
 // ModuleCard — per-module hide/show toggle card for Settings > Modules tab
@@ -127,6 +128,12 @@ const redTextStyle: React.CSSProperties = { color: 'var(--accent-red)', fontSize
 const successBannerStyle: React.CSSProperties = { marginTop: '16px', padding: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '8px', color: 'var(--brand-green-glow)', fontSize: '14px' };
 
 export const Settings: React.FC = () => {
+  // *** SETTINGS EARNS NOTHING AND STILL NEEDS THIS, WHICH IS NOT A
+  // CONTRADICTION. *** Spec §5.2 says no act is ADVERTISED here — no act
+  // line, no cairn. But a surface is where a mutation can MOVE an act, and
+  // a user connects their bank from `SimpleFinSettings.tsx`, so
+  // `bank_connected`'s 2,400 coins have to land where they did it.
+  useSurfaceCoins('settings');
   const navigate = useNavigate();
   const { user, features } = useAuthStore();
   const { theme } = useTheme();

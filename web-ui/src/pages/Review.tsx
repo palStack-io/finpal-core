@@ -38,6 +38,7 @@ import { GROUP_LABELS, GROUP_ORDER, UNSORTED_LABEL } from '../utils/spendingGrou
 import { formatMoney } from '../styles/money';
 import { pageContainerStyle } from '../styles/layoutStyles';
 import { PageHead } from '../components/PageHead';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 /**
  * The account types the API actually accepts.
@@ -213,6 +214,10 @@ function RowError({ message }: { message: string }) {
 }
 
 export default function Review() {
+  // The page names its own surface and nothing more; the server owns
+  // which acts a `review` mutation can move. Fires on mount as well as
+  // on demand, so an unwired mutation handler still gets its moment.
+  useSurfaceCoins('review');
   const [payload, setPayload] = useState<ReviewPayload | null>(null);
   /**
    * Coins earned per act, keyed by slug.
