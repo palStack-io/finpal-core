@@ -186,40 +186,25 @@ describe('the shells are actually used', () => {
        * was drawn first: `docs/mockups/entry-web.html`.
        */
       'NotFound.tsx',
-      /**
-       * *** THE FOUR pointsPal PAGES ARE EXEMPT PENDING A DESIGN DECISION THAT
-       * IS NOT THIS SESSION'S TO TAKE. *** Widening this sweep from
-       * `pages/*.tsx` to include `modules/` is what surfaced them: Overview,
-       * CapTracker, MyCards and BestCard each render
-       * `<h1 style={{ fontFamily: "'Bricolage Grotesque'", fontWeight: 800,
-       * fontSize: 22, color: 'var(--ink)' }}>` — a deliberate, self-consistent
-       * type treatment at 22px, which is NOT the app's 27px `.page-title`.
-       * `--ink` is a real token, so nothing here is broken; it is a different
-       * design language.
-       *
-       * They belong to `feat/coins-and-gear`, whose spec is written and
-       * AWAITING OWNER REVIEW, and `docs/mockups/coins/pages-web-2.html` draws
-       * pointsPal as part of that. Converting them now would pre-empt a
-       * decision the owner has not taken, so they are named here rather than
-       * silently passing or silently failing.
-       *
-       * learnPal's three pages are NOT exempt and do not need to be — Home,
-       * Lessons and Range all already use `className="page-title"`.
-       *
-       * REMOVE THESE FOUR when the coins spec is approved and pointsPal is
-       * redrawn, or when a decision says pointsPal keeps its own type scale.
-       */
-      'pointspal/pages/Overview.tsx',
-      'pointspal/pages/CapTracker.tsx',
-      'pointspal/pages/MyCards.tsx',
-      'pointspal/pages/BestCard.tsx',
-      /* *** Redeem IS THE ONE THE OLD SUBSTRING CHECK HID, AND IT IS THE PROOF
-         THAT FIXING THE NEEDLE MATTERED. *** It passed for years by rendering
-         its own local `<PageHeader />` — a prefix match on `'<PageHead'` — and
-         goes red the moment the match is made precise. Same pointsPal design
-         decision as the four above; its local `PageHeader` is where that
-         module's own head lives. */
-      'pointspal/pages/Redeem.tsx',
+      /* *** THE FIVE pointsPal EXEMPTIONS ARE GONE, AND THE DECISION THEY
+         WERE WAITING ON IS THE REASON. *** They said: "REMOVE THESE when the
+         coins spec is approved and pointsPal is redrawn, OR when a decision
+         says pointsPal keeps its own type scale." The owner took the second
+         kind of decision on 2026-09-16 — adopt the app's head, keep Bricolage
+         Grotesque for the figures and card faces — so all five now render
+         `PageHead` and need no exemption.
+
+         *** AND THE PREMISE THE EXEMPTION WAS WRITTEN ON TURNED OUT TO BE
+         WRONG. *** It said converting them "would pre-empt a decision the
+         owner has not taken", because `coins/pages-web-2.html` draws pointsPal.
+         Reading that sheet instead of assuming: it draws the Overview with
+         `<h1>` + subtitle + a `right` slot + a ridge band, which IS
+         `PageHead`'s shape. The coins design was drawn assuming this
+         conversion, so adopting the head implements it rather than pre-empting
+         it. `docs/mockups/pointspal-web.html` records that finding.
+
+         `Redeem`'s local `<PageHeader />` — the prefix match that hid it from
+         this very gate (D-234) — is deleted rather than worked around. */
     ];
 
     for (const [file, src] of Object.entries(sources)) {

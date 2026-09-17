@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { PageHead } from '../../../components/PageHead';
 import { pointspalService, RedemptionOverview, RedemptionOption } from '../service';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
@@ -57,7 +58,22 @@ const Redeem: React.FC = () => {
   if (!data || data.programs.length === 0) {
     return (
       <div style={{ padding: '24px 28px' }}>
-        <PageHeader />
+        {/* *** THE LOCAL `PageHeader` COMPONENT IS DELETED, AND IT IS THE ONE
+          THAT BLINDED A GATE. *** `pageShells.test.ts` looked for
+          `src.includes('<PageHead')` and `<PageHeader />` PREFIX-MATCHES it —
+          so this page passed, twice over, the gate written to catch exactly
+          what it was doing. That is D-234, and the fix there was to tighten the
+          needle to `/<PageHead[\s/>]/`. This removes the thing the needle had
+          to be tightened against rather than leaving it sitting there having
+          been worked around.
+
+          See `CapTracker.tsx` for why the head is the app's now. */}
+      <PageHead
+        band="pointspal"
+        title="Redemption Optimizer"
+        subtitle="Maximize what your points are worth — ranked by cents per point."
+        right={<ScopeTag scope="yours" />}
+      />
         <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--muted)', fontSize: 14 }}>
           No redemption options available. Add cards to get started.
         </div>
@@ -86,7 +102,13 @@ const Redeem: React.FC = () => {
 
   return (
     <div style={{ padding: '24px 28px', background: 'var(--bg)', minHeight: '100%' }}>
-      <PageHeader />
+      {/* The same head as the branch above; see its note. */}
+      <PageHead
+        band="pointspal"
+        title="Redemption Optimizer"
+        subtitle="Maximize what your points are worth — ranked by cents per point."
+        right={<ScopeTag scope="yours" />}
+      />
 
       {/* Top banner */}
       <div
@@ -285,18 +307,6 @@ const ProgramCard: React.FC<{ program: RedemptionOverview['programs'][0] }> = ({
       </tbody>
     </table>
       </div>
-  </div>
-);
-
-const PageHeader: React.FC = () => (
-  <div style={{ marginBottom: 20 }}>
-    <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>
-      Redemption Optimizer
-    </h1>
-    <div style={{ marginTop: 6 }}><ScopeTag scope="yours" /></div>
-    <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-      Maximize what your points are worth — ranked by cents per point.
-    </p>
   </div>
 );
 

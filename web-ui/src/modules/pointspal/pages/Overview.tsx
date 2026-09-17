@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { PageHead } from '../../../components/PageHead';
+import { TotalsRow } from '../../../components/dashboard/TotalsRow';
 import { useNavigate } from 'react-router-dom';
 import { pointspalService, Overview } from '../service';
 import CardFace from '../components/CardFace';
@@ -6,6 +8,13 @@ import StaleCardBanner from '../components/StaleCardBanner';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
 import { useMoney } from '../../../hooks/useMoney';
+
+/* The cap-tracker link inside a `TotalsRow` note. A real button, not a styled
+   div: it navigates, so it has to be reachable by keyboard. */
+const capLinkStyle: React.CSSProperties = {
+  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+  color: 'var(--g-ink)', font: 'inherit', fontWeight: 600,
+};
 
 const PointsPalOverview: React.FC = () => {
   const { money } = useMoney();
@@ -55,15 +64,6 @@ const PointsPalOverview: React.FC = () => {
 
   return (
     <div style={{ padding: '24px 28px', background: 'var(--bg)', minHeight: '100%' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>
-          ✦ pointsPal
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-          Your rewards at a glance — cap alerts, missed points, and top opportunities.
-        </p>
-      </div>
 
       {/* Stale banners */}
       {data.stale_cards.map((sc) => (
@@ -77,83 +77,84 @@ const PointsPalOverview: React.FC = () => {
         />
       ))}
 
-      {/* KPI bar */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: 12,
-          marginBottom: 20,
-        }}
+      {/* *** THE APP'S HEAD, AND THE KPI BAR MOVES INTO IT. ***
+          All five pointsPal pages hand-rolled the same head block — the
+          eleven-page duplication `PageHead` exists to remove, repeated five
+          more times inside one module. D-233 recorded these as EXEMPTIONS with
+          a stated reason, and the reason was that a decision was pending; this
+          is that decision (owner, 2026-09-16).
+
+          *** IT DOES NOT WRITE PAST THE COINS SPEC — IT IMPLEMENTS IT. ***
+          `docs/mockups/coins/pages-web-2.html` draws this page with
+          `<h1>` + subtitle + a `right` slot + a ridge band, which is
+          `PageHead`'s exact shape, and the purse it puts in that corner is what
+          `PageHead` calls `right`. When coins ship the purse drops in beside
+          the scope tag and nothing else moves.
+
+          *** THE FOUR KPI CARDS BECOME ONE `TotalsRow`. *** They were a
+          hand-rolled `auto-fit` grid of bordered cards, each repeating the same
+          `yours` tag — one fact printed four times, which is D-101's
+          duplication in chrome. The tag is said ONCE now, in `right`, because
+          it is a property of every figure on the page.
+
+          *** AND A MEASURED TRAP THAT THIS MOVE WALKS INTO: THE HEAD SKY IS
+          LIGHTER THAN THE CARD. *** `--au-ink` is 4.88:1 on the page card and
+          **3.95:1 on `--head-sky`**; clay is 4.08:1 and gold 3.95:1 there. So
+          the warm inks cannot carry a figure in a head at all. That is D-229
+          exactly — moving Investments' buttons into `PageHead` dropped
+          `--g-ink` to 4.38:1 on this same surface. The figures below use
+          `--re-ink` (5.09:1) and `--g-ink` (5.61:1), both measured on the sky
+          rather than on the card.
+
+          Bricolage Grotesque stays everywhere it is doing real work — the card
+          faces, and the figures inside `TotalsRow`'s own type. What changed is
+          the page TITLE. */}
+      <PageHead
+        band="pointspal"
+        title="pointsPal"
+        subtitle="Your rewards at a glance — cap alerts, missed points, and top opportunities."
+        right={<ScopeTag scope="yours" />}
       >
-        {[
+        <TotalsRow cells={[
           {
-            label: 'Total Rewards Value',
-            value: `$${data.total_value_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            sub: `${data.cards.reduce((a, c) => a + c.points, 0).toLocaleString()} pts across ${data.cards.length} cards`,
-            valueColor: 'var(--ink)',
+            label: 'Rewards you hold',
+            value: money(data.total_value_usd),
+            note: `${data.cards.reduce((a, c) => a + c.points, 0).toLocaleString()} pts`
+              + ` across ${data.cards.length} ${data.cards.length === 1 ? 'card' : 'cards'}`,
           },
           {
-            label: 'Pts Earned (this month)',
-            value: data.pts_earned_this_month.toLocaleString(),
-            sub: null,
-            valueColor: 'var(--ink)',
+            label: 'Earned this month',
+            value: `${data.pts_earned_this_month.toLocaleString()} pts`,
+            note: 'on the cards you have connected',
           },
           {
-            label: 'Pts Missed (this month)',
-            value: data.pts_missed_this_month.toLocaleString(),
-            sub: data.pts_missed_this_month > 0 ? '⚠ cap hit' : null,
-            valueColor: data.pts_missed_this_month > 0 ? 'var(--re-ink)' : 'var(--ink)',
-            warn: data.pts_missed_this_month > 0,
+            /* Red only when there IS something missed. At zero this is good
+               news and colouring it like a loss would be a figure arguing with
+               itself. */
+            label: 'Missed this month',
+            value: `${data.pts_missed_this_month.toLocaleString()} pts`,
+            valueColor: data.pts_missed_this_month > 0 ? 'var(--re-ink)' : undefined,
+            note: data.pts_missed_this_month > 0
+              ? 'spend that went on the wrong card'
+              : 'nothing went on the wrong card',
           },
           {
-            label: 'Cap Alerts',
+            /* *** KEPT DESPITE READING 0 ON THE DEMO, BECAUSE 0 HERE IS AN
+               ANSWER RATHER THAN AN ABSENCE. *** "no cap alerts" is the state
+               you want to be in, which is why it is green at zero — unlike a
+               coin badge that is 0 because nothing can increment it. It also
+               carries the only route out of this page to the cap tracker. */
+            label: 'Cap alerts',
             value: String(data.active_cap_alerts),
-            sub: 'View cap tracker →',
-            subAction: () => navigate('/pointspal/caps'),
             valueColor: data.active_cap_alerts > 0 ? 'var(--re-ink)' : 'var(--g-ink)',
+            note: (
+              <button type="button" onClick={() => navigate('/pointspal/caps')} style={capLinkStyle}>
+                View cap tracker →
+              </button>
+            ),
           },
-        ].map(({ label, value, sub, subAction, valueColor, warn }) => (
-          <div
-            key={label}
-            style={{
-              background: 'var(--white)',
-              border: `1px solid ${warn ? 'var(--re100)' : 'var(--border)'}`,
-              borderRadius: 'var(--r)',
-              padding: '14px 16px',
-              boxShadow: 'var(--sh-xs)',
-            }}
-          >
-            {/* Every figure here is the caller's own: routes.py filters
-                UserCard by user_id, so the whole row is `yours`. D-01's sweep
-                never reached this page because the module was switched off. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 600 }}>
-                {label}
-              </div>
-              <ScopeTag scope="yours" />
-            </div>
-            <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 24, color: valueColor, lineHeight: 1 }}>
-              {value}
-            </div>
-            {sub && (
-              <div
-                onClick={subAction}
-                style={{
-                  fontSize: 11,
-                  color: subAction ? 'var(--g-ink)' : warn ? 'var(--re-ink)' : 'var(--muted)',
-                  marginTop: 6,
-                  cursor: subAction ? 'pointer' : 'default',
-                  fontFamily: subAction ? "'Bricolage Grotesque', sans-serif" : undefined,
-                  fontWeight: subAction ? 600 : undefined,
-                }}
-              >
-                {sub}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+        ]} />
+      </PageHead>
 
       {/* Main grid */}
       <div className="fp-two-pane">

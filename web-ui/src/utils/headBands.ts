@@ -126,4 +126,23 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
       + 'L690,18 L820,18 L840,10 L970,10 L990,4 L1100,4 L1100,52 Z',
     opacity: 0.34,
   },
+  /* *** pointsPal's BAND IS A CAP LINE, NOT A RANGE, AND THAT IS THE ONE FACT
+     THE MODULE EXISTS TO TELL YOU. *** Every other ridge here is peaks at
+     whatever heights suit the page; learnPal's is a staircase because that
+     module is about progress. pointsPal is about CEILINGS — a 3x category earns
+     3x until you hit the cap and then it does not — so peaks that would have
+     gone higher are CUT FLAT, and the two that have not reached the cap rise
+     freely. The flats all sit at y=20, which is where `PageHead` draws nothing:
+     the line itself is not in this path, because a `HeadBand` is one filled
+     ridge and a dashed rule is a second stroke. *** SO THE CAP IS READ FROM THE
+     FLATS BEING LEVEL WITH EACH OTHER *** rather than from a drawn line, which
+     is quieter and survives the band being 52px tall.
+
+     Verified by rendering the shape alone at 4x, because at 52px the difference
+     between "the flats are level" and "nearly level" is two pixels. */
+  pointspal: {
+    d: 'M0,52 L70,34 L120,34 L180,52 L250,20 L360,20 L420,52 L500,38 L560,38 '
+      + 'L620,52 L700,20 L820,20 L880,52 L960,30 L1020,30 L1075,52 L1100,46 L1100,52 Z',
+    opacity: 0.42,
+  },
 };

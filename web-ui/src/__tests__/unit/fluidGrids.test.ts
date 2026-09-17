@@ -120,13 +120,25 @@ const collect = () => {
 
 describe('grids are intrinsically fluid, or exempt for a stated reason', () => {
   it('finds a non-trivial number of grids, or the scan is broken', () => {
-    // A regex that matched nothing would make the assertion below vacuous — which
-    // is the failure mode this repo names D-45, and it has shipped it more than
-    // once. 49 grids were counted by hand on 2026-08-11.
+    /* A regex that matched nothing would make the assertion below vacuous —
+       the failure mode this repo names D-45, and it has shipped it more than
+       once. 49 grids were counted by hand on 2026-08-11.
+
+       *** THE FLOOR IS 25, NOT 40, AND THE REASON IS THE DIRECTION OF TRAVEL.
+       *** This number goes DOWN every time a hand-rolled stat grid becomes a
+       `TotalsRow` — which is a thing this codebase is deliberately doing, and
+       `sidebarAndStatCardsMeasured` actively requires. Converting pointsPal's
+       four-card KPI bar on 2026-09-16 took the count from 41 to exactly 40 and
+       reddened this, which is the guard complaining about progress.
+
+       A guards-the-guard floor should be far enough below the real count to
+       catch a BROKEN SCAN and nothing else. 25 does that: a regex that stops
+       matching returns 0, not 39. Tracking the exact count would make this an
+       inventory nobody agreed to maintain. */
     const all = walk(SRC).flatMap((f) => [
       ...readFileSync(f, 'utf8').matchAll(/gridTemplateColumns:\s*'([^']+)'/g),
     ]);
-    expect(all.length).toBeGreaterThan(40);
+    expect(all.length).toBeGreaterThan(25);
   });
 
   it('no fixed-track grid outside the exemption list', () => {
