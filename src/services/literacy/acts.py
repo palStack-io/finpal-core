@@ -197,8 +197,13 @@ def _register_core_acts():
 _register_core_acts()
 
 
-def award_for_user(user_id) -> list:
-    """Award every act this user has newly covered. Returns `[(slug, coins)]`.
+def _award_acts(user_id, acts) -> list:
+    """Award each act in `acts` this user has newly covered. `[(slug, coins)]`.
+
+    *** THE SHARED BODY, EXTRACTED RATHER THAN COPIED. *** `award_for_user` and
+    `award_for_surface` differ only in which acts they are handed. Two copies of
+    this loop would eventually drift on the dormant skip or on the per-act
+    isolation, and both of those are load-bearing.
 
     *** DOES NOT COMMIT. *** The caller owns the transaction, so a night's awards
     land together or not at all -- the same convention `raise_watermark` follows.
@@ -216,22 +221,49 @@ def award_for_user(user_id) -> list:
 
     repo = CoinRepository()
     earned = []
-    for slug, act in ACTS.items():
+    for act in acts:
         try:
             covered = act.coverage(user_id)
         except Exception:
-            # *** ONE BROKEN ACT MUST NOT COST A USER THE OTHER TWELVE. ***
+            # *** ONE BROKEN ACT MUST NOT COST A USER THE OTHERS. ***
             # Same failure isolation as `run_check`, and the same reason: a
             # predicate that raises is a bug, not a verdict.
-            logger.exception('literacy: coverage for %r raised — skipped', slug)
+            logger.exception('literacy: coverage for %r raised — skipped',
+                             act.slug)
             continue
         if covered is None:
             continue
         coins = int(Decimal(str(act.ceiling)) * Decimal(str(covered)))
-        delta = repo.upsert_award(user_id, slug, covered, coins)
+        delta = repo.upsert_award(user_id, act.slug, covered, coins)
         if delta:
-            earned.append((slug, delta))
+            earned.append((act.slug, delta))
     return earned
+
+
+def award_for_user(user_id) -> list:
+    """Award every act this user has newly covered. Returns `[(slug, coins)]`.
+
+    The nightly pass and the demo seeder use this. Does not commit.
+    """
+    return _award_acts(user_id, list(ACTS.values()))
+
+
+def award_for_surface(user_id, surface) -> list:
+    """The same, restricted to the acts a mutation on `surface` could move.
+
+    *** THIS IS WHAT GIVES A COIN ITS MOMENT. *** Before it, `award_for_user`
+    had one production caller -- a cron at 04:30 -- so coins for work done at
+    breakfast appeared overnight on a page nobody was looking at.
+
+    *** IDEMPOTENT, BECAUSE `upsert_award` IS A RATCHET. *** Calling it twice
+    awards nothing twice, which is what keeps correctness independent of the
+    client: one that forgets to call it loses the MOMENT, never the COINS.
+
+    *** AN UNKNOWN SURFACE AWARDS NOTHING AND DOES NOT RAISE. *** A client
+    naming a surface this build does not know is a client one release ahead,
+    not an error worth a 500 -- and the nightly pass collects the coins anyway.
+    """
+    return _award_acts(user_id, surface_acts(surface))
 
 
 def award_all_users(app) -> int:

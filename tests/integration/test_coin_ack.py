@@ -93,3 +93,53 @@ def test_one_users_ack_does_not_touch_another(owner, db):
 
     assert repo.unseen(owner.id) == []
     assert repo.unseen(other.id) == [('has_a_goal', 600)]
+
+
+# ══════════════════════════════════════════════════════════════════════
+# The wire
+# ══════════════════════════════════════════════════════════════════════
+
+def test_the_wallet_reports_an_overnight_award_as_unseen(
+        owner, auth_headers, client):
+    """*** THIS IS WHAT GIVES A CRON AWARD ITS MOMENT. *** The user was asleep
+    at 04:30; the award waits for them."""
+    _award(owner.id, 'has_a_goal', 600)
+
+    body = client.get('/api/v1/coins', headers=auth_headers(owner)).get_json()
+    assert [u['slug'] for u in body['unseen']] == ['has_a_goal']
+    assert body['unseen'][0]['coins'] == 600
+
+
+def test_acknowledging_clears_it_from_the_wallet(owner, auth_headers, client):
+    _award(owner.id, 'has_a_goal', 600)
+    h = auth_headers(owner)
+
+    res = client.post('/api/v1/coins/ack', json={'act_slug': 'has_a_goal'},
+                      headers=h)
+    assert res.status_code == 200, res.get_json()
+
+    body = client.get('/api/v1/coins', headers=h).get_json()
+    assert body['unseen'] == []
+
+    # *** ROLL BACK FIRST — D-61's SHAPE. *** The `db` fixture gives the test
+    # the SAME session the request used, so a write the handler never committed
+    # is still pending in it and autoflush makes it visible to the next query.
+    # Only what was actually COMMITTED survives a rollback.
+    _db.session.rollback()
+    assert CoinAwardAck.query.filter_by(
+        user_id=owner.id, act_slug='has_a_goal').one().coins_seen == 600
+
+
+def test_acknowledging_an_act_the_user_never_earned_is_404(
+        owner, auth_headers, client):
+    res = client.post('/api/v1/coins/ack', json={'act_slug': 'has_a_goal'},
+                      headers=auth_headers(owner))
+    assert res.status_code == 404
+
+
+def test_unseen_carries_no_denominator(owner, auth_headers, client):
+    _award(owner.id, 'has_a_goal', 600)
+    body = client.get('/api/v1/coins', headers=auth_headers(owner)).get_json()
+    assert body['unseen'], 'nothing unseen — the absence check is vacuous'
+    for u in body['unseen']:
+        assert 'ceiling' not in u and 'coverage' not in u

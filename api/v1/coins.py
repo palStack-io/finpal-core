@@ -25,7 +25,7 @@ from flask_restx import Namespace, Resource, fields
 
 from src.extensions import db
 from src.repositories.coins import CoinRepository
-from src.services.literacy.acts import ACTS
+from src.services.literacy.acts import ACTS, award_for_surface
 from src.services.literacy.gear import GEAR_PRICES
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,45 @@ purchase_request = ns.model('CoinPurchaseRequest', {
         required=True, example='rope',
         description='Which piece of gear to buy. Must be a slug in GEAR_PRICES.'),
 })
+
+
+refresh_request = ns.model('CoinRefreshRequest', {
+    'surface': fields.String(
+        required=True, example='transactions',
+        description='Which page the user just acted on. The server owns the '
+                    'surface-to-acts map; an unknown surface awards nothing.'),
+})
+
+ack_request = ns.model('CoinAckRequest', {
+    'act_slug': fields.String(
+        required=True, example='has_a_goal',
+        description='The act whose award the user has now been shown.'),
+})
+
+
+def _render_awards(user_id, pairs):
+    """`[(slug, coins)]` -> the award objects both `/refresh` and `unseen` send.
+
+    *** ONE BUILDER, BECAUSE THE FAIL-CLOSED PAYOFF RULE IS LOAD-BEARING. *** A
+    second copy would eventually grow a friendly fallback sentence, and a
+    sentence finPal cannot justify is worse than silence -- four payoffs were
+    caught on 2026-09-14 claiming an act was done beside `coins: 0`.
+    """
+    out = []
+    for slug, coins in pairs:
+        act = ACTS.get(slug)
+        try:
+            revealed = act.payoff(user_id) if act else None
+        except Exception:
+            logger.exception('coins: payoff for %r raised — omitted', slug)
+            revealed = None
+        out.append({
+            'slug': slug,
+            'title': act.title if act else slug,
+            'coins': int(coins),
+            'revealed': revealed,
+        })
+    return out
 
 
 def _wallet(user_id):
@@ -86,6 +125,11 @@ def _wallet(user_id):
         'earned': repo.earned(user_id),
         'balance': repo.balance(user_id),
         'acts': acts,
+        # *** WHAT GIVES A CRON AWARD ITS MOMENT. *** The user was asleep at
+        # 04:30; without this the award simply never happened as far as they
+        # could tell. Same objects `/refresh` returns, same builder, so the
+        # fail-closed payoff rule cannot drift between the two.
+        'unseen': _render_awards(user_id, repo.unseen(user_id)),
         'gear': [
             {'slug': slug, 'price': price, 'owned': slug in owned}
             for slug, price in GEAR_PRICES.items()
@@ -134,3 +178,59 @@ class CoinPurchaseResource(Resource):
 
         db.session.commit()
         return {'gear_slug': slug, 'balance': repo.balance(user_id)}, 200
+
+
+@ns.route('/refresh')
+class CoinRefresh(Resource):
+    @ns.expect(refresh_request, validate=False)
+    @jwt_required()
+    def post(self):
+        """Award anything this surface just made true, and say what it revealed.
+
+        *** THIS IS THE AWARD MOMENT. *** Before it, the only production caller
+        of the award pass was a cron at 04:30, so a user categorised forty
+        transactions and the coins arrived overnight on a page they were not
+        looking at.
+
+        *** IDEMPOTENT, BECAUSE `upsert_award` IS A RATCHET. *** Calling this
+        twice awards nothing twice, which is what makes correctness independent
+        of the client: one that forgets loses the MOMENT, never the COINS --
+        the 04:30 pass collects them, and is deliberately unchanged.
+
+        *** NO DENOMINATOR ON THE WIRE, SAME AS THE WALLET. *** No ceiling and
+        no coverage fraction, so no client can reconstruct "14 of 35".
+        """
+        user_id = get_jwt_identity()
+        payload = request.get_json(silent=True) or {}
+        surface = payload.get('surface')
+        if not isinstance(surface, str) or not surface:
+            return {'error': 'A surface is required.'}, 400
+
+        earned = award_for_surface(user_id, surface)
+        db.session.commit()
+
+        repo = CoinRepository()
+        return {
+            'awarded': _render_awards(user_id, earned),
+            'earned': repo.earned(user_id),
+            'balance': repo.balance(user_id),
+        }, 200
+
+
+@ns.route('/ack')
+class CoinAck(Resource):
+    @ns.expect(ack_request, validate=False)
+    @jwt_required()
+    def post(self):
+        """Mark one award as shown. Ratchet-only; it can never un-show."""
+        user_id = get_jwt_identity()
+        payload = request.get_json(silent=True) or {}
+        slug = payload.get('act_slug')
+
+        repo = CoinRepository()
+        if not slug or repo.award_row(user_id, slug) is None:
+            return {'error': 'No such award.'}, 404
+
+        repo.ack(user_id, slug)
+        db.session.commit()
+        return {'acknowledged': slug}, 200
