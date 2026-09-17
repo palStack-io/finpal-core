@@ -189,6 +189,15 @@ def _register_core_acts():
         Act('debt_minimums', 'Know your minimums', 400,
             coverage.debt_minimums, payoff.debt_minimums,
             surfaces=('accounts',)),
+        # ---- added by the 2026-09-17 amendment (spec §14.3) ----
+        # *** ALL FOUR ARE CONDITIONAL, AND THAT IS AN INVARIANT NOT A
+        # PREFERENCE. *** A user with no investments and no groups must still
+        # afford the whole kit, which §7.2 prices against the UNIVERSAL acts
+        # alone. Flipping one of these to `universal=True` would quietly make
+        # the kit unreachable for them.
+        Act('holdings_priced', 'Record what you paid', 900,
+            coverage.holdings_priced, payoff.holdings_priced,
+            surfaces=('investments',)),
     ]
     for act in core:
         register_act(act)

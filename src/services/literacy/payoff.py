@@ -37,6 +37,7 @@ from sqlalchemy import func
 from src.extensions import db
 from src.models.account import Account
 from src.models.category import Category
+from src.models.investment import Investment, Portfolio
 from src.models.transaction import Expense
 
 
@@ -314,3 +315,33 @@ def transfers_confirmed(user_id):
     return (f'{_money(total, _currency_for(user_id))} that looked like income '
             'is money you moved between your own accounts. Your income figure '
             'is the real one now.')
+
+
+def holdings_priced(user_id):
+    """What recording the price revealed: the real gain, not the market value.
+
+    *** FAIL-CLOSED. *** No priced holding, or no current price to compare
+    against, and there is no sentence -- the same rule `check_reason` follows.
+    """
+    rows = Investment.query.join(
+        Portfolio, Portfolio.id == Investment.portfolio_id).filter(
+            Portfolio.user_id == user_id).all()
+    priced = [h for h in rows
+              if h.purchase_price and h.purchase_price > 0 and h.current_price]
+    if not priced:
+        return None
+
+    cost = sum(Decimal(str(h.shares)) * Decimal(str(h.purchase_price))
+               for h in priced)
+    value = sum(Decimal(str(h.shares)) * Decimal(str(h.current_price))
+                for h in priced)
+    if cost <= 0:
+        return None
+
+    currency = _currency_for(user_id)
+    gain = value - cost
+    verb = 'up' if gain >= 0 else 'down'
+    return (f'You paid {_money(cost, currency)} for those holdings and they '
+            f'are worth {_money(value, currency)} — {verb} '
+            f'{_money(abs(gain), currency)}. Before you recorded the price, '
+            f'finPal counted the whole {_money(value, currency)} as gain.')

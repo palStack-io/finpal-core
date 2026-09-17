@@ -36,6 +36,7 @@ from src.models.account import Account
 from src.models.budget import Budget
 from src.models.category import Category
 from src.models.goal import Goal
+from src.models.investment import Investment, Portfolio
 from src.models.recurring import RecurringExpense
 from src.models.transaction import Expense
 from src.models.transaction_rule import TransactionRule
@@ -70,6 +71,23 @@ def _binary(done):
     Never dormant -- every user can name a goal, record their income or teach a
     rule, whatever their circumstances.
     """
+    return ONE if done else ZERO
+
+
+def _binary_conditional(possible, done):
+    """A binary act that a user's circumstances may not raise at all.
+
+    *** `_binary` IS WRONG FOR AN EVENT ACT AND ITS OWN DOCSTRING SAYS WHY: ***
+    *"never dormant"*. That is true of naming a goal and false of revising a
+    budget -- you cannot revise one you have not set, and scoring that user
+    `ZERO` tells them they are failing at something they cannot yet do, which
+    is the report-card voice decision 5 exists to forbid (§4.2.1).
+
+    So: `None` when the act is not yet possible, `ONE` once done, `ZERO` only
+    in the genuine middle -- it IS possible and you have not done it.
+    """
+    if not possible:
+        return None
     return ONE if done else ZERO
 
 
@@ -327,3 +345,31 @@ def transfers_confirmed(user_id):
     covered = sum(abs(Decimal(str(r.amount or 0)))
                   for r in rows if r.type_source == 'user')
     return _share(covered, total)
+
+
+def holdings_priced(user_id):
+    """Share of your holdings that record what you actually paid.
+
+    *** THIS ACT EXISTS BECAUSE THE MISSING FIGURE DOES NOT READ AS MISSING —
+    D-257. *** `Investment.purchase_price` is `nullable=False, default=0`, and
+    `gain_loss` is `current_value - shares * purchase_price`. So a holding you
+    never priced does not say *unknown*: it reports its ENTIRE market value as
+    profit, beside a confident `0.00%`. Recording the price is the truth test's
+    first limb exactly -- it makes a figure finPal already shows truer.
+
+    *** PER-USER, NOT HOUSEHOLD-SCOPED, AND THAT IS DELIBERATE. *** The
+    Investments PAGE shows a housemate's holdings (portfolios are
+    household-scoped in `api/v1/investments.py`), so this denominator is
+    smaller than the page's list. That is correct twice over: coins measure
+    coverage of the user's OWN picture (decision 5), and writes to someone
+    else's holding are not theirs to make -- paying them for a figure they
+    cannot fix would be a score they can never clear. Every other coverage
+    function in this file is per-user for the same reason.
+    """
+    rows = Investment.query.join(
+        Portfolio, Portfolio.id == Investment.portfolio_id).filter(
+            Portfolio.user_id == user_id).all()
+    if not rows:
+        return None
+    return _share(sum(1 for h in rows if h.purchase_price and h.purchase_price > 0),
+                  len(rows))
