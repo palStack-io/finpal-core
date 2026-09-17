@@ -44,6 +44,11 @@ def init_scheduled_tasks():
             try:
                 from src.services.literacy.acts import award_all_users
                 total = award_all_users(scheduler.app)
+                # *** BADGES RIDE THE SAME PASS, AND PAY NOTHING INTO IT. ***
+                # They are milestones, recorded once and kept; the coin total
+                # above is unaffected by design.
+                from src.services.literacy.badges import award_all_badges
+                award_all_badges(scheduler.app)
                 logger.info(f"Literacy coin pass completed: {total} coin(s)")
             except Exception as e:
                 logger.error(f"Literacy coin pass failed: {str(e)}")

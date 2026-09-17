@@ -103,7 +103,8 @@ def _coins_reset(user_id):
     `act_events` goes too: its rows name budget and expense ids that the reseed
     replaces, so surviving rows are orphans pointing at data that is gone.
     """
-    from src.models.act_event import ActEvent, EverestWatermark, TeachingSeen
+    from src.models.act_event import (ActEvent, BadgeEarned, EverestWatermark,
+                                      TeachingSeen)
     from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase
     removed = CoinAward.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
@@ -123,6 +124,11 @@ def _coins_reset(user_id):
     # height nothing on the stack justifies, which is the one thing
     # `_coins_award` refuses for coins.
     removed += EverestWatermark.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    # Badges are append-only for a real user, deliberately — but a demo RESET
+    # wipes the data they were earned against, so keeping them would show a
+    # badge nothing on the stack justifies.
+    removed += BadgeEarned.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
     return removed
 
@@ -150,6 +156,18 @@ def _coins_award(user_id):
         logger.exception('demo: coin award failed for %s', user_id)
         return 0
     _coins_demo_kit(user_id)
+
+    # *** BADGES ARE EARNED HERE TOO, NOT FABRICATED. *** Same rule as the
+    # coins above: running the real predicates means the demo's badges are
+    # exactly what that user's data justifies. demo1 has a finished goal, so
+    # `goal-reached` fires honestly. Without this the badges surface would demo
+    # itself empty — D-77's shape, which has hidden three defects here.
+    try:
+        from src.services.literacy.badges import award_badges
+        award_badges(user_id)
+    except Exception:
+        logger.exception('demo: badge award failed for %s', user_id)
+
     return awarded
 
 

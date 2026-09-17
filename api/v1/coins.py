@@ -28,6 +28,7 @@ from src.extensions import db
 from src.repositories.coins import CoinRepository
 from src.services.literacy.acts import ACTS, award_for_surface
 from src.services.literacy.gear import GEAR_PRICES
+from src.services.literacy.badges import award_badges, earned_badges
 from src.services.literacy.everest import altitude_for
 from src.services.literacy.teaching import ACT_TOPIC, panel_for
 
@@ -237,6 +238,11 @@ def _wallet(user_id):
         # forbids a denominator finPal chose about the USER'S FINANCES; this one
         # is about effort and says nothing about anyone's money.
         'everest': altitude_for(user_id),
+        # *** EARNED ONES ONLY, NEVER A LOCKED GRID. *** An unearned badge is
+        # absent, not present-and-false, so no client can render "you have not
+        # paid your debt" — which is the report card decision 5 forbids. Same
+        # rule as a dormant act (§4.2.1).
+        'badges': earned_badges(user_id),
     }
 
 
@@ -319,6 +325,12 @@ class CoinRefresh(Resource):
             return {'error': 'A surface is required.'}, 400
 
         earned = award_for_surface(user_id, surface)
+        # *** BADGES ARE CHECKED HERE TOO, AND THEY PAY NOTHING. *** No coins,
+        # no altitude — owner decision 2026-09-17. They are outcomes, so paying
+        # them into the economy would let a high earner out-climb a careful low
+        # earner, which is the brief's failure mode and the reason DTI was
+        # refused for Everest. This call only RECORDS.
+        award_badges(user_id)
         db.session.commit()
 
         repo = CoinRepository()

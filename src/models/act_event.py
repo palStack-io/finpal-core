@@ -133,3 +133,47 @@ class EverestWatermark(db.Model):
 
     def __repr__(self):
         return f'<EverestWatermark {self.user_id} {self.fraction}>'
+
+
+class BadgeEarned(db.Model):
+    """One row per badge a user has been awarded. *** APPEND-ONLY. ***
+
+    *** THIS TABLE IS WHAT MAKES AN ACHIEVEMENT BADGE SAFE. *** The three the
+    owner asked for on 2026-09-17 — debt cleared, goal reached, months on
+    budget — are all OUTCOMES, and §14.1 excludes outcomes from EARNING for a
+    good reason: a careful person on a low wage may never clear their card.
+    Badges survive that rule only because of two properties, and this table is
+    the first:
+
+    1. *** RECORDED WHEN FIRST OBSERVED, NEVER RE-EVALUATED. *** A live
+       predicate would take the badge BACK the moment the user borrowed again,
+       and decision 1 says nothing earned can ever be taken away. So the badge
+       is an EVENT, not a condition, exactly as `ActEvent` is for the acts that
+       cannot be derived from state.
+    2. An unearned badge is ABSENT from the payload, never present-and-false —
+       so no client can render a grid of locked badges saying *you have not paid
+       your debt*, which is the report card decision 5 forbids.
+
+    *** AND THEY PAY NOTHING ELSE. *** No coins, no altitude. Owner decision,
+    2026-09-17: otherwise a high earner would out-climb a careful low earner,
+    which is the brief's own failure mode one level up, and is the same reason
+    debt-to-income was refused for Everest.
+
+    *** A NEW TABLE, NOT A COLUMN — D-121. *** `create_all()` is blind to a new
+    column on an existing model.
+    """
+
+    __tablename__ = 'badges_earned'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'slug', name='uq_badge_earned_user_slug'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.String(120), db.ForeignKey('users.id', name='fk_badge_earned_user'),
+        nullable=False, index=True)
+    slug = db.Column(db.String(60), nullable=False)
+    earned_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<BadgeEarned {self.user_id} {self.slug}>'
