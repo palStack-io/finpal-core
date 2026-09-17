@@ -55,6 +55,7 @@ from src.models.mountain import Mountain, MountainBand  # noqa: F401
 # point of moving the predicate library out of learnPal was that a user who
 # hides a module must not lose this. Two new TABLES, so `create_all()` makes
 # them at boot; a new COLUMN would have been invisible to it (D-121).
+from src.models.act_event import ActEvent  # noqa: F401,E402
 from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase  # noqa: F401,E402
 
 from src.modules.pointspal.manifest import PointsPalModule as _PointsPalModule
