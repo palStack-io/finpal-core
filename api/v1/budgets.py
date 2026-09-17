@@ -183,7 +183,26 @@ class BudgetDetail(Resource):
             if 'name' in data:
                 budget.name = data['name']
             if 'amount' in data:
+                # *** COMPARE BEFORE ASSIGNING, OR THE ACT RECORDS A PUT THAT
+                # CHANGED NOTHING. *** A client that round-trips the whole
+                # budget object on every save sends `amount` unchanged, and
+                # `budget_adjusted` pays for a DECISION, not for a request.
+                from decimal import Decimal, InvalidOperation
+                try:
+                    changed = (Decimal(str(data['amount']))
+                               != Decimal(str(budget.amount)))
+                except (InvalidOperation, TypeError):
+                    changed = str(data['amount']) != str(budget.amount)
                 budget.amount = data['amount']
+                if changed:
+                    # *** RECORDED HERE RATHER THAN READ OFF
+                    # `Budget.updated_at` — D-197. *** `rollover_service.py:76`
+                    # writes `rollover_amount` from a cron, which fires
+                    # `onupdate`, so the timestamp cannot tell a user's
+                    # decision from a scheduled task's housekeeping.
+                    from src.repositories.act_events import ActEventRepository
+                    ActEventRepository().record(
+                        current_user_id, 'budget_adjusted', str(budget.id))
             if 'period' in data:
                 budget.period = data['period']
             if 'category_id' in data:

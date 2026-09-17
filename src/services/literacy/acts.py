@@ -198,6 +198,15 @@ def _register_core_acts():
         Act('holdings_priced', 'Record what you paid', 900,
             coverage.holdings_priced, payoff.holdings_priced,
             surfaces=('investments',)),
+        Act('splits_confirmed', 'Confirm a split is real', 600,
+            coverage.splits_confirmed, payoff.splits_confirmed,
+            surfaces=('groups',)),
+        Act('settlement_recorded', 'Record settling up', 400,
+            coverage.settlement_recorded, payoff.settlement_recorded,
+            surfaces=('groups',)),
+        Act('budget_adjusted', 'Revise a budget that was not working', 500,
+            coverage.budget_adjusted, payoff.budget_adjusted,
+            surfaces=('budgets',)),
     ]
     for act in core:
         register_act(act)

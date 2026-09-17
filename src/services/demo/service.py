@@ -88,15 +88,30 @@ def _learnpal_reset(user_id):
 def _coins_reset(user_id):
     """Delete a demo user's coin ledger. Core, so no optional-import dance.
 
-    *** AWARDS AND PURCHASES BOTH GO. *** Leaving the awards behind would let a
-    reset user keep coins earned against data that no longer exists, and leaving
-    the purchases behind would leave them owning gear they can no longer afford.
-    The pair is one state.
+    *** ALL FOUR TABLES GO, AND MISSING ONE IS NOT COSMETIC. *** Leaving the
+    awards behind would let a reset user keep coins earned against data that no
+    longer exists, and leaving the purchases behind would leave them owning
+    gear they can no longer afford.
+
+    *** THE ACKS ARE THE ONE THAT BREAKS THE DEMO SILENTLY. *** `coin_award_acks`
+    records what the user has been SHOWN. Delete the awards, re-earn them, and
+    leave the acks: every re-earned award reads as *already seen*, the wallet's
+    `unseen` list comes back EMPTY, and the award moment stops demoing itself
+    with nothing on the page to say so -- D-77's shape, and D-184's lesson that
+    a reset which misses a table is the reset being wrong, not the table.
+
+    `act_events` goes too: its rows name budget and expense ids that the reseed
+    replaces, so surviving rows are orphans pointing at data that is gone.
     """
-    from src.models.coins import CoinAward, CoinPurchase
+    from src.models.act_event import ActEvent
+    from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase
     removed = CoinAward.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
     removed += CoinPurchase.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    removed += CoinAwardAck.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    removed += ActEvent.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
     return removed
 
@@ -115,6 +130,8 @@ def _coins_award(user_id):
     an empty wallet for ever and every coins surface would demo itself empty --
     D-77's shape, which has hidden three defects here already.
     """
+    _act_events_seed(user_id)
+
     from src.services.literacy.acts import award_for_user
     try:
         awarded = len(award_for_user(user_id))
@@ -123,6 +140,59 @@ def _coins_award(user_id):
         return 0
     _coins_demo_kit(user_id)
     return awarded
+
+
+def _act_events_seed(user_id):
+    """Record the demo persona's EVENT acts, through the real repository.
+
+    *** TWO ACTS CANNOT BE EARNED FROM SEEDED ROWS ALONE (§14.3.1). ***
+    `budget_adjusted` and `splits_confirmed` are events, not coverages: nothing
+    in a budget or an expense records *the user came back and decided this*, so
+    seeding the data does not seed the act. Without this the two would demo
+    themselves empty -- D-77's shape, which has hidden three defects here.
+
+    Written through `ActEventRepository.record`, not inserted directly, so the
+    demo obeys the same idempotence a user does -- the same reason
+    `_coins_demo_kit` goes through `CoinRepository.purchase`.
+
+    *** A FIRST DRAFT OF THIS DOCSTRING CLAIMED THE DEMO GROUPS HOLD NO
+    EXPENSES. THAT WAS STALE AND MEASURED FALSE. *** D-175 seeded them: there
+    are **9** group expenses, every one carrying `split_with`, and demo1 is
+    named in all of them. So `splits_confirmed` is LIVE for the demo personas,
+    not dormant, and it is seeded below.
+
+    *** PARTIAL ON PURPOSE. *** Confirming SOME of the shared bills leaves the
+    act mid-coverage, which is the instructive state: it shows coins already
+    earned AND something still worth doing. Confirming all of them would demo a
+    finished act, which teaches nobody what the act is for.
+
+    *** `settlement_recorded` IS LEFT AT ZERO, DELIBERATELY. *** There are 0
+    settlements and `test_the_demo_covers_every_feature` already records that as
+    a known GAP -- *"nobody has ever settled up, so the settle-up flow shows no
+    history"*. That is a pre-existing demo-seed decision, not this function's to
+    take. The act is correctly LIVE-AND-UNDONE rather than dormant, because
+    shared expenses exist, so the demo shows an act genuinely available to do.
+    """
+    from src.models.budget import Budget
+    from src.models.transaction import Expense
+    from src.repositories.act_events import ActEventRepository
+
+    repo = ActEventRepository()
+
+    budget = Budget.query.filter_by(user_id=user_id).first()
+    if budget is not None:
+        repo.record(user_id, 'budget_adjusted', str(budget.id))
+
+    # Confirm the first two shared bills this user is actually split into --
+    # membership tested the same way `Group.balances` does it, on the
+    # comma-separated string, never with a `LIKE`.
+    shared = Expense.query.filter(
+        Expense.group_id.isnot(None), Expense.split_with.isnot(None)).all()
+    mine = [e for e in shared
+            if user_id in [i.strip() for i in (e.split_with or '').split(',')]
+            or e.paid_by == user_id]
+    for e in mine[:2]:
+        repo.record(user_id, 'splits_confirmed', str(e.id))
 
 
 # What a demo climber has already bought. *** THREE PIECES, SO THE KIT SHOWS ALL

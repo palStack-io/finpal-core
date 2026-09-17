@@ -92,3 +92,24 @@ def test_every_act_declares_a_positive_ceiling_and_a_title():
         assert act.ceiling > 0, f'{slug} pays nothing'
         assert act.title, f'{slug} has no title'
         assert callable(act.coverage), f'{slug} has no coverage function'
+
+
+def test_the_four_amendment_acts_are_CONDITIONAL_not_universal():
+    """*** AN INVARIANT, NOT A PREFERENCE. ***
+
+    §7.2 prices the whole kit against the UNIVERSAL acts alone, precisely so a
+    user whose circumstances never raise a conditional one can still finish it.
+    `holdings_priced` needs investments; `splits_confirmed` and
+    `settlement_recorded` need a group; `budget_adjusted` needs a budget.
+    Flipping any of them to `universal=True` would quietly make the kit
+    unaffordable for a user with none of those, and the affordability test
+    above would keep passing because it reads the universal set.
+    """
+    from src.services.literacy.acts import ACTS
+
+    for slug in ('holdings_priced', 'splits_confirmed',
+                 'settlement_recorded', 'budget_adjusted'):
+        assert slug in ACTS, f'{slug} is not registered'
+        assert ACTS[slug].universal is False, (
+            f'{slug} is universal, so the kit is now priced against a ceiling '
+            f'a user without those circumstances can never reach')

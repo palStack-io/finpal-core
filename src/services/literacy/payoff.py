@@ -345,3 +345,64 @@ def holdings_priced(user_id):
             f'are worth {_money(value, currency)} — {verb} '
             f'{_money(abs(gain), currency)}. Before you recorded the price, '
             f'finPal counted the whole {_money(value, currency)} as gain.')
+
+
+def splits_confirmed(user_id):
+    """What confirming the splits fixed: your own share of the bill.
+
+    *** FAIL-CLOSED. *** Nothing confirmed, nothing to say.
+    """
+    from src.services.literacy.coverage import _shared_expenses_for
+    from src.repositories.act_events import ActEventRepository
+
+    mine = _shared_expenses_for(user_id)
+    if not mine:
+        return None
+    confirmed = ActEventRepository().subject_ids(user_id, 'splits_confirmed')
+    done = [e for e in mine if str(e.id) in confirmed]
+    if not done:
+        return None
+
+    currency = _currency_for(user_id)
+    total = sum(Decimal(str(abs(e.amount or 0))) for e in done)
+    n = len(done)
+    bill = 'bill' if n == 1 else 'bills'
+    return (f'{n} shared {bill} worth {_money(total, currency)} now splits the '
+            f'way it actually happened. Your spending figures count your share '
+            f'of it, not an even guess.')
+
+
+def settlement_recorded(user_id):
+    """What recording a settlement fixed: money owed is money accounted for."""
+    from src.models.group import Settlement
+
+    rows = Settlement.query.filter(
+        db.or_(Settlement.payer_id == user_id,
+               Settlement.receiver_id == user_id)).all()
+    if not rows:
+        return None
+
+    currency = _currency_for(user_id)
+    total = sum(Decimal(str(s.amount or 0)) for s in rows)
+    n = len(rows)
+    word = 'settlement' if n == 1 else 'settlements'
+    return (f'{n} {word} recorded, {_money(total, currency)} in all. Money '
+            f'that changed hands is now in your figures instead of sitting '
+            f'outside them.')
+
+
+def budget_adjusted(user_id):
+    """What revising a budget did: the plan now matches what you decided.
+
+    *** NO FIGURE IS CLAIMED HERE, AND THAT IS THE POINT. *** This act earns on
+    the truth test's EFFORT limb (§14.1), not because it made a number truer,
+    so a sentence inventing a consequence would be the bluff the fail-closed
+    rule exists to prevent. It names what the user did and stops.
+    """
+    from src.models.budget import Budget
+
+    n = Budget.query.filter_by(user_id=user_id).count()
+    if not n:
+        return None
+    return ('You came back and changed a budget rather than leaving one that '
+            'was not working. A plan you revise is a plan you are using.')

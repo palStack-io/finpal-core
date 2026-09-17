@@ -36,6 +36,7 @@ from src.models.account import Account
 from src.models.budget import Budget
 from src.models.category import Category
 from src.models.goal import Goal
+from src.models.group import Settlement
 from src.models.investment import Investment, Portfolio
 from src.models.recurring import RecurringExpense
 from src.models.transaction import Expense
@@ -373,3 +374,95 @@ def holdings_priced(user_id):
         return None
     return _share(sum(1 for h in rows if h.purchase_price and h.purchase_price > 0),
                   len(rows))
+
+
+def _shared_expenses_for(user_id):
+    """Group expenses this user is actually split into.
+
+    *** `split_with` IS A COMMA-SEPARATED STRING, NOT A RELATION *** -- the
+    same shape `Group.balances` reads (`group.py:15`). So the membership test
+    happens in Python after the query rather than in SQL, and a substring
+    `LIKE` would be wrong: `'bob@x.com'` is a substring of `'rob@x.com'` is
+    not, but `'a@x.com'` IS a substring of `'ba@x.com'`.
+    """
+    rows = Expense.query.filter(
+        Expense.group_id.isnot(None),
+        Expense.split_with.isnot(None)).all()
+    mine = []
+    for e in rows:
+        ids = [i.strip() for i in (e.split_with or '').split(',') if i.strip()]
+        if user_id in ids or e.paid_by == user_id or e.user_id == user_id:
+            mine.append(e)
+    return mine
+
+
+def splits_confirmed(user_id):
+    """Share of your shared expenses whose split you have confirmed.
+
+    *** DORMANT UNLESS THE USER IS SPLIT INTO SOMETHING. *** A user in no
+    group, or in a group with no shared expense, has nothing to confirm.
+
+    Counted from `ActEvent` because **there is no split-confirmation field
+    anywhere** -- `split_method`, `split_with`, `split_details` and
+    `has_category_splits` all describe the split, none records that a human
+    agreed with it (§14.3.1).
+    """
+    from src.repositories.act_events import ActEventRepository
+
+    mine = _shared_expenses_for(user_id)
+    if not mine:
+        return None
+    confirmed = ActEventRepository().subject_ids(user_id, 'splits_confirmed')
+    return _share(sum(1 for e in mine if str(e.id) in confirmed), len(mine))
+
+
+def settlement_recorded(user_id):
+    """Have you recorded settling up with anyone?
+
+    *** KEYED ON THE RECORDING, NEVER ON A BALANCE REACHING ZERO (§14.2). *** A
+    user who cannot pay yet is not failing, and a reward keyed to the zero
+    would say they were -- voice rule 11. So an outstanding balance does not
+    reduce this, and clearing one does not raise it; only the record does.
+
+    *** THE SETTLEMENT CHECK COMES FIRST, BEFORE THE DORMANCY TEST. *** A user
+    who has settled everything would otherwise fall into the dormant branch and
+    read as absent having actually done the thing.
+
+    *** AND DORMANCY IS "NO SHARED EXPENSE", NOT "NEVER HAD A BALANCE". *** A
+    balance is derived from expenses plus settlements, so the schema only knows
+    the CURRENT one -- *ever had a balance* is not computable from what is
+    stored. This test is, and it fails in the right direction.
+    """
+    has_settled = db.session.query(Settlement.query.filter(
+        db.or_(Settlement.payer_id == user_id,
+               Settlement.receiver_id == user_id)).exists()).scalar()
+    if has_settled:
+        return ONE
+    if not _shared_expenses_for(user_id):
+        return None
+    return ZERO
+
+
+def budget_adjusted(user_id):
+    """Have you come back and changed a budget you had set?
+
+    *** THE CLEAREST THING THE AMENDED TRUTH TEST UNLOCKS. *** Under the
+    original §1 this paid nothing: revising a budget makes no figure truer, it
+    is a deliberate act of taking control. §14.1 added that limb.
+
+    *** DORMANT UNTIL THERE IS A BUDGET TO REVISE. *** You cannot revise what
+    you have not set.
+
+    *** IT READS `ActEvent`, NOT `Budget.updated_at` — D-197. ***
+    `src/services/budget/rollover_service.py:76` writes `budget.rollover_amount`
+    from a SCHEDULED TASK, which fires `onupdate`. Keyed on the timestamp,
+    every budget on every stack would eventually read as *the user revised
+    this* because a cron touched it. A column with a non-user writer cannot
+    testify to a user's act.
+    """
+    from src.repositories.act_events import ActEventRepository
+
+    has_budget = db.session.query(
+        Budget.query.filter_by(user_id=user_id).exists()).scalar()
+    return _binary_conditional(
+        has_budget, ActEventRepository().exists(user_id, 'budget_adjusted'))

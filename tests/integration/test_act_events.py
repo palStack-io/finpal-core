@@ -113,3 +113,44 @@ def test_the_CONSTRAINT_dedupes_a_subject_less_event_not_just_the_pre_check(owne
     _db.session.rollback()
 
     assert ActEvent.query.filter_by(user_id=owner.id).count() == 1
+
+
+def test_the_demo_reset_clears_the_acks_or_the_award_moment_stops_demoing(db):
+    """*** THE HALF OF THIS THAT IS NOT COSMETIC. ***
+
+    `_coins_reset` deleted awards and purchases and left `coin_award_acks`
+    behind. A reset user's awards are then re-earned while their acks survive,
+    so every re-earned award reads as ALREADY SEEN, the wallet's `unseen` list
+    comes back empty, and the award moment stops demonstrating itself with
+    nothing on the page to say so — D-77's shape, and D-184's lesson.
+
+    Asserts on both new tables, because a reset that clears one and not the
+    other is the same defect half-fixed.
+    """
+    from src.models.act_event import ActEvent
+    from src.models.coins import CoinAward, CoinAwardAck
+    from src.repositories.act_events import ActEventRepository
+    from src.repositories.coins import CoinRepository
+    from src.services.demo.service import _coins_reset
+
+    u = UserFactory(id='resetme@test.com', name='R',
+                    password_plain='testpassword')
+    _db.session.commit()
+
+    _db.session.add(CoinAward(user_id=u.id, act_slug='has_a_goal',
+                              coverage=1, coins=600))
+    _db.session.commit()
+    CoinRepository().ack(u.id, 'has_a_goal')
+    ActEventRepository().record(u.id, 'budget_adjusted', '7')
+    _db.session.commit()
+
+    assert CoinAwardAck.query.filter_by(user_id=u.id).count() == 1
+    assert ActEvent.query.filter_by(user_id=u.id).count() == 1
+
+    _coins_reset(u.id)
+    _db.session.commit()
+
+    assert CoinAwardAck.query.filter_by(user_id=u.id).count() == 0, (
+        'acks survived the reset — re-earned awards will read as already seen')
+    assert ActEvent.query.filter_by(user_id=u.id).count() == 0, (
+        'act_events survived the reset, pointing at data that is now gone')
