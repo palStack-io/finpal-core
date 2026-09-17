@@ -25,7 +25,8 @@ import { useAuthStore } from '../../store/authStore';
 import { moduleRegistry } from '../../modules';
 import { useReviewStore } from '../../store/reviewStore';
 import type { ModuleManifest } from '../../modules/registry';
-import { useCoinBalance } from '../../contexts/CoinAwardContext';
+import { useCoinBalance, useOpenSurfaces } from '../../contexts/CoinAwardContext';
+import { Cairn } from '../Cairn';
 
 /**
  * The nav is grouped by WHAT YOU ARE DOING, and the headings are shared with
@@ -303,6 +304,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
   type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }> };
 
   const coinBalance = useCoinBalance();
+  const openSurfaces = useOpenSurfaces();
+
+  /**
+   * Which surface each nav destination is.
+   *
+   * *** THE SERVER CANNOT OWN THIS ONE, AND THAT IS NOT A DRIFT RISK. *** It
+   * maps THIS CLIENT'S ROUTES onto surface names; mobile's routes differ and
+   * the server knows neither. The surface NAMES are the shared vocabulary and
+   * `everySurfaceHasACaller.test.ts` pins that no unknown name is used here.
+   */
+  const SURFACE_BY_PATH: Record<string, string> = {
+    '/transactions': 'transactions',
+    '/accounts': 'accounts',
+    '/categories': 'categories',
+    '/budgets': 'budgets',
+    '/recurring': 'recurring',
+    '/rules': 'rules',
+    '/goals': 'goals',
+    '/review': 'review',
+    '/investments': 'investments',
+    '/groups': 'groups',
+  };
 
 
   const renderNavItems = (items: readonly NavItem[]) =>
@@ -316,6 +339,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         >
           <Icon className="nav-icon" size={20} strokeWidth={2} />
           <span>{item.name}</span>
+          {/* *** THE CAIRN, AND IT IS A MARKER NOT A SCORE. *** Present when
+              an act on that page is still open to you, gone when there is
+              nothing left to do there. No stones accumulate — a marker that
+              grew with progress would be decision 5's denominator in a hat.
+              It inherits `currentColor` from the row, so it cannot go
+              invisible in one theme (D-60's class) and it needs no token of
+              its own. */}
+          {openSurfaces.has(SURFACE_BY_PATH[item.path] ?? '') && (
+            <span
+              style={{
+                marginLeft: 'auto', display: 'inline-flex',
+                alignItems: 'center', opacity: 0.55,
+              }}
+            >
+              <Cairn size={11} title={`${item.name} has something to finish`} />
+            </span>
+          )}
           {/* *** A COUNT, NEVER A FRACTION, AND ABSENT AT ZERO. *** "3" is
               momentum; "3 of 47" is a report card, and a permanent "0" badge
               would nag about a job already done. `null` means "not asked yet"

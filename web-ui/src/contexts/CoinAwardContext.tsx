@@ -32,6 +32,14 @@ interface CoinAwardContextType {
   balance: number | null;
   /** Pull `unseen` from the wallet — the overnight awards. */
   loadUnseen: () => Promise<void>;
+  /**
+   * Surfaces with at least one act still open, for the cairn.
+   *
+   * *** DERIVED FROM A BIT THE SERVER SENDS, NOT FROM A FRACTION. *** The
+   * client cannot compute this: no ceiling goes on the wire, so `coins: 600`
+   * is indistinguishable from finished. `act.open` is one boolean per act.
+   */
+  openSurfaces: ReadonlySet<string>;
 }
 
 const CoinAwardContext = createContext<CoinAwardContextType | undefined>(undefined);
@@ -47,6 +55,9 @@ export const useCoinAwards = () => {
 export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [queue, setQueue] = useState<CoinAwardItem[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
+  const [openSurfaces, setOpenSurfaces] = useState<ReadonlySet<string>>(
+    () => new Set<string>()
+  );
 
   // *** A REF, NOT STATE. *** Two mutations in quick succession would both
   // read a stale `queue` from the closure and the second would drop the
@@ -79,6 +90,16 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const wallet = await coinService.getWallet();
       setBalance(wallet.balance);
       enqueue(wallet.unseen ?? []);
+
+      // *** A DORMANT ACT IS ABSENT FROM `acts`, SO IT RAISES NO CAIRN. ***
+      // That is the point: a debt-free user must not be told there is work
+      // waiting on Accounts for debt they do not have.
+      const open = new Set<string>();
+      for (const act of wallet.acts ?? []) {
+        if (!act.open) continue;
+        for (const surface of act.surfaces ?? []) open.add(surface);
+      }
+      setOpenSurfaces(open);
     } catch {
       /* same reasoning as refresh */
     }
@@ -94,7 +115,10 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   return (
     <CoinAwardContext.Provider
-      value={{ current: queue[0] ?? null, refresh, dismiss, balance, loadUnseen }}
+      value={{
+        current: queue[0] ?? null, refresh, dismiss, balance, loadUnseen,
+        openSurfaces,
+      }}
     >
       {children}
     </CoinAwardContext.Provider>
@@ -156,4 +180,34 @@ export default CoinAwardContext;
 export const useCoinBalance = (): number | null => {
   const context = useContext(CoinAwardContext);
   return context?.balance ?? null;
+};
+
+/**
+ * Does this surface still have an act open on it?
+ *
+ * *** SAFE WITHOUT A PROVIDER, LIKE THE OTHER READ HOOKS. *** Returns `false`,
+ * so a missing provider means no cairn rather than a broken rail. The mount
+ * itself is gated by `appMountsTheAwardMoment.test.tsx`.
+ */
+export const useSurfaceHasOpenAct = (surface: string | null): boolean => {
+  const context = useContext(CoinAwardContext);
+  if (!surface || !context) return false;
+  return context.openSurfaces.has(surface);
+};
+
+/** Stable identity, so a consumer's `useMemo` does not thrash on every paint. */
+const EMPTY_SURFACES: ReadonlySet<string> = new Set<string>();
+
+/**
+ * Every surface with an act still open, or an empty set.
+ *
+ * `useSurfaceHasOpenAct` answers for one surface; the nav needs the whole set
+ * because it renders a list and cannot call a hook per row.
+ *
+ * Safe without a provider, like the other read hooks: an empty set means no
+ * cairns rather than a broken rail.
+ */
+export const useOpenSurfaces = (): ReadonlySet<string> => {
+  const context = useContext(CoinAwardContext);
+  return context?.openSurfaces ?? EMPTY_SURFACES;
 };

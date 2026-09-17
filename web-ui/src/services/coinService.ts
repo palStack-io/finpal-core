@@ -64,6 +64,22 @@ export interface CoinAct {
    * is what keeps that fix visible.
    */
   revealed: string | null;
+  /**
+   * Is there still something to do for this act?
+   *
+   * *** A BIT, NOT A FRACTION, AND THE CLIENT COULD NOT DERIVE IT. *** No
+   * ceiling goes on the wire (decision 5), so `coins: 600` is
+   * indistinguishable from finished. The server answers with one boolean,
+   * which is what the cairn is drawn from and which cannot be used to
+   * reconstruct "n of m".
+   *
+   * *** IT FAILS OPEN. *** An earned act whose predicate crashes comes back
+   * `true`: a spurious cairn costs a wasted visit, where a missing one costs
+   * the act, because the user never returns to the page.
+   */
+  open: boolean;
+  /** The page identities this act can be worked on. Names, never counts. */
+  surfaces: string[];
 }
 
 /** One piece of gear in the shop. */
