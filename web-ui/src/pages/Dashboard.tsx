@@ -31,7 +31,7 @@ import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
-import { EverestLine } from '../components/dashboard/EverestLine';
+import { EverestPeak } from '../components/dashboard/EverestPeak';
 
 const tableCellMuted: React.CSSProperties = { padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' };
 const tableCellSecondary: React.CSSProperties = { padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' };
@@ -551,15 +551,6 @@ export const Dashboard = () => {
             <EmptyRange />
           )}
 
-          {/* *** EVEREST GOES UNDER THE RANGE, AS A FIGURE, FOR BOTH CASES. ***
-              A user with goals sees their own peaks and then their altitude on
-              the shared climb; a user with none sees the invitation and then
-              the climb they are already on, which is the honest thing to put
-              there — they have earned coins from their first acts, where a
-              range of goals they have not set is empty by definition. */}
-          <div style={{ marginTop: 12 }}>
-            <EverestLine />
-          </div>
           {/* *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
               GROUND". *** The ground is a monthly recurring total, and the only
               place it is computed today is learnPal's range endpoint — reading
@@ -572,6 +563,23 @@ export const Dashboard = () => {
 
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
+
+        {/* *** EVEREST, DRAWN, IN THE MIDDLE — OWNER DECISION 2026-09-17,
+            OVERRIDING MY RECOMMENDATION. *** I argued for a figure here and the
+            drawing only on Kit, because two mountain pictures on one page read
+            as one confusing picture. Owner: *"we do need everest on dashboard.
+            we will place everest in the middle"*.
+
+            The concern is answered by making them different OBJECTS rather than
+            by shrinking one: the range above is MANY silhouettes on a ground
+            line at varied heights, from the user's money; this is ONE peak with
+            a route and a climber on it, from their effort. Tellable apart at a
+            glance, which is what keeps the range's meaning intact.
+
+            It sits between the head and the section cards — the page's middle
+            band — and renders nothing at 0 m. */}
+        <EverestPeak />
+
 
         {/* *** THE RANGE EARNS THE TOP OF THE PAGE — spec variant B. *** The
             user's own goals, drawn at their real named elevations, above the

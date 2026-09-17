@@ -19,7 +19,7 @@
 import React, {
   createContext, useCallback, useContext, useEffect, useRef, useState,
 } from 'react';
-import { coinService, type CoinAwardItem, type CoinSurface } from '../services/coinService';
+import { coinService, type CoinAwardItem, type CoinGear, type CoinSurface } from '../services/coinService';
 
 interface CoinAwardContextType {
   /** The award currently on screen, or `null`. */
@@ -49,6 +49,8 @@ interface CoinAwardContextType {
    * server stores the best-ever figure rather than today's.
    */
   everest: { altitude_m: number; summit_m: number; at_summit: boolean } | null;
+  /** Gear the climber actually owns, so the drawing can show what coins bought. */
+  ownedGear: CoinGear[];
 }
 
 const CoinAwardContext = createContext<CoinAwardContextType | undefined>(undefined);
@@ -70,6 +72,7 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [everest, setEverest] = useState<
     { altitude_m: number; summit_m: number; at_summit: boolean } | null
   >(null);
+  const [ownedGear, setOwnedGear] = useState<CoinGear[]>([]);
 
   // *** A REF, NOT STATE. *** Two mutations in quick succession would both
   // read a stale `queue` from the closure and the second would drop the
@@ -113,6 +116,7 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       setOpenSurfaces(open);
       setEverest(wallet.everest ?? null);
+      setOwnedGear((wallet.gear ?? []).filter((g) => g.owned));
     } catch {
       /* same reasoning as refresh */
     }
@@ -130,7 +134,7 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     <CoinAwardContext.Provider
       value={{
         current: queue[0] ?? null, refresh, dismiss, balance, loadUnseen,
-        openSurfaces, everest,
+        openSurfaces, everest, ownedGear,
       }}
     >
       {children}
@@ -239,4 +243,18 @@ export const useOpenSurfaces = (): ReadonlySet<string> => {
 export const useEverest = () => {
   const context = useContext(CoinAwardContext);
   return context?.everest ?? null;
+};
+
+/**
+ * The dearest piece of gear the climber owns, or `null`.
+ *
+ * Safe without a provider, like every other read hook here. Used to put the
+ * kit a user actually bought onto the mountain they are climbing — the loop
+ * closing in one place: acts pay coins, coins buy kit, kit rides up with you.
+ */
+export const useBestGear = (): string | null => {
+  const context = useContext(CoinAwardContext);
+  const owned = context?.ownedGear ?? [];
+  if (!owned.length) return null;
+  return [...owned].sort((a, b) => b.price - a.price)[0].slug;
 };
