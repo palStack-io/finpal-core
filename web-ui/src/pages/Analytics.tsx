@@ -9,6 +9,8 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { formatMoney, tabular } from '../styles/money';
 import { incomeFlow, type FlowCategory } from '../utils/incomeFlow';
 import IncomeFlowChart from '../components/analytics/IncomeFlowChart';
+import PeriodCompareChart from '../components/analytics/PeriodCompareChart';
+import { comparePeriods } from '../utils/periodComparison';
 import { MemberFilter } from '../components/MemberFilter';
 import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
@@ -30,10 +32,11 @@ import {
   PieChart as PieChartIcon,
   BarChart3,
   GitBranch,
+  ArrowLeftRight,
 } from 'lucide-react';
 
 // Tab types
-type AnalyticsTab = 'overview' | 'cashflow' | 'flow' | 'spending' | 'health';
+type AnalyticsTab = 'overview' | 'cashflow' | 'flow' | 'compare' | 'spending' | 'health';
 
 // Color palette for categories
 /**
@@ -97,6 +100,12 @@ export const Analytics: React.FC = () => {
    * like-for-like comparison the note above exists to protect.
    */
   const rangeLabel = timeRange === 'week' ? 'Last 7 days' : timeRange === 'year' ? 'Last 12 months' : 'Last 30 days';
+  /* The window immediately before the selected one, named for what it IS. Not
+     "last month" — `windowsFor` is rolling, so the comparison is against the
+     equal-length span that ended the day the current one began, and calling
+     that "last month" would be a calendar claim the data does not make. */
+  const priorLabel = timeRange === 'week' ? 'the 7 days before'
+    : timeRange === 'year' ? 'the 12 months before' : 'the 30 days before';
 
   // Data state
   const [cashFlowMonthly, setCashFlowMonthly] = useState<Array<{
@@ -105,6 +114,15 @@ export const Analytics: React.FC = () => {
     expenses: number;
     savings: number;
   }>>([]);
+
+  /* What the cash-flow chart ACTUALLY drew, not what was asked for. See the
+     note on its card: the endpoint buckets by month, so a 7-day range cannot
+     be honestly labelled "Last 7 days" over a bar covering all of September. */
+  const cashFlowLabel = cashFlowMonthly.length === 0
+    ? rangeLabel
+    : cashFlowMonthly.length === 1
+      ? `${cashFlowMonthly[0].month}, by month`
+      : `${cashFlowMonthly[0].month}–${cashFlowMonthly[cashFlowMonthly.length - 1].month}, by month`;
 
   /**
    * *** WHAT OF THIS MONTH'S SPENDING WAS ACTUALLY YOURS TO MOVE. ***
@@ -197,6 +215,12 @@ export const Analytics: React.FC = () => {
      tail into a node that says how many categories it stands for. */
   const [flowIncome, setFlowIncome] = useState<FlowCategory[]>([]);
   const [flowExpenses, setFlowExpenses] = useState<FlowCategory[]>([]);
+  /* The PRIOR window's lists, kept whole for the same reason as the current
+     ones: `previous` below sums them into four figures, and a comparison needs
+     the categories. Same fetch — `loadAnalytics` already pulls both because the
+     savings-rate deltas need them. */
+  const [priorIncomeRows, setPriorIncomeRows] = useState<FlowCategory[]>([]);
+  const [priorExpenseRows, setPriorExpenseRows] = useState<FlowCategory[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [memberId, setMemberId] = useState<string | null>(null);
   const selectedMember = members.find((m) => m.id === memberId) || null;
@@ -321,6 +345,8 @@ export const Analytics: React.FC = () => {
       // fetch. `limit=50` above is what makes both possible.
       setFlowIncome(currentIncome);
       setFlowExpenses(currentExpenses);
+      setPriorIncomeRows(priorIncome);
+      setPriorExpenseRows(priorExpenses);
 
       setCategorySpending(currentExpenses.slice(0, 8).map((cat, idx) => ({
         name: cat.name || 'Uncategorised',
@@ -474,6 +500,10 @@ export const Analytics: React.FC = () => {
        The chart type is the implementation; the question it answers is the
        label. Nobody opens a money app looking for a Sankey diagram. */
     { id: 'flow' as const, label: 'Where It Went', icon: <GitBranch size={18} /> },
+    /* Owner, 2026-09-16: *"can we provide visuals to compare this time vs
+       past?"*. Named for the question, like "Where It Went" — "vs Last Period"
+       is what it does, "Compare" is what you came to do. */
+    { id: 'compare' as const, label: 'Compare', icon: <ArrowLeftRight size={18} /> },
     { id: 'spending' as const, label: 'Spending Analysis', icon: <PieChartIcon size={18} /> },
     { id: 'health' as const, label: 'Financial Health', icon: <Target size={18} /> },
   ];
@@ -833,7 +863,19 @@ export const Analytics: React.FC = () => {
               />
             </div>
 
-            <ChartCard title="Cash Flow Trend" subtitle={rangeLabel}>
+            {/* *** THIS CARD SAID "Last 7 days" AND DREW THE WHOLE OF
+                SEPTEMBER. *** `/analytics/cashflow` returns MONTH buckets, and
+                the client asks for `months` = 1 for a week, 2 for a month, 12
+                for a year — so a 7-day selection renders one bucket labelled
+                "Sep". The figures were right and the caption was not, which is
+                D-102's shape: a caption that disagrees with its own chart.
+
+                Fixed the way the Net Worth card beside it already does it —
+                the subtitle describes WHAT WAS DRAWN, derived from the buckets
+                that came back, rather than repeating the range selector. The
+                range still drives how many months are fetched; it just no
+                longer claims a granularity the endpoint does not have. */}
+            <ChartCard title="Cash Flow Trend" subtitle={cashFlowLabel}>
               {cashFlowMonthly.length === 0 ? (
                 <div style={{ ...emptyStateStyle, padding: '140px 0' }}>
                   <p style={{ margin: 0, fontWeight: 500, color: 'var(--text-primary)' }}>
@@ -953,6 +995,108 @@ export const Analytics: React.FC = () => {
                       )}
                     </p>
                   </>
+                );
+              })()}
+            </ChartCard>
+          </div>
+        )}
+
+        {/* *** COMPARE — THIS PERIOD AGAINST THE ONE BEFORE IT. ***
+            Owner, 2026-09-16: *"can we provide visuals to compare this time vs
+            past? like this week vs previous, this month vs last, year."*
+
+            *** IT ADDS NO REQUEST, AND IT CANNOT DISAGREE WITH THE CARDS. ***
+            `loadAnalytics` already fetches the current AND prior category
+            lists at `limit=50`, because the "% vs last period" figures on the
+            Overview cards need both. So this is a third reading of data the
+            page has — the same trick the flow tab uses — which also means the
+            headline here and the deltas up there are the same two arrays.
+
+            *** THE WINDOWS ARE ROLLING, AND THE LABELS SAY SO RATHER THAN
+            IMPLYING CALENDAR PERIODS. *** `windowsFor` is `now - 30 → now`
+            against the 30 days before that, deliberately (see its own note:
+            comparing a part-month against a full previous month understates
+            every figure and the error looks like real news). "This month vs
+            last month" in the calendar sense is a different question and would
+            change every figure on the page, so the labels below say "the 30
+            days before" and not "last month". */}
+        {activeTab === 'compare' && (
+          <div style={flexColGap20}>
+            <ChartCard
+              title="Spending, this period against the last"
+              subtitle={`${rangeLabel} vs ${priorLabel}`}
+            >
+              {(() => {
+                const cmp = comparePeriods(flowExpenses, priorExpenseRows);
+                if (!cmp) {
+                  return (
+                    <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      No spending in either period, so there is nothing to
+                      compare.
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    {/* The headline, from EVERY category rather than the rows
+                        drawn — a truncated chart must not truncate the total. */}
+                    <p style={{
+                      margin: '0 0 18px', fontSize: '14px', lineHeight: 1.6,
+                      color: 'var(--text-secondary)',
+                    }}>
+                      {formatMoney(cmp.nowTotal, { currency })} against{' '}
+                      {formatMoney(cmp.beforeTotal, { currency })} —{' '}
+                      <strong style={{
+                        color: cmp.delta > 0 ? 'var(--re-ink)' : 'var(--g-ink)',
+                      }}>
+                        {cmp.delta === 0
+                          ? 'exactly level'
+                          : `${cmp.delta > 0 ? 'up' : 'down'} ${formatMoney(Math.abs(cmp.delta), { currency })}`}
+                        {/* No percentage from a zero baseline. A first period
+                            with nothing in it is not an infinite rise. */}
+                        {cmp.deltaPct !== null && cmp.delta !== 0
+                          && ` (${Math.abs(cmp.deltaPct).toFixed(0)}%)`}
+                      </strong>
+                      {cmp.deltaPct === null && cmp.beforeTotal === 0
+                        && ' — there was no spending in the earlier period to compare against'}
+                    </p>
+                    <PeriodCompareChart
+                      comparison={cmp}
+                      format={(a) => formatMoney(a, { currency })}
+                      nowLabel={rangeLabel}
+                      beforeLabel={priorLabel}
+                      /* Spending: up is unwelcome. */
+                      upIsGood={false}
+                    />
+                  </>
+                );
+              })()}
+            </ChartCard>
+
+            <ChartCard
+              title="Income, this period against the last"
+              subtitle={`${rangeLabel} vs ${priorLabel}`}
+            >
+              {(() => {
+                const cmp = comparePeriods(flowIncome, priorIncomeRows);
+                if (!cmp) {
+                  return (
+                    <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      No income in either period, so there is nothing to compare.
+                    </div>
+                  );
+                }
+                return (
+                  <PeriodCompareChart
+                    comparison={cmp}
+                    format={(a) => formatMoney(a, { currency })}
+                    nowLabel={rangeLabel}
+                    beforeLabel={priorLabel}
+                    /* Income: up is the welcome direction, which is the
+                       opposite of the card above — and the reason this prop
+                       is required rather than defaulted. */
+                    upIsGood
+                  />
                 );
               })()}
             </ChartCard>

@@ -32,6 +32,8 @@ import Redeem from '../../src/modules/pointspal/pages/Redeem';
 import { Sidebar } from '../../src/components/layout/Sidebar';
 import IncomeFlowChart from '../../src/components/analytics/IncomeFlowChart';
 import { incomeFlow } from '../../src/utils/incomeFlow';
+import PeriodCompareChart from '../../src/components/analytics/PeriodCompareChart';
+import { comparePeriods } from '../../src/utils/periodComparison';
 
 /**
  * The rail in the ONE state a phone user can ever see it in.
@@ -45,6 +47,56 @@ import { incomeFlow } from '../../src/utils/incomeFlow';
  * class is inert, so one capture is valid at all four widths.
  */
 const SidebarOpen: React.FC = () => <Sidebar isOpen onClose={() => {}} />;
+
+/**
+ * The comparison chart, on a fixture that contains all three of its states.
+ *
+ * *** THE FIXTURE IS THE TEST HERE AS MUCH AS THE WALK IS. *** A comparison
+ * where every category merely grew is the easy case and the one a careless
+ * fixture picks. This one carries a category that STOPPED (Gym), one that is
+ * NEW (Streaming, which must show no percentage — there is none from zero), one
+ * that did not move at all (Housing, the largest, which must not vanish) and
+ * one that grew. Capture the comfortable case and the walk measures the version
+ * of the chart nobody has a problem with — the trap D-227's `cost_basis`
+ * fixture taught.
+ *
+ * Captured as the COMPONENT, not the page: `/analytics` reads seven endpoints
+ * and is still one of the surfaces the walk does not cover. Stated rather than
+ * implied.
+ */
+const CompareChartFixture: React.FC = () => {
+  const cmp = comparePeriods(
+    [
+      { name: 'Housing', amount: 5400 }, { name: 'Groceries', amount: 500.49 },
+      { name: 'Coffee', amount: 60 }, { name: 'Streaming', amount: 25 },
+      { name: 'Transport', amount: 215.5 },
+    ],
+    [
+      { name: 'Housing', amount: 5400 }, { name: 'Groceries', amount: 300 },
+      { name: 'Gym', amount: 240 }, { name: 'Transport', amount: 260 },
+    ],
+  )!;
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+      borderRadius: 16, padding: 24,
+    }}>
+      <h1 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+        Spending, this period against the last
+      </h1>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '4px 0 20px' }}>
+        Last 30 days vs the 30 days before
+      </p>
+      <PeriodCompareChart
+        comparison={cmp}
+        format={(a) => `£${a.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+        nowLabel="Last 30 days"
+        beforeLabel="the 30 days before"
+        upIsGood={false}
+      />
+    </div>
+  );
+};
 
 /**
  * The flow chart, on the live demo's own figures.
@@ -1264,6 +1316,7 @@ const cases: Case[] = [
    * of capture that measures a page it is not looking at.
    */
   ['analytics-flow', FlowChartFixture],
+  ['analytics-compare', CompareChartFixture],
   ['sidebar', SidebarOpen, async () => {
     // Both module headers, by name — clicking by index would silently click
     // the same row twice if the registry order changed.
