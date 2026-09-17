@@ -10,8 +10,15 @@
  *
  * *** IT IS A LOWER BOUND, AND SAYING SO MATTERS. *** This asserts each
  * surface is asked for SOMEWHERE. It cannot prove the call sits on the right
- * page, and it cannot see a surface the server adds that this list does not
- * know about — `test_act_surfaces.py` owns the server half.
+ * page.
+ *
+ * *** AND THE LIST BELOW WENT STALE THE FIRST TIME THE SERVER GAINED A
+ * SURFACE. *** Adding `pointspal` server-side left this file passing while the
+ * new surface had no caller at all — the gate could not see what it did not
+ * know about. That hole is now closed from the OTHER side:
+ * `test_surface_lists_agree.py` reads this array out of this file and asserts
+ * it equals `SURFACES` in `acts.py`. Two languages, one list, and a mismatch
+ * fails in Python rather than passing in TypeScript.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'fs';
@@ -21,6 +28,7 @@ import { join } from 'path';
 const SERVER_SURFACES = [
   'accounts', 'transactions', 'categories', 'budgets', 'recurring',
   'rules', 'goals', 'review', 'investments', 'groups', 'settings',
+  'pointspal',
 ] as const;
 
 /**

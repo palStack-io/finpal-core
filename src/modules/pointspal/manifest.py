@@ -25,6 +25,23 @@ class PointsPalModule(ModuleBase):
             (pointspal_ns,  '/pointspal'),
         ]
 
+
+    def get_acts(self) -> dict:
+        """pointsPal's own earnable acts (spec §5.1).
+
+        *** THE HOOK THIS USES HAD NO CALLER UNTIL 2026-09-17 — D-187. ***
+        `ModuleBase.get_acts()` was defined and `acts.py`'s docstring promised
+        it, and nothing invoked it. `registry.py` now registers these beside
+        the checks.
+
+        *** `contribution_accepted` IS NOT HERE, AND THE SPEC'S REASON FOR
+        EXPECTING IT IS FALSE. *** See `acts.py` in this package: there is no
+        identifier linking an accepted contribution to a finPal user, so the
+        act could never fire. Owner decision pending.
+        """
+        from src.modules.pointspal.acts import get_acts as _acts
+        return _acts()
+
     def register_tasks(self, scheduler, app):
         @scheduler.task('cron', id='pointspal_sync', hour=3, minute=0)
         def nightly_sync():

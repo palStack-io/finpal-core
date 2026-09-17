@@ -163,7 +163,8 @@ export interface CoinRefreshResult {
  */
 export type CoinSurface =
   | 'accounts' | 'transactions' | 'categories' | 'budgets' | 'recurring'
-  | 'rules' | 'goals' | 'review' | 'investments' | 'groups' | 'settings';
+  | 'rules' | 'goals' | 'review' | 'investments' | 'groups' | 'settings'
+  | 'pointspal';
 
 export const coinService = {
   async getWallet(): Promise<CoinWallet> {

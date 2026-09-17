@@ -52,6 +52,18 @@ class ModuleRegistry:
                     fn, reason = entry if isinstance(entry, tuple) else (entry, None)
                     register_check(check_type, fn, reason)
 
+                # *** `get_acts()` HAD NO CALLER AT ALL UNTIL NOW — D-187. ***
+                # `ModuleBase` defined the hook, `acts.py`'s own docstring said
+                # *"a module may contribute its own acts through
+                # `ModuleBase.get_acts()`"*, and nothing ever invoked it. A
+                # module returning acts would have been ignored in silence.
+                # Registered here beside the checks, for the same reason and in
+                # the same order: before `on_startup`, so a startup pass cannot
+                # dispatch through a registry the module has not filled yet.
+                from src.services.literacy.acts import register_act
+                for act in (module.get_acts() or {}).values():
+                    register_act(act)
+
                 module.on_startup(app)
             except Exception as e:
                 logger.warning(f"Module {module.name} on_startup failed: {e}")

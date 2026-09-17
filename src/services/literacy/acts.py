@@ -47,6 +47,9 @@ logger = logging.getLogger(__name__)
 SURFACES = frozenset({
     'accounts', 'transactions', 'categories', 'budgets', 'recurring',
     'rules', 'goals', 'review', 'investments', 'groups', 'settings',
+    # pointsPal's own pages. A MODULE surface: the acts that use it live in
+    # the module and reach the registry through `get_acts()`.
+    'pointspal',
 })
 
 

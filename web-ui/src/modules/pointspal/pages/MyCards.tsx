@@ -6,6 +6,7 @@ import CardFace from '../components/CardFace';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
 import { useMoney } from '../../../hooks/useMoney';
+import { useSurfaceCoins } from '../../../contexts/CoinAwardContext';
 
 // ── Common category slugs shown for manual earn-rate entry ───────────────────
 
@@ -528,6 +529,12 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
 // ── MyCards page ──────────────────────────────────────────────────────────────
 
 const MyCards: React.FC = () => {
+  // *** pointsPal's ACTS LIVE IN THE MODULE, NOT IN CORE, because they read
+  // the module's own card tables (spec §3, §5.1). They reach the registry
+  // through `get_acts()` — a hook that had NO CALLER AT ALL until
+  // 2026-09-17 (D-187). This page is where a user records what a card
+  // really earns and confirms it against the issuer, which are the two acts.
+  useSurfaceCoins('pointspal');
   const { money } = useMoney();
   const [cards, setCards] = useState<WalletCard[]>([]);
   const [loading, setLoading] = useState(true);
