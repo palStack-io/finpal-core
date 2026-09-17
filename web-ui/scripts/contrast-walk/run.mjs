@@ -71,6 +71,11 @@ const TEXT_FLOORS = {
      (D-244 covers the other two). The lesson is that a shared floor encodes an
      assumption about how big a page is, and it was written when every scope was
      a data-dense app page. */
+  /* The no-goals dashboard range is three text-bearing elements COMPLETE — a
+     title, a sentence and the invitation. It is a picture with a caption, and
+     that is the whole design: no figures, because a figure here would be a
+     number about a portfolio the user does not have. */
+  'dashboard-empty-range': 3,
   login: 15,
   register: 15,
   /* A 404 at its most complete, MEASURED RATHER THAN COUNTED FROM THE SOURCE:

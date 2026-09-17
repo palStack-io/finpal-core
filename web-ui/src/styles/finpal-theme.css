@@ -1647,3 +1647,76 @@ body {
   .auth-entry { padding: 48px 32px 0; gap: 28px; }
   .auth-entry-hero { padding-bottom: 130px; }
 }
+
+/* ── The empty range's invitation ────────────────────────────────────────────
+   The marker a user with no goals sees on the dashboard. A real link rather
+   than a hover tooltip: hover is unreachable by keyboard and absent on touch,
+   so the sentence is revealed on `:hover` AND `:focus-visible`, and the link
+   carries its own accessible name either way. See `EmptyRange.tsx`. */
+.fp-empty-range-cta {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  text-decoration: none;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--card-shadow);
+  padding: 6px;
+  transition: gap 0.18s ease, padding 0.18s ease;
+}
+
+.fp-empty-range-bang {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 50%;
+  background: var(--g-wash);
+  color: var(--g-ink);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Collapsed by default; `max-width` rather than `display` so it can animate and
+   so the text stays in the accessibility tree for a screen reader that walks
+   the link's contents. */
+.fp-empty-range-hint {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: max-width 0.22s ease, opacity 0.18s ease, padding 0.18s ease;
+}
+
+.fp-empty-range-cta:hover .fp-empty-range-hint,
+.fp-empty-range-cta:focus-visible .fp-empty-range-hint {
+  max-width: 320px;
+  opacity: 1;
+  padding: 0 10px 0 8px;
+}
+
+/* A focus ring on the link itself, because the reveal alone is not a focus
+   indicator — 2.4.7 wants something visible regardless of what the hover does. */
+.fp-empty-range-cta:focus-visible {
+  outline: 2px solid var(--brand-main-green);
+  outline-offset: 2px;
+}
+
+/* *** NO MOTION MEANS NO MOTION, INCLUDING THIS. *** The reveal is a width
+   transition, which is exactly the kind of thing that triggers vestibular
+   symptoms. The hint still appears; it simply appears at once. */
+@media (prefers-reduced-motion: reduce) {
+  .fp-empty-range-cta,
+  .fp-empty-range-hint { transition: none; }
+}

@@ -256,6 +256,10 @@ let hardErrors = 0;
  * A per-page number with a reason cannot make that mistake silently.
  */
 const LAID_OUT_FLOORS = {
+  /* A card, a heading, a sentence, an svg of five peaks and a two-part link:
+     19 laid-out elements COMPLETE. Fourth time this shared floor has been
+     wrong about a small surface — see the note above, and D-244. */
+  'dashboard-empty-range': 15,
   // The panel, the figure, the heading, the sentence, one destination and the
   // unmeasured ridge. Nine at 1440 and nine at 390 — it does not reflow,
   // because there is nothing in it to reflow.

@@ -20,6 +20,7 @@ import { SectionCard } from '../components/SectionCard';
 import { ScrollPane } from '../components/ScrollPane';
 import { PageHead } from '../components/PageHead';
 import { GoalRange } from '../components/dashboard/GoalRange';
+import EmptyRange from '../components/dashboard/EmptyRange';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { goalService } from '../services/goalService';
 import type { Goal } from '../types/goal';
@@ -468,7 +469,12 @@ export const Dashboard = () => {
             `every-page.spec.ts` still measures it — the heading expectation for
             `/dashboard` moved with it. */}
         <PageHead
-          title={goals.length > 0 ? 'Your range' : 'Where you stand'}
+          /* *** "Your range" EITHER WAY NOW. *** The title switched to
+             "Where you stand" for a user with no goals because there was no
+             range to head — there is one now, so the page reads the same for
+             everybody and `every-page.spec.ts` keeps matching both spellings
+             while the change settles. */
+          title="Your range"
           /* *** TWO FACTS, AND MAKING THEM EXCLUSIVE WAS A REGRESSION THE
              SUITE CAUGHT. *** The first draft of this consolidation put the
              range sentence here when there were goals and the SCOPE sentence
@@ -481,9 +487,12 @@ export const Dashboard = () => {
              filter whose current value is not stated is a filter you have to
              open to read. Both sentences, always. */
           subtitle={<>
-            {goals.length > 0 && (
-              <span>What you are climbing, and the ground you stand on while you climb.{' · '}</span>
-            )}
+            <span>
+              {goals.length > 0
+                ? 'What you are climbing, and the ground you stand on while you climb.'
+                : 'What you are climbing, once you pick something to climb.'}
+              {' · '}
+            </span>
             {/* Its own element, not a bare string beside another one. A
                 fragment of two text nodes splits the sentence across them, and
                 `getByText('Everyone sharing this finPal instance')` matches a
@@ -520,8 +529,18 @@ export const Dashboard = () => {
               for a fact, and the "you have nothing yet" case belongs to base
               camp — which is why the title above changes rather than this
               rendering an empty range. */}
-          {goals.length > 0 && (
+          {goals.length > 0 ? (
             <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
+          ) : (
+            /* *** A NEW USER NOW SEES THE SHAPE OF THE THING AND WHAT TO DO
+               ABOUT IT. *** Owner, 2026-09-16. This panel used to render
+               nothing at all for someone with no goals, on the recorded
+               grounds that "an empty frame would be decoration standing in for
+               a fact". That rule holds and `EmptyRange` stays inside it: no
+               figures, no elevations, no labels, nothing that could be read as
+               a number — silhouettes and an invitation. Its own header has the
+               full argument. */
+            <EmptyRange />
           )}
           {/* *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
               GROUND". *** The ground is a monthly recurring total, and the only

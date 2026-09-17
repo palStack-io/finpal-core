@@ -30,6 +30,7 @@ import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
 import { Sidebar } from '../../src/components/layout/Sidebar';
+import EmptyRange from '../../src/components/dashboard/EmptyRange';
 import IncomeFlowChart from '../../src/components/analytics/IncomeFlowChart';
 import { incomeFlow } from '../../src/utils/incomeFlow';
 import PeriodCompareChart from '../../src/components/analytics/PeriodCompareChart';
@@ -47,6 +48,22 @@ import { comparePeriods } from '../../src/utils/periodComparison';
  * class is inert, so one capture is valid at all four widths.
  */
 const SidebarOpen: React.FC = () => <Sidebar isOpen onClose={() => {}} />;
+
+/** The no-goals range, in the card the dashboard puts it in. */
+const EmptyRangeFixture: React.FC = () => (
+  <div style={{
+    background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+    borderRadius: 16, padding: 24,
+  }}>
+    <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+      Your range
+    </h1>
+    <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '4px 0 18px' }}>
+      What you are climbing, once you pick something to climb.
+    </p>
+    <EmptyRange />
+  </div>
+);
 
 /**
  * The comparison chart, on a fixture that contains all three of its states.
@@ -1317,6 +1334,11 @@ const cases: Case[] = [
    */
   ['analytics-flow', FlowChartFixture],
   ['analytics-compare', CompareChartFixture],
+  /* The dashboard a NEW user sees. Captured as the component because the
+     dashboard scope is seeded with goals — and a state only a brand-new
+     account reaches is exactly the one nothing else renders. D-77's lesson:
+     an empty demo hid three defects. */
+  ['dashboard-empty-range', EmptyRangeFixture, undefined, undefined, 6],
   ['sidebar', SidebarOpen, async () => {
     // Both module headers, by name — clicking by index would silently click
     // the same row twice if the registry order changed.
