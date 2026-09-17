@@ -22,10 +22,15 @@ def _restore_registry():
     ACTS.update(before)
 
 
-def _stub(slug='stub_act', ceiling=100, universal=False):
+def _stub(slug='stub_act', ceiling=100, universal=False, surfaces=('goals',)):
+    # `surfaces` is REQUIRED on `Act` and has no default, deliberately: an act
+    # with nowhere to fire never triggers a refresh and looks fine doing it.
+    # This stub names a real surface so the registration is a valid one --
+    # `test_act_surfaces.py` owns the refusal cases.
     return Act(slug=slug, title='Stub', ceiling=ceiling,
                coverage=lambda user_id: None,
                payoff=lambda user_id: None,
+               surfaces=surfaces,
                universal=universal)
 
 
