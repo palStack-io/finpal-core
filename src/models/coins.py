@@ -82,3 +82,42 @@ class CoinPurchase(db.Model):
 
     def __repr__(self):
         return f'<CoinPurchase {self.user_id} {self.gear_slug} {self.price}>'
+
+
+class CoinAwardAck(db.Model):
+    """How many coins of one act the user has actually been SHOWN.
+
+    *** A NEW TABLE, NOT A COLUMN ON `coin_awards` — D-121. *** `create_all()`
+    makes a missing TABLE at boot and is blind to a new COLUMN on an existing
+    model, so a `seen_at` column here would never exist on any deployment that
+    already has users -- which is every deployment that matters.
+
+    *** AND IT STORES A FIGURE, NOT A FLAG, FOR A CASE A FLAG CANNOT COVER. ***
+    An act whose coverage rises 0.4 -> 0.8 earns a SECOND time and deserves a
+    second moment. `unseen` is `award.coins > ack.coins_seen`, which says that
+    without needing a second column or a timestamp comparison.
+    """
+
+    __tablename__ = 'coin_award_acks'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'act_slug',
+                            name='uq_coin_award_ack_user_act'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.String(120), db.ForeignKey('users.id', name='fk_coin_award_ack_user'),
+        nullable=False, index=True)
+
+    # The act's slug, not a foreign key -- acts live in code, matching
+    # `CoinAward.act_slug` exactly, because the two are joined on it.
+    act_slug = db.Column(db.String(60), nullable=False)
+
+    coins_seen = db.Column(db.Integer, nullable=False, default=0)
+
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow,
+        onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<CoinAwardAck {self.user_id} {self.act_slug} {self.coins_seen}>'

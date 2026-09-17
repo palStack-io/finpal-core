@@ -15,7 +15,7 @@ from decimal import Decimal
 from sqlalchemy import func
 
 from src.extensions import db
-from src.models.coins import CoinAward, CoinPurchase
+from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,26 @@ class CoinRepository:
 
     def awards(self, user_id) -> list:
         return CoinAward.query.filter_by(user_id=user_id).all()
+
+    def unseen(self, user_id) -> list:
+        """`[(act_slug, coins_not_yet_shown)]`.
+
+        *** A LEFT JOIN, NOT AN INNER ONE. *** An act earned for the first time
+        has no ack row at all, and an inner join would drop it -- swallowing the
+        first award every user ever gets, which is the only one that is certain
+        to matter.
+        """
+        rows = db.session.query(
+            CoinAward.act_slug, CoinAward.coins,
+            func.coalesce(CoinAwardAck.coins_seen, 0),
+        ).outerjoin(
+            CoinAwardAck,
+            (CoinAwardAck.user_id == CoinAward.user_id)
+            & (CoinAwardAck.act_slug == CoinAward.act_slug),
+        ).filter(CoinAward.user_id == user_id).all()
+
+        return [(slug, int(coins) - int(seen))
+                for slug, coins, seen in rows if int(coins) > int(seen)]
 
     # ------------------------------------------------------------------
     # Writes
@@ -118,3 +138,23 @@ class CoinRepository:
         db.session.add(CoinPurchase(
             user_id=user_id, gear_slug=gear_slug, price=price))
         return True
+
+    def ack(self, user_id, act_slug) -> None:
+        """Raise the seen-watermark to the award's current coins. No commit.
+
+        *** RATCHET-ONLY, LIKE `upsert_award`. *** If an act's ceiling is
+        retuned downward later, lowering the ack would show a user an award
+        they have already been shown -- the mirror of the reason the coins
+        themselves never fall.
+        """
+        award = self.award_row(user_id, act_slug)
+        if award is None:
+            return
+        row = CoinAwardAck.query.filter_by(
+            user_id=user_id, act_slug=act_slug).first()
+        if row is None:
+            db.session.add(CoinAwardAck(
+                user_id=user_id, act_slug=act_slug,
+                coins_seen=int(award.coins)))
+            return
+        row.coins_seen = max(int(row.coins_seen), int(award.coins))
