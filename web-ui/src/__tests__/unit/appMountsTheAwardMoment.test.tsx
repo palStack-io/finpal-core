@@ -38,3 +38,31 @@ describe('App mounts the award moment', () => {
     expect(container).toBeLessThan(closeProvider);
   });
 });
+
+describe('the award queue is honest about what is waiting', () => {
+  const award = readFileSync('src/components/coins/CoinAward.tsx', 'utf8');
+  const ctx = readFileSync('src/contexts/CoinAwardContext.tsx', 'utf8');
+
+  it('says how many more are queued', () => {
+    // *** THE PILE-UP WAS FOUND ON THE DEMO. *** demo1 arrives with twelve
+    // unseen awards, each dismissed by hand, so a panel returned twelve times
+    // with nothing saying why.
+    expect(ctx).toMatch(/remaining: Math\.max\(0, queue\.length - 1\)/);
+    expect(award).toMatch(/remaining\?: number/);
+    expect(award).toMatch(/coin-award-remaining/);
+  });
+
+  it('does NOT auto-dismiss or auto-advance', () => {
+    // A timer would clear an award the user has not read, and the payoff
+    // sentence IS the reward (decision 6). Hurrying it along throws away the
+    // only thing the award is for.
+    expect(award).not.toMatch(/setTimeout|setInterval/);
+    expect(ctx).not.toMatch(/setTimeout\(\s*\(\)\s*=>\s*dismiss/);
+  });
+
+  it('anchors the count to the CARD, not the viewport', () => {
+    // Absolute positioning without a positioned ancestor lands it in the
+    // corner of the screen, inside the fixed container.
+    expect(award).toMatch(/position: 'relative'/);
+  });
+});

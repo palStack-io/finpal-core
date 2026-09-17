@@ -27,8 +27,19 @@ export const CoinAward: React.FC<{
    * award simply renders TALLER the first time.
    */
   teach?: { topic: string; title: string; body: string } | null;
+  /**
+   * How many awards are queued behind this one.
+   *
+   * *** SAYING THE NUMBER IS THE WHOLE FIX, AND IT IS DELIBERATELY NOT AN
+   * AUTO-ADVANCE. *** A timer or an auto-dismiss would clear an award the user
+   * has not read, and the payoff sentence IS the reward (decision 6) — so
+   * hurrying it along throws away the only thing the award is for. What the
+   * pile-up actually costs is the SURPRISE of a panel returning with nothing
+   * explaining why, and a count fixes exactly that.
+   */
+  remaining?: number;
   onDismiss?: () => void;
-}> = ({ coins, revealed, teach, onDismiss }) => {
+}> = ({ coins, revealed, teach, remaining = 0, onDismiss }) => {
   if (!revealed || coins <= 0) return null;
 
   return (
@@ -38,7 +49,16 @@ export const CoinAward: React.FC<{
       style={{
         display: 'flex', gap: 16, alignItems: 'flex-start',
         background: 'var(--bg-card)', border: '1px solid var(--border-light)',
-        borderRadius: 16, padding: '16px 18px', marginTop: 14,
+        borderRadius: 16, marginTop: 14,
+        position: 'relative',
+        /* *** `position: relative` IS LOAD-BEARING, NOT TIDINESS. *** The
+           "N more" count below is absolutely positioned; without a positioned
+           ancestor it anchors to the nearest one — here the fixed container in
+           `CoinAwardContainer` — and lands in the corner of the viewport
+           instead of the corner of the card. */
+        /* Extra bottom padding only when the count is there, so it never sits
+           on top of the payoff sentence. */
+        padding: remaining > 0 ? '16px 18px 26px' : '16px 18px',
       }}
     >
       <span
@@ -95,7 +115,9 @@ export const CoinAward: React.FC<{
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={remaining > 0
+            ? `Dismiss, ${remaining} more waiting`
+            : 'Dismiss'}
           style={{
             background: 'none', border: 0, cursor: 'pointer',
             color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1,
@@ -104,6 +126,19 @@ export const CoinAward: React.FC<{
         >
           ×
         </button>
+      )}
+      {remaining > 0 && (
+        /* Sits with the dismiss control, because that is what it explains:
+           pressing × brings the next one. */
+        <span
+          data-testid="coin-award-remaining"
+          style={{
+            position: 'absolute', right: 14, bottom: 10,
+            fontSize: 11, color: 'var(--text-secondary)',
+          }}
+        >
+          {remaining} more
+        </span>
       )}
     </div>
   );

@@ -16,7 +16,7 @@ import { CoinAward } from './CoinAward';
  * this the award never happened as far as they could tell.
  */
 export const CoinAwardContainer: React.FC = () => {
-  const { current, dismiss, loadUnseen } = useCoinAwards();
+  const { current, remaining, dismiss, loadUnseen } = useCoinAwards();
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
@@ -41,6 +41,7 @@ export const CoinAwardContainer: React.FC = () => {
         coins={current.coins}
         revealed={current.revealed}
         teach={current.teach}
+        remaining={remaining}
         onDismiss={dismiss}
       />
     </div>

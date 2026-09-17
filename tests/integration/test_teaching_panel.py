@@ -131,20 +131,32 @@ def test_an_unknown_topic_renders_nothing_rather_than_an_empty_box():
 
 
 def test_AN_AWARD_WITH_NO_SENTENCE_DOES_NOT_CONSUME_THE_TEACHING(
-        owner, auth_headers, client):
+        owner, auth_headers, client, monkeypatch):
     """*** THE BUG A BROWSER FOUND AND NO UNIT TEST COULD. ***
 
-    `has_a_goal` pays 600 coins and its payoff is `None`, so `CoinAward`
-    renders nothing for it — by design, because a sentence finPal cannot
-    justify is worse than silence. The server used to attach the one-time
-    explanation to the FIRST award regardless, so a user whose first unseen
-    award had no sentence had their teaching silently dropped: the client
-    skipped that award, showed the next one, and the next one carried no
-    panel. Nothing was acked and nothing errored, so it would never come back.
+    `CoinAward` renders NOTHING when `revealed` is null — by design, because a
+    sentence finPal cannot justify is worse than silence. The server used to
+    attach the one-time explanation to the FIRST award regardless, so a user
+    whose first unseen award had no sentence had their teaching silently
+    dropped: the client skipped that award, showed the next, and the next
+    carried no panel. Nothing was acked and nothing errored, so it would never
+    have come back. On the demo it read as "award: 1, teach: 0".
 
-    On the demo this showed up as "award: 1, teach: 0".
+    *** THE SILENT ACT IS MADE SILENT HERE, NOT PICKED FROM THE REGISTRY. ***
+    A first version used `has_a_goal`, which returned `None` at the time. Giving
+    that act a payoff sentence — a content change, and §13 says the copy is
+    open — broke this test for a reason that has nothing to do with the
+    behaviour it guards. Monkeypatching states the precondition instead of
+    depending on it.
     """
-    # Earn ONLY the silent act.
+    import dataclasses
+
+    from src.services.literacy.acts import ACTS
+
+    monkeypatch.setitem(
+        ACTS, 'has_a_goal',
+        dataclasses.replace(ACTS['has_a_goal'], payoff=lambda _uid: None))
+
     _db.session.add(Goal(user_id=owner.id, name='Roof', start_amount=0,
                          target_amount=1000, status='active'))
     _db.session.commit()
@@ -153,8 +165,7 @@ def test_AN_AWARD_WITH_NO_SENTENCE_DOES_NOT_CONSUME_THE_TEACHING(
                          headers=auth_headers(owner)).get_json()
     goal_award = [a for a in silent['awarded'] if a['slug'] == 'has_a_goal']
     assert goal_award, 'has_a_goal did not award — the test is vacuous'
-    assert goal_award[0]['revealed'] is None, (
-        'has_a_goal gained a payoff sentence; this test needs a silent act')
+    assert goal_award[0]['revealed'] is None, 'the act was not made silent'
     assert goal_award[0]['teach'] is None, (
         'the teaching was attached to an award that renders nothing')
 

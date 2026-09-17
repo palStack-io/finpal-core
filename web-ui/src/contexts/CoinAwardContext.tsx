@@ -24,6 +24,19 @@ import { coinService, type CoinAwardItem, type CoinGear, type CoinSurface } from
 interface CoinAwardContextType {
   /** The award currently on screen, or `null`. */
   current: CoinAwardItem | null;
+  /**
+   * How many more are queued behind it.
+   *
+   * *** THE PILE-UP IS REAL AND WAS FOUND ON THE DEMO. *** demo1 arrives with
+   * twelve unseen awards, each dismissed by hand, so a panel sits over the
+   * page twelve times with nothing saying why. A real user earning one or two
+   * at a time never sees it; a returning user after the 04:30 pass can.
+   *
+   * This is the smallest honest fix: SAY how many are waiting. It is not an
+   * auto-advance and not a timer — both would dismiss an award the user has
+   * not read, and the payoff sentence IS the reward.
+   */
+  remaining: number;
   /** Award anything this surface just made true, then queue what came back. */
   refresh: (surface: CoinSurface) => Promise<void>;
   /** Dismiss the current award and acknowledge it server-side. */
@@ -133,7 +146,8 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <CoinAwardContext.Provider
       value={{
-        current: queue[0] ?? null, refresh, dismiss, balance, loadUnseen,
+        current: queue[0] ?? null, remaining: Math.max(0, queue.length - 1),
+        refresh, dismiss, balance, loadUnseen,
         openSurfaces, everest, ownedGear,
       }}
     >

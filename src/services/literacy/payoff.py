@@ -184,7 +184,55 @@ def taught_a_rule(user_id):
 
 
 def has_a_goal(user_id):
-    return None      # the goal's own peak is the payoff; a sentence would repeat it
+    """What naming a goal made computable: its size, and what is left.
+
+    *** THIS RETURNED `None` DELIBERATELY AND THE REASONING WENT STALE. *** The
+    old comment read *"the goal's own peak is the payoff; a sentence would
+    repeat it"*, which is true on the Goals PAGE, where the peak is on screen
+    beside the words. It stopped being true when the award moment shipped: the
+    award is shown wherever the user happens to be, and `CoinAward` renders
+    NOTHING when `revealed` is null — by design, because a sentence finPal
+    cannot justify is worse than silence. So `has_a_goal` paid 600 coins and
+    produced no feedback at all, on any surface.
+
+    *** IT DOES NOT REPEAT THE PEAK; IT NAMES WHAT BECAME COMPUTABLE. *** Before
+    a goal exists there is no target, no remaining figure and no peak to draw.
+    That is the truth test's second limb — a figure finPal could not compute
+    before.
+
+    Fail-closed like the rest: no goal, or no usable target, no sentence.
+    """
+    from src.models.goal import Goal
+
+    goals = Goal.query.filter_by(user_id=user_id).order_by(
+        Goal.created_at.desc()).all()
+    if not goals:
+        return None
+
+    currency = _currency_for(user_id)
+    named = goals[0]
+    try:
+        target = Decimal(str(named.target_amount or 0))
+        start = Decimal(str(named.start_amount or 0))
+    except Exception:
+        return None
+    if target <= 0:
+        return None
+
+    remaining = max(Decimal(0), target - start)
+    n = len(goals)
+
+    if remaining <= 0:
+        return (f'“{named.name}” is drawn on your range at '
+                f'{_money(target, currency)}, and it is already covered.')
+
+    if n == 1:
+        return (f'“{named.name}” is now drawn at the size of what it asks: '
+                f'{_money(remaining, currency)} still to find. finPal could '
+                f'not put a figure on that before you named it.')
+    return (f'“{named.name}” joins {n - 1} other '
+            f'{"goal" if n == 2 else "goals"} on your range, at '
+            f'{_money(remaining, currency)} still to find.')
 
 
 def debt_rates(user_id):
