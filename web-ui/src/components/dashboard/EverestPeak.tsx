@@ -40,14 +40,34 @@ export const EverestPeak: React.FC = () => {
 
   const fraction = Math.min(1, everest.altitude_m / everest.summit_m);
 
-  // Geometry. The peak apex sits at (300, 24) and the base line at y=210, so
-  // the climber's y interpolates between them by altitude.
-  const APEX_Y = 24;
-  const BASE_Y = 210;
-  const climberY = BASE_Y - (BASE_Y - APEX_Y) * fraction;
-  // The route leans right as it climbs, so the marker is never buried in the
-  // silhouette's centre where it would be unreadable against the fill.
-  const climberX = 300 + 70 * fraction;
+  /**
+   * The climber sits ON the left ridge, not beside the mountain.
+   *
+   * *** THE FIRST VERSION PUT THE ROUTE IN THE SKY. *** It interpolated x and
+   * y independently, so the marker floated off the silhouette and the route
+   * read as a stray diagonal. Rendered on the demo at 1440 and it was the
+   * first thing wrong with the drawing. The ridge is two segments — base to
+   * shoulder, shoulder to apex — and the altitude fraction is walked along
+   * them, so the climber is always on the rock.
+   */
+  const BASE = { x: 60, y: 210 };
+  const SHOULDER = { x: 230, y: 96 };
+  const APEX = { x: 300, y: 24 };
+  // The shoulder's share of the total rise, so the two segments are walked in
+  // proportion to HEIGHT rather than to path length.
+  const SHOULDER_F = (BASE.y - SHOULDER.y) / (BASE.y - APEX.y);
+
+  let climberX: number;
+  let climberY: number;
+  if (fraction <= SHOULDER_F) {
+    const t = SHOULDER_F === 0 ? 0 : fraction / SHOULDER_F;
+    climberX = BASE.x + t * (SHOULDER.x - BASE.x);
+    climberY = BASE.y - t * (BASE.y - SHOULDER.y);
+  } else {
+    const t = (fraction - SHOULDER_F) / (1 - SHOULDER_F);
+    climberX = SHOULDER.x + t * (APEX.x - SHOULDER.x);
+    climberY = SHOULDER.y - t * (SHOULDER.y - APEX.y);
+  }
 
   return (
     <section
@@ -56,7 +76,7 @@ export const EverestPeak: React.FC = () => {
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-light)',
-        borderRadius: 16, padding: '20px 24px 8px', marginTop: 20,
+        borderRadius: 16, padding: '20px 24px 16px', marginTop: 20,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
@@ -70,40 +90,52 @@ export const EverestPeak: React.FC = () => {
         </span>
       </div>
 
+      {/*
+        *** A FIXED HEIGHT, NOT `width: 100%` ALONE. *** The first version set
+        only the width, so at 1440 the 600x240 viewBox scaled to 1152x461 — a
+        near-empty half-screen of card. `height` plus `xMidYMax` keeps the
+        drawing at a readable size and pins it to its own baseline whatever the
+        column width.
+      */}
       <svg
         viewBox="0 0 600 240"
         preserveAspectRatio="xMidYMax meet"
         role="img"
         aria-hidden="true"
-        style={{ display: 'block', width: '100%', height: 'auto', marginTop: 4 }}
+        style={{ display: 'block', width: '100%', height: 200, marginTop: 8 }}
       >
-        {/* ONE peak, not a range. The shoulders are asymmetric so it reads as
-            a specific mountain rather than a generic triangle. */}
+        {/* ONE peak, not a range: asymmetric shoulders so it reads as a
+            specific mountain. `fillOpacity` on a TEXT token rather than a
+            border token, because `--border-light` measured invisible against
+            the card on the demo — a border colour is for 1px lines, not for a
+            200px fill. Opacity keeps it theme-safe: it is derived from a
+            colour that is guaranteed to contrast with this surface. */}
         <path
           d="M 60 210 L 230 96 L 300 24 L 372 104 L 430 70 L 540 210 Z"
-          fill="var(--border-light)"
+          fill="var(--text-secondary)" fillOpacity="0.18"
         />
-        {/* The snowline: a lighter cap, which is what makes it read as Everest
-            rather than as one more hill in the range above. */}
+        {/* The snowcap, a touch stronger so the summit reads. */}
         <path
           d="M 300 24 L 372 104 L 340 112 L 300 92 L 262 116 L 230 96 Z"
-          fill="var(--bg-secondary)"
+          fill="var(--text-secondary)" fillOpacity="0.32"
         />
 
-        {/* The route, dashed above the climber and solid below: what you have
-            walked, and what is still yours to walk. */}
+        {/* The whole route along the ridge, dashed: what the climb is. */}
         <path
-          d={`M 300 ${BASE_Y} Q 340 ${(BASE_Y + APEX_Y) / 2} 370 ${APEX_Y + 8}`}
+          d={`M ${BASE.x} ${BASE.y} L ${SHOULDER.x} ${SHOULDER.y} L ${APEX.x} ${APEX.y}`}
           fill="none" stroke="var(--text-secondary)" strokeWidth="1.5"
-          strokeDasharray="4 5" opacity="0.5"
+          strokeDasharray="4 5" opacity="0.6"
         />
+        {/* The part already walked, solid, over the top of it. */}
         <path
-          d={`M 300 ${BASE_Y} Q ${300 + climberX * 0.06} ${(BASE_Y + climberY) / 2} ${climberX} ${climberY}`}
+          d={fraction <= SHOULDER_F
+            ? `M ${BASE.x} ${BASE.y} L ${climberX} ${climberY}`
+            : `M ${BASE.x} ${BASE.y} L ${SHOULDER.x} ${SHOULDER.y} L ${climberX} ${climberY}`}
           fill="none" stroke="var(--status-warn)" strokeWidth="2.5"
+          strokeLinejoin="round"
         />
 
-        {/* The summit marker, and the climber. */}
-        <circle cx="300" cy={APEX_Y} r="3.5" fill="var(--text-secondary)" />
+        <circle cx={APEX.x} cy={APEX.y} r="3.5" fill="var(--text-secondary)" />
         <circle cx={climberX} cy={climberY} r="6" fill="var(--status-warn)" />
       </svg>
 
