@@ -360,6 +360,25 @@ class InvestmentList(Resource):
                          'genuinely cost nothing.',
             }, 400
 
+        # *** `shares` IS `purchase_price`'S EXACT TWIN, FOUND BY ENUMERATING
+        # THE CLASS RATHER THAN BY LUCK. *** `Investment.shares` is
+        # `nullable=False, default=0`, so omitting it stored a holding of ZERO
+        # shares and answered 201 — a position that exists, is worth nothing,
+        # and drags every portfolio total it is part of. Proven: POST without
+        # `shares` returned 201 with `shares = 0E-8`.
+        #
+        # An explicit 0 is refused here, unlike `purchase_price`: a holding of
+        # no shares is not a statement, it is a row that should not exist.
+        try:
+            shares = float(data.get('shares'))
+        except (TypeError, ValueError):
+            shares = None
+        if not shares or shares <= 0:
+            return {
+                'success': False,
+                'error': 'shares is required and must be greater than zero.',
+            }, 400
+
         # D-85: PARSE THE DATE BEFORE THE INSERT. Both clients send `purchase_date` as a
         # `YYYY-MM-DD` string (mobile's HoldingForm always includes it; web's
         # AddHoldingModal.tsx does too) and `Investment.purchase_date` is a `DateTime`, so

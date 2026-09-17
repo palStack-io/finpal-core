@@ -21,44 +21,41 @@ what tells you.
 # slug -> price in coins. Ordered roughly by when a climber would want the piece,
 # which is also the order the shop lists them in.
 GEAR_PRICES = {
-    # *** RAISED 2026-09-17 ON OWNER INSTRUCTION: "increase the coins needed
-    # for kits". *** 9,200 -> 9,650, and the curve is STEEPER at the bottom:
-    # the cheapest piece went 100 -> 150 and the dearest 900 -> 1,000, so early
-    # gear stops being nearly free while the top still feels like a summit buy.
+    # *** RAISED ~2.4x ON OWNER INSTRUCTION, 2026-09-17: "lets make it
+    # reasonable height". *** 9,650 -> 23,550, alongside a ~2.5x raise of the
+    # act ceilings (24,600 universal). Both had to move together: §7.2 caps the
+    # kit at the universal total, so prices alone had 150 coins of room.
     #
-    # *** 9,800 IS A HARD CEILING AND THIS TABLE SITS 150 UNDER IT. *** §7.2
-    # requires the EIGHT UNIVERSAL acts alone to afford the whole kit, because a
-    # user with no debt, no groups and no investments can never reach a
-    # conditional ceiling — pricing the kit above 9,800 would lock exactly that
-    # user out of it.
-    # `test_the_universal_acts_alone_can_afford_the_whole_kit` is what tells
-    # you, and it is the reason this went up by 450 rather than by 4,500.
+    # *** RAISING THE CEILINGS REQUIRED FIXING `upsert_award` FIRST, AND THAT
+    # IS THE PART WORTH READING. *** Its guard refused a raise when coverage
+    # was unchanged, so an existing user at coverage 1.0 was paid NOTHING when
+    # a ceiling went up — the kit would have got dearer while their earning
+    # ceiling stayed put, for every user who already had one, silently.
     #
-    # *** GOING FURTHER NEEDS A DECISION, NOT AN EDIT. *** Either raise the
-    # universal act ceilings with it (bigger numbers on both sides, same
-    # difficulty), or accept that a debt-free user cannot finish the kit, which
-    # reverses §7.2. Left to the owner.
-    'map': 150,
-    'boots': 200,
-    'rope': 250,
-    'gloves': 250,
-    'compass': 300,
-    'headlamp': 350,
-    'water-bottle': 350,
-    'trekking-poles': 400,
-    'guidebook': 400,
-    'signpost': 450,
-    'ice-axe': 450,
-    'carabiner': 450,
-    'helmet': 500,
-    'slope-gauge': 500,
-    'pack-scale': 550,
-    'thermometer': 550,
-    'alpine-start': 600,
-    'bivvy': 600,
-    'cache': 650,
-    'tent': 700,
-    'oxygen': 1000,
+    # Cheapest 400, dearest 2,400. Headroom 1,050, which
+    # `test_the_universal_acts_alone_can_afford_the_whole_kit` is what keeps
+    # honest — change one side without the other and it tells you.
+    'map': 400,
+    'boots': 500,
+    'rope': 600,
+    'gloves': 600,
+    'compass': 750,
+    'headlamp': 850,
+    'water-bottle': 850,
+    'trekking-poles': 1000,
+    'guidebook': 1000,
+    'signpost': 1100,
+    'ice-axe': 1100,
+    'carabiner': 1100,
+    'helmet': 1200,
+    'slope-gauge': 1200,
+    'pack-scale': 1350,
+    'thermometer': 1350,
+    'alpine-start': 1450,
+    'bivvy': 1450,
+    'cache': 1600,
+    'tent': 1700,
+    'oxygen': 2400,
 }
 
 # *** THE FINISH SET IS FINITE AND ENUMERABLE — NOT SEASONAL, NOT GENERATED. ***

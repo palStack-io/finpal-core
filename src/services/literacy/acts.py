@@ -139,8 +139,18 @@ def surface_acts(surface: str) -> list:
 # The core acts.
 #
 # *** THE CEILINGS AND THE GEAR PRICES ARE ONE SYSTEM. *** The eight universal
-# acts below total 9,800 against a 9,200-coin kit, so a user with no debt, no
-# pointsPal and no contributions can still finish it with headroom. Change a
+# acts below total 24,600 against a 23,550-coin kit, so a user with no debt, no
+# pointsPal and no contributions can still finish it with headroom.
+#
+# *** RAISED ~2.5x ON OWNER INSTRUCTION, 2026-09-17: "lets make it reasonable
+# height". *** Both sides moved together, because the kit cannot exceed the
+# universal total (§7.2) — raising prices alone had only 150 coins of room.
+#
+# *** AND RAISING THEM AT ALL REQUIRED FIXING `upsert_award` FIRST. *** Its
+# guard refused a raise when coverage was unchanged, so a user already at
+# coverage 1.0 was paid NOTHING when a ceiling went up: the kit would have got
+# dearer while their earning ceiling did not, silently, for every existing
+# user. See `test_coin_ledger.py`. Change a
 # ceiling here or a price in `gear.py` and
 # `test_acts_registry.py::test_the_universal_acts_alone_can_afford_the_whole_kit`
 # is what tells you.
@@ -155,41 +165,41 @@ def _register_core_acts():
 
     core = [
         # ---- universal: anyone with any data at all can finish these ----
-        Act('bank_connected', 'Connect your bank', 2400,
+        Act('bank_connected', 'Connect your bank', 6000,
             coverage.bank_connected, payoff.bank_connected,
             surfaces=('accounts', 'settings'), universal=True),
-        Act('transactions_categorised', 'Categorise your spending', 2000,
+        Act('transactions_categorised', 'Categorise your spending', 5000,
             coverage.transactions_categorised, payoff.transactions_categorised,
             surfaces=('transactions', 'review'), universal=True),
-        Act('categories_classified', 'Sort your categories', 1500,
+        Act('categories_classified', 'Sort your categories', 3800,
             coverage.categories_classified, payoff.categories_classified,
             surfaces=('categories', 'review'), universal=True),
-        Act('has_a_budget', 'Set a budget', 1000,
+        Act('has_a_budget', 'Set a budget', 2500,
             coverage.has_a_budget, payoff.has_a_budget,
             surfaces=('budgets',), universal=True),
-        Act('accounts_confirmed', 'Confirm what finPal guessed', 800,
+        Act('accounts_confirmed', 'Confirm what finPal guessed', 2000,
             coverage.accounts_confirmed, payoff.accounts_confirmed,
             surfaces=('accounts', 'review'), universal=True),
-        Act('income_recorded', 'Record what arrives', 800,
+        Act('income_recorded', 'Record what arrives', 2000,
             coverage.income_recorded, payoff.income_recorded,
             surfaces=('recurring',), universal=True),
-        Act('taught_a_rule', 'Teach finPal a rule', 700,
+        Act('taught_a_rule', 'Teach finPal a rule', 1800,
             coverage.taught_a_rule, payoff.taught_a_rule,
             surfaces=('rules',), universal=True),
-        Act('has_a_goal', 'Name what you are working toward', 600,
+        Act('has_a_goal', 'Name what you are working toward', 1500,
             coverage.has_a_goal, payoff.has_a_goal,
             surfaces=('goals',), universal=True),
         # ---- conditional: dormant unless the user's circumstances raise them ----
-        Act('debt_rates', 'Know what your debt costs', 1200,
+        Act('debt_rates', 'Know what your debt costs', 3000,
             coverage.debt_rates, payoff.debt_rates,
             surfaces=('accounts',)),
-        Act('transfers_confirmed', 'Confirm your transfers', 800,
+        Act('transfers_confirmed', 'Confirm your transfers', 2000,
             coverage.transfers_confirmed, payoff.transfers_confirmed,
             surfaces=('transactions', 'review')),
-        Act('debt_limits', 'Know your limits', 600,
+        Act('debt_limits', 'Know your limits', 1500,
             coverage.debt_limits, payoff.debt_limits,
             surfaces=('accounts',)),
-        Act('debt_minimums', 'Know your minimums', 400,
+        Act('debt_minimums', 'Know your minimums', 1000,
             coverage.debt_minimums, payoff.debt_minimums,
             surfaces=('accounts',)),
         # ---- added by the 2026-09-17 amendment (spec §14.3) ----
@@ -198,16 +208,16 @@ def _register_core_acts():
         # afford the whole kit, which §7.2 prices against the UNIVERSAL acts
         # alone. Flipping one of these to `universal=True` would quietly make
         # the kit unreachable for them.
-        Act('holdings_priced', 'Record what you paid', 900,
+        Act('holdings_priced', 'Record what you paid', 2300,
             coverage.holdings_priced, payoff.holdings_priced,
             surfaces=('investments',)),
-        Act('splits_confirmed', 'Confirm a split is real', 600,
+        Act('splits_confirmed', 'Confirm a split is real', 1500,
             coverage.splits_confirmed, payoff.splits_confirmed,
             surfaces=('groups',)),
-        Act('settlement_recorded', 'Record settling up', 400,
+        Act('settlement_recorded', 'Record settling up', 1000,
             coverage.settlement_recorded, payoff.settlement_recorded,
             surfaces=('groups',)),
-        Act('budget_adjusted', 'Revise a budget that was not working', 500,
+        Act('budget_adjusted', 'Revise a budget that was not working', 1300,
             coverage.budget_adjusted, payoff.budget_adjusted,
             surfaces=('budgets',)),
     ]

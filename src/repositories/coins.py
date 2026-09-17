@@ -117,14 +117,28 @@ class CoinRepository:
                 coverage=coverage, coins=int(coins)))
             return int(coins)
 
-        if coverage <= row.coverage:
+        # *** A FALLING COVERAGE IS REFUSED; A RISING CEILING IS NOT. ***
+        # The original guard was `if coverage <= row.coverage: return 0`, which
+        # also refused the case where coverage is UNCHANGED and the act's
+        # CEILING went up. Measured 2026-09-17: a user at coverage 1.0 who had
+        # earned 600 was paid 0 when the ceiling was raised to 1,500 — so
+        # retuning the economy upward would have locked every existing user out
+        # of a kit they could previously afford, silently, while every test
+        # stayed green.
+        #
+        # The rule decision 1 actually needs is that coins NEVER FALL. So the
+        # refusal is on coverage falling, and a raise is paid whenever the
+        # computed coins exceed what is stored — whichever of the two inputs
+        # moved.
+        if coverage < row.coverage:
             return 0
 
         delta = int(coins) - int(row.coins)
         if delta <= 0:
-            # Coverage rose but the ceiling was retuned downward. Keep the
-            # coverage watermark honest and the coins where they are.
-            row.coverage = coverage
+            # Either nothing moved, or the ceiling was retuned DOWNWARD. Keep
+            # the coverage watermark honest and the coins exactly where they
+            # are: re-tuning an act must never take coins back.
+            row.coverage = max(coverage, Decimal(str(row.coverage)))
             return 0
         row.coverage = coverage
         row.coins = int(coins)

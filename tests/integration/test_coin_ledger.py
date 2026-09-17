@@ -116,3 +116,83 @@ def test_a_user_with_no_rows_at_all_reads_as_zero_not_as_an_error(repo):
     assert repo.earned('nobody@test.com') == 0
     assert repo.spent('nobody@test.com') == 0
     assert repo.balance('nobody@test.com') == 0
+
+
+def test_RAISING_A_CEILING_PAYS_AN_EXISTING_USER_AT_FULL_COVERAGE(db):
+    """*** WITHOUT THIS, RETUNING THE ECONOMY UPWARD LOCKS EVERY EXISTING USER
+    OUT OF THE KIT. ***
+
+    Measured 2026-09-17: the guard was `if coverage <= row.coverage: return 0`,
+    which refused the case where coverage is UNCHANGED and the act's CEILING
+    went up. A user at coverage 1.0 holding 600 coins was paid 0 when the
+    ceiling moved to 1,500 — so the kit got dearer and their earning ceiling
+    did not, silently, while every test stayed green.
+
+    The rule decision 1 needs is that coins never FALL. A rise is paid whichever
+    of the two inputs moved.
+    """
+    from decimal import Decimal
+
+    from src.extensions import db as _db
+    from src.repositories.coins import CoinRepository
+    from tests.factories import UserFactory
+
+    u = UserFactory(id='ceilingraise@test.com', name='C',
+                    password_plain='testpassword')
+    _db.session.commit()
+
+    repo = CoinRepository()
+    assert repo.upsert_award(u.id, 'has_a_goal', Decimal(1), 600) == 600
+    _db.session.commit()
+
+    # Same coverage, higher ceiling.
+    assert repo.upsert_award(u.id, 'has_a_goal', Decimal(1), 1500) == 900
+    _db.session.commit()
+    assert repo.award_row(u.id, 'has_a_goal').coins == 1500
+
+
+def test_LOWERING_A_CEILING_STILL_TAKES_NOTHING_BACK(db):
+    """The other half of decision 1, and the reason the guard is on coverage
+    FALLING rather than on equality: re-tuning an act downward must not cost
+    somebody coins they already hold."""
+    from decimal import Decimal
+
+    from src.extensions import db as _db
+    from src.repositories.coins import CoinRepository
+    from tests.factories import UserFactory
+
+    u = UserFactory(id='ceilingdrop@test.com', name='C',
+                    password_plain='testpassword')
+    _db.session.commit()
+
+    repo = CoinRepository()
+    repo.upsert_award(u.id, 'has_a_goal', Decimal(1), 1500)
+    _db.session.commit()
+
+    assert repo.upsert_award(u.id, 'has_a_goal', Decimal(1), 600) == 0
+    _db.session.commit()
+    assert repo.award_row(u.id, 'has_a_goal').coins == 1500
+
+
+def test_A_FALLING_COVERAGE_IS_STILL_REFUSED(db):
+    """Coverage genuinely falls — pay a card off and open a new one — and the
+    watermark is what stops that costing coins."""
+    from decimal import Decimal
+
+    from src.extensions import db as _db
+    from src.repositories.coins import CoinRepository
+    from tests.factories import UserFactory
+
+    u = UserFactory(id='covdrop@test.com', name='C',
+                    password_plain='testpassword')
+    _db.session.commit()
+
+    repo = CoinRepository()
+    repo.upsert_award(u.id, 'debt_rates', Decimal(1), 1200)
+    _db.session.commit()
+
+    assert repo.upsert_award(u.id, 'debt_rates', Decimal('0.5'), 600) == 0
+    _db.session.commit()
+    row = repo.award_row(u.id, 'debt_rates')
+    assert row.coins == 1200
+    assert Decimal(str(row.coverage)) == Decimal(1)

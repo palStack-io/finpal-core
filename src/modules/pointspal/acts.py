@@ -107,19 +107,31 @@ def payoff_program_verified(user_id):
 def get_acts() -> dict:
     """The acts pointsPal contributes. `{slug: Act}`.
 
-    *** `contribution_accepted` IS DELIBERATELY ABSENT, AND §5.1's PREMISE FOR
-    IT IS FALSE. *** The spec says *"the schema already closes that loop"* via
-    `PointsProgram.contributor`. Measured 2026-09-17: that column holds a
-    free-text handle from the dataset JSON (`'palstack-team'` or `NULL`), there
-    is **no GitHub handle or any other identifier on `User`**, and the submitted
-    payload carries **no user identity at all** — which is D-91's privacy fix
-    working exactly as intended.
+    *** `contribution_accepted` IS ABSENT BY OWNER DECISION, 2026-09-17, AND
+    THAT IS NOW SETTLED RATHER THAN PENDING. *** Owner: *"we arent taking
+    contribtion code wise but we appreciate users to use pointpal and do
+    contribution"*.
 
-    So there is currently no way to connect an accepted contribution back to the
-    finPal user who made it. Registering the act anyway would be a predicate
-    that can never fire: D-187's shape, and the third time that hook pattern has
-    bitten this project. **It needs an identity decision from the owner**, which
-    is recorded in the roadmap rather than guessed at here.
+    Two reasons it stays out, and the first is a measurement:
+
+    1. §5.1's premise for it is FALSE. The spec says *"the schema already closes
+       that loop"* via `PointsProgram.contributor`. Measured: that column holds
+       a free-text handle from the dataset JSON (`'palstack-team'` or `NULL`),
+       there is **no GitHub handle or any other identifier on `User`**, and the
+       submitted payload carries **no user identity at all** — which is D-91's
+       privacy fix working exactly as intended. Nothing can connect an accepted
+       contribution back to a finPal user, so the act could only ever be a
+       predicate that never fires (D-187's shape).
+    2. Closing that loop would mean putting an identifier into a PUBLIC issue on
+       a feature whose scar is exactly that. **Not worth it for a reward.**
+
+    *** SO CONTRIBUTION IS APPRECIATED IN WORDS, NOT IN CURRENCY. *** The two
+    acts below already pay for the work that makes a contribution possible —
+    recording what your cards really earn, and checking them against the
+    issuer. Sharing that afterwards is thanked on the page and buys nothing,
+    which is the only version that cannot be farmed: §5.1's own warning is that
+    paying for contributions gets you volume, not accuracy, and a community
+    dataset's entire value is accuracy.
     """
     return {
         'card_rewards_recorded': Act(

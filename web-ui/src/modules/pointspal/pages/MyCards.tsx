@@ -791,6 +791,36 @@ const MyCards: React.FC = () => {
                   </button>
                 </div>
 
+                {card.submitted_to_community && (
+                  /* *** THANKS, AND DELIBERATELY NOT A REWARD. *** Owner
+                     decision 2026-09-17: *"we arent taking contribtion code
+                     wise but we appreciate users to use pointpal and do
+                     contribution"*.
+
+                     No coins and no badge hang off this. §5.1's warning is
+                     that paying for contributions gets you volume, not
+                     accuracy, and a community dataset's entire value IS
+                     accuracy — and `submitted_to_community` only means a link
+                     was built, so rewarding it would pay for pressing a
+                     button.
+
+                     It also does not claim the contribution was ACCEPTED,
+                     because finPal cannot know: nothing links a merge back to
+                     a user, by design (D-91 keeps every identifier out of the
+                     public payload). So it thanks them for sharing, which is
+                     the part that actually happened. */
+                  <div
+                    data-testid="community-thanks"
+                    style={{
+                      padding: '8px 14px 10px', fontSize: 11,
+                      color: 'var(--muted)', borderTop: '1px solid var(--border)',
+                    }}
+                  >
+                    Thank you for sharing this with the community. Rates you
+                    share are read by everyone using pointsPal.
+                  </div>
+                )}
+
                 {/* Transactions toggle */}
                 <div style={{ borderTop: '1px solid var(--border)', padding: '0 14px' }}>
                   <button
