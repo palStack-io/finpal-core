@@ -185,7 +185,7 @@ const RecentRow: React.FC<{
   const body = (
     <>
     <span style={{ lineHeight: 0, marginTop: 2 }}>
-      <BadgeIcon slug={row.gear_slug ?? row.slug} size={20} />
+      <BadgeIcon slug={row.gear_slug ?? row.slug} size={34} />
     </span>
     <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -250,7 +250,7 @@ const NextRow: React.FC<{ row: StatsNext }> = ({ row }) => (
     borderTop: '1px solid var(--border-light)',
   }}>
     <span style={{ lineHeight: 0, marginTop: 2, opacity: 0.3 }}>
-      <BadgeIcon slug={row.gear_slug ?? row.slug} size={20} />
+      <BadgeIcon slug={row.gear_slug ?? row.slug} size={34} />
     </span>
     <div style={{ minWidth: 0, flex: 1 }}>
       <div style={{

@@ -33,8 +33,13 @@ export const BadgeIcon: React.FC<{
   size?: number;
   title?: string;
 }> = ({ slug, size = 24, title }) => {
-  // The disc is sized from the caller's `size`, and the glyph is inset so the
-  // ring stays legible at the ~20px learnPal actually renders these at.
+  // *** THE DISC INSETS THE GLYPH, SO A SMALL `size` IS WORSE HERE THAN IT WAS
+  // FOR BARE GEAR. *** The design already recorded that the 21 drawings ship
+  // rendered at ~14px in a row of five, "where it is illegible — a sizing
+  // decision, not a missing asset". At 58% a 20px disc leaves an 11.6px glyph,
+  // which is smaller still. `gearIsLegible.test.ts` holds callers to a floor
+  // rather than clamping here: silently resizing would hide the caller's
+  // mistake and leave the layout guessing.
   const glyph = Math.round(size * 0.58);
 
   return (

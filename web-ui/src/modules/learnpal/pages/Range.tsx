@@ -97,7 +97,7 @@ const Peak: React.FC<{ entry: RangePeak }> = ({ entry }) => {
                 title={`${g.title}${g.earned ? '' : ' — not yet'}`}
                 style={{ opacity: g.earned ? 1 : 0.3, lineHeight: 0 }}
               >
-                <BadgeIcon slug={g.slug ?? g.milestone_slug} size={22} />
+                <BadgeIcon slug={g.slug ?? g.milestone_slug} size={34} />
               </span>
             ))}
           </div>
