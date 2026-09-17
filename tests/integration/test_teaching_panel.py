@@ -12,6 +12,7 @@ from src.extensions import db as _db
 from src.models.act_event import TeachingSeen
 from src.models.coins import CoinAward
 from src.models.goal import Goal
+from src.models.transaction_rule import TransactionRule
 from src.services.literacy import teaching
 from tests.factories import UserFactory
 
@@ -20,15 +21,24 @@ USER = 'teach@test.com'
 
 @pytest.fixture
 def owner(db):
+    """A user whose first award HAS a payoff sentence.
+
+    *** `has_a_goal` PAYS 600 COINS AND SAYS NOTHING. *** Its payoff returns
+    `None` — fail-closed, because finPal cannot compute a consequence for
+    naming a goal — so `CoinAward` renders nothing for it at all. An earlier
+    version of this file used it as the teaching carrier, which made the tests
+    green while the panel never appeared on the demo. A rule is used instead,
+    because `taught_a_rule` has a real sentence.
+    """
     u = UserFactory(id=USER, name='Teach', password_plain='testpassword')
-    _db.session.add(Goal(user_id=u.id, name='Roof', start_amount=0,
-                         target_amount=1000, status='active'))
+    _db.session.add(TransactionRule(user_id=u.id, name='Coffee',
+                                    pattern='COFFEE', active=True))
     _db.session.commit()
     return u
 
 
 def test_the_first_award_carries_the_coins_panel(owner, auth_headers, client):
-    body = client.post('/api/v1/coins/refresh', json={'surface': 'goals'},
+    body = client.post('/api/v1/coins/refresh', json={'surface': 'rules'},
                        headers=auth_headers(owner)).get_json()
 
     assert body['awarded'], 'nothing awarded — the test would pass vacuously'
@@ -42,21 +52,18 @@ def test_the_first_award_carries_the_coins_panel(owner, auth_headers, client):
 def test_after_acking_it_no_further_award_carries_it(
         owner, auth_headers, client):
     h = auth_headers(owner)
-    first = client.post('/api/v1/coins/refresh', json={'surface': 'goals'},
+    first = client.post('/api/v1/coins/refresh', json={'surface': 'rules'},
                         headers=h).get_json()
     slug = first['awarded'][0]['slug']
 
     client.post('/api/v1/coins/ack', json={'act_slug': slug}, headers=h)
 
-    # A second, different act earns; it must NOT re-teach. `taught_a_rule` is
-    # binary and needs no spend fixture, unlike `has_a_budget`, which measures
-    # a share of FLEXIBLE spend.
-    from src.models.transaction_rule import TransactionRule
-    _db.session.add(TransactionRule(user_id=owner.id, name='Coffee',
-                                    pattern='COFFEE', active=True))
+    # A second, different act earns; it must NOT re-teach.
+    _db.session.add(Goal(user_id=owner.id, name='Roof', start_amount=0,
+                         target_amount=1000, status='active'))
     _db.session.commit()
 
-    second = client.post('/api/v1/coins/refresh', json={'surface': 'rules'},
+    second = client.post('/api/v1/coins/refresh', json={'surface': 'goals'},
                          headers=h).get_json()
     assert second['awarded'], 'nothing awarded — vacuous'
     assert second['awarded'][0]['teach'] is None
@@ -64,7 +71,7 @@ def test_after_acking_it_no_further_award_carries_it(
 
 def test_the_ack_persists_the_topic(owner, auth_headers, client):
     h = auth_headers(owner)
-    first = client.post('/api/v1/coins/refresh', json={'surface': 'goals'},
+    first = client.post('/api/v1/coins/refresh', json={'surface': 'rules'},
                         headers=h).get_json()
     client.post('/api/v1/coins/ack',
                 json={'act_slug': first['awarded'][0]['slug']}, headers=h)
@@ -84,7 +91,7 @@ def test_only_ONE_award_in_a_batch_carries_the_panel(
     _db.session.commit()
 
     # `review` moves several acts at once.
-    body = client.post('/api/v1/coins/refresh', json={'surface': 'goals'},
+    body = client.post('/api/v1/coins/refresh', json={'surface': 'rules'},
                        headers=auth_headers(owner)).get_json()
     taught = [a for a in body['awarded'] if a.get('teach')]
     assert len(taught) <= 1
@@ -92,8 +99,8 @@ def test_only_ONE_award_in_a_batch_carries_the_panel(
 
 def test_the_unseen_queue_carries_it_too(owner, auth_headers, client):
     """An award earned at 04:30 must still get its explanation."""
-    _db.session.add(CoinAward(user_id=owner.id, act_slug='has_a_goal',
-                              coverage=Decimal(1), coins=600))
+    _db.session.add(CoinAward(user_id=owner.id, act_slug='taught_a_rule',
+                              coverage=Decimal(1), coins=700))
     _db.session.commit()
 
     wallet = client.get('/api/v1/coins', headers=auth_headers(owner)).get_json()
@@ -121,3 +128,40 @@ def test_every_topic_has_a_title_and_a_body():
 
 def test_an_unknown_topic_renders_nothing_rather_than_an_empty_box():
     assert teaching.panel_for('no_such_topic') is None
+
+
+def test_AN_AWARD_WITH_NO_SENTENCE_DOES_NOT_CONSUME_THE_TEACHING(
+        owner, auth_headers, client):
+    """*** THE BUG A BROWSER FOUND AND NO UNIT TEST COULD. ***
+
+    `has_a_goal` pays 600 coins and its payoff is `None`, so `CoinAward`
+    renders nothing for it — by design, because a sentence finPal cannot
+    justify is worse than silence. The server used to attach the one-time
+    explanation to the FIRST award regardless, so a user whose first unseen
+    award had no sentence had their teaching silently dropped: the client
+    skipped that award, showed the next one, and the next one carried no
+    panel. Nothing was acked and nothing errored, so it would never come back.
+
+    On the demo this showed up as "award: 1, teach: 0".
+    """
+    # Earn ONLY the silent act.
+    _db.session.add(Goal(user_id=owner.id, name='Roof', start_amount=0,
+                         target_amount=1000, status='active'))
+    _db.session.commit()
+
+    silent = client.post('/api/v1/coins/refresh', json={'surface': 'goals'},
+                         headers=auth_headers(owner)).get_json()
+    goal_award = [a for a in silent['awarded'] if a['slug'] == 'has_a_goal']
+    assert goal_award, 'has_a_goal did not award — the test is vacuous'
+    assert goal_award[0]['revealed'] is None, (
+        'has_a_goal gained a payoff sentence; this test needs a silent act')
+    assert goal_award[0]['teach'] is None, (
+        'the teaching was attached to an award that renders nothing')
+
+    # It is still available, so the next award that CAN render gets it.
+    later = client.post('/api/v1/coins/refresh', json={'surface': 'rules'},
+                        headers=auth_headers(owner)).get_json()
+    renderable = [a for a in later['awarded'] if a['revealed']]
+    assert renderable, 'nothing renderable was awarded — vacuous'
+    assert renderable[0]['teach'] is not None, (
+        'the teaching was lost rather than deferred')

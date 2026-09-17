@@ -111,6 +111,10 @@ def _render_awards(user_id, pairs, revealed_by_slug=None):
             revealed = revealed_by_slug[slug]
         else:
             revealed = _payoff(user_id, act)
+        # The client's own render condition, mirrored here: `CoinAward` returns
+        # null unless there is a sentence AND coins to report.
+        renders = bool(revealed) and int(coins) > 0
+
         out.append({
             'slug': slug,
             'title': act.title if act else slug,
@@ -121,10 +125,25 @@ def _render_awards(user_id, pairs, revealed_by_slug=None):
             # modal over it (§14.6): the payoff sentence IS the lesson
             # (decision 6), and a popup on top of it competes with the thing
             # it exists to support.
+            # *** ATTACHED ONLY TO AN AWARD THAT WILL ACTUALLY RENDER, AND
+            # THAT QUALIFIER IS THE WHOLE FIX. *** Found on the demo, in a
+            # browser: the award appeared and the panel did not. The first
+            # unseen award was `has_a_goal`, whose payoff is `None`, and
+            # `CoinAward` renders NOTHING when `revealed` is null — by design,
+            # because a sentence finPal cannot justify is worse than silence.
+            # The client therefore skipped it and showed the next award, which
+            # carried no `teach`. So the one-time explanation was silently
+            # DROPPED for any user whose first unseen award happened to have no
+            # computable consequence — and it would never come back, because
+            # nothing was acked and nothing errored.
+            #
+            # *** NO TEST COULD HAVE CAUGHT THIS. *** Every unit test asserted
+            # `awarded[0]['teach']`, which was correct. The defect lived in the
+            # gap between what the server offers and what the client renders.
             'teach': (panel_for(ACT_TOPIC)
-                      if teach_coins and not teach_used else None),
+                      if teach_coins and not teach_used and renders else None),
         })
-        if teach_coins and not teach_used:
+        if teach_coins and not teach_used and renders:
             teach_used = True
     return out
 

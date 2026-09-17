@@ -73,7 +73,15 @@ class CoinRepository:
             CoinAwardAck,
             (CoinAwardAck.user_id == CoinAward.user_id)
             & (CoinAwardAck.act_slug == CoinAward.act_slug),
-        ).filter(CoinAward.user_id == user_id).all()
+        ).filter(CoinAward.user_id == user_id).order_by(
+            # *** DETERMINISTIC, AND NOT MERELY FOR TIDINESS. *** Without an
+            # ORDER BY the database may return these in any order, so WHICH
+            # award a user sees first — and therefore which one carries the
+            # one-time explanation — was arbitrary and could differ between
+            # two reads of the same data. Biggest first also puts the most
+            # consequential sentence in front of them.
+            CoinAward.coins.desc(), CoinAward.act_slug.asc(),
+        ).all()
 
         return [(slug, int(coins) - int(seen))
                 for slug, coins, seen in rows if int(coins) > int(seen)]
