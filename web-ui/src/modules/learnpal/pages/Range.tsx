@@ -3,7 +3,7 @@ import { PageHead } from '../../../components/PageHead';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { MountainSilhouette } from '../../../components/MountainSilhouette';
-import { GearIcon } from '../../../components/GearIcon';
+import { BadgeIcon } from '../../../components/BadgeIcon';
 import { heightForMagnitude } from '../../../utils/mountainGeometry';
 import { peakColorVar, peakSubline } from '../../../utils/peakCopy';
 import { formatMoney } from '../../../styles/money';
@@ -97,7 +97,7 @@ const Peak: React.FC<{ entry: RangePeak }> = ({ entry }) => {
                 title={`${g.title}${g.earned ? '' : ' — not yet'}`}
                 style={{ opacity: g.earned ? 1 : 0.3, lineHeight: 0 }}
               >
-                <GearIcon slug={g.slug ?? g.milestone_slug} size={22} />
+                <BadgeIcon slug={g.slug ?? g.milestone_slug} size={22} />
               </span>
             ))}
           </div>

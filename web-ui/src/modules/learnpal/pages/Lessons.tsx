@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { PageHead } from '../../../components/PageHead';
 import { Loader2 } from 'lucide-react';
-import { GearIcon } from '../../../components/GearIcon';
+import { BadgeIcon } from '../../../components/BadgeIcon';
 import { useLessonReader } from '../LessonReader';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
 import { learnpalService } from '../service';
@@ -132,7 +132,7 @@ export const Lessons: React.FC = () => {
         {rows.map((row) => (
           <div key={row.slug} style={rowStyle} data-testid={`lesson-${row.slug}`}>
             <span style={{ opacity: row.earned ? 1 : 0.3, lineHeight: 0 }}>
-              <GearIcon slug={row.gear_slug ?? row.slug} size={22} />
+              <BadgeIcon slug={row.gear_slug ?? row.slug} size={22} />
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>

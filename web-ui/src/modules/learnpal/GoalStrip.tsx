@@ -1,5 +1,5 @@
 import React from 'react';
-import { GearIcon } from '../../components/GearIcon';
+import { BadgeIcon } from '../../components/BadgeIcon';
 import type { RangeStrip } from '../../types/learnpal';
 
 /**
@@ -41,7 +41,7 @@ export const GoalStrip: React.FC<{ strip: RangeStrip; goalId: number }> = ({ str
                that grew an icon at a time would never show the shape of it. */
             style={{ opacity: g.earned ? 1 : 0.3, lineHeight: 0 }}
           >
-            <GearIcon slug={g.slug ?? g.milestone_slug} size={24} />
+            <BadgeIcon slug={g.slug ?? g.milestone_slug} size={24} />
           </span>
         ))}
       </span>
