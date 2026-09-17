@@ -279,3 +279,30 @@ def test_badges_do_not_commit(owner):
     badges.award_badges(owner.id)
     _db.session.rollback()
     assert BadgeEarned.query.filter_by(user_id=owner.id).count() == 0
+
+
+def test_A_MONTH_WITH_NO_TRANSACTIONS_DOES_NOT_COUNT_AS_ON_BUDGET(owner):
+    """*** FOUND ON THE LIVE DEMO, WHERE EVERY PERSONA SCORED best_run=24. ***
+
+    That is the entire lookback window. `calculate_spent_amount` returns 0 for
+    a month with no transactions, and `0 <= planned` is True — so every month
+    before the user had any data counted as a month on budget. A brand-new user
+    with one budget would have collected "a year on budget" for having been
+    absent, which is a reward for a circumstance.
+
+    No unit test caught it because the fixtures all had recent data. Only real
+    seeded data over a real 24-month window showed it.
+    """
+    from tests.factories import BudgetFactory, CategoryFactory
+    cat = CategoryFactory(user_id=owner.id, name='Food')
+    _db.session.commit()
+    BudgetFactory(user_id=owner.id, category_id=cat.id, amount=300)
+    _db.session.commit()
+
+    # A budget exists and there is not a single transaction anywhere.
+    assert badges.best_on_budget_run(owner.id) == 0, (
+        'an empty history scored as months on budget')
+
+    awarded = badges.award_badges(owner.id)
+    _db.session.commit()
+    assert 'on-budget-3' not in awarded

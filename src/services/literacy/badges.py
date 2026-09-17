@@ -32,6 +32,7 @@ from datetime import date
 from decimal import Decimal
 
 from src.extensions import db
+from src.models.transaction import Expense
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,26 @@ def _within_budget(user_id, year, month):
 
     budgets = Budget.query.filter_by(user_id=user_id, active=True).all()
     if not budgets:
+        return None
+
+    # *** A MONTH WITH NO ACTIVITY IS UNKNOWABLE, NOT A MONTH YOU SUCCEEDED. ***
+    # Found on the live demo: every persona scored `best_run=24`, the entire
+    # lookback window. `calculate_spent_amount` returns 0 for a month with no
+    # transactions, and `0 <= planned` is True — so every month before the user
+    # had any data counted as a month on budget. A brand-new user with one
+    # budget would have collected "a year on budget" for having been absent,
+    # which is a reward for a circumstance and the exact thing §14.1 excludes.
+    #
+    # Measured, not assumed: the demo seeds a few months of transactions and
+    # scored 24 regardless.
+    first = date(year, month, 1)
+    last = date(year, month, monthrange(year, month)[1])
+    activity = Expense.query.filter(
+        Expense.user_id == user_id,
+        Expense.date >= first,
+        Expense.date <= last,
+    ).count()
+    if activity == 0:
         return None
 
     planned = Decimal(0)
