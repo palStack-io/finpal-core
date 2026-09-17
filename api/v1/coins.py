@@ -27,6 +27,7 @@ from src.extensions import db
 from src.repositories.coins import CoinRepository
 from src.services.literacy.acts import ACTS, award_for_surface
 from src.services.literacy.gear import GEAR_PRICES
+from src.services.literacy.teaching import ACT_TOPIC, panel_for
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,17 @@ def _payoff(user_id, act):
         return None
 
 
+def _teaching_unseen(user_id, topic):
+    """`True` when this user has never been shown that explanation.
+
+    *** ASKED PER REQUEST RATHER THAN CACHED. *** It is one indexed lookup, and
+    the alternative is a second copy of a fact one table already determines.
+    """
+    from src.models.act_event import TeachingSeen
+    return TeachingSeen.query.filter_by(
+        user_id=user_id, topic=topic).first() is None
+
+
 def _render_awards(user_id, pairs, revealed_by_slug=None):
     """`[(slug, coins)]` -> the award objects both `/refresh` and `unseen` send.
 
@@ -87,6 +99,10 @@ def _render_awards(user_id, pairs, revealed_by_slug=None):
     hand.
     """
     out = []
+    # *** ONCE PER REWARD TYPE, SO AT MOST ONE AWARD IN A BATCH CARRIES IT. ***
+    # Two awards landing together would otherwise both explain what a coin is.
+    teach_coins = _teaching_unseen(user_id, ACT_TOPIC) if pairs else False
+    teach_used = False
     for slug, coins in pairs:
         act = ACTS.get(slug)
         if revealed_by_slug is not None and slug in revealed_by_slug:
@@ -98,7 +114,16 @@ def _render_awards(user_id, pairs, revealed_by_slug=None):
             'title': act.title if act else slug,
             'coins': int(coins),
             'revealed': revealed,
+            # *** THE TEACHING RIDES ON THE AWARD, NOT ON A SECOND REQUEST. ***
+            # `CoinAward` renders it as a PANEL inside itself rather than a
+            # modal over it (§14.6): the payoff sentence IS the lesson
+            # (decision 6), and a popup on top of it competes with the thing
+            # it exists to support.
+            'teach': (panel_for(ACT_TOPIC)
+                      if teach_coins and not teach_used else None),
         })
+        if teach_coins and not teach_used:
+            teach_used = True
     return out
 
 
@@ -251,5 +276,13 @@ class CoinAck(Resource):
             return {'error': 'No such award.'}, 404
 
         repo.ack(user_id, slug)
+
+        # *** THE PANEL WAS DISMISSED WITH THE AWARD, SO IT IS SEEN. *** One
+        # endpoint rather than two, because the client cannot dismiss one
+        # without the other: the teaching is rendered INSIDE the award.
+        from src.models.act_event import TeachingSeen
+        if _teaching_unseen(user_id, ACT_TOPIC):
+            db.session.add(TeachingSeen(user_id=user_id, topic=ACT_TOPIC))
+
         db.session.commit()
         return {'acknowledged': slug}, 200

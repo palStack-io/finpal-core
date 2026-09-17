@@ -9,6 +9,8 @@ import { Menu } from 'lucide-react';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastContainer } from './components/common/Toast';
+import { CoinAwardProvider } from './contexts/CoinAwardContext';
+import { CoinAwardContainer } from './components/coins/CoinAwardContainer';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Sidebar } from './components/layout/Sidebar';
 import { useAuthStore } from './store/authStore';
@@ -145,6 +147,7 @@ function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
+        <CoinAwardProvider>
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
@@ -343,7 +346,12 @@ function App() {
 
           {/* Toast Notifications */}
           <ToastContainer />
+
+          {/* The award moment. One container, app-wide: an earning page's only
+              job is to name its surface, so no page can earn invisibly. */}
+          <CoinAwardContainer />
         </BrowserRouter>
+        </CoinAwardProvider>
       </ToastProvider>
     </ThemeProvider>
   );

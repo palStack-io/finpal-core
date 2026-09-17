@@ -105,6 +105,20 @@ export interface CoinAwardItem {
    * here would put that straight back.
    */
   revealed: string | null;
+  /**
+   * The one-time explanation of what this reward IS, or `null`.
+   *
+   * *** ONCE PER REWARD TYPE, AND THE SERVER DECIDES. *** Not "the first N
+   * awards": a count spends itself badly, since three awards in one evening
+   * can all be coins. The client never tracks this — it renders what arrives.
+   */
+  teach: CoinTeachPanel | null;
+}
+
+export interface CoinTeachPanel {
+  topic: string;
+  title: string;
+  body: string;
 }
 
 export interface CoinRefreshResult {

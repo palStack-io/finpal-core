@@ -18,8 +18,17 @@ import React from 'react';
 export const CoinAward: React.FC<{
   coins: number;
   revealed: string | null;
+  /**
+   * The one-time explanation of what a coin IS, or `null`.
+   *
+   * *** RENDERED AS A PANEL INSIDE THIS COMPONENT, NEVER AS A MODAL OVER IT
+   * (spec §14.6). *** The payoff sentence IS the lesson (decision 6), so a
+   * popup on top of it competes with the very thing it exists to support. The
+   * award simply renders TALLER the first time.
+   */
+  teach?: { topic: string; title: string; body: string } | null;
   onDismiss?: () => void;
-}> = ({ coins, revealed, onDismiss }) => {
+}> = ({ coins, revealed, teach, onDismiss }) => {
   if (!revealed || coins <= 0) return null;
 
   return (
@@ -55,6 +64,32 @@ export const CoinAward: React.FC<{
         }}>
           {revealed}
         </p>
+        {teach && (
+          /* *** A PANEL, NOT A MODAL — AND IT SITS BELOW THE SENTENCE, NOT
+             ABOVE IT. *** The payoff sentence is the reward; this only explains
+             what the reward IS, and it is shown once in a user's life. Ranking
+             it above the sentence would make the first coin a lecture. */
+          <div
+            data-testid="coin-award-teach"
+            style={{
+              marginTop: 12, paddingTop: 12,
+              borderTop: '1px solid var(--border-light)',
+            }}
+          >
+            <div style={{
+              fontSize: 13, fontWeight: 600, letterSpacing: '0.02em',
+              color: 'var(--text-secondary)', textTransform: 'uppercase',
+            }}>
+              {teach.title}
+            </div>
+            <p style={{
+              margin: '4px 0 0', fontSize: 14, lineHeight: 1.55,
+              color: 'var(--text-secondary)',
+            }}>
+              {teach.body}
+            </p>
+          </div>
+        )}
       </div>
       {onDismiss && (
         <button

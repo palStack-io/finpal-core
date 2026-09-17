@@ -54,6 +54,13 @@ NO_DEMO_ROWS_BY_DESIGN = {
     # `unseen`, which is the award moment demonstrating itself. SEEDING acks
     # here would mark every one as already seen and the demo would show an
     # empty award queue: D-77's shape, a feature demoing its own absence.
+    # Same reasoning as `coin_award_acks` below, one reward-type further along:
+    # a demo user who has been TAUGHT nothing is the user who gets the four
+    # explanations, which is the state worth demonstrating. Seeding rows here
+    # would silence the teaching on the demo.
+    'teaching_seen': 'records which explanations the user has been shown; a '
+                     'freshly seeded demo has been shown none, which is what '
+                     'makes the teaching panels appear',
     'coin_award_acks': 'records what the user has been shown; a freshly seeded '
                        'demo has been shown nothing, and that is what makes its '
                        'unseen awards visible',

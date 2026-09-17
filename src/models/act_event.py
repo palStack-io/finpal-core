@@ -68,3 +68,31 @@ class ActEvent(db.Model):
 
     def __repr__(self):
         return f'<ActEvent {self.user_id} {self.act_slug} {self.subject_id!r}>'
+
+
+class TeachingSeen(db.Model):
+    """Which of the four explanations this user has already been shown.
+
+    *** A NEW TABLE, NOT A COLUMN ON `User` — D-121. *** `create_all()` makes a
+    missing TABLE at boot and is blind to a new COLUMN on an existing model, so
+    a flag on `users` would read as absent on every deployment that already has
+    users, and every existing user would be taught everything again.
+
+    Four rows at most per user today (`coins`, `gear`, `badges`, `mountains`),
+    and the table takes a fifth without a migration anybody has to remember.
+    """
+
+    __tablename__ = 'teaching_seen'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'topic', name='uq_teaching_seen_user_topic'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.String(120), db.ForeignKey('users.id', name='fk_teaching_seen_user'),
+        nullable=False, index=True)
+    topic = db.Column(db.String(40), nullable=False)
+    seen_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<TeachingSeen {self.user_id} {self.topic}>'
