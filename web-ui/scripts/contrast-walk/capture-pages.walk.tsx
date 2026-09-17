@@ -164,6 +164,7 @@ const FlowChartFixture: React.FC = () => {
     </div>
   );
 };
+import { Kit } from '../../src/pages/Kit';
 import GroupDetail from '../../src/pages/GroupDetail';
 import NotFound from '../../src/pages/NotFound';
 import { Login } from '../../src/pages/Login';
@@ -1195,6 +1196,31 @@ beforeEach(() => {
         },
       },
     })),
+    /* Kit's wallet. `balance` is deliberately BELOW the cheapest unowned
+       price: the savings bar only draws for a piece you cannot yet afford, and
+       a fixture that can afford everything captures the page without it —
+       which is how the "7,853 / 200" defect recorded in `Kit.tsx` survived
+       every test that had one. */
+    http.get('*/api/v1/coins', () => HttpResponse.json({
+      earned: 940,
+      balance: 140,
+      acts: [
+        { slug: 'classify', title: 'Classified a month of spending', coins: 300, sentence: null },
+        { slug: 'budget', title: 'Covered your spending with budgets', coins: 240, sentence: null },
+      ],
+      gear: [
+        { slug: 'boots', price: 100, owned: true },
+        { slug: 'compass', price: 120, owned: true },
+        { slug: 'rope', price: 200, owned: false },
+        { slug: 'tent', price: 350, owned: false },
+        /* Real slugs only. All 21 have both art and an emoji fallback
+           (checked), and an invented slug would render the fallback's blank —
+           a fixture that cannot draw the art cannot notice when the art
+           breaks. */
+        { slug: 'headlamp', price: 500, owned: false },
+      ],
+    })),
+
     // ── the six surfaces added 2026-09-16 ──────────────────────────────────
     /*
      * *** THE GROUP FIXTURE CARRIES `expense_count`, AND THAT FIELD IS THE
@@ -1339,6 +1365,12 @@ const cases: Case[] = [
      account reaches is exactly the one nothing else renders. D-77's lesson:
      an empty demo hid three defects. */
   ['dashboard-empty-range', EmptyRangeFixture, undefined, undefined, 6],
+  /* *** KIT HAD NEVER BEEN IN THE WALK EITHER. *** It is a sidebar route every
+     user can reach, and it was redesigned on 2026-09-16 without a single
+     measured pixel behind it. Captured with a MIXED wallet — owned and unowned
+     gear, and a balance that cannot afford the cheapest remaining piece, which
+     is the only state that renders the savings bar. */
+  ['kit', Kit as React.FC],
   ['sidebar', SidebarOpen, async () => {
     // Both module headers, by name — clicking by index would silently click
     // the same row twice if the registry order changed.

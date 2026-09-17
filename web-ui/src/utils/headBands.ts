@@ -140,6 +140,24 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
 
      Verified by rendering the shape alone at 4x, because at 52px the difference
      between "the flats are level" and "nearly level" is two pixels. */
+  /* *** KIT'S BAND CARRIES A CAIRN, BECAUSE KIT IS WHAT YOU TOOK UP THERE. ***
+     A cairn is the stack of stones climbers build at a summit to say somebody
+     reached it — which is exactly what a piece of gear is on this page: proof
+     of a climb, and nothing more. *** GEAR GATES NOTHING *** (owner decision,
+     recorded in `Kit.tsx`), so the band must not read as a locked gate or a
+     trophy case; a cairn is the quietest possible "you were here".
+
+     One filled path, three subpaths: the ridge, then the cairn's three stones
+     stacked on the tallest peak at x=900. Drawn as stacked trapezoids rather
+     than rectangles so they read as stones at 52px instead of as a bar chart. */
+  kit: {
+    d: 'M0,52 L120,34 L230,52 L360,20 L500,52 L640,28 L760,52 L900,16 L1010,52 '
+      + 'L1100,36 L1100,52 Z '
+      + 'M892,16 L908,16 L906,11 L894,11 Z '
+      + 'M894,11 L906,11 L904,6.5 L896,6.5 Z '
+      + 'M896,6.5 L904,6.5 L902,2.5 L898,2.5 Z',
+    opacity: 0.36,
+  },
   pointspal: {
     d: 'M0,52 L70,34 L120,34 L180,52 L250,20 L360,20 L420,52 L500,38 L560,38 '
       + 'L620,52 L700,20 L820,20 L880,52 L960,30 L1020,30 L1075,52 L1100,46 L1100,52 Z',
