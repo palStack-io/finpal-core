@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { GearIcon } from '../components/GearIcon';
+import { PageHead } from '../components/PageHead';
 import { CoinPurse } from '../components/coins/CoinPurse';
 import { coinService, type CoinWallet } from '../services/coinService';
 
@@ -23,6 +24,12 @@ import { coinService, type CoinWallet } from '../services/coinService';
  * a piece of kit a precondition for anything, it has stopped being cosmetic and
  * has become a punishment mechanic in a friendly hat.
  */
+/* One sentence, three branches. It was only on the main one before, so a user
+   whose wallet failed to load got a heading with nothing under it saying what
+   the page is. */
+const KIT_SUBTITLE = 'Coins come from telling finPal the truth about your own '
+  + 'money. Kit is what you spend them on — it looks good and it gates nothing.';
+
 export const Kit: React.FC = () => {
   const [wallet, setWallet] = useState<CoinWallet | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +76,8 @@ export const Kit: React.FC = () => {
   if (error && !wallet) {
     return (
       <div>
-        <h1 className="page-title">Your kit</h1>
+      {/* `PageHead`, like every other page — see the note on the main branch. */}
+        <PageHead band="kit" title="Your kit" subtitle={KIT_SUBTITLE} />
         <div role="alert" style={{ color: 'var(--danger-text)', marginTop: 10 }}>
           {error}
         </div>
@@ -79,7 +87,8 @@ export const Kit: React.FC = () => {
   if (!wallet) {
     return (
       <div>
-        <h1 className="page-title">Your kit</h1>
+      {/* `PageHead`, like every other page — see the note on the main branch. */}
+        <PageHead band="kit" title="Your kit" subtitle={KIT_SUBTITLE} />
         <div aria-label="Loading your kit" style={{ color: 'var(--text-secondary)', marginTop: 10 }}>
           Loading…
         </div>
@@ -103,19 +112,29 @@ export const Kit: React.FC = () => {
 
   return (
     <div>
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap',
-        marginBottom: 6,
-      }}>
-        <div style={{ flex: 1, minWidth: 240 }}>
-          <h1 className="page-title">Your kit</h1>
-          <p style={{ color: 'var(--text-secondary)', margin: '2px 0 0', fontSize: 14 }}>
-            Coins come from telling finPal the truth about your own money. Kit is
-            what you spend them on — it looks good and it gates nothing.
-          </p>
-        </div>
-        <CoinPurse balance={wallet.balance} />
-      </div>
+      {/* *** THE APP'S HEAD, AND THE PURSE IS WHAT `right` IS FOR. ***
+          This page hand-rolled its own flex row with an `h1.page-title`, a
+          sentence and the purse pushed to the end — which is `PageHead`'s
+          exact shape, built by hand, for the third time in this file (the
+          loading and error branches each had a bare copy of the heading).
+
+          *** AND A SHEET OF MINE WAS WRONG ABOUT THIS PAGE. ***
+          `docs/mockups/orphan-pages-web.html` argued that `/kit` should stay
+          un-headed because "a style kit wearing the style it documents cannot
+          show you the style". `/kit` is not a style kit. It is this — where
+          coins go — and that whole argument was about a page that does not
+          exist. The sheet has been corrected. Owner asked for the redesign on
+          2026-09-16, and it is a route in the sidebar that every user can
+          reach, not an internal tool.
+
+          The band carries a cairn; see `headBands.ts` for why that shape and
+          not a trophy. */}
+      <PageHead
+        band="kit"
+        title="Your kit"
+        subtitle={KIT_SUBTITLE}
+        right={<CoinPurse balance={wallet.balance} />}
+      />
 
       {error && (
         <div role="alert" style={{

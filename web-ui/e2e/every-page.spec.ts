@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, pageIsLoaded } from './fixtures';
+import { DASHBOARD_HEADING, expect, pageIsLoaded, test } from './fixtures';
 
 /**
  * Every page in the app, in both themes — and the route list is DERIVED, not typed.
@@ -78,7 +78,13 @@ function moduleRoutes(): Array<{ slug: string; path: string }> {
  * in this app has one of those even when its data failed to load.
  */
 const HEADINGS: Record<string, RegExp> = {
-  '/dashboard': /Dashboard|Welcome|Overview/,
+  // *** NOT /Dashboard/ ANY MORE, AND THIS IS WHY THE EXPECTATION IS PER PAGE.
+  // *** The page's head opens on "Your range" (or "Where you stand" for a user
+  // with no goals) — the word "Dashboard" named the route and said nothing, and
+  // the owner asked for it to go. A shared /.*/ regex here would have absorbed
+  // that silently; a named expectation makes the rename a visible diff, which
+  // is the whole argument in this file's own docstring.
+  '/dashboard': DASHBOARD_HEADING,
   '/transactions': /Transactions/,
   '/accounts': /Accounts/,
   '/budgets': /Budget/,
@@ -108,8 +114,16 @@ const NOT_WALKED: Record<string, string> = {
   '/auth/callback': 'an OIDC redirect target, not a page a user opens',
   '/onboarding': 'redirects away once the demo user has completed it',
   '/groups/:id': 'a detail page; needs a live id, and groups.spec has no fixture yet',
-  '*': 'the catch-all',
+  // *** THE CATCH-ALL IS A PAGE NOW, AND IT IS WALKED — JUST NOT BY ITS PATH.
+  // *** `page.goto('/*')` is not a URL a browser resolves, so the literal route
+  // string cannot drive the sweep. The dedicated test below opens a URL that
+  // matches nothing instead, which is how a real user reaches it, and runs the
+  // same axe + heading-outline assertions.
+  '*': 'a real page (NotFound), reached below by an unknown URL rather than by this path',
 };
+
+/** A URL no route in App.tsx can match. Changing it must not change the result. */
+const UNKNOWN_URL = '/this-page-does-not-exist';
 
 const WALKED = Object.keys(HEADINGS);
 
@@ -263,6 +277,71 @@ for (const [route, heading] of Object.entries(HEADINGS)) {
       }
     });
   }
+}
+
+/**
+ * *** THE 404, WALKED BY AN UNKNOWN URL RATHER THAN BY ITS ROUTE STRING. ***
+ *
+ * `path="*"` cannot be navigated to; a user reaches this page by typing
+ * something wrong, so the test does that. The assertions are deliberately the
+ * same ones every other route gets — axe, the heading outline, no console
+ * errors — because the reason this page exists at all is that the catch-all
+ * used to be a silent `<Navigate>`, and a silent redirect is exactly the kind
+ * of thing that passes a test suite.
+ *
+ * *** AND THE FIRST ASSERTION IS THAT IT DID NOT REDIRECT. *** If somebody
+ * restores the `<Navigate>`, every other expectation here would still pass
+ * against the dashboard: it has an h1, it is axe-clean, and it logs nothing.
+ * Pinning the URL is what makes this a test of the 404 rather than a test of
+ * wherever the 404 sent us.
+ */
+for (const theme of ['light', 'dark'] as const) {
+  test(`an unknown URL renders the 404 page in ${theme}`, async ({ page }) => {
+    const seen = watch(page);
+
+    await page.goto(UNKNOWN_URL);
+    await page.evaluate((t) => {
+      localStorage.setItem('theme', t);
+      document.documentElement.setAttribute('data-theme', t);
+    }, theme);
+    await page.reload();
+
+    expect(new URL(page.url()).pathname,
+      'the catch-all redirected instead of rendering — a silent relocation is '
+        + 'the behaviour NotFound replaced').toBe(UNKNOWN_URL);
+
+    await pageIsLoaded(page, /That page is not here/);
+
+    // The sentence that is the whole point of the page, asserted as text rather
+    // than trusted to the heading: a 404 that does not say the data is intact
+    // is a 404 that leaves a finance user guessing.
+    await expect(page.getByText(/Nothing has gone wrong with your data/))
+      .toBeVisible();
+
+    expect(seen.errors, `console errors on ${UNKNOWN_URL}`).toEqual([]);
+    expect(seen.failed, `server errors behind ${UNKNOWN_URL}`).toEqual([]);
+
+    const results = await new AxeBuilder({ page })
+      .withTags(STANDARD)
+      .disableRules(['color-contrast'])
+      .analyze();
+    expect(
+      results.violations.map((v) => `${v.id}: ${v.nodes.length} node(s)`),
+      `WCAG violations on the 404 (${theme})`,
+    ).toEqual([]);
+
+    const levels = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+        .filter((h) => (h as HTMLElement).offsetParent !== null)
+        .map((h) => Number(h.tagName[1])));
+    expect(levels.filter((l) => l === 1).length,
+      `the 404 (${theme}): expected exactly one h1`).toBe(1);
+    for (let i = 1; i < levels.length; i += 1) {
+      expect(levels[i] - levels[i - 1],
+        `the 404 (${theme}): heading jumps h${levels[i - 1]} -> h${levels[i]}`)
+        .toBeLessThanOrEqual(1);
+    }
+  });
 }
 
 test.describe('module pages', () => {

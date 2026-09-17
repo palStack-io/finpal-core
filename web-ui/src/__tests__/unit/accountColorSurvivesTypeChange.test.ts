@@ -154,7 +154,22 @@ describe('#123 was fixed in two of three copies — the third is live data', () 
       // colour maps — and those are literal hexes, so widening to the status
       // trio cannot hide it. Named explicitly rather than widened to `var(--`,
       // because a guard that excludes everything catches nothing.
-      .filter(([, line]) => !/style=|background|border|boxShadow|:\s*'var\(--text|:\s*'var\(--border|var\(--status-/i.test(line));
+      //
+      // *** `valueColor` ADDED 2026-09-16, AND IT IS THE PRECISE EXCLUSION
+      // RATHER THAN A WIDER ONE. *** Accounts' three summary StatCards became a
+      // `TotalsRow` inside the page head, and a `TotalsCell` names its optional
+      // ink `valueColor` — so `valueColor: balance < 0 ? 'var(--re-ink)' :
+      // undefined` matches the `/colou?r/i` test above while being unambiguously
+      // presentation. It is a prop on a dumb display component that renders
+      // text; it cannot reach an account's stored colour, because it is never
+      // read by a form and never POSTed.
+      //
+      // Excluded by the PROP NAME, not by adding `--re-ink` to the token list:
+      // the token could legitimately appear in a stored colour one day and the
+      // prop never can, so keying on the prop is the narrower claim. Same
+      // reasoning the `--status-*` note above gives for naming rather than
+      // widening — a guard that excludes everything catches nothing.
+      .filter(([, line]) => !/style=|background|border|boxShadow|valueColor|:\s*'var\(--text|:\s*'var\(--border|var\(--status-/i.test(line));
     expect(offenders).toEqual([]);
   });
 

@@ -1,5 +1,5 @@
 /*
- * PRE-AUTH BRAND PALETTE. Four things about the colours in this file:
+ * PRE-AUTH BRAND PALETTE, and the six things that have been wrong about the colours here.
  *
  * 1. They are HARDCODED HEX, and that is deliberate. Every pre-auth page — Landing, Login,
  *    Register, ForgotPassword, ResetPassword — is dark in BOTH themes and uses zero CSS
@@ -32,18 +32,32 @@
  *    mode that resolves to #9CB3A3 and reads at 8.17:1. In LIGHT mode it resolves to
  *    #56685D, and on this page's dark gradient that is **3.00:1 — below AA**. So every
  *    light-mode user read the password-reset instructions at 3:1, and no gate saw it
- *    because the token is legible against the surface the theme THINKS it is on. Nobody
- *    reported it; it was found by resolving the token by hand while fixing the brand green.
- *    The dark-mode values are inlined, so the page's surface and its text can no longer
- *    disagree. `--accent-red` becomes #f87171 (the theme's own dark red ink, 6.61:1)
- *    rather than #EF4444, which is 4.29:1 on the card and would have been a fix that
- *    still failed.
+ *    because the token is legible against the surface the theme THINKS it is on.
+ *
+ * 6. *** AND THE GATE THAT PINS ALL OF THE ABOVE WAS BLIND TO HALF OF WHAT IT BANS. ***
+ *    It matched the four banned colours as HEX only. Written as rgb they went straight
+ *    through. Measured across the five pre-auth pages: **21 occurrences of four banned
+ *    colours**, every one of them in rgb form — emerald-500 as `rgba(16, 185, 129, …)`
+ *    here and in ForgotPassword, slate-900/800 as `rgba(15, 23, 42, …)` / `rgba(30, 41,
+ *    59, …)` in Login and Register, blue-500 as `rgba(59, 130, 246, …)` in Login. All of
+ *    it behind a green test whose entire job was to remove exactly those four values. The
+ *    gate now matches both spellings. Third time a guard keyed to a spelling has gone
+ *    blind in this repo; D-59's rule again.
+ *
+ *    The hover handlers had the same shape of bug in the small: `onMouseLeave` restored
+ *    **#94a3b8**, slate-400, not the #9CB3A3 the link actually started as — so passing the
+ *    mouse over "Back to sign in" once left it a different grey for the rest of the visit.
  */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import AuthShell from '../components/auth/AuthShell';
+
+const PAGE = 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)';
+const INK = '#ffffff';
+const SOFT = '#9CB3A3';
+const FIELD_INK = '#e2e8f0';
 
 export const ForgotPassword: React.FC = () => {
   const { showToast } = useToast();
@@ -95,240 +109,160 @@ export const ForgotPassword: React.FC = () => {
     await handleSubmit(new Event('submit') as any);
   };
 
+  const primaryButton = (label: string): React.CSSProperties => ({
+    width: '100%',
+    padding: '0.75rem 1.5rem',
+    fontSize: '0.9375rem',
+    fontWeight: 600,
+    color: INK,
+    background: isLoading ? '#6b7280' : '#15803d',
+    border: 'none',
+    borderRadius: '10px',
+    cursor: isLoading ? 'not-allowed' : 'pointer',
+    transition: 'all 0.2s',
+    marginTop: label ? '0.25rem' : 0,
+  });
+
+  /** The quiet "back" link, and the colour it must return to when the mouse leaves. */
+  const backLink: React.CSSProperties = {
+    display: 'block',
+    marginTop: '0.9375rem',
+    textAlign: 'center',
+    fontSize: '0.8125rem',
+    fontWeight: 600,
+    color: SOFT,
+    textDecoration: 'none',
+    transition: 'color 0.2s',
+  };
+
+  /**
+   * *** THE SHELL OWNS THE PAGE NOW, SO THIS IS A PASSTHROUGH. ***
+   * It used to paint the 100vh wash and centre a 46rem column, because
+   * `AuthShell` was a card that needed a page around it. `AuthShell` IS the
+   * page now — full-bleed, with the frieze positioned against its own box — so
+   * a wrapper here would nest a viewport inside a viewport and put the horizon
+   * 1rem from the bottom of a centred card instead of on the floor.
+   *
+   * Kept as a function rather than deleted at both call sites: the two states
+   * of this screen both go through it, and a named seam is where the next
+   * page-level decision goes.
+   */
+  const page = (children: React.ReactNode) => <>{children}</>;
+
   if (emailSent) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-      }}>
-        <div style={{
-          maxWidth: '450px',
-          width: '100%',
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '3rem 2rem',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            borderRadius: '50%',
-            background: 'rgba(16, 185, 129, 0.2)',
-            border: '3px solid #22c55e',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1.5rem'
-          }}>
-            <CheckCircle size={48} style={{ color: '#22c55e' }} />
-          </div>
-          <h2 style={{
-            fontSize: '1.875rem',
-            fontWeight: '700',
-            color: '#ffffff',
-            marginBottom: '0.75rem'
-          }}>
-            Check Your Email
-          </h2>
-          <p style={{
-            fontSize: '1rem',
-            color: '#9CB3A3',
-            lineHeight: '1.75',
-            marginBottom: '0.5rem'
-          }}>
-            We've sent password reset instructions to:
-          </p>
-          <p style={{
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: '#22c55e',
-            marginBottom: '1.5rem'
-          }}>
-            {email}
-          </p>
-          <p style={{
-            fontSize: '0.875rem',
-            color: '#9CB3A3',
-            lineHeight: '1.5',
-            marginBottom: '2rem'
-          }}>
-            If you don't see the email, check your spam folder or request a new one.
-          </p>
+    return page(
+      <AuthShell
+        art="lost"
+        kicker="Check your email"
+        headline="The way back is in your inbox."
+        blurb="Still the same mountain. Nothing about your money has changed."
+        short
+      >
+        {/* *** AN h1, WHERE THIS PAGE HAD AN h2 AND NO h1 AT ALL. *** Both states
+            of this screen opened at level two, so a reader navigating by
+            headings arrived at a password-reset flow with nothing at the top of
+            it. `every-page.spec.ts` asserts exactly one h1 per route but skips
+            the signed-out pages by name, so it never measured this one. */}
+        <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.1875rem', fontWeight: 700, color: INK }}>
+          Check your email
+        </h1>
+        <p style={{ margin: '0 0 1.125rem', fontSize: '0.8125rem', color: SOFT, lineHeight: 1.6 }}>
+          Reset instructions are on their way to{' '}
+          <span style={{ color: '#22c55e', fontWeight: 600 }}>{email}</span>. The link works
+          once. If it does not arrive, check your spam folder or send another.
+        </p>
 
-          <button
-            onClick={handleResend}
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#ffffff',
-              background: isLoading ? '#6b7280' : '#15803d',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              marginBottom: '0.75rem'
-            }}
-            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#166534')}
-            onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#15803d')}>
-            {isLoading ? 'Sending...' : 'Resend Email'}
-          </button>
+        <button onClick={handleResend} disabled={isLoading} style={primaryButton('resend')}
+          onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#166534')}
+          onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#15803d')}>
+          {isLoading ? 'Sending…' : 'Send another link'}
+        </button>
 
-          <Link to="/login" style={{ textDecoration: 'none' }}>
-            <button style={{
-              width: '100%',
-              padding: '0.875rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#9CB3A3',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
-              Back to Login
-            </button>
-          </Link>
-        </div>
-      </div>
+        <Link to="/login" style={backLink}
+          onMouseEnter={(e) => { e.currentTarget.style.color = INK; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = SOFT; }}>
+          Back to sign in
+        </Link>
+      </AuthShell>,
     );
   }
 
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem',
-    }}>
-      <div style={{
-        maxWidth: '450px',
-        width: '100%',
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '3rem 2rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            padding: '1rem',
-            background: 'rgba(16, 185, 129, 0.1)',
-            borderRadius: '16px',
-            marginBottom: '1rem'
-          }}>
-            <Mail size={32} style={{ color: '#22c55e' }} />
-          </div>
-          <h2 style={{
-            fontSize: '1.875rem',
-            fontWeight: '700',
-            color: '#ffffff',
-            marginBottom: '0.5rem'
-          }}>
-            Forgot Password?
-          </h2>
-          <p style={{
-            fontSize: '1rem',
-            color: '#9CB3A3',
-            lineHeight: '1.75'
-          }}>
-            Enter your email address and we'll send you instructions to reset your password.
+  return page(
+    <AuthShell
+      art="lost"
+      kicker="Lost the way in"
+      headline="The mountain is still there."
+      blurb="Only the way in is missing. Nothing about your money has changed."
+      short
+    >
+      <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.1875rem', fontWeight: 700, color: INK }}>
+        Reset your password
+      </h1>
+      {/* Two sentences, and the second one is the point: a reset link that
+          silently stops working is the most common support question this flow
+          produces, and saying so up front costs one line. */}
+      <p style={{ margin: '0 0 1.125rem', fontSize: '0.8125rem', color: SOFT, lineHeight: 1.6 }}>
+        We will email you a link. The link works once.
+      </p>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+        <label htmlFor="forgot-email" style={{
+          display: 'block',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          color: FIELD_INK,
+          marginBottom: '0.3125rem',
+        }}>
+          Email address
+        </label>
+        <input
+          id="forgot-email"
+          type="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (error) setError('');
+          }}
+          placeholder="your.email@example.com"
+          autoComplete="email"
+          style={{
+            width: '100%',
+            padding: '0.6875rem 0.75rem',
+            fontSize: '0.9375rem',
+            color: INK,
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: `1px solid ${error ? '#f87171' : '#517E60'}`,
+            borderRadius: '10px',
+            outline: 'none',
+            transition: 'all 0.2s',
+            boxSizing: 'border-box',
+            marginBottom: '0.8125rem',
+          }}
+          onFocus={(e) => { e.target.style.borderColor = error ? '#f87171' : '#22c55e'; }}
+          onBlur={(e) => {
+            e.target.style.borderColor = error ? '#f87171' : '#517E60';
+          }}
+        />
+        {error && (
+          <p style={{ margin: '-0.375rem 0 0.8125rem', fontSize: '0.8125rem', color: '#f87171' }}>
+            {error}
           </p>
-        </div>
+        )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              color: '#e2e8f0',
-              marginBottom: '0.5rem'
-            }}>
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (error) setError('');
-              }}
-              placeholder="your.email@example.com"
-              autoComplete="email"
-              style={{
-                width: '100%',
-                padding: '0.875rem',
-                fontSize: '1rem',
-                color: '#ffffff',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: `1px solid ${error ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}`,
-                borderRadius: '12px',
-                outline: 'none',
-                transition: 'all 0.2s',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => e.target.style.borderColor = error ? '#ef4444' : '#22c55e'}
-              onBlur={(e) => e.target.style.borderColor = error ? '#ef4444' : 'rgba(255, 255, 255, 0.1)'}
-            />
-            {error && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#f87171' }}>
-                {error}
-              </p>
-            )}
-          </div>
+        <button type="submit" disabled={isLoading} style={primaryButton('')}
+          onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#166534')}
+          onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#15803d')}>
+          {isLoading ? 'Sending…' : 'Send reset link'}
+        </button>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#ffffff',
-              background: isLoading ? '#6b7280' : '#15803d',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              marginTop: '0.5rem'
-            }}
-            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = '#166534')}
-            onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = '#15803d')}>
-            {isLoading ? 'Sending...' : 'Send Reset Link'}
-          </button>
-
-          <Link to="/login" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <ArrowLeft size={16} style={{ color: '#9CB3A3' }} />
-            <span style={{
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#9CB3A3',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
-              Back to Login
-            </span>
-          </Link>
-        </form>
-      </div>
-    </div>
+        <Link to="/login" style={backLink}
+          onMouseEnter={(e) => { e.currentTarget.style.color = INK; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = SOFT; }}>
+          Back to sign in
+        </Link>
+      </form>
+    </AuthShell>,
   );
 };
+
+export default ForgotPassword;

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { PageHead } from '../../../components/PageHead';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { MountainSilhouette } from '../../../components/MountainSilhouette';
@@ -164,8 +165,14 @@ export const Range: React.FC = () => {
   if (!range) {
     return (
       <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-        <h1 className="page-title">Your range</h1>
-        <p className="fp-hint">learnPal is not enabled on this instance.</p>
+        {/* The module being absent is not an error, and it still gets a
+            real head: a bare sentence on an empty page reads as a
+            failure rather than as an answer. */}
+        <PageHead
+          band="learnpal"
+          title="Your range"
+          subtitle="learnPal is not enabled on this instance."
+        />
       </div>
     );
   }
@@ -176,13 +183,27 @@ export const Range: React.FC = () => {
 
   return (
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 className="page-title">Your range</h1>
-        <p className="fp-hint">
-          Every goal you have, drawn at the size of what it asks of you —
-          and the ground you stand on while you climb.
-        </p>
-      </div>
+      {/* *** learnPal'S PAGES NOW OPEN THE WAY EVERY OTHER PAGE DOES. ***
+          Owner, 2026-09-16: *"can we redesign our pointPal and also the
+          learnPal"*. These three were already halfway there — AUDIT D-233
+          recorded that they use `className="page-title"` rather than inventing
+          their own title scale, which is why they needed no exemption when that
+          gate widened to `modules/`. What they did NOT have is the head: a
+          hand-rolled `h1` plus `p.fp-hint` in a `marginBottom: 20` wrapper,
+          which is the exact shape `PageHead` replaced on eleven core pages.
+          Adopting it is a consolidation, not a redesign of anything this module
+          decided.
+
+          The `learnpal` band is a STAIRCASE rather than a range — see
+          `headBands.ts`. Every other ridge is peaks at whatever heights suit the
+          page; this module is about lessons that unlock from your own figures,
+          so the ridge steps up in even increments and reads as progress instead
+          of scenery. */}
+      <PageHead
+        band="learnpal"
+        title="Your range"
+        subtitle="Every goal you have, drawn at the size of what it asks of you — and the ground you stand on while you climb."
+      />
 
       {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}
 

@@ -99,7 +99,11 @@ export const Landing = () => {
         left: 0,
         right: 0,
         zIndex: 50,
-        background: scrolled ? 'rgba(15, 23, 42, 0.95)' : 'transparent',
+        // slate-900 until 2026-09-16, which is the leftover navy D-127 removed
+        // everywhere else; #0E1711 is --kt-wash, the surface this page already
+        // paints. The hex form was banned and the rgb form was not, so the
+        // sticky nav was the one slate object left on the marketing page.
+        background: scrolled ? 'rgba(14, 23, 17, 0.95)' : 'transparent',
         backdropFilter: scrolled ? 'blur(10px)' : 'none',
         transition: 'all 0.3s ease',
         borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
@@ -201,7 +205,10 @@ export const Landing = () => {
           {/* Hero Image/Dashboard Preview */}
           <div style={{ marginTop: '80px', position: 'relative' }}>
             <div style={{
-              background: 'linear-gradient(135deg, rgba(21, 128, 61, 0.1), rgba(59, 130, 246, 0.1))',
+              // Green to AMBER, not green to blue: #15803d -> #fbbf24 is the
+              // gradient this page's own headings use, and blue-500 is a banned
+              // value that only survived because it was written as rgb.
+              background: 'linear-gradient(135deg, rgba(21, 128, 61, 0.1), rgba(251, 191, 36, 0.1))',
               borderRadius: '24px',
               padding: '8px',
               border: '1px solid rgba(255, 255, 255, 0.1)',

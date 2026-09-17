@@ -13,7 +13,19 @@ ns = Namespace('demo', description='Demo mode operations')
 # Define response models
 demo_status_model = ns.model('DemoStatus', {
     'enabled': fields.Boolean(description='Whether demo mode is enabled'),
-    'timeout_minutes': fields.Integer(description='Demo session timeout in minutes'),
+    # *** A CONFIGURED INTENTION, NOT AN ENFORCED LIMIT — AUDIT D-232. ***
+    # Nothing in this codebase expires a demo session: `session_timeout.py`
+    # registers no request hook and has zero production callers on all four of
+    # its methods, and a real token from the live demo lives 86400s against the
+    # 7200 this field claimed. The web UI stopped presenting it as a limit on
+    # 2026-09-16 (owner decision: withdraw the claim rather than implement
+    # expiry). Kept in the payload because removing it breaks any self-hoster's
+    # client; described honestly so no new client repeats the mistake. See
+    # `DemoService.get_demo_timeout_minutes`.
+    'timeout_minutes': fields.Integer(
+        description='Configured demo session timeout in minutes. NOT ENFORCED — '
+                    'no request hook expires demo sessions (AUDIT D-232). Do not '
+                    'present this to a user as a session limit.'),
 })
 
 demo_account_model = ns.model('DemoAccount', {

@@ -220,6 +220,20 @@ class GroupDetail(Resource):
 
         Unlike the list, this carries no `created_at` or `member_count` but adds
         a `balance` per member.
+
+        *** AND IT NOW CARRIES `expense_count`, WHICH IT DID NOT. *** The list
+        route has had it since 2026-09-15 and this one omitted it, so
+        `/groups` could say a group has 2 expenses while `/groups/1` had no way
+        to know — and GroupDetail's own panel, which queries
+        `/transactions/?group_id=` and gets nothing back, told the reader "No
+        transactions yet" about a group it had just been shown as having two.
+        Two endpoints disagreeing about whether a group has anything in it is
+        AUDIT D-236; this is the half of it the server owes the client.
+
+        Deliberately additive and deliberately NOT the whole asymmetry:
+        `created_at` and `member_count` stay absent, because
+        `test_groups_rules_contract.py` pins that difference on purpose and
+        widening it would be a second change hiding inside this one.
         """
         try:
             identity = get_jwt_identity()
@@ -231,6 +245,15 @@ class GroupDetail(Resource):
             balance_data = group_service.calculate_group_balances(group_id)
             member_balances = balance_data.get('member_balances', {})
 
+            # One group, so one COUNT — the list route's `GROUP BY` exists to
+            # avoid N+1 across many groups and there is nothing to batch here.
+            # `.count()` rather than `len(group.expenses)`: this must not load
+            # every expense row to answer how many there are.
+            from src.models.transaction import Expense
+            expense_count = (db.session.query(Expense)
+                             .filter(Expense.group_id == group.id)
+                             .count())
+
             return {'group': {
                 'id': group.id,
                 'name': group.name,
@@ -239,6 +262,10 @@ class GroupDetail(Resource):
                 'default_split_method': group.default_split_method,
                 'default_payer': group.default_payer,
                 'auto_include_all': group.auto_include_all,
+                # Always present, never omitted when zero: the client renders 0
+                # as "nothing recorded yet", and it cannot tell an absent key
+                # from an empty group.
+                'expense_count': expense_count,
                 'members': _member_rows(group, member_balances),
             }}, 200
 

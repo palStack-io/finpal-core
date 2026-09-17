@@ -10,7 +10,7 @@ import { SlidePanel } from '../components/SlidePanel';
 import { AddAccountForm } from '../components/forms/AddAccountForm';
 import { EditAccountForm } from '../components/forms/EditAccountForm';
 import { CSVImportModal } from '../components/import/CSVImportModal';
-import { StatCard } from '../components/StatCard';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { BankSyncCallout } from '../components/accounts/BankSyncCallout';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { CoOwnerControl } from '../components/accounts/CoOwnerControl';
@@ -255,6 +255,13 @@ export const Accounts = () => {
   const totalAssets = accounts.filter(a => a.balance > 0).reduce((sum, acc) => sum + acc.balance, 0);
   const totalLiabilities = Math.abs(accounts.filter(a => a.balance < 0).reduce((sum, acc) => sum + acc.balance, 0));
 
+  /* Pluralised and counted once. In the JSX these were
+     `accounts.filter(a => a.balance > 0).length` inline, twice — two more array
+     walks per render for a figure the page already has, and "1 positive
+     accounts" the moment somebody has one. */
+  const positiveCount = accounts.filter((a) => a.balance > 0).length;
+  const negativeCount = accounts.filter((a) => a.balance < 0).length;
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -276,7 +283,7 @@ export const Accounts = () => {
         <PageHead
           band="accounts"
           title="Accounts"
-          subtitle="What you have, what you owe, and what it costs to owe it."
+          subtitle="What you have, what you owe, and what it costs to owe it. Every figure here is the whole household's."
           right={<>
               <button
                 onClick={() => setShowCSVImport(true)}
@@ -305,35 +312,50 @@ export const Accounts = () => {
                 <Plus size={16} /> Add Account
               </button>
           </>}
-        />
+        >
+          {/* *** THREE StatCards BECOME ONE TotalsRow, INSIDE THE HEAD. ***
+              Owner, 2026-09-16: *"the accounts top metric cards are different
+              from how investment top cards look? maybe investment one"*. They
+              were, and Investments is the right one: this page opened with a
+              head and then a separate grid of three bordered cards, each with
+              its own shadow, padding, 24px accent icon chip and its own
+              `household` tag — three panels and three competing headers before
+              the account list, which is the exact shape
+              `docs/mockups/dashboard-web.html` argued out of the Dashboard
+              ("the top of the page is one object now, not five") and out of
+              Investments after it. `TotalsRow`'s own docstring says the icon
+              chips are the point of the change: a coloured square per figure is
+              four more things competing with the numbers, and what a figure
+              means is carried by its label and its own colour.
 
-        {/* Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          <StatCard
-            label="Net Worth"
-            scope="household"
-            value={showBalances ? formatCurrency(totalBalance) : '••••••'}
-            accentColor="#22c55e"
-            icon={<Wallet size={24} color="#22c55e" />}
-            subtitle={<><TrendingUp size={16} color="#22c55e" /><span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Assets − Liabilities</span></>}
-          />
-          <StatCard
-            label="Total Assets"
-            scope="household"
-            value={showBalances ? formatCurrency(totalAssets) : '••••••'}
-            accentColor="#3b82f6"
-            icon={<TrendingUp size={24} color="#3b82f6" />}
-            subtitle={<span style={bodyTextStyle}>{accounts.filter(a => a.balance > 0).length} positive accounts</span>}
-          />
-          <StatCard
-            label="Total Liabilities"
-            scope="household"
-            value={showBalances ? formatCurrency(totalLiabilities) : '••••••'}
-            accentColor="#ef4444"
-            icon={<TrendingDown size={24} color="#ef4444" />}
-            subtitle={<span style={bodyTextStyle}>{accounts.filter(a => a.balance < 0).length} credit/loan accounts</span>}
-          />
-        </div>
+              *** AND THE `household` TAG IS NOW SAID ONCE, IN THE SUBTITLE. ***
+              All three cards carried the identical `scope="household"` tag,
+              which is one fact printed three times — the same duplication D-101
+              is about, in chrome rather than arithmetic. It is a property of
+              every figure on this page, so it belongs to the page.
+
+              `showBalances` masking is preserved on all three: the eye toggle
+              is a real feature and a converted figure that forgot to hide
+              itself would be a privacy regression, not a styling one. */}
+          <TotalsRow cells={[
+            {
+              label: 'Net worth',
+              value: showBalances ? formatCurrency(totalBalance) : '••••••',
+              valueColor: totalBalance < 0 ? 'var(--re-ink)' : undefined,
+              note: 'assets − liabilities',
+            },
+            {
+              label: 'Assets',
+              value: showBalances ? formatCurrency(totalAssets) : '••••••',
+              note: `${positiveCount} ${positiveCount === 1 ? 'account' : 'accounts'} in credit`,
+            },
+            {
+              label: 'Liabilities',
+              value: showBalances ? formatCurrency(totalLiabilities) : '••••••',
+              note: `${negativeCount} ${negativeCount === 1 ? 'account' : 'accounts'} you owe on`,
+            },
+          ]} />
+        </PageHead>
 
         {/*
           The pointer to bank sync. Sits above the list rather than inside the empty

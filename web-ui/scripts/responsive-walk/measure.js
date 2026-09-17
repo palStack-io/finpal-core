@@ -113,7 +113,30 @@
       if (ccs.display === 'none') continue;
       inflowRight = Math.max(inflowRight, child.getBoundingClientRect().right);
     }
-    if (cs.overflowX === 'hidden' && inflowRight > r.right + TOL) {
+    /*
+     * *** AN <svg>'s `overflow: hidden` IS DEFINITIONAL, NOT A LAYOUT ACCIDENT
+     * — BUT ONLY WHEN IT IS DECORATIVE. ***
+     *
+     * A viewBox works BY clipping: art placed outside it is meant to run off
+     * the edge, the way a horizon does. `AuthShell`'s frieze puts peaks at
+     * x=-30 and x=1140 in a 1200 box on purpose, so both ends continue past the
+     * frame instead of stopping short of it — and this check reported all four
+     * widths of four pages as "clipped" with **+0px of overflow**, because SVG
+     * children cannot be `position: absolute` and so never hit the exemption
+     * above them. Same false positive as D-245's icon rule, one property over.
+     *
+     * *** KEYED TO `aria-hidden`, NOT TO THE TAG. *** A blanket svg exemption
+     * would blind this to a real defect: a CHART whose bars run past its own
+     * viewBox is lost content, and this app now has one (`IncomeFlowChart`
+     * carries `role="img"` and an `aria-label`, so it is still measured). What
+     * is skipped is art the author has declared decorative — the same line
+     * WCAG 1.4.11 draws, and the same one the contrast walk draws.
+     */
+    const decorativeSvg = el.tagName.toLowerCase() === 'svg'
+      && (el.getAttribute('aria-hidden') === 'true'
+          || el.getAttribute('role') === 'presentation');
+
+    if (!decorativeSvg && cs.overflowX === 'hidden' && inflowRight > r.right + TOL) {
       kinds.push('clipped');
     }
 

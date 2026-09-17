@@ -380,10 +380,28 @@ class AuthService:
         # Keyed by PATH, because `Gas` under Transportation is petrol while the
         # demo seeder's `Gas` under Housing is the utility bill.
         from src.services.category.spending_type import default_for
+        from src.data.convert_icons_to_emoji import convert_icon
 
+        # *** THIS SEEDER WROTE RAW `fa-*` NAMES AND IT IS THE ONE SIGNUP RUNS.
+        # *** The literal tree above still carries FontAwesome class names — 28
+        # of them — and `**cat_data` passed them straight into `Category.icon`.
+        # `src/data/seed_defaults.py`, the OTHER default-category seeder, has
+        # called `convert_icon` on every icon for as long as the map has
+        # existed. So there were two seeders for the same data and only one of
+        # them converted, which is why the conversion had to keep being re-run
+        # over live databases in the first place — and re-running it is what
+        # collapsed every icon to a folder, because the conversion was not
+        # idempotent (see `convert_icon`'s docstring).
+        #
+        # Converting at the write site rather than rewriting the literal is
+        # deliberate: the `fa-*` names are also what `create_default_category_mappings`
+        # and the CSV mapper key against, and this change is about what reaches
+        # the DATABASE. `convert_icon` is now idempotent, so an emoji in this
+        # tree would pass through untouched too.
         for cat_data in default_categories:
             subcategories = cat_data.pop('subcategories', [])
             parent_name = cat_data['name']
+            cat_data['icon'] = convert_icon(cat_data.get('icon'))
             category = Category(user_id=user_id,
                                 spending_type=default_for(parent_name),
                                 **cat_data)
@@ -391,6 +409,7 @@ class AuthService:
             db.session.flush()  # Get the ID without committing
 
             for subcat_data in subcategories:
+                subcat_data['icon'] = convert_icon(subcat_data.get('icon'))
                 subcat = Category(user_id=user_id, parent_id=category.id,
                                   spending_type=default_for(subcat_data['name'],
                                                             parent_name),

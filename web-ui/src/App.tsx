@@ -45,6 +45,7 @@ import { Analytics } from './pages/Analytics';
 import { Investments } from './pages/Investments';
 import { Settings } from './pages/Settings';
 import { OidcCallback } from './pages/OidcCallback';
+import NotFound from './pages/NotFound';
 
 /** Layout wrapper that adds sidebar for authenticated pages */
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -327,8 +328,17 @@ function App() {
                 that hid it.
 
                 Signed in -> the dashboard, which is where they were going.
-                Signed out -> the landing page, unchanged. */}
-            <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
+                Signed out -> the landing page, unchanged.
+
+                *** AND AS OF 2026-09-16 IT IS A PAGE, NOT A REDIRECT. *** Both
+                halves of the note above are about WHERE to send someone; the
+                unexamined half was whether to send them anywhere silently. A
+                stale bookmark, a truncated link and a deleted group all read as
+                "finPal moved me for no reason". `NotFound` says what happened,
+                says nothing is wrong with their data, and offers the same two
+                destinations this redirect chose between. See
+                `docs/mockups/entry-web.html`. */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
 
           {/* Toast Notifications */}
