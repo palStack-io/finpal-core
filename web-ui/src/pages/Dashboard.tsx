@@ -546,7 +546,7 @@ export const Dashboard = () => {
               Everest exists to fill: base camp's own audience had no mountain
               at all (D-205). `EmptyRange` still carries the invitation when
               there is neither a goal nor any altitude yet. */}
-          {(goals.length > 0 || (everest && everest.altitude_m > 0)) ? (
+          {(goals.length > 0 || everest) ? (
             <GoalRange
               goals={goals}
               currency={user?.default_currency_code || 'USD'}

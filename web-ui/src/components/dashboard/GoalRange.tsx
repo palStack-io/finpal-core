@@ -141,7 +141,20 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
    * with no goals used to see no mountain at all, and they are precisely the
    * population base camp is designed for (D-205).
    */
-  const climb = everest && everest.altitude_m > 0 ? everest : null;
+  /*
+   * *** RENDERED AT 0 m TOO, AND THAT CORRECTION CAME FROM VERIFYING IT. ***
+   * The first version gated this on `altitude_m > 0`, reasoning that a new user
+   * should not be told they have climbed nothing. Checking the owner's actual
+   * requirement — "no matter what mt everest will be present for all users even
+   * those with no goals" — showed that gate excluded exactly the user it is
+   * for: somebody brand new has no goals AND no coins, so they would have seen
+   * no mountain at all.
+   *
+   * Decision 7 settles it: *the empty state is base camp*. Everest at zero IS
+   * base camp, so it draws, and the label says "base camp" rather than "0 m" —
+   * which is the difference between an invitation and a report card.
+   */
+  const climb = everest ?? null;
   if (peaks.length === 0 && !climb) return null;
 
   const tallest = peaks.length ? Math.max(...peaks.map((p) => p.height)) : 0;
@@ -254,7 +267,9 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
           // The climber's y on the peak, measured from the ground up: the same
           // honest thing the standalone card did, without inventing a route
           // over a shape whose ridge this code does not know.
-          const climberY = GROUND_Y - height * f;
+          // A floor of 6px, so a climber at base camp sits ON the ground line
+          // rather than being clipped by it.
+          const climberY = GROUND_Y - Math.max(height * f, 6);
           return (
             <g>
               <g transform={`translate(${x} ${y}) scale(${sc})`} color="var(--peak-unmeasured)">
@@ -350,7 +365,9 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
               </text>
               <text x={cx} y={line1 + 26} textAnchor="middle"
                     style={{ fontSize: '11px', fill: 'var(--status-warn)', fontWeight: 600 }}>
-                you are at {climb.altitude_m.toLocaleString()} m
+                {climb.altitude_m > 0
+                  ? `you are at ${climb.altitude_m.toLocaleString()} m`
+                  : 'you are at base camp'}
               </text>
             </g>
           );

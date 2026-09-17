@@ -49,7 +49,7 @@ describe('Everest in the range', () => {
     // The old guard was `if (peaks.length === 0) return null`.
     expect(range()).toMatch(/peaks\.length === 0 && !climb\) return null/);
     // And the page stops branching to EmptyRange purely on goal count.
-    expect(dash()).toMatch(/goals\.length > 0 \|\| \(everest && everest\.altitude_m > 0\)/);
+    expect(dash()).toMatch(/goals\.length > 0 \|\| everest\)/);
   });
 
   /**
@@ -72,9 +72,20 @@ describe('Everest in the range', () => {
     expect(everestDrawing()).not.toMatch(/--peak-cost|--peak-build/);
   });
 
+  it('draws at ZERO altitude too, as base camp', () => {
+    // *** THE CASE THE FIRST VERSION EXCLUDED. *** Gating on altitude > 0 hid
+    // Everest from a brand-new user — no goals and no coins — who is exactly
+    // the user the owner wants it present for. Decision 7: the empty state IS
+    // base camp.
+    expect(range()).toMatch(/const climb = everest \?\? null/);
+    expect(range()).toMatch(/you are at base camp/);
+  });
+
   it('labels itself in METRES, where the goals are in money', () => {
     expect(range()).toMatch(/summit_m\.toLocaleString\(\)\} m/);
-    expect(range()).toMatch(/you are at \{climb\.altitude_m/);
+    // The altitude line is now a ternary — metres when climbing, "base camp"
+    // at zero — so match the metres branch rather than the old literal.
+    expect(range()).toMatch(/you are at \$\{climb\.altitude_m\.toLocaleString\(\)\} m/);
   });
 
   it('carries a marker and no progress TRACK', () => {
