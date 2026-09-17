@@ -66,3 +66,45 @@ describe('the award queue is honest about what is waiting', () => {
     expect(award).toMatch(/position: 'relative'/);
   });
 });
+
+describe('no award is ever shown to a signed-out visitor', () => {
+  const ctx = readFileSync('src/contexts/CoinAwardContext.tsx', 'utf8');
+  const container = readFileSync(
+    'src/components/coins/CoinAwardContainer.tsx', 'utf8');
+
+  it('clears the queue when the user changes or goes away', () => {
+    // *** THE OWNER CAUGHT THIS ON THE DEMO: a coin award rendering on the
+    // SIGNED-OUT login page, and the figure was in EUROS — a previous
+    // persona's award still sitting in this provider's state. Two faults: the
+    // queue survived a logout, and the `seen` ref survived a user change,
+    // which would also have suppressed the NEXT user's first award for an act
+    // the previous one had been shown.
+    expect(ctx).toMatch(/const userId = useAuthStore/);
+    expect(ctx).toMatch(/seen\.current = new Set\(\)/);
+    expect(ctx).toMatch(/\}, \[userId\]\)/);
+  });
+
+  it('refuses to paint an award with no user, as well', () => {
+    expect(container).toMatch(/if \(!user \|\| !current\) return null/);
+  });
+});
+
+describe('login is the index', () => {
+  const app = readFileSync('src/App.tsx', 'utf8');
+
+  it('serves Login at /', () => {
+    expect(app).toMatch(/<Route path="\/" element=\{<Login \/>\} \/>/);
+  });
+
+  it('keeps Landing reachable at /welcome rather than deleting it', () => {
+    expect(app).toMatch(/<Route path="\/welcome" element=\{<Landing \/>\} \/>/);
+  });
+
+  it('does not leave the auth back-link pointing at itself', () => {
+    // `/` is the login page now, so a back-link to `/` would make the login
+    // page link to itself — the dead end that shared link exists to remove.
+    const shell = readFileSync('src/components/auth/AuthShell.tsx', 'utf8');
+    expect(shell).toMatch(/to="\/welcome" className="auth-entry-back"/);
+    expect(shell).not.toMatch(/to="\/" className="auth-entry-back"/);
+  });
+});

@@ -95,6 +95,21 @@ class ModuleBase:
         """
         return {}
 
+    def get_badges(self) -> dict:
+        """Return `{slug: (title, predicate)}` for this module's own badges.
+
+        The third of the three contribution hooks, and it exists for the same
+        reason as the other two: pointsPal's contributor badges read its card
+        tables, so they cannot live in core. A slug core already registers is
+        REFUSED, never replaced.
+
+        *** BADGES PAY NOTHING — NO COINS, NO ALTITUDE. *** Owner decision
+        2026-09-17. A module contributing a badge is contributing recognition,
+        not currency, so it cannot affect the coin economy or Everest however
+        it is implemented.
+        """
+        return {}
+
     def register_tasks(self, scheduler, app) -> None:
         """Register APScheduler cron jobs for this module."""
         pass

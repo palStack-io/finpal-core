@@ -158,6 +158,12 @@ def _has_reached_a_goal(user_id):
 
 # slug -> (title, predicate). Titles are what a client renders; art comes from
 # `docs/superpowers/specs/2026-09-17-contributor-badge-art-prompt.md`.
+#
+# *** MUTABLE ON PURPOSE: A MODULE MAY CONTRIBUTE ITS OWN. *** pointsPal's
+# contributor badges read its card tables, so they cannot live here — the same
+# boundary `get_checks()` and `get_acts()` already draw, and the same reason
+# `test_literacy_boundary.py` gives in as many words: *"a predicate that needs a
+# module's tables belongs in that module"*.
 BADGES = {
     'debt-free': (
         'Debt clear',
@@ -180,6 +186,19 @@ BADGES = {
         lambda uid: best_on_budget_run(uid) >= 12,
     ),
 }
+
+
+def register_badge(slug, title, predicate) -> None:
+    """Add a badge. *** REFUSES A SLUG ALREADY REGISTERED. ***
+
+    A module quietly changing what an existing badge means would be invisible
+    from core — the same surprise `register_act` and `register_check` refuse.
+    """
+    if slug in BADGES:
+        logger.warning(
+            'badges: refusing to re-register %r — it is already defined', slug)
+        return
+    BADGES[slug] = (title, predicate)
 
 
 def award_badges(user_id):

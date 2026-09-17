@@ -151,7 +151,20 @@ function App() {
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
+            {/* *** LOGIN IS THE INDEX — OWNER DECISION 2026-09-17: *** "we
+                also need the landing page be the login page make it as index".
+                A visitor arrives at sign-in rather than at a marketing pitch,
+                which also matches where the real marketing lives:
+                `palstack.io/finpal`, outside this app.
+
+                *** `Landing` IS NOT DELETED, IT MOVES TO `/welcome`. *** It is
+                475 lines of copy and deleting it is a bigger decision than
+                changing a route; `AuthShell`'s back-link points at it so it
+                does not become orphaned. `every-page.spec.ts` walks routes
+                derived from this file, so the move is covered rather than
+                hidden. */}
+            <Route path="/" element={<Login />} />
+            <Route path="/welcome" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

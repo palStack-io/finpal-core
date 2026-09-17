@@ -20,6 +20,7 @@ import React, {
   createContext, useCallback, useContext, useEffect, useRef, useState,
 } from 'react';
 import { coinService, type CoinAwardItem, type CoinGear, type CoinSurface } from '../services/coinService';
+import { useAuthStore } from '../store/authStore';
 
 interface CoinAwardContextType {
   /** The award currently on screen, or `null`. */
@@ -91,6 +92,30 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // read a stale `queue` from the closure and the second would drop the
   // first's award. The ref is the queue's identity; state only drives paint.
   const seen = useRef<Set<string>>(new Set());
+
+  const userId = useAuthStore((st) => st.user?.id ?? null);
+
+  /**
+   * *** EVERYTHING RESETS WHEN THE USER CHANGES OR GOES AWAY, AND SHIPPING
+   * WITHOUT THIS WAS A REAL LEAK. *** The owner caught a coin award rendering
+   * on the SIGNED-OUT login page — and the figure in it was in EUROS, so it
+   * was a previous persona's award still sitting in this provider's state.
+   *
+   * Two separate faults, both fixed here: the queue survived a logout, and the
+   * `seen` ref survived a user change, which would also have suppressed the
+   * next user's first award for an act the previous one had already been shown.
+   *
+   * On a public demo where four personas are switched between constantly, this
+   * is not an edge case.
+   */
+  useEffect(() => {
+    setQueue([]);
+    seen.current = new Set();
+    setBalance(null);
+    setOpenSurfaces(new Set<string>());
+    setEverest(null);
+    setOwnedGear([]);
+  }, [userId]);
 
   const enqueue = useCallback((items: CoinAwardItem[]) => {
     const fresh = items.filter(

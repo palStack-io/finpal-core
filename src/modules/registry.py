@@ -64,6 +64,14 @@ class ModuleRegistry:
                 for act in (module.get_acts() or {}).values():
                     register_act(act)
 
+                # The third hook, added 2026-09-17 with pointsPal's contributor
+                # badges. Same boundary as the other two: a predicate that needs
+                # a module's tables belongs in that module.
+                from src.services.literacy.badges import register_badge
+                for slug, entry in (module.get_badges() or {}).items():
+                    title, predicate = entry
+                    register_badge(slug, title, predicate)
+
                 module.on_startup(app)
             except Exception as e:
                 logger.warning(f"Module {module.name} on_startup failed: {e}")

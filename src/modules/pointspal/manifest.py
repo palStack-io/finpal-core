@@ -26,6 +26,20 @@ class PointsPalModule(ModuleBase):
         ]
 
 
+
+    def get_badges(self) -> dict:
+        """pointsPal's contributor badges (owner decision 2026-09-17).
+
+        A BADGE, not coins: §5.1's warning is about paying, where every extra
+        submission is worth something again. A badge is once-only and buys
+        nothing, so the worst a farmer gets is one spurious submission.
+
+        Earned on SHARING, and the titles say so — finPal cannot know whether a
+        contribution was accepted, because nothing links a merge to a user.
+        """
+        from src.modules.pointspal.badges import get_badges as _badges
+        return _badges()
+
     def get_acts(self) -> dict:
         """pointsPal's own earnable acts (spec §5.1).
 

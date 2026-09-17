@@ -27,7 +27,12 @@ export const CoinAwardContainer: React.FC = () => {
     void loadUnseen();
   }, [user, loadUnseen]);
 
-  if (!current) return null;
+  // *** NO USER, NO AWARD — BELT AND BRACES BESIDE THE PROVIDER'S RESET. ***
+  // The owner caught an award rendering on the signed-out login page. The
+  // provider now clears its queue when the user changes, and this refuses to
+  // paint one even if something ever repopulates it: a coins figure on a page
+  // where nobody is signed in is somebody else's money on screen.
+  if (!user || !current) return null;
 
   return (
     <div
