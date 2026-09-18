@@ -8,7 +8,7 @@
  * Run the capture first:
  *   npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
  */
-import { execFileSync } from 'child_process';
+import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdtempSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { tmpdir } from 'os';
@@ -127,6 +127,70 @@ const themes = process.argv.includes('--theme')
 
 
 
+/**
+ * Dump a page's DOM, and *** DO NOT WAIT FOR CHROME TO EXIT. ***
+ *
+ * This walk reported `chrome did not return: ETIMEDOUT` on its FIRST page for
+ * several sessions, and the roadmap recorded the gate as unrunnable on this
+ * machine. That diagnosis was wrong in the way that matters: Chrome writes the
+ * whole DOM — marker, complete payload, `::END` — and then **never exits**.
+ * `execFileSync` waits for exit, so it hit its own 60s ceiling and threw away
+ * output that had been finished for 59 of those seconds. Measured: the dump is
+ * 20,165 bytes with a valid 3-entry payload, and the process was still alive at
+ * 25s with the data already on stdout.
+ *
+ * *** SO THE WALK NOW WAITS FOR ITS DATA, NOT FOR A PROCESS. *** `::END` is
+ * exactly the signal that the page is done — the walk script writes it last —
+ * and it is already what the parse below looks for. Once it arrives the DOM is
+ * complete by definition, so Chrome is killed and the scope moves on. Chrome's
+ * exit behaviour stops being something this gate depends on.
+ *
+ * *** THE RESPONSIVE WALK NEVER HAD THIS PROBLEM AND THAT IS THE CLUE THAT WAS
+ * SITTING THERE. *** It drives the same Chrome on the same machine over CDP and
+ * passes in the same preflight run, so "headless Chrome does not return here"
+ * could not have been the whole story. One flag differs that matters:
+ * `--dump-dom`, whose contract is "print and quit", and which here does the
+ * first and not the second.
+ *
+ * The ceiling stays, because a page that never produces `::END` must still fail
+ * with a name attached rather than stall the run.
+ */
+const DUMP_CEILING_MS = 60_000;
+
+function dumpDom(file, key) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(chrome(), [
+      '--headless=new', '--disable-gpu', '--allow-file-access-from-files',
+      '--virtual-time-budget=6000', '--hide-scrollbars',
+      `--user-data-dir=${CHROME_PROFILE}`, '--no-first-run', '--no-default-browser-check',
+      '--window-size=1400,3000', '--dump-dom', `file://${file}`,
+    ], { stdio: ['ignore', 'pipe', 'ignore'] });
+
+    let out = '';
+    let settled = false;
+    const finish = (fn, arg) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { child.kill('SIGKILL'); } catch { /* already gone */ }
+      fn(arg);
+    };
+    const timer = setTimeout(
+      () => finish(reject, new Error(`[${key}] no ::END within ${DUMP_CEILING_MS / 1000}s`)),
+      DUMP_CEILING_MS);
+
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      out += chunk;
+      // The walk writes the marker last, so its arrival IS completion.
+      if (out.includes('::END')) finish(resolve, out);
+    });
+    child.on('error', (err) => finish(reject, err));
+    // A Chrome that DOES exit cleanly is fine too — resolve on whatever it wrote.
+    child.on('close', () => finish(resolve, out));
+  });
+}
+
 let failed = 0;
 const seenPairs = {};
 
@@ -179,16 +243,10 @@ for (const CAPTURED of CAPTURES) {
    */
   let dom;
   try {
-    dom = execFileSync(chrome(), [
-      '--headless=new', '--disable-gpu', '--allow-file-access-from-files',
-      '--virtual-time-budget=6000', '--hide-scrollbars',
-      `--user-data-dir=${CHROME_PROFILE}`, '--no-first-run', '--no-default-browser-check',
-      '--window-size=1400,3000', '--dump-dom', `file://${file}`,
-    ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'], timeout: 60_000 });
+    dom = await dumpDom(file, key);
   } catch (err) {
-    // ETIMEDOUT is the hang; anything else is Chrome refusing to start. Both
-    // are reported against the scope that caused them, which is the thing the
-    // silent version never told anybody.
+    // Reported against the scope that caused it, which is the thing the silent
+    // version never told anybody.
     console.error(`[${key}] chrome did not return: ${err.code ?? err.message}`);
     process.exit(2);
   }
