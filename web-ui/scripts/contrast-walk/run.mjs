@@ -219,27 +219,25 @@ for (const CAPTURED of CAPTURES) {
     : page);
 
   /*
-   * *** THIS WALK USED TO HANG, NOT FAIL, AND BOTH CAUSES WERE IN THIS CALL. ***
-   * Measured 2026-09-15: it stalled mid-run four times, at four DIFFERENT
-   * scopes (4 of 36, then 19, then 12), with headless Chrome sitting at 0.7%
-   * CPU and the process never returning. Once it was killed by hand the step
-   * reported `✗`, which read as a contrast failure and was not one.
+   * *** THE PROFILE FLAG IS STILL LOAD-BEARING, AND THE REST OF THIS BLOCK USED
+   * TO EXPLAIN CODE THAT NO LONGER EXISTS. *** It said "both causes were in this
+   * call" and named `--user-data-dir` and a 60s `execFileSync` timeout. The
+   * first is true and lives on in `dumpDom`. The second described an
+   * `execFileSync` that is gone, and "both causes" was wrong anyway — the cause
+   * that actually kept this gate dark for several sessions was a third thing,
+   * documented at `dumpDom` above: `--dump-dom` prints everything and never
+   * exits. *A stale comment in the file whose defect was a stale note is the
+   * joke writing itself, so it is rewritten rather than left.*
    *
-   * **1. `--user-data-dir`.** Without it every one of these 36 launches uses
+   * **Why `--user-data-dir` matters, preserved:** without it every launch uses
    * Chrome's DEFAULT profile and serialises on its lock. That directory really
    * does hold a `SingletonLock` on this machine, left behind whether or not a
    * browser is running, so a launch can block on a lock nothing will release.
-   * It also means the walk was reading the owner's real profile — extensions
-   * and all — when the whole point is a clean, reproducible render. A fresh
-   * temp profile per run removes the contention AND the shared state. This is
-   * also why "kill every Chrome and re-run" appeared to be the cure and then
-   * was not: killing a browser clears the live lock, not the stale file.
-   *
-   * **2. `timeout`.** `execFileSync` with no timeout waits forever, so the only
-   * thing that ever ended a stall was `preflight.sh`'s own 900s step limit —
-   * fifteen minutes to learn nothing. 60s is many times the ~1.5s a scope
-   * actually takes, so it cannot fire on a slow machine, and a hung scope now
-   * THROWS with a name attached instead of silently costing the whole run.
+   * It also meant the walk was reading the owner's real profile — extensions and
+   * all — when the whole point is a clean, reproducible render. A fresh temp
+   * profile per run removes the contention AND the shared state. It is also why
+   * "kill every Chrome and re-run" appeared to be the cure and then was not:
+   * killing a browser clears the live lock, not the stale file.
    */
   let dom;
   try {
