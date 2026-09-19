@@ -234,6 +234,20 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
     return () => window.removeEventListener('keydown', onKey);
   }, [openPeak]);
 
+  /**
+   * The open peak's detail, drawn LAST.
+   *
+   * *** SVG HAS NO `z-index` — IT PAINTS IN DOCUMENT ORDER. *** The popover
+   * started life inside its own peak's `<g>`, which put Everest's (drawn
+   * first, so the goals stand in front of it) underneath every goal label on
+   * the card: "Emergency fund" and "Pay off the Visa Credit Card" were
+   * painted straight through the panel. The LOCAL capture missed it because
+   * the peak it focused happened to be the last one drawn; the demo showed it
+   * immediately. Collected during the label passes and rendered after them,
+   * so whichever peak is open is on top of all of them.
+   */
+  let openDetail: { cx: number; top: number; lines: string[] } | null = null;
+
   /** The handlers every peak shares, so one cannot drift from the others. */
   const peakHandlers = (id: string) => ({
     tabIndex: 0,
@@ -521,9 +535,8 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
                     style={{ fontSize: '11px', fill: 'var(--status-warn)', fontWeight: 600 }}>
                 {standing}
               </text>
-              {openPeak === 'everest' && (
-                <PeakDetail cx={cx} top={blockBottom + 4} width={width} lines={detail} />
-              )}
+              {openPeak === 'everest'
+                && ((openDetail = { cx, top: blockBottom + 4, lines: detail }), null)}
             </g>
           );
         })()}
@@ -581,9 +594,8 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
                     style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>
                 {kind}
               </text>
-              {openPeak === String(peak.goal.id) && (
-                <PeakDetail cx={cx} top={blockBottom + 4} width={width} lines={detail} />
-              )}
+              {openPeak === String(peak.goal.id)
+                && ((openDetail = { cx, top: blockBottom + 4, lines: detail }), null)}
             </g>
           );
         })}
@@ -637,6 +649,18 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
             </g>
           );
         })()}
+
+        {/* *** LAST CHILD, AND THAT IS THE WHOLE POINT. *** SVG paints in
+            document order with no `z-index`, so a popover drawn inside its own
+            peak's group sits under every label drawn after it. Everest is
+            drawn FIRST (the goals stand in front of it), so its detail was
+            under all four goal captions on the demo. */}
+        {openDetail && (
+          <PeakDetail
+            cx={openDetail.cx} top={openDetail.top}
+            width={width} lines={openDetail.lines}
+          />
+        )}
       </svg>
     </ScrollPane>
   );

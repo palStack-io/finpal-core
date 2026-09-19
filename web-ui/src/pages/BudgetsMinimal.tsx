@@ -1320,6 +1320,24 @@ const BudgetsMinimal = () => {
                             <span className="fp-hint">Actual</span>
                             <Money amount={group.actual} currency={currency} />
                           </span>
+                          {/* *** THE HEADER HAS TO CARRY IT, BECAUSE A GROUP
+                              COLLAPSES. *** Rendering the unbudgeted rows in
+                              the BODY alone put "Actual $0.00" directly above
+                              "NOT BUDGETED $1,800.00" — and collapsing Fixed
+                              hid the rent entirely, which is D-271 again one
+                              interaction later. Seen on the deployed demo,
+                              not reasoned about.
+
+                              A fourth figure rather than folding it into
+                              `Actual`: Planned − Actual = Remaining still
+                              chains, so a reader who checks the arithmetic
+                              finds it true. */}
+                          {(group.unbudgeted_actual ?? 0) > 0 && (
+                            <span style={groupFigureStyle}>
+                              <span className="fp-hint">Not budgeted</span>
+                              <Money amount={group.unbudgeted_actual} currency={currency} />
+                            </span>
+                          )}
                           <span style={groupFigureStyle}>
                             <span className="fp-hint">Remaining</span>
                             {/* Negative renders in clay and is NEVER clamped to

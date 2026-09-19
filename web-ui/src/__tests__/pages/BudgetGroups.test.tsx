@@ -11,6 +11,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
@@ -574,6 +575,34 @@ describe('spending nobody budgeted is shown inside its own group', () => {
       expect(row).not.toHaveTextContent(/of\s/);
       expect(row).not.toHaveTextContent('%');
     });
+
+  it('*** A COLLAPSED GROUP STILL REPORTS WHAT IT COST ***', async () => {
+    /* The rows live in the group BODY, and a group collapses. Rendering the
+       figure only in the body meant collapsing Fixed hid 1,800 of rent again
+       — D-271 one interaction later, on a page that had just been fixed for
+       exactly that. Found by looking at the deployed demo: the header read
+       "Actual $0.00" directly above "NOT BUDGETED $1,800.00". */
+    mount(withUnbudgeted);
+    const heading = await screen.findByRole('heading', { name: 'Fixed' });
+    const header = heading.closest('button')!;
+
+    expect(header).toHaveTextContent('Not budgeted');
+    expect(header).toHaveTextContent('1,800');
+
+    // Collapse it: the figure is on the header, so it survives.
+    await userEvent.click(header);
+    expect(header).toHaveAttribute('aria-expanded', 'false');
+    expect(header).toHaveTextContent('1,800');
+    expect(screen.queryByTestId('unbudgeted-91')).not.toBeInTheDocument();
+  });
+
+  it('shows no Not budgeted figure for a group that has none', async () => {
+    // Non-Monthly has nothing unbudgeted; a 0.00 beside three other figures is
+    // noise, and this page already refuses to pad.
+    mount(withUnbudgeted);
+    const heading = await screen.findByRole('heading', { name: 'Non-Monthly' });
+    expect(heading.closest('button')!).not.toHaveTextContent('Not budgeted');
+  });
 
   it('renders against a server that predates the field, rather than blanking', async () => {
     /* A self-hoster on an older image must get the page they always had. The

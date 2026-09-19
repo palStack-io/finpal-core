@@ -227,15 +227,19 @@ describe('Everest says what it is doing there', () => {
        so nobody reads it as their own goal, but nothing ever SAID what it was
        — a reader had to infer that from a colour, which is D-269's shape on
        the one peak that is not a goal. */
-    render(<GoalRange goals={[]} currency="USD" everest={EVEREST} />);
+    const { container } = render(
+      <GoalRange goals={[]} currency="USD" everest={EVEREST} />);
     const peak = screen.getByRole('button', { name: /Everest/ });
 
     fireEvent.focus(peak);
     /* *** JOINED WITH SPACES, BECAUSE SVG HAS NO WORD WRAP. *** The sentence
        is measured into separate `<text>` lines, and `textContent`
        concatenates them with nothing between — so a naive substring check
-       reads "financialliteracy" and fails on correct output. */
-    const drawn = [...peak.querySelectorAll('text')]
+       reads "financialliteracy" and fails on correct output.
+
+       Read off the CONTAINER, not the peak: the panel is deliberately not a
+       child of the peak that opened it — see the paint-order test below. */
+    const drawn = [...container.querySelectorAll('text')]
       .map((t) => t.textContent).join(' ');
     expect(drawn).toContain('8,849 m — the shared summit');
     expect(drawn).toContain('financial literacy');
@@ -243,6 +247,33 @@ describe('Everest says what it is doing there', () => {
 
     // And without the interaction, for a screen reader.
     expect(peak.getAttribute('aria-label') ?? '').toContain('financial literacy');
+  });
+
+  it('*** DRAWS THE PANEL AFTER EVERY LABEL, OR IT PAINTS UNDERNEATH THEM ***', () => {
+    /* SVG has no `z-index`: it paints in document order. The panel started
+       life inside its own peak's `<g>`, and Everest is drawn FIRST so the
+       goals stand in front of it — so on the demo its detail rendered under
+       all four goal captions, with "Emergency fund" straight through the
+       text. The LOCAL capture missed it because the peak it happened to focus
+       was the last one drawn. */
+    const { container } = render(
+      <GoalRange
+        goals={[withPeak({}), withPeak({ id: 2, name: 'Pay off the Visa' } as Partial<Goal>)]}
+        currency="USD" everest={EVEREST}
+      />);
+    fireEvent.focus(screen.getByRole('button', { name: /Everest/ }));
+
+    const svg = container.querySelector('svg')!;
+    const panel = svg.querySelector('rect[rx="7"]')!;
+    expect(panel).toBeTruthy();
+
+    // Every label group must come BEFORE the panel in document order.
+    const kids = [...svg.children];
+    const panelAt = kids.findIndex((k) => k.contains(panel));
+    const lastLabelAt = kids.reduce(
+      (last, k, i) => (k.querySelector('g[role="button"]') || k.matches('g[role="button"]')
+        ? i : last), -1);
+    expect(panelAt).toBeGreaterThan(lastLabelAt);
   });
 
   it('says base camp rather than 0 m, and still explains itself', () => {

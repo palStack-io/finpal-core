@@ -1355,7 +1355,14 @@ const cases: Case[] = [
     const peak = container.querySelector<SVGGElement>('g[role="button"][aria-expanded]');
     if (!peak) throw new Error('dashboard: no focusable peak — the range drew no label');
     fireEvent.focus(peak);
-    if (!container.querySelector('g[aria-expanded="true"] rect')) {
+    if (peak.getAttribute('aria-expanded') !== 'true') {
+      throw new Error('dashboard: focusing a peak did not open it');
+    }
+    /* Looked for `g[aria-expanded="true"] rect` until 2026-09-19 and went red
+       the moment the panel stopped being a child of its own peak — which is
+       the fix for it painting under every label drawn after it. The panel is
+       the SVG's last child now, so it is found on the SVG, not on the peak. */
+    if (!container.querySelector('svg rect[rx="7"]')) {
       throw new Error('dashboard: focusing a peak drew no detail panel');
     }
   }],
