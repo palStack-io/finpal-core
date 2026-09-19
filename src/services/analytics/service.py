@@ -175,6 +175,48 @@ class AnalyticsService:
         # total_income — a year-to-date number under a monthly label.
         current_month_income = 0
         for expense in expenses:
+            # *** THE YEAR BOUND, AND WHY IT IS HERE RATHER THAN ON THE QUERY. ***
+            #
+            # `dashboard_start` is January 1st MINUS 31 DAYS, so `expenses` runs
+            # from roughly last December. That window is for the monthly trend
+            # chart, which wants the extra month. It is NOT the window for a
+            # year-to-date TOTAL — and the expense loop below has always known
+            # that, skipping rows whose year is not `current_year`.
+            #
+            # This loop did not, so `total_income` counted last December's pay
+            # while `total_expenses_only` excluded last December's spending. The
+            # two terms of `net_cash_flow = total_income - total_expenses_only`
+            # therefore covered DIFFERENT PERIODS, and the difference was
+            # roughly one paycheque, every year, always in the flattering
+            # direction. `savings_rate` inherited it, and January was the worst
+            # month: year-to-date is nearly empty then, so one December salary
+            # was most of the numerator.
+            #
+            # Measured before the fix, with 1,000 income and 400 expense this
+            # year plus 9,999 income and 8,888 expense last December:
+            # total_income 10,999, total_expenses 400, net_cash_flow 10,599 —
+            # against a true 1,000 / 400 / 600.
+            #
+            # *** THIS GUARDS `total_transfers` TOO, AND THAT IS DELIBERATE. ***
+            # It sits above the whole branch, so the `elif ... == 'transfer'`
+            # below is now year-bounded as well. Same argument: it is a
+            # year-to-date total sharing a payload with two others, and one of
+            # three figures on a line covering a different period is the defect
+            # this comment is about. No client reads `total_transfers` today
+            # (grepped across web-ui and mobile, 2026-09-18), so nothing visible
+            # changes — which is exactly why it needed saying rather than
+            # leaving for somebody to rediscover.
+            #
+            # *** AND THE SCOPE HALF, CHECKED SO IT IS NOT RE-OPENED: *** D-18's
+            # note below records that these two loops once described different
+            # PEOPLE — a caller-scoped expense share against a household-scoped
+            # income sum. They do not now: both iterate the single `expenses`
+            # list built by `scope_query(scope_ids)` above, so the scope is
+            # resolved once, before either loop, and cannot differ between them.
+            # This fix aligns them on TIME; D-18 aligned them on PEOPLE; there
+            # is no third axis left in this expression.
+            if expense.date.year != current_year:
+                continue
             if hasattr(expense, 'transaction_type'):
                 if expense.transaction_type == 'income':
                     total_income += amounts[expense.id]
