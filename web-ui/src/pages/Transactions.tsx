@@ -279,7 +279,52 @@ export const Transactions: React.FC = () => {
               <Plus size={20} />
               Add Transaction
             </button>}
-          />
+          >
+              {/* *** ONE HAIRLINE-SEPARATED ROW, NOT THREE CARDS WITH ICON
+                  CHIPS. *** `TotalsRow`'s own docstring says why — "four
+                  separate cards under a card is why the page read as out of
+                  place", and "the icon chips are gone, and that is the point
+                  of the change" — and then this page kept the cards anyway,
+                  along with Budgets. The owner spotted it before the gate
+                  did: D-106's shape, a helper adopted in five places and
+                  bypassed in two.
+
+                  *** THE SCOPE IS STATED ONCE, NOT ONCE PER FIGURE. *** Three
+                  identical HOUSEHOLD tags over three figures is one fact
+                  printed three times, which is the duplication D-101 is about
+                  in chrome rather than arithmetic. It moves to the head's
+                  subtitle, where Accounts already puts it. */}
+            <div>
+                <TotalsRow cells={[
+                  {
+                    label: 'Total income',
+                    value: formatMoney(totalIncome, { currency, signed: true }),
+/* *** INK TOKENS, NOT STATUS TOKENS — THE ROW MOVED ONTO THE BAND. ***
+                       Measured against the band's resolved #dce7de: every
+                       `--status-*` fill FAILS AA there (ok/warn 3.95, over
+                       4.08) while every `--*-ink` clears it (g 5.61, re 5.09).
+                       They were fine on the near-white card and are not on
+                       green, which is the theme's own distinction: the inks
+                       are TEXT colours, the status tokens are fills. Caught
+                       by the contrast ratchet, not by eye. */
+                    valueColor: 'var(--g-ink)',
+                  },
+                  {
+                    label: 'Total expenses',
+                    value: formatMoney(-Math.abs(totalExpense), { currency }),
+                    valueColor: 'var(--re-ink)',
+                  },
+                  {
+                    label: 'Net balance',
+                    value: formatMoney(netBalance, { currency, signed: true }),
+                    /* Net balance KEEPS its red, and that is O1 rather than an
+                       exception to it: a negative net is a figure whose sign
+                       means something. */
+                    valueColor: netBalance >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
+                  },
+                ]} />
+            </div>
+          </PageHead>
 
           {/* Loading */}
           {loading && (
@@ -298,45 +343,6 @@ export const Transactions: React.FC = () => {
           {!loading && !error && (
             <>
               {/* Summary Cards */}
-              {/* *** ONE HAIRLINE-SEPARATED ROW, NOT THREE CARDS WITH ICON
-                  CHIPS. *** `TotalsRow`'s own docstring says why — "four
-                  separate cards under a card is why the page read as out of
-                  place", and "the icon chips are gone, and that is the point
-                  of the change" — and then this page kept the cards anyway,
-                  along with Budgets. The owner spotted it before the gate
-                  did: D-106's shape, a helper adopted in five places and
-                  bypassed in two.
-
-                  *** THE SCOPE IS STATED ONCE, NOT ONCE PER FIGURE. *** Three
-                  identical HOUSEHOLD tags over three figures is one fact
-                  printed three times, which is the duplication D-101 is about
-                  in chrome rather than arithmetic. It moves to the head's
-                  subtitle, where Accounts already puts it. */}
-              <div style={{ marginBottom: '32px' }}>
-                <TotalsRow cells={[
-                  {
-                    label: 'Total income',
-                    value: formatMoney(totalIncome, { currency, signed: true }),
-                    /* The FIGURE takes the legible green, never the brand one:
-                       #22c55e measured 2.27:1 here, below even the 3.0
-                       non-text floor. */
-                    valueColor: 'var(--amount-income)',
-                  },
-                  {
-                    label: 'Total expenses',
-                    value: formatMoney(-Math.abs(totalExpense), { currency }),
-                    valueColor: '#ef4444',
-                  },
-                  {
-                    label: 'Net balance',
-                    value: formatMoney(netBalance, { currency, signed: true }),
-                    /* Net balance KEEPS its red, and that is O1 rather than an
-                       exception to it: a negative net is a figure whose sign
-                       means something. */
-                    valueColor: netBalance >= 0 ? 'var(--amount-income)' : 'var(--accent-red)',
-                  },
-                ]} />
-              </div>
 
               {/* Search & Filter */}
               <SectionCard title="Filter Transactions">

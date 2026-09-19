@@ -576,6 +576,30 @@ describe('spending nobody budgeted is shown inside its own group', () => {
       expect(row).not.toHaveTextContent('%');
     });
 
+  it('*** THE HEADLINE IS ALL SPENDING, NOT THE BUDGETED SLICE OF IT ***', async () => {
+    /* D-271's actual headline. `totalSpent` was `budgets.reduce(...)`, so the
+       biggest figure on the page could only ever be spending in categories
+       the user happened to budget — 474.28 printed under the words "Total
+       Spent" while 2,359.72 left the account. It reads the server's figure
+       now, which is also D-101's rule: one arithmetic, server-side. */
+    mount(overview({
+      totals: {
+        planned: 1400, actual: 2359.72, remaining: 925.72,
+        budgeted_actual: 474.28, unbudgeted_actual: 1885.44,
+      },
+    }));
+
+    const row = await screen.findByTestId('page-totals');
+    expect(row.textContent).toContain('2,359.72');
+    expect(row.textContent).toContain('1,885.44 of it not budgeted');
+
+    /* *** AND THE BAR STAYS ADHERENCE. *** 474.28 of a 1,720 plan is 28%.
+       Dividing ALL spending by the plan would read 137% for somebody who is
+       not over a single budget — the opposite of what this bar is for. */
+    expect(row.textContent).toContain('28% used');
+    expect(row.textContent).not.toContain('137%');
+  });
+
   it('*** A COLLAPSED GROUP STILL REPORTS WHAT IT COST ***', async () => {
     /* The rows live in the group BODY, and a group collapses. Rendering the
        figure only in the body meant collapsing Fixed hid 1,800 of rent again

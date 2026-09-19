@@ -11,6 +11,7 @@ import { useToast } from '../contexts/ToastContext';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
+import type { BudgetTotals } from '../services/budgetService';
 import { teamService } from '../services/teamService';
 import type { TeamMember } from '../types/team';
 import { householdScopeNote } from '../utils/scope';
@@ -333,8 +334,10 @@ const BudgetsMinimal = () => {
   const [incomeSection, setIncomeSection] = useState<IncomeSection | null>(null);
   const [unsorted, setUnsorted] = useState<UnsortedSection>(
     { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
-  const [totals, setTotals] = useState<{ planned: number; actual: number; remaining: number }>(
-    { planned: 0, actual: 0, remaining: 0 });
+  const [totals, setTotals] = useState<BudgetTotals>({
+    planned: 0, actual: 0, remaining: 0,
+    budgeted_actual: 0, unbudgeted_actual: 0,
+  });
   const [income, setIncome] = useState<number | null>(null);
   const [leftToBudget, setLeftToBudget] = useState<number | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<SpendingType[]>([]);
@@ -380,7 +383,10 @@ const BudgetsMinimal = () => {
         || { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
       // `?? null`, never `|| 0`: null means "nothing recorded this month" and
       // zero would be a claim that the user earned nothing.
-      setTotals(overview?.totals || { planned: 0, actual: 0, remaining: 0 });
+      setTotals(overview?.totals || {
+        planned: 0, actual: 0, remaining: 0,
+        budgeted_actual: 0, unbudgeted_actual: 0,
+      });
       setIncome(overview?.income ?? null);
       setLeftToBudget(overview?.left_to_budget ?? null);
 
@@ -599,6 +605,24 @@ const BudgetsMinimal = () => {
 
   const totalBudgeted = budgets.reduce((sum, b) => sum + b.amount, 0);
   const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+
+  /* *** HOISTED OUT OF THE BUDGET-HEALTH IIFE ON 2026-09-19. *** The totals
+     row moved INSIDE `PageHead` so it sits in the band with the ridge beneath
+     it, the way Accounts does (owner: "the accounts is good because the
+     metrics are inside the header design with mountains under it"). That put
+     it outside the closure these were declared in, and two places now read
+     them — so they belong to the component, not to one block. */
+  const spentPct = totalBudgeted > 0
+    ? ((totals.budgeted_actual || totalSpent) / totalBudgeted) * 100 : 0;
+  // Status tokens, not raw accents: measured on the card, #22c55e was 2.21:1
+  // and #f59e0b 2.09:1 in light. `over` is the direction's clay, which piece 5
+  // reserved for exactly this — "clay ONLY for a broken budget".
+  const spentColor = spentPct >= 100 ? 'var(--status-over)'
+    : spentPct >= 80 ? 'var(--status-warn)' : 'var(--status-ok)';
+  const onTrack = budgets.filter(b => b.percentage < 80).length;
+  const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
+  const over = budgets.filter(b => b.spent > b.amount).length;
+
   const totalRemaining = totalBudgeted - totalSpent;
 
   const daysLeftInMonth = () => {
@@ -1101,21 +1125,7 @@ const BudgetsMinimal = () => {
                 <Plus size={18} /> New Budget
               </button>
             </div>}
-          />
-
-          {/* Top Stats */}
-          {(() => {
-            const spentPct = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
-            // Status tokens, not raw accents: measured on the card, #22c55e was
-            // 2.21:1 and #f59e0b 2.09:1 in light. `over` is the direction's clay,
-            // which piece 5 reserved for exactly this — "clay ONLY for a broken
-            // budget" — so the state finally wears the colour meant for it.
-            const spentColor = spentPct >= 100 ? 'var(--status-over)' : spentPct >= 80 ? 'var(--status-warn)' : 'var(--status-ok)';
-            const onTrack = budgets.filter(b => b.percentage < 80).length;
-            const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
-            const over = budgets.filter(b => b.spent > b.amount).length;
-            return (
-              <>
+          >
               {/* *** ONE HAIRLINE-SEPARATED ROW, NOT FOUR CARDS WITH ICON
                   CHIPS. *** Owner, 2026-09-19: the KPI "look differes for
                   each page", and Accounts is the one to match. `TotalsRow`'s
@@ -1134,31 +1144,61 @@ const BudgetsMinimal = () => {
                   Nothing else is dropped: the progress bar and every caption
                   ride in `note`, which takes a node precisely so a caller can
                   put its own furniture there. */}
-              <div style={{ marginBottom: '32px' }}>
+            <div>
                 <TotalsRow cells={[
                   {
                     label: 'Total budgeted',
+                    /* The bar belongs HERE, with the plan it is a fraction of
+                       — not under "Total spent", which is now all spending and
+                       is not a fraction of anything. */
                     value: formatCurrency(totalBudgeted),
-                    note: `Across ${budgets.length} ${budgets.length === 1 ? 'category' : 'categories'}`,
-                  },
-                  {
-                    label: 'Total spent',
-                    value: formatCurrency(totalSpent),
                     note: (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                         <div style={{ flex: 1, height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ width: `${Math.min(spentPct, 100)}%`, height: '100%', background: spentColor, borderRadius: '3px' }} />
-                        </div>
-                        <span style={{ color: spentColor, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {spentPct.toFixed(0)}%
-                        </span>
                       </div>
+                        {/* *** THE BAR KEEPS THE STATUS COLOUR; THE LABEL
+                            CANNOT. *** Measured on the band's resolved
+                            #dce7de: `--status-over` is 4.08 and
+                            `--status-warn` 3.95, both under AA for text —
+                            they were only ever safe on the near-white card.
+                            A bar is a graphic (3.0 floor) and clears it, so
+                            the state keeps its colour where the colour is
+                            decoration, and the label states the number in
+                            ink. Nothing is carried by colour alone: the
+                            percentage is right there in words. */}
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {spentPct.toFixed(0)}% used
+                        </span>
+                    </div>
                     ),
+                  },
+                  {
+                    label: 'Total spent',
+                    /* *** THE SERVER'S FIGURE, AND IT IS ALL SPENDING — D-271.
+                       *** This said `budgets.reduce(...)`, so the headline of
+                       the page could only ever be spending in categories the
+                       user happened to budget: 474.28 against 2,359.72 that
+                       actually left the account, under the words "Total
+                       Spent". Summing it here was also a second arithmetic to
+                       disagree with the server's, which is D-101's rule. */
+                    value: formatCurrency(totals.actual),
+                    note: totals.unbudgeted_actual > 0
+                      ? `${formatCurrency(totals.unbudgeted_actual)} of it not budgeted`
+                      : `Across ${budgets.length} ${budgets.length === 1 ? 'category' : 'categories'}`,
                   },
                   {
                     label: 'Remaining',
                     value: formatCurrency(Math.abs(totalRemaining)),
-                    valueColor: totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)',
+/* *** INK TOKENS, NOT STATUS TOKENS — THE ROW MOVED ONTO THE BAND. ***
+                       Measured against the band's resolved #dce7de: every
+                       `--status-*` fill FAILS AA there (ok/warn 3.95, over
+                       4.08) while every `--*-ink` clears it (g 5.61, re 5.09).
+                       They were fine on the near-white card and are not on
+                       green, which is the theme's own distinction: the inks
+                       are TEXT colours, the status tokens are fills. Caught
+                       by the contrast ratchet, not by eye. */
+                    valueColor: totalRemaining >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
                     note: `${daysLeftInMonth()} days left this month`,
                   },
                   {
@@ -1171,13 +1211,23 @@ const BudgetsMinimal = () => {
                     value: leftToBudget === null ? '—' : formatCurrency(leftToBudget),
                     valueColor: leftToBudget === null
                       ? 'var(--text-muted)'
-                      : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)',
+                      : leftToBudget >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
                     note: income === null
                       ? 'No income recorded this month yet'
                       : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`,
                   },
                 ]} />
-              </div>
+            </div>
+          </PageHead>
+
+          {/* Top Stats */}
+          {(() => {
+            /* *** ADHERENCE, SO IT IS THE BUDGETED HALF OVER THE PLAN. ***
+               `totals.actual` is now ALL spending; dividing that by the plan
+               would read 168% for somebody who is not over a single budget,
+               which is the opposite of what this bar is for. */
+            return (
+              <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                 {/* *** FIVE CARDS IN AN auto-fit GRID IS FOUR AND A LONELY
                     ONE. *** At 1440px this grid computes four 273px columns, so
