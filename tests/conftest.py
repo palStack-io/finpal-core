@@ -93,6 +93,59 @@ os.environ['RUN_SCHEDULER'] = 'false'
 os.environ.setdefault('SECRET_KEY', 'test-secret-key')
 os.environ.setdefault('ENCRYPTION_KEY', '')
 
+# ══════════════════════════════════════════════════════════════════════════
+# *** THE SUITE REACHED THE PUBLIC INTERNET, AND IT COST A RED PRE-COMMIT. ***
+# ══════════════════════════════════════════════════════════════════════════
+#
+# `PointspalModule.on_startup()` calls `sync_from_pointspal()` whenever
+# `PointsProgram` is empty, and that is `requests.get(..., timeout=30)` against
+# `raw.githubusercontent.com`. Every test database starts empty, so building the
+# session-scoped `app` fixture fetched a catalogue off GitHub — once per pytest
+# process, with a thirty-second ceiling.
+#
+# MEASURED, not inferred. One integration file, same tree, same interpreter:
+#
+#     control                                 4.49s
+#     POINTSPAL_SYNC_URL -> unroutable host   33.80s
+#
+# The 29.3s delta IS the timeout. And it is not theoretical: the pre-commit hook
+# runs 3.11 and 3.12 IN PARALLEL, both boot, both fetch, and on 2026-09-18 the
+# 3.12 leg died in `service.py:46` and refused a commit that had nothing to do
+# with pointsPal. A gate that fails on somebody else's network is a gate people
+# learn to re-run rather than read.
+#
+# *** IT IS REFUSED AT THE ADAPTER, NOT WORKED AROUND WITH A FASTER URL. ***
+# Pointing `POINTSPAL_SYNC_URL` somewhere that fails quickly would fix the
+# symptom and leave the next outbound call to find its own way out. This makes
+# the whole suite offline-by-construction: any test that reaches the network
+# gets an immediate, named error instead of a thirty-second hang, and a test
+# that WANTS an HTTP call has to say so by mocking it.
+#
+# `HTTPAdapter.send` is the right seam. `requests_mock` and `responses` replace
+# that same method, so a test using either wins while its patch is active, and a
+# test that monkeypatches `requests.get` or the service function never reaches
+# here at all.
+#
+# `tests/integration/test_simplefin_live_bridge.py` is the one deliberate
+# exception — it talks to SimpleFin's real bridge and is already skipped unless
+# `FINPAL_LIVE=1`, so the same flag lifts this.
+if os.environ.get('FINPAL_LIVE') != '1':
+    from requests.adapters import HTTPAdapter as _HTTPAdapter
+
+    class NetworkReachedInATest(RuntimeError):
+        """A test tried to open a real connection. Mock it, or set FINPAL_LIVE=1."""
+
+    def _refuse_outbound(self, request, *args, **kwargs):
+        raise NetworkReachedInATest(
+            f'A test tried to reach {request.url}.\n'
+            'The suite is offline by construction — see the note in '
+            'tests/conftest.py. Mock the call (monkeypatch the service function '
+            'or requests.get), or run with FINPAL_LIVE=1 if the test is '
+            'deliberately live.'
+        )
+
+    _HTTPAdapter.send = _refuse_outbound
+
 from src import create_app
 from src.extensions import db as _db
 
