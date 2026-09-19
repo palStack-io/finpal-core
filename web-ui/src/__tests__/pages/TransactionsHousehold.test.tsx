@@ -172,8 +172,17 @@ describe('Transactions page — household', () => {
      * E2E axe run caught. The discrimination this test needs is real; the
      * heading was the wrong way to get it.
      */
-    const cardValues = () =>
-      screen.getAllByTestId('stat-value').map((h) => h.textContent);
+    /* *** THE CARDS BECAME ONE HAIRLINE ROW ON 2026-09-19 *** (owner: the KPI
+       "look differes for each page", and `TotalsRow`'s own docstring had
+       already argued the icon-chip cards away). The discrimination this test
+       needs is unchanged — a row's own amount must not be mistaken for a
+       total — so it reads the totals row rather than the old testid. */
+    const cardValues = () => {
+      const row = document.querySelector('[data-testid="page-totals"]')!;
+      return [...row.querySelectorAll('div')]
+        .map((d) => d.textContent || '')
+        .filter((t) => /^[+\u2212-]?[$£€]/.test(t.trim()));
+    };
 
     // Both rows: $20 of expenses against $6 of income.
     await waitFor(() => expect(cardValues()).toContain('\u2212$20.00'));
@@ -189,36 +198,58 @@ describe('Transactions page — household', () => {
     expect(cardValues()).not.toContain('\u2212$20.00');
   });
 
-  it('tags the cards HOUSEHOLD by default and drops the tag for a housemate', async () => {
+  it('*** STATES WHOSE MONEY IT IS ONCE, NOT ONCE PER FIGURE ***', async () => {
+    /* The vocabulary is unchanged and so are its refusals; only where it is
+       printed moved. Three identical HOUSEHOLD chips over three totals is one
+       fact printed three times — the duplication D-101 is about, in chrome
+       rather than arithmetic — and Accounts already states it once. */
     mockHousehold();
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByText('HOUSEHOLD').length).toBe(3));
+    await waitFor(() => expect(
+      screen.getByText("Every figure here is the whole household's")
+    ).toBeInTheDocument());
+    // Once. Not three times, and not as a chip on each figure.
+    expect(screen.getAllByText("Every figure here is the whole household's"))
+      .toHaveLength(1);
     expect(screen.queryByText('YOURS')).not.toBeInTheDocument();
+    expect(screen.queryByText('HOUSEHOLD')).not.toBeInTheDocument();
+  });
+
+  it('*** NAMES A HOUSEMATE RATHER THAN CALLING THEIR MONEY YOURS ***', async () => {
+    /* Neither `yours` nor `household` is true of Bob's rows on Alice's screen,
+       and tagging them "yours" is the untrue label this vocabulary exists to
+       prevent. */
+    mockHousehold();
+    renderPage();
+    await waitFor(() => expect(
+      screen.getByText("Every figure here is the whole household's")
+    ).toBeInTheDocument());
 
     await userEvent.selectOptions(
       screen.getByLabelText('Show transactions for'),
       BOB.id
     );
 
-    // Neither `yours` nor `household` is true of Bob's rows on Alice's screen.
-    await waitFor(() => expect(screen.queryByText('HOUSEHOLD')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Bob's money only")).toBeInTheDocument());
+    expect(screen.queryByText("Every figure here is the whole household's"))
+      .not.toBeInTheDocument();
     expect(screen.queryByText('YOURS')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Bob only').length).toBe(3);
   });
 
-  it('tags the cards YOURS when the filter is the signed-in user', async () => {
+  it('names the signed-in user too, rather than saying YOURS', async () => {
     mockHousehold();
     renderPage();
-
-    await waitFor(() => expect(screen.getAllByText('HOUSEHOLD').length).toBe(3));
+    await waitFor(() => expect(
+      screen.getByText("Every figure here is the whole household's")
+    ).toBeInTheDocument());
 
     await userEvent.selectOptions(
       screen.getByLabelText('Show transactions for'),
       ALICE.id
     );
 
-    await waitFor(() => expect(screen.getAllByText('YOURS').length).toBe(3));
+    await waitFor(() => expect(screen.getByText("Alice's money only")).toBeInTheDocument());
   });
 
   it('shows a solo household no filter, no badges and no scope tags', async () => {
@@ -233,6 +264,11 @@ describe('Transactions page — household', () => {
     expect(screen.queryByText('🌱 Alice')).not.toBeInTheDocument();
     expect(screen.queryByText('HOUSEHOLD')).not.toBeInTheDocument();
     expect(screen.queryByText('YOURS')).not.toBeInTheDocument();
+    // *** AND NO SCOPE CLAUSE EITHER. *** With one member the household and
+    // the user are the same set, so saying "the whole household's" states a
+    // distinction that does not exist.
+    expect(screen.queryByText("Every figure here is the whole household's"))
+      .not.toBeInTheDocument();
   });
 });
 

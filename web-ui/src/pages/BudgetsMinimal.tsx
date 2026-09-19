@@ -10,7 +10,10 @@ import { categoriesApi, type Category } from '../services/api/categories';
 import { useToast } from '../contexts/ToastContext';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
-import { StatCard } from '../components/StatCard';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
+import { teamService } from '../services/teamService';
+import type { TeamMember } from '../types/team';
+import { householdScopeNote } from '../utils/scope';
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
@@ -299,6 +302,13 @@ const BudgetsMinimal = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetWithDetails | null>(null);
+  /* *** THE PAGE HAS TO KNOW THE HOUSEHOLD SIZE TO SAY WHOSE MONEY THIS IS. ***
+     It used to stamp `scope="household"` on four cards without ever asking —
+     true for a shared instance, noise for somebody on their own, since with
+     one member the household and the caller are the same set. Failure is
+     silent and falls back to saying nothing, which is the honest default: a
+     scope claim finPal could not verify is worse than none. */
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [budgetFormData, setBudgetFormData] = useState({
     category_id: '',
     amount: '',
@@ -343,6 +353,12 @@ const BudgetsMinimal = () => {
   useEffect(() => {
     loadData();
   }, [selectedMonth]);
+
+  /* Once, not per month: the household does not change when the user pages
+     through the calendar. Failure is swallowed — see the state's own note. */
+  useEffect(() => {
+    teamService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
 
   const loadData = async () => {
     try {
@@ -970,7 +986,15 @@ const BudgetsMinimal = () => {
           <PageHead
             band="budgets"
             title="Budgets"
-            subtitle="A limit is only useful for the part of your spending that can move."
+            subtitle={(() => {
+              const note = householdScopeNote(members.length);
+              const base = 'A limit is only useful for the part of your spending that can move.';
+              /* Two spans, not one string: `getByText` matches a node's WHOLE
+                 text, so concatenating makes each half unfindable. */
+              return note ? (
+                <><span>{base}</span>{' · '}<span>{note}</span></>
+              ) : base;
+            })()}
             right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               {/* Compact Month Navigator */}
               <div style={{
@@ -1091,66 +1115,70 @@ const BudgetsMinimal = () => {
             const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
             const over = budgets.filter(b => b.spent > b.amount).length;
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                <StatCard
-                  label="Total Budgeted"
-                  scope="household"
-                  value={formatCurrency(totalBudgeted)}
-                  accentColor="#3b82f6"
-                  icon={<DollarSign size={24} color="#3b82f6" />}
-                  subtitle={<span style={mutedSmallStyle}>Across {budgets.length} categories</span>}
-                />
-                <StatCard
-                  label="Total Spent"
-                  scope="household"
-                  value={formatCurrency(totalSpent)}
-                  accentColor={spentColor}
-                  icon={<TrendingDown size={24} color={spentColor} />}
-                  subtitle={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                      <div style={{ flex: 1, height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.min(spentPct, 100)}%`, height: '100%', background: spentColor, borderRadius: '3px' }} />
+              <>
+              {/* *** ONE HAIRLINE-SEPARATED ROW, NOT FOUR CARDS WITH ICON
+                  CHIPS. *** Owner, 2026-09-19: the KPI "look differes for
+                  each page", and Accounts is the one to match. `TotalsRow`'s
+                  own docstring had already argued this — "four separate cards
+                  under a card is why the page read as out of place", "the
+                  icon chips are gone, and that is the point of the change" —
+                  and this page plus Transactions kept the cards anyway. That
+                  is D-106's shape: a helper adopted in five places and
+                  bypassed in two.
+
+                  *** THE FOUR `HOUSEHOLD` CHIPS GO TOO. *** One fact printed
+                  four times is the duplication D-101 is about in chrome
+                  rather than arithmetic; it is stated once in the head, as
+                  Accounts states it.
+
+                  Nothing else is dropped: the progress bar and every caption
+                  ride in `note`, which takes a node precisely so a caller can
+                  put its own furniture there. */}
+              <div style={{ marginBottom: '32px' }}>
+                <TotalsRow cells={[
+                  {
+                    label: 'Total budgeted',
+                    value: formatCurrency(totalBudgeted),
+                    note: `Across ${budgets.length} ${budgets.length === 1 ? 'category' : 'categories'}`,
+                  },
+                  {
+                    label: 'Total spent',
+                    value: formatCurrency(totalSpent),
+                    note: (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                        <div style={{ flex: 1, height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(spentPct, 100)}%`, height: '100%', background: spentColor, borderRadius: '3px' }} />
+                        </div>
+                        <span style={{ color: spentColor, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {spentPct.toFixed(0)}%
+                        </span>
                       </div>
-                      <span style={{ color: spentColor, fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                        {spentPct.toFixed(0)}%
-                      </span>
-                    </div>
-                  }
-                />
-                <StatCard
-                  label="Remaining"
-                  scope="household"
-                  value={formatCurrency(Math.abs(totalRemaining))}
-                  accentColor={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  icon={<TrendingUp size={24} color={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'} />}
-                  valueColor={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  subtitle={<span style={mutedSmallStyle}>{daysLeftInMonth()} days left this month</span>}
-                />
-                <StatCard
-                  label="Left to budget"
-                  scope="household"
-                  /* *** null IS NOT ZERO, AND THIS IS THE WHOLE POINT. *** No
-                     income recorded this month means finPal does not know what
-                     they earn; rendering that as 0 turns into "-$1,400 left to
-                     budget" for somebody who has not been paid yet on the 10th.
-                     Measured on the live demo, where total income is 9,950 and
-                     this month's is nothing. */
-                  value={leftToBudget === null ? '—' : formatCurrency(leftToBudget)}
-                  accentColor={leftToBudget === null
-                    ? 'var(--text-muted)'
-                    : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  valueColor={leftToBudget === null
-                    ? 'var(--text-muted)'
-                    : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  icon={<DollarSign size={24} color={leftToBudget === null ? 'var(--text-muted)' : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'} />}
-                  subtitle={
-                    <span style={mutedSmallStyle}>
-                      {income === null
-                        ? 'No income recorded this month yet'
-                        : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`}
-                    </span>
-                  }
-                />
+                    ),
+                  },
+                  {
+                    label: 'Remaining',
+                    value: formatCurrency(Math.abs(totalRemaining)),
+                    valueColor: totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)',
+                    note: `${daysLeftInMonth()} days left this month`,
+                  },
+                  {
+                    label: 'Left to budget',
+                    /* *** null IS NOT ZERO, AND THIS IS THE WHOLE POINT. *** No
+                       income recorded this month means finPal does not know
+                       what they earn; rendering that as 0 turns into
+                       "−$1,400 left to budget" for somebody who has not been
+                       paid yet on the 10th. */
+                    value: leftToBudget === null ? '—' : formatCurrency(leftToBudget),
+                    valueColor: leftToBudget === null
+                      ? 'var(--text-muted)'
+                      : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)',
+                    note: income === null
+                      ? 'No income recorded this month yet'
+                      : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`,
+                  },
+                ]} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                 {/* *** FIVE CARDS IN AN auto-fit GRID IS FOUR AND A LONELY
                     ONE. *** At 1440px this grid computes four 273px columns, so
                     the fifth card sat by itself on a second row with ~880px of
@@ -1189,6 +1217,7 @@ const BudgetsMinimal = () => {
                   </div>
                 </div>
               </div>
+              </>
             );
           })()}
 

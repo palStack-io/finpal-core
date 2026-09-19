@@ -38,6 +38,7 @@ export interface TotalsRowProps {
 
 export const TotalsRow: React.FC<TotalsRowProps> = ({ cells }) => (
   <div
+    data-testid="page-totals"
     style={{
       display: 'grid',
       // `auto-fit` with a 150px floor: four across on a desktop, two on a

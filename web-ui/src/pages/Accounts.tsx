@@ -16,6 +16,7 @@ import { OwnerBadge } from '../components/OwnerBadge';
 import { CoOwnerControl } from '../components/accounts/CoOwnerControl';
 import { PageHead } from '../components/PageHead';
 import { teamService } from '../services/teamService';
+import { householdScopeNote } from '../utils/scope';
 import { TeamMember } from '../types/team';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
@@ -290,7 +291,23 @@ export const Accounts = () => {
         <PageHead
           band="accounts"
           title="Accounts"
-          subtitle="What you have, what you owe, and what it costs to owe it. Every figure here is the whole household's."
+          /* *** THE SCOPE SENTENCE IS NOW THE SHARED ONE, AND THAT IS NOT
+             COSMETIC. *** It was hardcoded prose, so the honesty gate had
+             nothing to key on and was passing this page on the words
+             `scope="household"` surviving in a COMMENT about the tags that
+             were deleted — green on a page it was inspecting nothing on.
+             `householdScopeNote` is called or it is not.
+
+             It also stops claiming the household's money to somebody who is
+             on their own: with one member the two sets are the same, and the
+             sentence stated a distinction that did not exist. */
+          subtitle={(() => {
+            const base = 'What you have, what you owe, and what it costs to owe it.';
+            const note = householdScopeNote(members.length);
+            return note ? (
+              <><span>{base}</span>{' '}<span>{note}.</span></>
+            ) : base;
+          })()}
           right={<>
               <button
                 onClick={() => setShowCSVImport(true)}

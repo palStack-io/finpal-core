@@ -159,19 +159,40 @@ describe('B — a page that shows money says whose money it is', () => {
        * still matched. A guard keyed to a name that exists is not keyed to
        * behaviour that happens.
        */
+      /*
+       * *** COMMENTS STRIPPED FIRST, BECAUSE THIS GATE WAS GREEN ON A COMMENT.
+       * *** Measured 2026-09-19: `Accounts.tsx` satisfied it with the single
+       * string `scope="household"` appearing in a note EXPLAINING THE TAG IT
+       * HAD DELETED. The behaviour was gone; the spelling outlived it. That is
+       * this project's recurring guard failure — a check keyed to a word,
+       * passing on prose — and it means the gate had been inspecting nothing
+       * on that page since the tags were removed.
+       */
+      const code = text
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+
       const labelsEachFigure =
-        /ScopeTag/.test(text) ||
-        /scope=/.test(text) ||
-        /MIXED_SCOPE_CAPTION/.test(text);
+        /ScopeTag/.test(code) ||
+        /scope=/.test(code) ||
+        /MIXED_SCOPE_CAPTION/.test(code);
       const filtersTheWholePage =
-        /<MemberFilter/.test(text) && /\{selectedMember\b/.test(text);
+        /<MemberFilter/.test(code) && /\{selectedMember\b/.test(code);
+      /*
+       * The third honest answer: the page states it ONCE, in its head, for
+       * pages whose every figure is one set of people. Keyed to the imported
+       * helper being CALLED — a thing that happens — rather than to a phrase
+       * somebody could paste into a comment.
+       */
+      const statesItOnceForThePage = /householdScopeNote\s*\(/.test(code);
 
       expect(
-        labelsEachFigure || filtersTheWholePage,
+        labelsEachFigure || filtersTheWholePage || statesItOnceForThePage,
         `${rel(file)} renders a currency figure but neither labels its scope nor ` +
           `offers a member filter whose current selection it states. This ` +
           `instance is one household: say whether the figure is the caller's or ` +
-          `everyone's, per src/utils/scope.ts — with a tag, or with a filter.`
+          `everyone's, per src/utils/scope.ts — with a tag, with a filter, or ` +
+          `with householdScopeNote() in the page head.`
       ).toBe(true);
     }
   );

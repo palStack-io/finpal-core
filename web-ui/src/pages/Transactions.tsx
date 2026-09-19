@@ -6,7 +6,7 @@ import { formatMoney, Money, moneyStyle, tabular } from '../styles/money';
 import { getBranding } from '../config/branding';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
-import { StatCard } from '../components/StatCard';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { SectionCard } from '../components/SectionCard';
 import { MemberFilter } from '../components/MemberFilter';
 import { PageHead } from '../components/PageHead';
@@ -14,7 +14,7 @@ import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
 import { accountService, Account } from '../services/accountService';
 import { TeamMember } from '../types/team';
-import type { Scope } from '../utils/scope';
+import { householdScopeNote } from '../utils/scope';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
@@ -203,20 +203,23 @@ export const Transactions: React.FC = () => {
    * are the same set, and tagging a figure with a distinction that does not exist
    * is the noise D-01's tags were criticised for in the first place.
    */
-  const soloHousehold = members.length <= 1;
-  const scopeTag: Scope | undefined = (() => {
-    if (soloHousehold) return undefined;
-    if (!memberId) return 'household';
-    // `yours` means the signed-in user's own rows. Filtering to a HOUSEMATE is
-    // neither `yours` nor `household`, and there is no third tag — so it gets no
-    // tag and leans on the subtitle, which names them. Tagging Bob's money
-    // "YOURS" on Alice's screen would be exactly the class of untrue label the
-    // scope vocabulary exists to prevent.
-    return memberId === user?.id ? 'yours' : undefined;
-  })();
-  const scopeSubtitle = selectedMember
-    ? `${selectedMember.name || selectedMember.email} only`
-    : undefined;
+  /**
+   * Whose money these figures are, as ONE phrase for the page head.
+   *
+   * *** IT WAS A TAG ON EVERY FIGURE AND IS NOW A CLAUSE ON THE HEAD. *** Three
+   * identical HOUSEHOLD chips over three totals is one fact printed three
+   * times — the duplication D-101 is about, in chrome rather than arithmetic —
+   * and Accounts already states it once in its subtitle. The vocabulary is
+   * unchanged, including its refusals: a solo household is not told its money
+   * is "the household's" when the two sets are the same, and filtering to a
+   * HOUSEMATE says their NAME rather than "yours", because tagging Bob's money
+   * "yours" on Alice's screen is the untrue label this vocabulary exists to
+   * prevent.
+   */
+  const scopePhrase = householdScopeNote(
+    members.length,
+    selectedMember ? (selectedMember.name || selectedMember.email) : null,
+  );
 
   const sectionTitle = (() => {
     if (!pagination || pagination.total === 0) return 'All Transactions';
@@ -246,7 +249,19 @@ export const Transactions: React.FC = () => {
           <PageHead
             band="transactions"
             title="Transactions"
-            subtitle={pageSubtitle}
+            /* *** TWO SPANS, NOT ONE STRING. *** `getByText` matches a
+               single node's WHOLE text, so concatenating these made the
+               account name unfindable by the two assertions that exist to
+               check it renders — the same reason Dashboard splits its scope
+               clause out. A fragment of two bare text nodes has the identical
+               problem; they have to be elements. */
+            subtitle={scopePhrase ? (
+              <>
+                <span>{pageSubtitle}</span>
+                {' · '}
+                <span>{scopePhrase}</span>
+              </>
+            ) : pageSubtitle}
             right={<button
               onClick={() => setIsAddPanelOpen(true)}
               style={{
@@ -283,56 +298,44 @@ export const Transactions: React.FC = () => {
           {!loading && !error && (
             <>
               {/* Summary Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                {/* All three come from the transactions endpoint's `summary`,
-                    which the server computes over the whole filtered query — so
-                    they describe exactly the rows the filter selected, not the
-                    page and not all time.
+              {/* *** ONE HAIRLINE-SEPARATED ROW, NOT THREE CARDS WITH ICON
+                  CHIPS. *** `TotalsRow`'s own docstring says why — "four
+                  separate cards under a card is why the page read as out of
+                  place", and "the icon chips are gone, and that is the point
+                  of the change" — and then this page kept the cards anyway,
+                  along with Budgets. The owner spotted it before the gate
+                  did: D-106's shape, a helper adopted in five places and
+                  bypassed in two.
 
-                    The tag follows the filter rather than being fixed. It read
-                    `yours` until 2026-08-06, when the list became household-wide;
-                    leaving it would have printed "YOURS" over the household's
-                    money, which is worse than no tag at all. This is D-01's tag
-                    being retired by the filter rather than deleted: with a control
-                    on screen the scope is a choice the user made, and the tag just
-                    reflects it back. `subtitle` names the member, because
-                    "HOUSEHOLD" and "YOURS" cannot say *which* member. */}
-                <StatCard
-                  label="Total Income"
-                  value={formatMoney(totalIncome, { currency, signed: true })}
-                  scope={scopeTag}
-                  subtitle={scopeSubtitle}
-                  accentColor="#22c55e"
-                  icon={<ArrowUpRight size={24} color="#22c55e" />}
-                  /* The FIGURE takes the legible green; the accent and the icon
-                     keep the brighter brand one, because those are decorative and
-                     graphical rather than text. #22c55e on this card measured
-                     2.27:1 — below even the 3.0 non-text floor, at 28px. */
-                  valueColor="var(--amount-income)"
-                />
-                <StatCard
-                  label="Total Expenses"
-                  value={formatMoney(-Math.abs(totalExpense), { currency })}
-                  scope={scopeTag}
-                  subtitle={scopeSubtitle}
-                  accentColor="#ef4444"
-                  icon={<ArrowDownRight size={24} color="#ef4444" />}
-                  valueColor="#ef4444"
-                />
-                <StatCard
-                  label="Net Balance"
-                  value={formatMoney(netBalance, { currency, signed: true })}
-                  scope={scopeTag}
-                  subtitle={scopeSubtitle}
-                  accentColor="#fbbf24"
-                  icon={<Calendar size={24} color="#fbbf24" />}
-                  /* Net balance KEEPS its red, and that is the point of O1 rather
-                     than an exception to it: a negative net is a figure whose sign
-                     means something, which is exactly where Monarch keeps red too
-                     (its "Remaining" column, its "left to budget"). Only the green
-                     half changes, and only for legibility. */
-                  valueColor={netBalance >= 0 ? 'var(--amount-income)' : 'var(--accent-red)'}
-                />
+                  *** THE SCOPE IS STATED ONCE, NOT ONCE PER FIGURE. *** Three
+                  identical HOUSEHOLD tags over three figures is one fact
+                  printed three times, which is the duplication D-101 is about
+                  in chrome rather than arithmetic. It moves to the head's
+                  subtitle, where Accounts already puts it. */}
+              <div style={{ marginBottom: '32px' }}>
+                <TotalsRow cells={[
+                  {
+                    label: 'Total income',
+                    value: formatMoney(totalIncome, { currency, signed: true }),
+                    /* The FIGURE takes the legible green, never the brand one:
+                       #22c55e measured 2.27:1 here, below even the 3.0
+                       non-text floor. */
+                    valueColor: 'var(--amount-income)',
+                  },
+                  {
+                    label: 'Total expenses',
+                    value: formatMoney(-Math.abs(totalExpense), { currency }),
+                    valueColor: '#ef4444',
+                  },
+                  {
+                    label: 'Net balance',
+                    value: formatMoney(netBalance, { currency, signed: true }),
+                    /* Net balance KEEPS its red, and that is O1 rather than an
+                       exception to it: a negative net is a figure whose sign
+                       means something. */
+                    valueColor: netBalance >= 0 ? 'var(--amount-income)' : 'var(--accent-red)',
+                  },
+                ]} />
               </div>
 
               {/* Search & Filter */}
