@@ -340,7 +340,37 @@ export const Investments: React.FC = () => {
                 </button>
               </>
             )}
-          />
+          >
+          {/* *** INSIDE THE HEAD, SO THE RIDGE IS DRAWN BENEATH THE FIGURES.
+              *** `PageHead` renders its children and THEN the band, which is
+              why Accounts reads as one object and this read as a head with a
+              panel stuck under it. Owner, 2026-09-19: *"the accounts is good
+              because the metrics are inside the header design with mountains
+              under it? where as the rest are under the header"*. */}
+            <TotalsRow cells={[
+              {
+                label: 'Worth now',
+                value: formatCurrency(totals.worthNow),
+                note: portfolioNote,
+              },
+              {
+                label: 'You put in',
+                value: formatCurrency(totals.youPutIn),
+                note: `across ${holdingCountLabel}`,
+              },
+              {
+                label: 'Ahead by',
+                value: `${totals.gain >= 0 ? '+' : ''}${formatCurrency(totals.gain)}`,
+                valueColor: totals.gain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)',
+                /* `gainPercent` is null when nothing was put in — a portfolio you
+                   paid nothing for has no percentage return, and 0% would read as
+                   "flat". The helper returns null and this renders the reason. */
+                note: totals.gainPercent === null
+                  ? 'no cost to measure against'
+                  : `${formatPercent(totals.gainPercent)} on what you paid`,
+              },
+            ]} />
+          </PageHead>
 
           {/* *** THE GAIN LEADS, AND THE "Holdings: 2" CARD IS GONE. ***
               Four cards stood here: Total Value, Total Gain/Loss, Total Cost and
@@ -352,29 +382,6 @@ export const Investments: React.FC = () => {
 
               The figures are the SERVER's, summed by `holdingTotals` — see that
               file for why recomputing them here was D-101 rather than a bug. */}
-          <TotalsRow cells={[
-            {
-              label: 'Worth now',
-              value: formatCurrency(totals.worthNow),
-              note: portfolioNote,
-            },
-            {
-              label: 'You put in',
-              value: formatCurrency(totals.youPutIn),
-              note: `across ${holdingCountLabel}`,
-            },
-            {
-              label: 'Ahead by',
-              value: `${totals.gain >= 0 ? '+' : ''}${formatCurrency(totals.gain)}`,
-              valueColor: totals.gain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)',
-              /* `gainPercent` is null when nothing was put in — a portfolio you
-                 paid nothing for has no percentage return, and 0% would read as
-                 "flat". The helper returns null and this renders the reason. */
-              note: totals.gainPercent === null
-                ? 'no cost to measure against'
-                : `${formatPercent(totals.gainPercent)} on what you paid`,
-            },
-          ]} />
 
           {/* Where the value sits — only worth drawing when there is more than
               one holding to split between. One holding is 100% of itself. */}

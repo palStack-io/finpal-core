@@ -637,7 +637,62 @@ export const CategoryManagement: React.FC = () => {
           <Plus size={20} />
           Add Category
         </button>}
-      />
+      >
+        {/* *** INSIDE THE HEAD, SO THE RIDGE IS DRAWN BENEATH THE FIGURES.
+            *** `PageHead` renders its children and THEN the band, which is
+            why Accounts reads as one object and this read as a head with a
+            panel stuck under it. Owner, 2026-09-19: *"the accounts is good
+            because the metrics are inside the header design with mountains
+            under it? where as the rest are under the header"*. The bordered
+            card goes with it: the band is the surface, and a box inside a box
+            is the stacked-panels problem `TotalsRow` exists to remove. */}
+        {split && (
+            <TotalsRow
+              cells={[
+                {
+                  label: 'Fixed',
+                  value: formatMoney(split.fixed),
+                  note: split.fixed === 0
+                    ? `nothing landed in ${split.label.split(' ')[0]}`
+                    : 'arrives whatever you do',
+                },
+                {
+                  label: 'Flexible',
+                  value: formatMoney(split.flexible),
+                  valueColor: 'var(--g-ink)',
+                  note: split.flexible === 0
+                    ? `nothing landed in ${split.label.split(' ')[0]}`
+                    : 'yours to move',
+                },
+                {
+                  label: 'Non-monthly',
+                  // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
+                  // FILLS. `--kt-seg-4` is #B8884D, which measures 3.06:1 on the
+                  // card in light — the contrast walk failed this exact pair, and
+                  // `coins/_kit.css` carries the same warning with the same
+                  // number: it "survives as --seg-4, which is a FILL and never
+                  // carries a label".
+                  value: formatMoney(split.non_monthly),
+                  valueColor: 'var(--au-ink)',
+                  note: split.non_monthly === 0
+                    ? `nothing landed in ${split.label.split(' ')[0]}`
+                    : 'lands some months and not others',
+                },
+                // Only when there is some: a zero here would invite sorting work
+                // that is already done, and "Not sorted yet — $0.00" reads as a
+                // problem rather than as finished.
+                ...(split.unsorted > 0 ? [{
+                  label: 'Not sorted yet',
+                  value: formatMoney(split.unsorted),
+                  valueColor: 'var(--text-secondary)',
+                  // NOT folded into flexible. Unsorted means finPal does not
+                  // know; calling it movable would claim the user said so.
+                  note: 'finPal cannot say which of the three this is',
+                }] : []),
+              ]}
+            />
+        )}
+      </PageHead>
 
       {/* *** THE PAYOFF FOR SORTING THEM, WHICH THIS PAGE NEVER SHOWED. ***
           Three figures, from the last full month, in the same three groups the
@@ -666,60 +721,6 @@ export const CategoryManagement: React.FC = () => {
           `splitSpendByGroup` refuses an ambiguous name rather than guessing,
           and anything it could not attribute is named below rather than
           quietly missing from a total. */}
-      {split && (
-        <div style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-light)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          marginBottom: '24px',
-        }}>
-          <TotalsRow
-            cells={[
-              {
-                label: 'Fixed',
-                value: formatMoney(split.fixed),
-                note: split.fixed === 0
-                  ? `nothing landed in ${split.label.split(' ')[0]}`
-                  : 'arrives whatever you do',
-              },
-              {
-                label: 'Flexible',
-                value: formatMoney(split.flexible),
-                valueColor: 'var(--g-ink)',
-                note: split.flexible === 0
-                  ? `nothing landed in ${split.label.split(' ')[0]}`
-                  : 'yours to move',
-              },
-              {
-                label: 'Non-monthly',
-                // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
-                // FILLS. `--kt-seg-4` is #B8884D, which measures 3.06:1 on the
-                // card in light — the contrast walk failed this exact pair, and
-                // `coins/_kit.css` carries the same warning with the same
-                // number: it "survives as --seg-4, which is a FILL and never
-                // carries a label".
-                value: formatMoney(split.non_monthly),
-                valueColor: 'var(--au-ink)',
-                note: split.non_monthly === 0
-                  ? `nothing landed in ${split.label.split(' ')[0]}`
-                  : 'lands some months and not others',
-              },
-              // Only when there is some: a zero here would invite sorting work
-              // that is already done, and "Not sorted yet — $0.00" reads as a
-              // problem rather than as finished.
-              ...(split.unsorted > 0 ? [{
-                label: 'Not sorted yet',
-                value: formatMoney(split.unsorted),
-                valueColor: 'var(--text-secondary)',
-                // NOT folded into flexible. Unsorted means finPal does not
-                // know; calling it movable would claim the user said so.
-                note: 'finPal cannot say which of the three this is',
-              }] : []),
-            ]}
-          />
-        </div>
-      )}
       {split && split.unattributable.length > 0 && (
         <p className="fp-hint" style={{ marginTop: '-12px', marginBottom: '24px' }}>
           Left out of the figures above, because more than one category shares
