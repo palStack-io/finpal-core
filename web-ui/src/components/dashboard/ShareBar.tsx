@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { formatMoney } from '../../styles/money';
 import type { SpendingGroup } from '../../services/api/spendingSummary';
 
@@ -72,8 +73,18 @@ const SEGMENT_VARS = [
   'var(--kt-seg-5)',
 ];
 
+/**
+ * A segment, plus — on the folded one — what was folded into it.
+ *
+ * *** THE TAIL IS CARRIED, NOT DISCARDED, SO THE LEGEND CAN OPEN. *** It used
+ * to be summed and thrown away, which is why `5 more $133.67` was a dead end:
+ * the categories behind it existed nowhere on the page, and "View all" goes to
+ * `/transactions`, not to a breakdown. FINPAL-25.
+ */
+export type Segment = SpendingGroup & { folded?: SpendingGroup[] };
+
 /** Top four by value, with the tail folded into a fifth "Everything else". */
-export function toSegments(groups: SpendingGroup[]): SpendingGroup[] {
+export function toSegments(groups: SpendingGroup[]): Segment[] {
   const sorted = [...groups].filter((g) => g.total > 0).sort((a, b) => b.total - a.total);
   if (sorted.length <= MAX_SEGMENTS) return sorted;
 
@@ -86,6 +97,7 @@ export function toSegments(groups: SpendingGroup[]): SpendingGroup[] {
       label: `${tail.length} more`,
       total: tail.reduce((sum, g) => sum + g.total, 0),
       count: tail.reduce((sum, g) => sum + g.count, 0),
+      folded: tail,
     },
   ];
 }
@@ -106,6 +118,26 @@ export const ShareBar: React.FC<ShareBarProps> = ({
 
   const effectiveAxis: ShareBarAxis = personAxisVaries ? axis : 'category';
   const segments = toSegments(effectiveAxis === 'person' ? byPerson : byCategory);
+
+  /*
+   * *** THE LEGEND OPENS; THE BAR DOES NOT. ***
+   *
+   * `5 more` was a legend row styled exactly like the four real ones, so it
+   * read as a control and was not one — and nothing else in the app showed
+   * what it hid. Opening it lists those categories underneath.
+   *
+   * The BAR deliberately keeps its five segments. Splitting it to nine would
+   * need nine colours; there are five, and segments 4 and 5 already measure
+   * **1.00** against each other — identical luminance, per the note above.
+   * Adding four more hues to a palette that cannot separate the two it has is
+   * the repaint that note exists to refuse.
+   *
+   * Reset when the axis flips: "5 more" means different things by person and
+   * by category, and an open disclosure carrying the other reading's rows is
+   * a stale panel that looks current.
+   */
+  const [foldedOpen, setFoldedOpen] = useState(false);
+  useEffect(() => setFoldedOpen(false), [effectiveAxis]);
   const total = segments.reduce((sum, s) => sum + s.total, 0);
 
   // FIRST RUN: omit, never draw empty. A bar of nothing is a broken bar.
@@ -162,18 +194,79 @@ export const ShareBar: React.FC<ShareBarProps> = ({
           carries meaning by colour alone — which is also what makes the
           adjacent-luminance finding a polish issue rather than a blocker. */}
       <ul className="fp-sharebar-legend">
-        {segments.map((segment, i) => (
-          <li key={String(segment.key ?? segment.label)}>
+        {segments.map((segment, i) => {
+          const dot = (
             <span
               className="fp-sharebar-dot"
               style={{ background: SEGMENT_VARS[i % SEGMENT_VARS.length] }}
             />
-            <span className="fp-sharebar-label">{segment.label}</span>
+          );
+          const money = (
             <span className="fp-sharebar-value">
               {formatMoney(segment.total, { currency })}
             </span>
-          </li>
-        ))}
+          );
+
+          /* The four real segments. A row, and nothing that looks otherwise. */
+          if (!segment.folded?.length) {
+            return (
+              <li key={String(segment.key ?? segment.label)}>
+                {dot}
+                <span className="fp-sharebar-label">{segment.label}</span>
+                {money}
+              </li>
+            );
+          }
+
+          /* *** THE FOLDED ONE IS A BUTTON, BECAUSE IT WAS ALREADY BEING READ
+             AS ONE. *** A real <button> rather than a clickable <li> so it is
+             reachable by keyboard and announced as a control; `aria-expanded`
+             so the announcement says which way it is. */
+          return (
+            <li
+              key={String(segment.key ?? segment.label)}
+              className="fp-sharebar-folded"
+              data-open={foldedOpen ? 'true' : undefined}
+            >
+              <button
+                type="button"
+                className="fp-sharebar-more"
+                aria-expanded={foldedOpen}
+                onClick={() => setFoldedOpen((open) => !open)}
+              >
+                {dot}
+                <span className="fp-sharebar-label">{segment.label}</span>
+                {money}
+                <ChevronDown
+                  size={13}
+                  aria-hidden="true"
+                  style={{
+                    transform: foldedOpen ? 'rotate(180deg)' : undefined,
+                    transition: 'transform 0.15s',
+                    flex: 'none',
+                  }}
+                />
+              </button>
+
+              {foldedOpen && (
+                /* *** NO DOTS ON THESE ROWS, ON PURPOSE. *** A dot promises a
+                   band in the bar, and these have none — they are inside the
+                   grouped segment. Indent says "part of the row above" without
+                   claiming a colour the bar does not carry. */
+                <ul className="fp-sharebar-sublegend">
+                  {segment.folded.map((item) => (
+                    <li key={String(item.key ?? item.label)}>
+                      <span className="fp-sharebar-label">{item.label}</span>
+                      <span className="fp-sharebar-value">
+                        {formatMoney(item.total, { currency })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

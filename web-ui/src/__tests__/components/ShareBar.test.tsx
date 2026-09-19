@@ -156,3 +156,138 @@ describe('segments fold rather than multiply', () => {
     expect(toSegments(CATEGORIES)).toHaveLength(3);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+// FINPAL-25 — "5 more" was a dead end
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * *** THE ROW LOOKED LIKE A CONTROL AND WAS NOT ONE, AND NOTHING ELSE IN THE
+ * APP SHOWED WHAT IT HID. ***
+ *
+ * `toSegments` keeps the top four and folds the rest into a fifth entry
+ * labelled `N more`, styled identically to the four real ones. It was a dead
+ * end in the strict sense: the folded categories appeared nowhere else — the
+ * card's "View all" goes to `/transactions`, which is a transaction list, not
+ * a breakdown, and Analytics surfaces only its own top four.
+ *
+ * *** THE LEGEND OPENS; THE BAR DOES NOT. *** Splitting the bar to nine
+ * segments needs nine colours. There are five, and the component's own
+ * docstring records that segments 4 and 5 measure **1.00** against each other
+ * — identical luminance. Four more hues on a palette that cannot separate the
+ * two it has is the repaint that note exists to refuse.
+ */
+const NINE = [
+  group('Housing', 1800),
+  group('Groceries', 216.93),
+  group('Shopping', 157.12),
+  group('Transportation', 52),
+  group('Pets', 40),
+  group('Gifts', 35),
+  group('Health', 30),
+  group('Books', 18.67),
+  group('Coffee', 10),
+];
+
+const renderFolded = () =>
+  render(<ShareBar memberCount={1} byCategory={NINE} byPerson={[]} currency="GBP" />);
+
+describe('the folded categories can be opened', () => {
+  it('folds the tail rather than dropping it', () => {
+    // The unit the component works from. Before this the tail was summed and
+    // discarded, which is what made the row a dead end.
+    const segments = toSegments(NINE);
+    expect(segments).toHaveLength(5);
+    expect(segments[4].label).toBe('5 more');
+    expect(segments[4].folded?.map((g) => g.label)).toEqual([
+      'Pets', 'Gifts', 'Health', 'Books', 'Coffee',
+    ]);
+    // and the group's total is exactly what it folded — a header that
+    // disagrees with the rows under it is D-102's family.
+    const sum = segments[4].folded!.reduce((t, g) => t + g.total, 0);
+    expect(segments[4].total).toBeCloseTo(sum, 2);
+  });
+
+  it('is a real button, announced with its state', () => {
+    renderFolded();
+    const more = screen.getByRole('button', { name: /5 more/ });
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('hides the folded categories until it is opened', () => {
+    renderFolded();
+    expect(screen.queryByText('Coffee')).not.toBeInTheDocument();
+    expect(screen.queryByText('Books')).not.toBeInTheDocument();
+  });
+
+  it('lists every folded category, with its amount, when opened', async () => {
+    const user = userEvent.setup();
+    renderFolded();
+    await user.click(screen.getByRole('button', { name: /5 more/ }));
+
+    for (const label of ['Pets', 'Gifts', 'Health', 'Books', 'Coffee']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    // the amounts, not just the names — a list of labels with no figures is
+    // the same dead end with more rows
+    expect(screen.getByText('£18.67')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /5 more/ })).toHaveAttribute(
+      'aria-expanded', 'true',
+    );
+  });
+
+  it('closes again', async () => {
+    const user = userEvent.setup();
+    renderFolded();
+    const more = screen.getByRole('button', { name: /5 more/ });
+    await user.click(more);
+    await user.click(more);
+    expect(screen.queryByText('Coffee')).not.toBeInTheDocument();
+  });
+
+  it('leaves the BAR at five segments when opened', async () => {
+    // *** THE ASSERTION THIS WHOLE DESIGN TURNS ON. *** Nine legend rows over
+    // a nine-segment bar would need four colours that do not exist and would
+    // worsen a contrast weakness the component already documents.
+    const user = userEvent.setup();
+    const { container } = renderFolded();
+    const count = () => container.querySelectorAll('.fp-sharebar-segment').length;
+    expect(count()).toBe(5);
+    await user.click(screen.getByRole('button', { name: /5 more/ }));
+    expect(count()).toBe(5);
+  });
+
+  it('gives the sub-rows no dot, because they have no band in the bar', async () => {
+    // A dot promises a segment. These sit inside the grouped one.
+    const user = userEvent.setup();
+    const { container } = renderFolded();
+    await user.click(screen.getByRole('button', { name: /5 more/ }));
+    const sub = container.querySelector('.fp-sharebar-sublegend');
+    expect(sub).not.toBeNull();
+    expect(sub!.querySelectorAll('.fp-sharebar-dot')).toHaveLength(0);
+    expect(sub!.querySelectorAll('li')).toHaveLength(5);
+  });
+
+  it('offers nothing to open when nothing was folded', () => {
+    // Four categories fold into nothing, and a disclosure over an empty list
+    // is an affordance that lies — the failure this component's toggle rule
+    // already names.
+    render(<ShareBar memberCount={1} byCategory={CATEGORIES} byPerson={[]} currency="GBP" />);
+    expect(screen.queryByRole('button', { name: /more/ })).not.toBeInTheDocument();
+  });
+
+  it('closes when the axis flips, so it cannot show the other reading\'s rows', async () => {
+    // "5 more" means different categories and different people. An open panel
+    // surviving the switch is a stale list that looks current.
+    const user = userEvent.setup();
+    const PEOPLE_9 = NINE.map((g, i) => group(`Person ${i}`, g.total, `p${i}`));
+    const { container } = render(
+      <ShareBar memberCount={3} byCategory={NINE} byPerson={PEOPLE_9} currency="GBP" />,
+    );
+    await user.click(screen.getByRole('button', { name: /5 more/ }));
+    expect(container.querySelector('.fp-sharebar-sublegend')).not.toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'By category' }));
+    expect(container.querySelector('.fp-sharebar-sublegend')).toBeNull();
+  });
+});

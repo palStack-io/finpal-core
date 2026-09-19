@@ -97,13 +97,19 @@ function selectsWithBackgroundShorthand(): Array<{ file: string; line: number }>
       i = src.indexOf('<select', i + 7);
     }
   }
-  // The two shared objects a select spreads in.
-  for (const rel of ['styles/formStyles.ts', 'pages/Review.tsx']) {
-    const src = readFileSync(join(SRC, rel), 'utf8');
-    for (const m of src.matchAll(/\bbackground:\s*'/g)) {
-      const ctx = src.slice(Math.max(0, (m.index ?? 0) - 400), m.index);
-      if (/[Ss]elect/.test(ctx)) {
-        hits.push({ file: rel, line: src.slice(0, m.index).split('\n').length });
+  // The shared objects a select spreads in, found by the declaration's NAME
+  // for the same reason as above — proximity is not ownership.
+  for (const file of tsxFiles(SRC)) {
+    const src = readFileSync(file, 'utf8');
+    for (const decl of src.matchAll(
+      /(?:export )?const \w*[Ss]elect\w*Style\s*:[^=]*=\s*\{([\s\S]*?)\n\};/g,
+    )) {
+      const m = decl[1].match(/\bbackground:\s*/);
+      if (m) {
+        hits.push({
+          file: file.slice(SRC.length + 1),
+          line: src.slice(0, (decl.index ?? 0) + decl[0].indexOf(m[0])).split('\n').length,
+        });
       }
     }
   }
@@ -128,24 +134,26 @@ function selectsWithInlinePadding(): Site[] {
       }
       i = src.indexOf('<select', i + 7);
     }
-    // Style objects a select spreads in — `selectStyle`, and Review's local
-    // one — carry the same risk and are not inside the tag.
-    if (/export const \w*[Ss]elect\w*Style/.test(src) || file.endsWith('Review.tsx')) {
-      for (const m of src.matchAll(/\bpadding:\s*'(\d+px[^']*)'/g)) {
-        const after = src.slice(m.index ?? 0, (m.index ?? 0) + 200);
-        if (!/paddingRight/.test(after)) {
-          // Only flag it when the object is plausibly a select's — a form
-          // section's padding is not this test's business.
-          const ctx = src.slice(Math.max(0, (m.index ?? 0) - 400), m.index);
-          if (/[Ss]elect/.test(ctx)) {
-            sites.push({
-              file: file.slice(SRC.length + 1),
-              line: src.slice(0, m.index).split('\n').length,
-              padding: m[1],
-              hasPaddingRight: false,
-            });
-          }
-        }
+    // Style objects a select spreads in are not inside any tag, so they need
+    // their own pass.
+    //
+    // *** SCOPED BY THE DECLARATION'S NAME, NOT BY "a select is mentioned
+    // nearby". *** The first version looked 400 characters back for the word
+    // "select" and flagged `rowStyle` in Review.tsx, which is a table row and
+    // happens to sit nine lines below `selectStyle`. A guard that reports a
+    // file which is not wrong teaches people to ignore it.
+    for (const decl of src.matchAll(
+      /(?:export )?const (\w*[Ss]elect\w*Style)\s*:[^=]*=\s*\{([\s\S]*?)\n\};/g,
+    )) {
+      const body = decl[2];
+      const pad = body.match(/\bpadding:\s*'([^']+)'/);
+      if (pad && !/\bpaddingRight\b/.test(body)) {
+        sites.push({
+          file: file.slice(SRC.length + 1),
+          line: src.slice(0, (decl.index ?? 0) + decl[0].indexOf(pad[0])).split('\n').length,
+          padding: pad[1],
+          hasPaddingRight: false,
+        });
       }
     }
     i = -1;

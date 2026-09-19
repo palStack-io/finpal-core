@@ -1077,6 +1077,57 @@ body {
   color: var(--text-primary);
 }
 
+/* ── The dropdown chevron ──────────────────────────────────────────────────
+ *
+ * *** THE REPORTED FIX — "bump the arrow a few pixels" — DOES NOTHING, AND
+ * THAT IS WHY THIS RULE EXISTS. *** (FINPAL-28.)
+ *
+ * A native `<select>` draws its arrow in a gutter the browser owns.
+ * `padding-right` moves the TEXT and leaves the arrow where it was — rendered
+ * side by side, `padding-right: 16px` and `padding-right: 40px` put it on the
+ * same pixel. The only way to inset it is to suppress the native control and
+ * draw our own.
+ *
+ * *** ON THE BARE ELEMENT, NOT ON `.fp-input`. *** 32 of the app's 48 selects
+ * carry that class and 16 do not. Scoping this to the class would leave two
+ * dropdown appearances in one app — D-106's shape, a helper adopted in most
+ * places and bypassed in the rest.
+ *
+ * `:not([multiple]):not([size])` because a list box is not a dropdown: no
+ * arrow to replace, and a chevron in its corner would be decoration
+ * pretending to be a control.
+ *
+ * *** TWO DATA URIs, ONE PER THEME, BECAUSE A BACKGROUND IMAGE CANNOT READ
+ * `currentColor`. *** `mask-image` with `background-color` WOULD follow the
+ * token, but the mask applies to the whole background and would take the
+ * select's own `--input-bg` with it. The strokes are `--kt-soft` in each
+ * theme, spelled out because a URI cannot hold a variable — light #56685D,
+ * dark #9CB3A3 — and `everySelectClearsItsChevron.test.ts` refuses any value
+ * that is not the token.
+ */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2356685D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  /* The gutter the native arrow used to reserve. A select that sets its own
+     inline `padding` overrides this — which is why every such site lists
+     `paddingRight` explicitly, and why the guard checks. */
+  padding-right: 38px;
+}
+
+[data-theme='dark'] select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%239CB3A3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+}
+
+/* A compact select — a filter in a card header, a cell in a table — where a
+   38px gutter is most of the control. Same chevron, tighter. */
+select.fp-select-compact:not([multiple]):not([size]) {
+  background-position: right 8px center;
+  padding-right: 26px;
+}
+
 /* Scrollbar styling for dark/light */
 ::-webkit-scrollbar {
   width: 6px;
@@ -1403,6 +1454,71 @@ body {
   color: var(--text-primary);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── The "N more" disclosure (FINPAL-25) ───────────────────────────────────
+ * That row was styled exactly like the four real ones, so it read as a
+ * control and was not one — and nothing else in the app showed what it hid
+ * (the card's "View all" goes to /transactions, not to a breakdown). It is a
+ * real <button> now. The styling stays identical to a legend row on purpose:
+ * it should read as the same kind of thing, just one you can open. */
+/* *** `.fp-sharebar-legend li` HAS TO BE IN THE SELECTOR. *** That rule is
+   (0,1,1) and a bare `.fp-sharebar-folded` is (0,1,0), so its
+   `align-items: center` won and centred the disclosure and its rows on the
+   cross axis — which, once this item became a COLUMN, means horizontally.
+   The chips looked right and the open panel sat in the middle of the card. */
+.fp-sharebar-legend li.fp-sharebar-folded {
+  /* The open list sits under the button, so this item stacks. */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+/* *** OPEN, IT TAKES THE WHOLE ROW. ***
+   The legend is `flex-wrap`, so an item that grows tall while the others stay
+   short sits BESIDE them — the open list rendered alongside "Transportation"
+   with the remaining chips shuffled around it. Claiming the full basis puts
+   the disclosure and its rows on their own line and leaves the four real
+   chips wrapping exactly as they did. Closed, it is a chip like any other. */
+.fp-sharebar-legend li.fp-sharebar-folded[data-open='true'] {
+  flex-basis: 100%;
+}
+.fp-sharebar-more {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.fp-sharebar-more:hover .fp-sharebar-label,
+.fp-sharebar-more:focus-visible .fp-sharebar-label {
+  color: var(--text-primary);
+}
+.fp-sharebar-more:focus-visible {
+  outline: 2px solid var(--brand-main-green);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.fp-sharebar-sublegend {
+  list-style: none;
+  /* Indented to the width of a dot plus its gap, so the rows line up under
+     the LABEL of the row they belong to rather than under its dot. */
+  margin: 6px 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fp-sharebar-sublegend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
 }
 
 /* Full-width error banner above a form or list. */

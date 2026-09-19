@@ -68,8 +68,8 @@ export const SpendingTypeControl: React.FC<Props> = ({
         disabled={saving}
         onChange={handleChange}
         onClick={(e) => e.stopPropagation()}
-        className="fp-input"
-        style={{ padding: '4px 8px', fontSize: '12px', width: 'auto' }}
+        className="fp-input fp-select-compact"
+        style={{ padding: '4px 8px', paddingRight: '26px', fontSize: '12px', width: 'auto' }}
       >
         {OPTIONS.map((option) => (
           <option key={option.label} value={option.value ?? ''}>

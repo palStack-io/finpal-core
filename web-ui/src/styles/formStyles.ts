@@ -44,7 +44,14 @@ export const formSectionStyle: React.CSSProperties = {
 export const selectStyle: React.CSSProperties = {
   width: '100%',
   padding: '12px 16px',
-  background: 'var(--input-bg)',
+  // *** NOT REDUNDANT WITH THE SHORTHAND ABOVE. *** The chevron's gutter is
+  // reserved by `select:not([multiple])` in finpal-theme.css, and an INLINE
+  // style beats a stylesheet rule at any specificity. FINPAL-28.
+  paddingRight: '38px',
+  // `backgroundColor`, not `background`: the shorthand resets
+  // background-image, which is where the chevron lives — a select styled
+  // that way has NO arrow once the native one is suppressed.
+  backgroundColor: 'var(--input-bg)',
   border: '1px solid var(--input-border)',
   borderRadius: '8px',
   color: 'var(--text-primary)',

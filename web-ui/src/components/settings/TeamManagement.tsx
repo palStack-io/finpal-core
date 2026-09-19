@@ -642,6 +642,8 @@ export const TeamManagement: React.FC = () => {
                       onChange={(e) => handleUpdateRole(member.id, e.target.value as TeamRole)}
                       className="fp-input" style={{ width: 'auto',
                         padding: '8px 12px',
+                        // Room for the chevron — see FINPAL-28.
+                        paddingRight: '38px',
                         borderRadius: '8px',
                       }}
                     >
