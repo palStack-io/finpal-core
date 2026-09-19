@@ -12,7 +12,7 @@ from sqlalchemy import func
 from src.extensions import db
 from src.models.account import Account
 from src.models.category import Category
-from src.models.transaction import Expense
+from src.models.transaction import CategorySplit, Expense
 from src.models.user import User
 
 GROUP_CATEGORY = 'category'
@@ -38,7 +38,35 @@ def parse_date(value, field):
             '%s must be an ISO date such as 2026-03-01' % field)
 
 
-def spending_summary(user_id, start_date, end_date, group_by=GROUP_CATEGORY):
+
+def _shape(rows, group_by, start_date, end_date):
+    """One shape for every grouping, so the drill-down cannot drift from them.
+
+    *** THE TOTAL IS SUMMED FROM THE GROUPS, NOT QUERIED SEPARATELY. *** A
+    second query for the total is a second chance to disagree with the rows
+    beside it, which is the whole class of defect this module's docstring is
+    about.
+    """
+    groups = [{
+        'key': row.key,
+        'label': row.label or UNCATEGORISED,
+        'total': round(float(row.total or 0), 2),
+        'count': int(row.count or 0),
+    } for row in rows]
+    groups.sort(key=lambda g: g['total'], reverse=True)
+
+    return {
+        'groups': groups,
+        'total': round(sum(g['total'] for g in groups), 2),
+        'count': sum(g['count'] for g in groups),
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'end_date': end_date.strftime('%Y-%m-%d'),
+        'group_by': group_by,
+    }
+
+
+def spending_summary(user_id, start_date, end_date, group_by=GROUP_CATEGORY,
+                     category_ids=None):
     """Totals per group over a date range, for the spending `user_id` may read.
 
     Income and transfers are excluded: "spending" means money out. `merchant`
@@ -93,13 +121,77 @@ def spending_summary(user_id, start_date, end_date, group_by=GROUP_CATEGORY):
                     Expense.date <= end_of_day,
                     Expense.transaction_type == 'expense'))
 
+    # ── attribution, and why it is not just `Expense.category_id` ────────────
+    #
+    # *** A SPLIT ROW BELONGS TO SEVERAL CATEGORIES AND THIS FILE USED TO
+    # PRETEND IT BELONGED TO ONE — D-272. *** `_get_category_spending`, which
+    # draws the dashboard pie and the flow diagram, apportions an expense
+    # across `category_splits`. This function grouped raw `Expense.amount` by
+    # `Expense.category_id` and never looked at the split table, so the two
+    # disagreed about what a category cost for any user who had ever split a
+    # row — D-101's shape, and the rule this project already applies to goal
+    # progress.
+    #
+    # It is invisible on the demo (0 of 108 expenses carry a split), which is
+    # exactly why it needed a test rather than a screenshot.
+    #
+    # *** THE UNION IS `has splits` XOR `has none`, WHICH IS WHAT STOPS IT
+    # DOUBLE COUNTING. *** A split row contributes its SPLITS and not its own
+    # `category_id`; an unsplit row contributes itself. Anything that counted
+    # both would report more money than left the account.
+    def attributions():
+        split_rows = (base.join(CategorySplit, CategorySplit.expense_id == Expense.id)
+                      .with_entities(
+                          CategorySplit.category_id.label('category_id'),
+                          CategorySplit.amount.label('amount'),
+                          Expense.description.label('description'),
+                          Expense.id.label('expense_id')))
+        plain_rows = (base.filter(~Expense.category_splits.any())
+                      .with_entities(
+                          Expense.category_id.label('category_id'),
+                          Expense.amount.label('amount'),
+                          Expense.description.label('description'),
+                          Expense.id.label('expense_id')))
+        return split_rows.union_all(plain_rows).subquery()
+
+    if category_ids is not None:
+        # *** THE FILTER ATTRIBUTES TOO, OR A SPLIT ROW ENTERS WHOLE. ***
+        # Drilling into Food on a row split half Food, half Travel must show
+        # the Food half — counting the whole row would make the panel add up
+        # to more than the slice it was opened from.
+        #
+        # *** AND IT TAKES THE CALLER'S EXACT SET, WITH NO PARENT ROLLUP. ***
+        # The flow diagram's slices are LEAF categories keyed by NAME, so a
+        # slice can merge two housemates' "Groceries" and never contains a
+        # parent's children. A single id would miss the housemate's rows; a
+        # rollup would add children the slice never counted. Either way the
+        # panel stops summing to the slice it came from, which is the one
+        # thing a drill-down must never do. The node sends what it merged.
+        att = attributions()
+        cond = (att.c.category_id.is_(None) if category_ids == [0]
+                else att.c.category_id.in_(category_ids))
+        rows = (db.session.query(
+                    att.c.description.label('key'),
+                    att.c.description.label('label'),
+                    func.sum(att.c.amount).label('total'),
+                    func.count(att.c.expense_id).label('count'))
+                .filter(cond)
+                .group_by(att.c.description).all())
+        return _shape(rows, group_by, start_date, end_date)
+
     if group_by == GROUP_CATEGORY:
-        rows = (base.outerjoin(Category, Expense.category_id == Category.id)
-                .with_entities(
+        # *** OVER THE ATTRIBUTIONS, NOT OVER `Expense.category_id` — D-272. ***
+        # This is the branch the dashboard pie and the flow diagram have to
+        # agree with, and it is the one that was wrong: a row split across two
+        # categories was counted whole against the one named on the expense.
+        att = attributions()
+        rows = (db.session.query(
                     Category.id.label('key'),
                     func.coalesce(Category.name, UNCATEGORISED).label('label'),
-                    func.sum(Expense.amount).label('total'),
-                    func.count(Expense.id).label('count'))
+                    func.sum(att.c.amount).label('total'),
+                    func.count(att.c.expense_id).label('count'))
+                .select_from(att)
+                .outerjoin(Category, att.c.category_id == Category.id)
                 .group_by(Category.id, Category.name).all())
     elif group_by == GROUP_MERCHANT:
         rows = (base.with_entities(
@@ -148,19 +240,4 @@ def spending_summary(user_id, start_date, end_date, group_by=GROUP_CATEGORY):
                     func.count(Expense.id).label('count'))
                 .group_by(month).all())
 
-    groups = [{
-        'key': row.key,
-        'label': row.label or UNCATEGORISED,
-        'total': round(float(row.total or 0), 2),
-        'count': int(row.count or 0),
-    } for row in rows]
-    groups.sort(key=lambda g: g['total'], reverse=True)
-
-    return {
-        'groups': groups,
-        'total': round(sum(g['total'] for g in groups), 2),
-        'count': sum(g['count'] for g in groups),
-        'start_date': start_date.strftime('%Y-%m-%d'),
-        'end_date': end_date.strftime('%Y-%m-%d'),
-        'group_by': group_by,
-    }
+    return _shape(rows, group_by, start_date, end_date)

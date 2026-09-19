@@ -36,6 +36,16 @@
 export interface FlowCategory {
   name?: string | null;
   amount?: number | null;
+  /**
+   * The category ids this row merged, from `/analytics/categories/top`.
+   *
+   * *** A ROW IS KEYED BY NAME SERVER-SIDE, SO IT CAN BE SEVERAL. *** Two
+   * housemates each with a "Groceries" category are one row of one
+   * household's spending. Optional because a backend predating the field
+   * sends none — and a node with no ids simply cannot be opened, which is the
+   * right degradation.
+   */
+  ids?: number[] | null;
 }
 
 export interface FlowNode {
@@ -44,6 +54,19 @@ export interface FlowNode {
   label: string;
   value: number;
   side: 'in' | 'out';
+  /**
+   * The categories behind this node, for the drill-down.
+   *
+   * *** THE NODE SAYS WHAT IT AGGREGATED, RATHER THAN THE PANEL GUESSING. ***
+   * A bundle ("6 others") merges many; a single slice can still merge two
+   * same-named categories across a household. Asking with anything other than
+   * this exact set — one id, or a parent rolled up over its children — makes
+   * the panel sum to something other than the slice that was clicked.
+   *
+   * `[]` means Uncategorised, which IS openable (the server takes `0`).
+   * `undefined` means the server never said, so the node is not interactive.
+   */
+  categoryIds?: number[];
   /**
    * True for a node that stands for several categories, or for the shortfall —
    * anything whose label a reader should not take as a single category name.
@@ -86,6 +109,11 @@ function bundle(
       // bucket with a null colour. It is not an error and must not be dropped.
       label: (row.name || '').trim() || 'Uncategorised',
       value: Number(row.amount) || 0,
+      /* *** `[]` AND `undefined` ARE DIFFERENT ANSWERS HERE. *** An empty
+         list is the Uncategorised bucket, which the server opens with `0`;
+         no list at all is a backend predating the field, and that node
+         must simply not be interactive rather than open the wrong rows. */
+      ids: Array.isArray(row.ids) ? row.ids : undefined,
     }))
     // A zero or negative category contributes no width and a negative one would
     // break conservation. Refused rather than clamped.
@@ -95,6 +123,7 @@ function bundle(
   if (named.length <= MAX_NODES_PER_SIDE) {
     return named.map((row, i) => ({
       id: `${keyPrefix}-${i}`, label: row.label, value: row.value, side,
+      categoryIds: row.ids,
     }));
   }
 
@@ -105,6 +134,7 @@ function bundle(
   return [
     ...head.map((row, i) => ({
       id: `${keyPrefix}-${i}`, label: row.label, value: row.value, side,
+      categoryIds: row.ids,
     })),
     {
       id: `${keyPrefix}-rest`,
@@ -113,6 +143,14 @@ function bundle(
       value: tailTotal,
       side,
       bundled: true,
+      /* *** A BUNDLE IS OPENABLE, AND IT IS THE MOST INTERESTING ONE. ***
+         "6 others" is exactly the slice a reader cannot account for, so it
+         carries every id it swallowed. Undefined if ANY row in the tail
+         lacks ids — a partial answer here would show some of the bundle and
+         claim to be all of it. */
+      categoryIds: tail.every((row) => row.ids !== undefined)
+        ? tail.flatMap((row) => row.ids as number[])
+        : undefined,
     },
   ];
 }

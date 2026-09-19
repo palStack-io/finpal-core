@@ -504,9 +504,32 @@ class SpendingSummary(Resource):
         try:
             start = parse_date(request.args.get('start_date'), 'start_date')
             end = parse_date(request.args.get('end_date'), 'end_date')
+            # *** PARSED HERE SO A BAD ONE IS A 400, NOT A 500. *** An
+            # `int()` inside the service would raise ValueError and land in
+            # the bare `except` below as "Could not compute the summary",
+            # which tells a caller nothing about what they got wrong.
+            # *** A LIST, BECAUSE ONE SLICE OF THE FLOW DIAGRAM CAN BE
+            # SEVERAL CATEGORIES. *** Its nodes are keyed by NAME, so two
+            # housemates' "Groceries" are one slice; the node sends the ids it
+            # merged and this answers for exactly those. `category_id=0` is
+            # the Uncategorised slice.
+            #
+            # Parsed here so a bad value is a 400: an `int()` inside the
+            # service raises ValueError into the bare `except` below and the
+            # caller is told "Could not compute the summary", which says
+            # nothing about what they got wrong.
+            raw = [v for v in request.args.getlist('category_id') if v != '']
+            category_ids = None
+            if raw:
+                try:
+                    category_ids = [int(v) for part in raw for v in part.split(',')]
+                except ValueError:
+                    raise InvalidSummaryRequest(
+                        'category_id must be an integer, or a comma-separated list')
             result = spending_summary(
                 user_id, start, end,
-                request.args.get('group_by') or GROUP_CATEGORY)
+                request.args.get('group_by') or GROUP_CATEGORY,
+                category_ids=category_ids)
         except InvalidSummaryRequest as exc:
             # Authored, client-safe messages only — never str() of an arbitrary
             # exception.

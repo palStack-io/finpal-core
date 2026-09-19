@@ -284,3 +284,165 @@ def test_it_aggregates_in_sql_not_in_python(client, db, auth_headers):
     assert len(expense_selects) <= 2, (
         'expected one aggregate query over expenses, saw %d — is it summing in '
         'Python?\n%s' % (len(expense_selects), expense_selects))
+
+
+def test_narrowing_to_one_category_is_what_the_flow_drilldown_asks(
+        client, db, auth_headers):
+    """Clicking a category in the flow diagram asks this endpoint who was paid.
+
+    *** THE TOTAL OF THE PANEL MUST EQUAL THE SLICE THAT WAS CLICKED. *** A
+    drill-down whose rows add up to less than the node it came from is the
+    caption-and-figure mismatch this project keeps finding, and it renders
+    perfectly.
+    """
+    user, food, _ = _seed(db)
+
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31',
+        'group_by': 'merchant', 'category_id': food.id},
+        headers=auth_headers(user))
+
+    assert resp.status_code == 200
+    groups = {g['label']: g['total'] for g in resp.get_json()['groups']}
+    assert groups == {'Tesco': 50.0}          # Train belongs to Travel
+    assert resp.get_json()['total'] == 50.0
+
+
+def test_one_slice_can_be_SEVERAL_categories(client, db, auth_headers):
+    """*** A FLOW SLICE IS KEYED BY NAME, SO IT CAN MERGE TWO CATEGORIES. ***
+
+    Two housemates each with a "Groceries" category are one slice of one
+    household's spending. Sending a single id would answer for one of them and
+    the panel would sum to less than the slice that was clicked.
+    """
+    user, food, travel = _seed(db)
+    resp = client.get(URL, query_string=[
+        ('start_date', '2026-03-01'), ('end_date', '2026-03-31'),
+        ('group_by', 'merchant'),
+        ('category_id', food.id), ('category_id', travel.id)],
+        headers=auth_headers(user))
+    groups = {g['label']: g['total'] for g in resp.get_json()['groups']}
+    assert groups == {'Tesco': 50.0, 'Train': 50.0}
+    assert resp.get_json()['total'] == 100.0
+
+
+def test_the_drilldown_does_NOT_invent_a_parent_rollup(client, db, auth_headers):
+    """*** THE SLICE IS A LEAF, SO THE PANEL MUST BE ONE TOO. ***
+
+    `_get_category_spending` — which draws the flow diagram — buckets each
+    expense under its OWN category's name and performs no parent rollup. So a
+    drill-down that added a parent's children would show more than the slice
+    it was opened from. This asserts the absence, because the first version of
+    this endpoint did exactly that and the tests passed: the rollup was
+    correct arithmetic answering the wrong question.
+    """
+    user, food, _ = _seed(db)
+    coffee = Category(name='Coffee', user_id=user.id, parent_id=food.id)
+    db.session.add(coffee)
+    db.session.flush()
+    db.session.add(_expense(user, 'Blue Bottle', 12.0, datetime(2026, 3, 8), coffee.id))
+    db.session.commit()
+
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31',
+        'group_by': 'merchant', 'category_id': food.id},
+        headers=auth_headers(user))
+
+    groups = {g['label']: g['total'] for g in resp.get_json()['groups']}
+    assert groups == {'Tesco': 50.0}
+    assert 'Blue Bottle' not in groups
+
+
+def test_uncategorised_is_openable_too(client, db, auth_headers):
+    """`category_id=0` is how the UNCATEGORISED node asks.
+
+    It is a real slice of the diagram and would otherwise be the one node a
+    user cannot open — which is worse than not having the feature, because it
+    is the slice they most want explained.
+    """
+    user, _, _ = _seed(db)
+    db.session.add(_expense(user, 'Cash withdrawal', 40.0, datetime(2026, 3, 9), None))
+    db.session.commit()
+
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31',
+        'group_by': 'merchant', 'category_id': 0}, headers=auth_headers(user))
+
+    groups = {g['label']: g['total'] for g in resp.get_json()['groups']}
+    assert groups == {'Cash withdrawal': 40.0}
+
+
+def test_a_nonsense_category_id_is_a_400_not_a_500(client, db, auth_headers):
+    user, _, _ = _seed(db)
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31',
+        'category_id': 'Food'}, headers=auth_headers(user))
+    assert resp.status_code == 400
+    assert 'category_id' in resp.get_json()['error']
+
+
+def test_a_SPLIT_row_is_attributed_to_its_splits_not_to_its_own_category(
+        client, db, auth_headers):
+    """D-272. *** THE DEMO CANNOT SEE THIS: 0 OF 108 EXPENSES CARRY A SPLIT. ***
+
+    `_get_category_spending` — the dashboard pie and the flow diagram —
+    apportions an expense across `category_splits`. This endpoint grouped raw
+    `Expense.amount` by `Expense.category_id` and never looked at the split
+    table, so the two disagreed about what a category cost for anybody who had
+    ever split a row. D-101's shape, and invisible to every screenshot.
+    """
+    from src.models.transaction import CategorySplit
+
+    user, food, travel = _seed(db)
+    row = _expense(user, 'Airport lunch', 100.0, datetime(2026, 3, 12), food.id)
+    db.session.add(row)
+    db.session.flush()
+    db.session.add_all([
+        CategorySplit(expense_id=row.id, category_id=food.id, amount=40.0),
+        CategorySplit(expense_id=row.id, category_id=travel.id, amount=60.0),
+    ])
+    row.has_category_splits = True
+    db.session.commit()
+
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31'},
+        headers=auth_headers(user))
+    groups = {g['label']: g['total'] for g in resp.get_json()['groups']}
+
+    # Food: 50 of Tesco + its 40 of the split. Travel: 50 Train + 60.
+    assert groups['Food'] == 90.0
+    assert groups['Travel'] == 110.0
+    # *** AND THE ROW IS NOT COUNTED TWICE. *** 50 + 50 + 100 = 200.
+    assert resp.get_json()['total'] == 200.0
+
+
+def test_the_drilldown_shows_only_the_SPLIT_share_of_a_split_row(
+        client, db, auth_headers):
+    """Opening Food on a row split half Food, half Travel shows the Food half.
+
+    Counting the whole row would make the panel add up to more than the slice
+    it was opened from -- a figure and a caption describing different things,
+    on the one screen built to explain the other.
+    """
+    from src.models.transaction import CategorySplit
+
+    user, food, travel = _seed(db)
+    row = _expense(user, 'Airport lunch', 100.0, datetime(2026, 3, 12), food.id)
+    db.session.add(row)
+    db.session.flush()
+    db.session.add_all([
+        CategorySplit(expense_id=row.id, category_id=food.id, amount=40.0),
+        CategorySplit(expense_id=row.id, category_id=travel.id, amount=60.0),
+    ])
+    row.has_category_splits = True
+    db.session.commit()
+
+    resp = client.get(URL, query_string={
+        'start_date': '2026-03-01', 'end_date': '2026-03-31',
+        'group_by': 'merchant', 'category_id': food.id},
+        headers=auth_headers(user))
+    groups = {g['label']: g['total'] for g in resp.get_json()['groups']}
+
+    assert groups == {'Tesco': 50.0, 'Airport lunch': 40.0}
+    # The panel's own total equals the slice the user clicked.
+    assert resp.get_json()['total'] == 90.0

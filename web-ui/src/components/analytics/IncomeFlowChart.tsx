@@ -30,6 +30,17 @@ interface IncomeFlowChartProps {
   flow: IncomeFlow;
   /** Already-bound formatter, so this file owns no currency knowledge. */
   format: (amount: number) => string;
+  /**
+   * Open a spending slice. Absent means the chart stays a picture.
+   *
+   * *** ONLY THE SPENDING SIDE, AND ONLY NODES THE SERVER GAVE IDS FOR. ***
+   * An income node has no "who did we pay" to answer, and a node whose ids
+   * the backend never sent cannot be opened without guessing which rows it
+   * meant. Both stay inert rather than offering a control that misleads.
+   */
+  onOpenSlice?: (node: FlowNode) => void;
+  /** The slice currently open, so the chart can mark it. */
+  openSliceId?: string | null;
 }
 
 /** Geometry. One viewBox, scaled by CSS — the chart is a band, not a square. */
@@ -201,7 +212,9 @@ function place(
   return deCollide(bands, height);
 }
 
-export const IncomeFlowChart: React.FC<IncomeFlowChartProps> = ({ flow, format }) => {
+export const IncomeFlowChart: React.FC<IncomeFlowChartProps> = ({
+  flow, format, onOpenSlice, openSliceId,
+}) => {
   /* Height follows the node count so bands stay readable: eight categories in
      a fixed 320px box gives 30px bands with 10px gaps, and the labels collide.
      52px per node is the smallest that fits a name and a figure on two lines. */
@@ -286,6 +299,43 @@ export const IncomeFlowChart: React.FC<IncomeFlowChartProps> = ({ flow, format }
             height={node.height} fill={inkFor(node)} rx={2} />
         ))}
 
+        {/* *** THE HIT TARGET IS A BAND, NOT THE 8px BAR. *** An 8px-wide
+            rect is a control nobody can hit and a focus ring nobody can see.
+            This covers the node's bar and its whole label column, which is
+            the region a reader would point at anyway. Drawn transparent and
+            AFTER the bars so it takes the events; the labels below are
+            `pointer-events: none` inside it so they never swallow a click.
+
+            *** A BUTTON, NOT AN onClick ON A <rect>. *** Same rule the range
+            peaks learned: a mouse-only control on a chart is a control that
+            does not exist on a phone or to a keyboard. */}
+        {onOpenSlice && right.map((node) => (
+          node.categoryIds === undefined ? null : (
+            <g
+              key={`rh-${node.id}`}
+              role="button"
+              tabIndex={0}
+              aria-label={`${node.label}, ${format(node.value)}. Show what it was spent on.`}
+              aria-pressed={openSliceId === node.id}
+              onClick={() => onOpenSlice(node)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpenSlice(node);
+                }
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <rect
+                x={W - COL} y={node.y - 2} width={COL}
+                height={Math.max(node.height, LABEL_PITCH) + 4}
+                fill={openSliceId === node.id ? 'var(--g-wash)' : 'transparent'}
+                rx={4}
+              />
+            </g>
+          )
+        ))}
+
         {/* ── labels. Each carries its own figure; see the header. ─────────── */}
         {left.map((node) => (
           <text key={`lt-${node.id}`} x={COL - 16} y={node.labelY}
@@ -297,8 +347,11 @@ export const IncomeFlowChart: React.FC<IncomeFlowChartProps> = ({ flow, format }
             </tspan>
           </text>
         ))}
+        {/* `pointer-events: none`: the label sits ON the hit band above,
+            and a <text> that takes the click makes the control feel dead
+            wherever the words happen to be. */}
         {right.map((node) => (
-          <text key={`rt-${node.id}`} x={W - COL + 16} y={node.labelY}
+          <text pointerEvents="none" key={`rt-${node.id}`} x={W - COL + 16} y={node.labelY}
             dominantBaseline="middle"
             fill="var(--text-primary)" fontSize={13}>
             <tspan fontWeight={600}>{node.label}</tspan>

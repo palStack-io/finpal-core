@@ -519,10 +519,24 @@ class AnalyticsService:
 
         category_totals = {}
 
-        def add(name, amount, color, icon):
+        def add(name, amount, color, icon, category_id=None):
+            """Accumulate into the bucket for `name`.
+
+            *** THE BUCKET REMEMBERS WHICH CATEGORY IDS IT MERGED. ***
+            Buckets are keyed by NAME on purpose — two housemates each with a
+            "Groceries" category are one slice of one household's spending,
+            and splitting them by id would be the wrong picture. But that
+            leaves a slice a caller cannot ask a follow-up question about: it
+            has a label and no handle. The flow diagram's drill-down needs
+            exactly the set that was merged, or it shows the wrong rows --
+            one id misses the housemate's, and a parent-and-children rollup
+            (which this function does NOT do) would exceed the slice.
+            """
             bucket = category_totals.setdefault(
-                name, {'amount': 0, 'color': color, 'icon': icon})
+                name, {'amount': 0, 'color': color, 'icon': icon, 'ids': []})
             bucket['amount'] += amount
+            if category_id is not None and category_id not in bucket['ids']:
+                bucket['ids'].append(category_id)
 
         for expense in expenses:
             if getattr(expense, 'transaction_type', 'expense') != transaction_type:
@@ -544,7 +558,8 @@ class AnalyticsService:
                     split_amount = rates.convert(split.amount, row_code, display_code)
                     if split.category:
                         add(split.category.name, split_amount,
-                            split.category.color, split.category.icon)
+                            split.category.color, split.category.icon,
+                            split.category.id)
                     else:
                         # A split with no category still spent money. Dropping it
                         # made the pie's slices sum to less than the reported
@@ -552,7 +567,8 @@ class AnalyticsService:
                         add(self.UNCATEGORISED_LABEL, split_amount, None, None)
             elif expense.category:
                 add(expense.category.name, row_amount,
-                    expense.category.color, expense.category.icon)
+                    expense.category.color, expense.category.icon,
+                    expense.category.id)
             else:
                 add(self.UNCATEGORISED_LABEL, row_amount, None, None)
 
@@ -562,7 +578,11 @@ class AnalyticsService:
                     'name': name,
                     'amount': round(data['amount'], 2),
                     'color': data['color'],
-                    'icon': data['icon']
+                    'icon': data['icon'],
+                    # The handle the drill-down asks with. A slice with an
+                    # empty list is Uncategorised — a real slice, and the one
+                    # a reader most wants explained.
+                    'ids': data['ids'],
                 }
                 for name, data in category_totals.items()
             ],
