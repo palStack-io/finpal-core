@@ -39,6 +39,47 @@ const tableCellSecondary: React.CSSProperties = { padding: '8px', color: 'var(--
 const tooltipBoxStyle: React.CSSProperties = { background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' };
 const emptyStateStyle: React.CSSProperties = { textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' };
 
+/**
+ * The same shell as `ViewAllBtn`, but the destination is on THIS page.
+ *
+ * *** AN ANCHOR, NOT A BUTTON WITH `scrollIntoView`. *** Owner, 2026-09-19:
+ * *"instead of doing view all and then going to transaction page, we litrally
+ * have the Monthly Expense Breakdown on the same page"*. A real `href="#id"`
+ * is focusable, announces itself as a link to the right place, survives
+ * middle-click and works before React has hydrated — a click handler that
+ * scrolls does none of that. The handler is additive: it only opens the month.
+ *
+ * *** AND IT DOES NOT ANIMATE. *** `scroll-behavior: smooth` on a jump this
+ * long is motion a reader did not ask for, and the theme already honours
+ * `prefers-reduced-motion`. The browser's instant jump also lands focus on the
+ * target, which a scripted scroll leaves behind.
+ */
+const JumpBtn = ({ to, label, onJump }: { to: string; label: string; onJump?: () => void }) => (
+  <a
+    href={`#${to}`}
+    onClick={onJump}
+    style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      padding: '6px 12px',
+      background: 'transparent',
+      border: '1px solid var(--border-light)',
+      borderRadius: '6px',
+      color: 'var(--text-secondary)',
+      fontSize: '13px',
+      textDecoration: 'none',
+      cursor: 'pointer',
+      flexShrink: 0,
+    }}
+  >
+    {label} <span aria-hidden="true">↓</span>
+  </a>
+);
+
+/** The breakdown's anchor. One constant, so the link and the target cannot
+    drift into two different strings — a `#` that matches nothing scrolls
+    nowhere and reports no error. */
+const BREAKDOWN_ID = 'monthly-expense-breakdown';
+
 const ViewAllBtn = ({ href }: { href: string }) => (
   <button
     onClick={() => window.location.href = href}
@@ -352,6 +393,19 @@ export const Dashboard = () => {
     return null;
   };
 
+  /** Today's month in the breakdown's own key format. */
+  const currentMonthKey = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  /* *** OPEN, NOT TOGGLE. *** The row is open by default, so a toggle on the
+     jump link would CLOSE the very thing the link exists to show for every
+     reader who had not touched it. */
+  const openMonth = (monthKey: string) => {
+    setExpandedMonths((prev) => (prev.has(monthKey) ? prev : new Set(prev).add(monthKey)));
+  };
+
   const toggleMonth = (monthKey: string) => {
     setExpandedMonths(prev => {
       const next = new Set(prev);
@@ -619,7 +673,18 @@ export const Dashboard = () => {
             <SectionCard
               title={`Where ${new Date().toLocaleDateString('en-US', { month: 'long' })} went`}
               subtitle={`${formatCurrency(monthlyExpenses)} out · day ${new Date().getDate()} of the month`}
-              action={<ViewAllBtn href="/transactions" />}
+              /* *** THE LEDGER IS NOT WHAT THIS CARD IS ASKING ABOUT. ***
+                 It answers "where did the month go", and the answer in full is
+                 the Monthly Expense Breakdown 400px below — same page, same
+                 month, already open on it. Sending the reader to
+                 /transactions made them leave the page to reach a table that
+                 was under their thumb. The month is re-opened on the way in
+                 case they had collapsed it. */
+              action={<JumpBtn
+                to={BREAKDOWN_ID}
+                label="See the breakdown"
+                onJump={() => openMonth(currentMonthKey())}
+              />}
             >
               <ShareBar
                 memberCount={members.length}
@@ -803,6 +868,7 @@ export const Dashboard = () => {
             two places. The strip's own "View all" went to /transactions, which
             is where somebody who wants the ledger should be. */}
         {/* Monthly Expense Breakdown */}
+        <div id={BREAKDOWN_ID} style={{ scrollMarginTop: 16 }}>
         <SectionCard title="Monthly Expense Breakdown" subtitle="View expenses grouped by month, category, and account">
           {monthlyAggregation.length > 0 ? (
             <ScrollPane label="Monthly expense breakdown table" axis="x">
@@ -999,6 +1065,7 @@ export const Dashboard = () => {
             <div style={emptyStateStyle}>No expense data found</div>
           )}
         </SectionCard>
+        </div>
 
       </div>
 

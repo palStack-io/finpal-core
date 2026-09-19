@@ -12,7 +12,7 @@
  * where somebody would add it.
  */
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { GoalRange } from '../../components/dashboard/GoalRange';
 import type { Goal } from '../../types/goal';
 
@@ -29,11 +29,67 @@ const withPeak = (over: Partial<Goal>): Goal => ({
 } as Goal);
 
 describe('the goal range', () => {
-  it('names each goal and the mountain it is drawn as', () => {
+  it('prints the NAME, and keeps the mountain behind the interaction', () => {
+    /* Owner, 2026-09-19: three printed lines per peak got "overpowering" with
+       several goals, and the geometry agreed — SLOT is 124 units and
+       `Mount Rainier · 4,392 m · saving` is ~170, so captions were already
+       wider than the space they own. The mountain and its height moved into
+       the detail; the name did not. */
     render(<GoalRange goals={[withPeak({})]} currency="USD" />);
     expect(screen.getByText('Emergency fund')).toBeTruthy();
-    expect(screen.getByText(/Mount Rainier/)).toBeTruthy();
-    expect(screen.getByText(/4,392 m/)).toBeTruthy();
+    expect(screen.queryByText(/Mount Rainier/)).toBeNull();
+    expect(screen.queryByText(/4,392 m/)).toBeNull();
+  });
+
+  it('shows the mountain, the height and the money on FOCUS, not just hover', () => {
+    /* *** A HOVER-ONLY DETAIL DOES NOT EXIST ON A PHONE OR TO A KEYBOARD, ***
+       and this card renders down to 390px. The peak is a focusable button and
+       a tap toggles it, so the three ways in are hover, Tab and touch. This
+       asserts the one a mouse test would miss. */
+    render(<GoalRange goals={[withPeak({})]} currency="USD" />);
+    const peak = screen.getByRole('button', { name: /Emergency fund/ });
+    expect(peak.getAttribute('aria-expanded')).toBe('false');
+
+    fireEvent.focus(peak);
+    expect(peak.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('Mount Rainier · 4,392 m')).toBeTruthy();
+    expect(screen.getByText(/8,000.00 still to save/)).toBeTruthy();
+
+    fireEvent.blur(peak);
+    expect(screen.queryByText('Mount Rainier · 4,392 m')).toBeNull();
+  });
+
+  it('answers a screen reader WITHOUT the interaction', () => {
+    // The detail is drawn on demand; the accessible name carries it always, so
+    // nothing here is reachable only by pointing at it.
+    render(<GoalRange goals={[withPeak({})]} currency="USD" />);
+    const name = screen.getByRole('button', { name: /Emergency fund/ })
+      .getAttribute('aria-label') ?? '';
+    expect(name).toContain('saving');
+    expect(name).toContain('Mount Rainier · 4,392 m');
+    expect(name).toContain('still to save');
+  });
+
+  it('is dismissible from the keyboard, and opens one at a time', () => {
+    // WCAG 2.1 1.4.13: content on hover or focus must be dismissible without
+    // moving the pointer.
+    render(
+      <GoalRange
+        goals={[withPeak({}), withPeak({ id: 2, name: 'Pay off the Visa' } as Partial<Goal>)]}
+        currency="USD"
+      />,
+    );
+    const a = screen.getByRole('button', { name: /Emergency fund/ });
+    const b = screen.getByRole('button', { name: /Pay off the Visa/ });
+
+    fireEvent.mouseEnter(a);
+    expect(a.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.mouseEnter(b);
+    expect(b.getAttribute('aria-expanded')).toBe('true');
+    expect(a.getAttribute('aria-expanded')).toBe('false');
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(b.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('*** SAYS debt OR saving IN WORDS, NOT ONLY IN COLOUR ***', () => {
@@ -59,8 +115,13 @@ describe('the goal range', () => {
         currency="USD"
       />
     );
-    expect(screen.getByText('Mount Rainier · 4,392 m · saving')).toBeTruthy();
-    expect(screen.getByText('Ben Nevis · 1,345 m · debt')).toBeTruthy();
+    /* *** THE WORD IS PRINTED, WITH NOTHING HOVERED. *** When the rest of the
+       caption moved behind hover/focus/tap on 2026-09-19 this was the one line
+       that could not go with it: a detail you have to point at answers the
+       reporter's question only for a reader with a mouse, which is the shape
+       of the defect, not a fix for it. */
+    expect(screen.getByText('saving')).toBeTruthy();
+    expect(screen.getByText('debt')).toBeTruthy();
   });
 
   it('labels an UNMEASURED peak too — the scale is never unknown', () => {
@@ -102,7 +163,12 @@ describe('the goal range', () => {
         currency="USD"
       />,
     );
+    // Each peak's own detail, opened one at a time — a saving goal says what
+    // is still to save, a payoff goal says what the debt COSTS, because the
+    // balance alone does not say whether to pay it first.
+    fireEvent.focus(screen.getByRole('button', { name: /Emergency fund/ }));
     expect(screen.getByText(/8,000.00 still to save/)).toBeTruthy();
+    fireEvent.focus(screen.getByRole('button', { name: /Pay off the Visa/ }));
     expect(screen.getByText(/13.33 a month in interest/)).toBeTruthy();
   });
 
@@ -139,5 +205,51 @@ describe('the goal range', () => {
     // No "1 of 1", no "100%", no "1 goal complete" — decision 5.
     expect(screen.queryByText(/\bof \d+\b/)).toBeNull();
     expect(screen.queryByText(/%/)).toBeNull();
+  });
+});
+
+describe('Everest says what it is doing there', () => {
+  const EVEREST = { altitude_m: 7973, summit_m: 8849, at_summit: false };
+
+  it('prints the name and YOUR standing, and nothing about everyone else', () => {
+    /* The two things that are about this reader: which peak it is, and how far
+       up it they are. `8,849 m` is the same for every user on the instance, so
+       it is the least useful thing the label could spend a line on. */
+    render(<GoalRange goals={[]} currency="USD" everest={EVEREST} />);
+    expect(screen.getByText('Everest')).toBeTruthy();
+    expect(screen.getByText('you are at 7,973 m')).toBeTruthy();
+    expect(screen.queryByText(/8,849 m/)).toBeNull();
+  });
+
+  it('*** EXPLAINS ITSELF ON DEMAND — IT USED TO EXPLAIN NOTHING ***', () => {
+    /* Owner, 2026-09-19: *"we can also add content to everest. its the
+       ultimate goal financial litracy"*. It has always been drawn in rock grey
+       so nobody reads it as their own goal, but nothing ever SAID what it was
+       — a reader had to infer that from a colour, which is D-269's shape on
+       the one peak that is not a goal. */
+    render(<GoalRange goals={[]} currency="USD" everest={EVEREST} />);
+    const peak = screen.getByRole('button', { name: /Everest/ });
+
+    fireEvent.focus(peak);
+    /* *** JOINED WITH SPACES, BECAUSE SVG HAS NO WORD WRAP. *** The sentence
+       is measured into separate `<text>` lines, and `textContent`
+       concatenates them with nothing between — so a naive substring check
+       reads "financialliteracy" and fails on correct output. */
+    const drawn = [...peak.querySelectorAll('text')]
+      .map((t) => t.textContent).join(' ');
+    expect(drawn).toContain('8,849 m — the shared summit');
+    expect(drawn).toContain('financial literacy');
+    expect(drawn).toContain('Not one of your goals');
+
+    // And without the interaction, for a screen reader.
+    expect(peak.getAttribute('aria-label') ?? '').toContain('financial literacy');
+  });
+
+  it('says base camp rather than 0 m, and still explains itself', () => {
+    render(<GoalRange goals={[]} currency="USD"
+                      everest={{ altitude_m: 0, summit_m: 8849, at_summit: false }} />);
+    expect(screen.getByText('you are at base camp')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Everest/ }).getAttribute('aria-label') ?? '')
+      .toContain('financial literacy');
   });
 });

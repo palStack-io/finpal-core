@@ -6,7 +6,7 @@
  * about the two pages nobody had rendered.
  */
 import { it, beforeAll, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
@@ -1343,7 +1343,22 @@ type Case = [
 ];
 
 const cases: Case[] = [
-  ['dashboard', Dashboard as React.FC],
+  /* *** DRIVEN, OR THE PEAK DETAIL IS MEASURED NOWHERE. *** The range's
+     captions moved behind hover/focus/tap on 2026-09-19, so the popover — a
+     panel with its own background, drawn ON TOP of a mountain — simply does
+     not exist in an undriven capture. That is D-165's shape: a page being in
+     the walk is not the walk seeing your change. Focus rather than hover,
+     because jsdom's pointer events do not drive a CSS-less SVG reliably and
+     focus is the path the keyboard takes anyway. */
+  ['dashboard', Dashboard as React.FC, async (container: HTMLElement) => {
+    await screen.findByText('Your range');
+    const peak = container.querySelector<SVGGElement>('g[role="button"][aria-expanded]');
+    if (!peak) throw new Error('dashboard: no focusable peak — the range drew no label');
+    fireEvent.focus(peak);
+    if (!container.querySelector('g[aria-expanded="true"] rect')) {
+      throw new Error('dashboard: focusing a peak drew no detail panel');
+    }
+  }],
   /**
    * *** THE SIX SCOPES ADDED 2026-09-16, ALL OF WHICH WERE REDESIGNED WHILE
    * INVISIBLE TO BOTH WALKS. *** Grouped here rather than scattered, because
