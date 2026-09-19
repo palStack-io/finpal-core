@@ -10,7 +10,7 @@
  * status code.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
@@ -108,9 +108,74 @@ describe('spending group on the category screen', () => {
     // exemption is per-field. Hiding the control here would re-create the gap
     // on the demo, where every category is a system category.
     mount();
-    const controls = await screen.findAllByLabelText('Spending group');
-    await userEvent.selectOptions(controls[2], 'flexible');
+
+    /* *** REACHED BY NAME, THROUGH THE FOLD. *** The list sorts by spending
+       now and folds categories nothing was spent in (owner, 2026-09-19: the
+       page should show where the money went). "Other" has no spend in the
+       shared fixture, so it sits behind the disclosure — and addressing it as
+       `controls[2]` silently selected a different category's control the
+       moment the order changed. The point of this test is that a SYSTEM
+       category can still be classified; where it sits is the page's business,
+       reaching it is the test's. */
+    await userEvent.click(await screen.findByTestId('unused-categories'));
+
+    const card = (await screen.findByText('Other')).closest('div[style]')!
+      .parentElement!.parentElement!.parentElement!;
+    const control = within(card as HTMLElement).getByLabelText('Spending group');
+    await userEvent.selectOptions(control, 'flexible');
+
     await waitFor(() => expect(puts.length).toBe(1));
     expect(puts[0].id).toBe('3');
+  });
+});
+
+describe('Categories answers where the money went', () => {
+  /* Owner, 2026-09-19: *"the header makes it loook like its for seeing where
+     money goes where as the categories page just has categories"*. The page
+     already FETCHED the per-category spend and used it only for the split in
+     the head — so the header talked about money and the list showed none. */
+
+  it('*** PUTS THE MONEY ON THE ROW, BIGGEST FIRST ***', async () => {
+    mount();
+    /* Housing is 1,800 in the shared fixture; Other has nothing. Scoped to
+       the ROW rather than the page, because the head's Fixed/Flexible split
+       prints the same figure — matching either would pass while the list
+       still showed no money, which is the defect. */
+    const heading = await screen.findByRole('heading', { name: 'Housing' });
+    /* *** WAITED FOR, NOT ASSERTED IMMEDIATELY. *** The categories arrive
+       first and the spend is a second request, so the row renders once
+       WITHOUT money and once with — asserting on the first paint fails
+       against correct code. */
+    await waitFor(() => expect(heading.parentElement!.textContent).toMatch(/1,800/));
+    expect(heading.parentElement!.textContent).toMatch(/% of the month/);
+  });
+
+  it('folds what nothing was spent in, and SAYS HOW MANY', async () => {
+    /* Pruning an unused category is this page's other job and the only place
+       to do it, so they fold rather than disappear — and the count is on the
+       control, or the page silently omits part of the list. */
+    mount();
+    const fold = await screen.findByTestId('unused-categories');
+    expect(fold.textContent).toMatch(/1 unused/);
+    expect(screen.queryByText('Other')).not.toBeInTheDocument();
+
+    await userEvent.click(fold);
+    expect(await screen.findByText('Other')).toBeInTheDocument();
+  });
+
+  it('*** NEVER FOLDS THE WHOLE LIST AWAY WHEN NOTHING WAS SPENT ***', async () => {
+    /* A new instance, or one whose spend request failed, has no spenders at
+       all — so every category is "unused" and the page would hide its own
+       only controls behind a disclosure, on the very account that has nothing
+       else to look at. Two existing tests went red on exactly this. */
+    server.use(
+      http.get('*/api/v1/analytics/categories/top', () =>
+        HttpResponse.json({ success: true, categories: [] })),
+    );
+    mount();
+
+    expect(await screen.findByText('Housing')).toBeInTheDocument();
+    expect(screen.getByText('Other')).toBeInTheDocument();
+    expect(screen.queryByTestId('unused-categories')).not.toBeInTheDocument();
   });
 });
