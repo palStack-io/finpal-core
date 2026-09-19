@@ -10,10 +10,29 @@ import pytest
 from src.extensions import db as _db
 from src.models.coins import CoinAward
 from src.models.goal import Goal
-from src.services.literacy.acts import award_for_surface, award_for_user
+from src.services.literacy.acts import ACTS, award_for_surface, award_for_user
 from tests.factories import UserFactory
 
 USER = 'refresh@test.com'
+
+# *** THE ACT'S OWN CEILING, NOT A LITERAL — AND THAT IS THE FIX, NOT A TIDY-UP.
+# ***
+#
+# Six assertions in this file read `600`, and every one of them went red the
+# moment `8bc76f7` re-priced the economy 9,650 -> 23,550 on the owner's
+# instruction. Nothing this file is ABOUT changed: a fully-covered act still
+# pays its whole ceiling, still on its own surface and no other, still exactly
+# once. Only the number moved.
+#
+# A test that a legitimate re-tune breaks is a test that gets deleted rather
+# than read — and this one had been red on the branch since that commit, which
+# is how a suite stops being a gate. `budgetSinkingFund` needed the same
+# correction on the mobile side this week: key on the DECISION, not on the
+# figure the decision currently produces.
+#
+# Read at import so a typo in the slug fails loudly here rather than comparing
+# `None` somewhere below.
+GOAL_COINS = ACTS['has_a_goal'].ceiling
 
 
 @pytest.fixture
@@ -47,8 +66,15 @@ def test_it_awards_only_that_surfaces_acts(owner_with_a_goal):
     earned = award_for_surface(uid, 'goals')
     _db.session.commit()
     assert [s for s, _ in earned] == ['has_a_goal']
+    # *** KEYED ON THE ACT'S OWN CEILING, NOT ON A LITERAL. ***
+    # This read `== 600` and went red the moment `8bc76f7` re-priced the
+    # economy 9,650 -> 23,550 on the owner's instruction: the DECISION under
+    # test — one fully-covered act pays its whole ceiling, on its own surface
+    # and no other — was unchanged, and only the number moved. A test that a
+    # legitimate re-tune breaks is a test that gets deleted rather than read.
+    # Same correction `budgetSinkingFund` needed on the mobile side.
     assert CoinAward.query.filter_by(
-        user_id=uid, act_slug='has_a_goal').one().coins == 600
+        user_id=uid, act_slug='has_a_goal').one().coins == GOAL_COINS
 
 
 def test_calling_it_twice_awards_nothing_the_second_time(owner_with_a_goal):
@@ -60,7 +86,7 @@ def test_calling_it_twice_awards_nothing_the_second_time(owner_with_a_goal):
     second = award_for_surface(uid, 'goals')
     _db.session.commit()
 
-    assert first == [('has_a_goal', 600)]
+    assert first == [('has_a_goal', GOAL_COINS)]
     assert second == []
 
 
@@ -73,7 +99,7 @@ def test_the_nightly_pass_still_collects_what_no_surface_fired(owner_with_a_goal
     calls refresh loses the MOMENT, never the COINS."""
     earned = award_for_user(owner_with_a_goal.id)
     _db.session.commit()
-    assert ('has_a_goal', 600) in earned
+    assert ('has_a_goal', GOAL_COINS) in earned
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -88,9 +114,9 @@ def test_the_route_awards_and_returns_the_payoff_sentence(
     body = res.get_json()
 
     assert [a['slug'] for a in body['awarded']] == ['has_a_goal']
-    assert body['awarded'][0]['coins'] == 600
-    assert body['earned'] == 600
-    assert body['balance'] == 600
+    assert body['awarded'][0]['coins'] == GOAL_COINS
+    assert body['earned'] == GOAL_COINS
+    assert body['balance'] == GOAL_COINS
 
     # *** ROLL BACK FIRST, OR THIS ASSERTION PROVES NOTHING — D-61's SHAPE. ***
     # The `db` fixture hands the test the SAME session the request used, so an
@@ -100,7 +126,7 @@ def test_the_route_awards_and_returns_the_payoff_sentence(
     # After a rollback, only what was actually COMMITTED survives.
     _db.session.rollback()
     assert CoinAward.query.filter_by(
-        user_id=owner_with_a_goal.id, act_slug='has_a_goal').one().coins == 600
+        user_id=owner_with_a_goal.id, act_slug='has_a_goal').one().coins == GOAL_COINS
 
 
 def test_the_route_is_idempotent(owner_with_a_goal, auth_headers, client):
@@ -110,7 +136,7 @@ def test_the_route_is_idempotent(owner_with_a_goal, auth_headers, client):
                         headers=h).get_json()
 
     assert again['awarded'] == []
-    assert again['earned'] == 600
+    assert again['earned'] == GOAL_COINS
 
 
 def test_no_denominator_reaches_the_wire(
