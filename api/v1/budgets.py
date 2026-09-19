@@ -388,6 +388,9 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
 
         (buckets[group] if group else unsorted_budgets).append(detail)
 
+    spend_rows = _spend_by_category(scope_ids)
+    unbudgeted = _unbudgeted_by_group(spend_rows, by_id, budgets)
+
     groups = []
     for value in VALID_SPENDING_TYPES:
         rows = buckets[value]
@@ -418,18 +421,39 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
             # user acts on.
             'remaining': round(planned - actual, 2),
             'budgets': rows,
+            # *** DELIBERATELY NOT FOLDED INTO `actual`, AND `remaining` DOES
+            # NOT MOVE. *** "Remaining" means *left of what you planned*; money
+            # you never planned cannot eat a plan it was never in, and adding
+            # it would make Fixed read "-1,800 remaining" against a plan of
+            # zero. The group reports both figures and the client labels them
+            # apart — one number answering two questions is D-102's shape.
+            'unbudgeted_actual': unbudgeted[value]['actual'],
+            'unbudgeted_categories': unbudgeted[value]['categories'],
         })
 
     unsorted = _unsorted_section(all_categories, by_id, scope_ids,
-                                 unsorted_budgets)
+                                 unsorted_budgets, spend_rows)
 
+    # *** `actual` IS ALL SPENDING, AND IT DID NOT USED TO BE. *** It summed
+    # the groups (built from budgets) plus the unsorted section (classified
+    # categories excluded), so "Total Spent" meant *total spent in categories
+    # you happen to have budgeted* — 474.28 out of 2,359.72 on the demo. The
+    # caption said Total Spent. It is now total spent.
+    budgeted_actual = round(sum(g['actual'] for g in groups), 2)
+    unbudgeted_actual = round(sum(g['unbudgeted_actual'] for g in groups), 2)
     totals = {
         'planned': round(sum(g['planned'] for g in groups)
                          + sum(_f(r['amount']) for r in unsorted_budgets), 2),
-        'actual': round(sum(g['actual'] for g in groups)
+        'actual': round(budgeted_actual + unbudgeted_actual
                         + unsorted['actual'], 2),
+        # Kept apart so the client never has to subtract to recover either.
+        'budgeted_actual': budgeted_actual,
+        'unbudgeted_actual': round(unbudgeted_actual + unsorted['actual'], 2),
     }
-    totals['remaining'] = round(totals['planned'] - totals['actual'], 2)
+    # *** OVER THE BUDGETED HALF ONLY, WHICH IS WHAT THE WORD MEANS. *** Against
+    # `actual` it would read "you have -959.72 remaining" to somebody who is not
+    # over a single budget.
+    totals['remaining'] = round(totals['planned'] - budgeted_actual, 2)
 
     # *** PLANNED INCOME IS ITS OWN SECTION WITH ITS OWN TOTALS, BECAUSE THE
     # COLUMNS MEAN DIFFERENT THINGS. *** "Remaining" on an expense is *still
@@ -447,7 +471,76 @@ def _group_by_spending_type(budgets, budget_details, scope_ids):
     return groups, unsorted, totals, income_section
 
 
-def _unsorted_section(all_categories, by_id, scope_ids, unsorted_budgets):
+def _spend_by_category(scope_ids):
+    """This month's expense total per category id.
+
+    Shared by the unbudgeted rows and the unsorted section, which used to ask
+    the same question twice — and would have answered it differently the moment
+    one of them grew a filter the other did not.
+    """
+    from sqlalchemy import func
+    from src.utils.household import scope_query
+
+    period_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0,
+                                             microsecond=0)
+    return (scope_query(scope_ids)
+            .filter(Expense.date >= period_start)
+            .filter(Expense.transaction_type == 'expense')
+            .filter(Expense.category_id.isnot(None))
+            .with_entities(Expense.category_id, func.sum(Expense.amount))
+            .group_by(Expense.category_id)
+            .all())
+
+
+def _unbudgeted_by_group(spend_rows, by_id, budgets):
+    """Spend in CLASSIFIED categories that no budget covers, per group.
+
+    *** THIS IS THE HALF `_unsorted_section` PROMISED AND DID NOT DELIVER. ***
+    Its docstring says unbudgeted spending is shown and not hidden, and then it
+    skips every category that HAS a spending type — so on the demo, Housing
+    (fixed, 1,800.00) and four flexible categories totalling 85.44 were
+    reported by neither the groups nor the unsorted section. The page showed
+    "Total Spent 474.28 / 4 on track / 0 over" against 2,359.72 of real
+    spending, and Fixed said "Nothing here yet" while holding the rent.
+
+    *** COVERAGE IS THE BUDGET'S OWN QUESTION, NOT AN ID MATCH. ***
+    `Budget.matches_expense` rolls a parent budget up over its children
+    (`budget.py:72`), so a category whose PARENT is budgeted is covered even
+    though no budget names it. Comparing `category_id` against the budgeted set
+    would report the child as unbudgeted and double-count it against a total
+    that already includes it.
+    """
+    covered = set()
+    for budget in budgets:
+        covered.add(budget.category_id)
+        for other_id, other in by_id.items():
+            if other.parent_id == budget.category_id:
+                covered.add(other_id)
+
+    out = {value: {'actual': 0.0, 'categories': []}
+           for value in VALID_SPENDING_TYPES}
+    for category_id, amount in spend_rows:
+        if category_id in covered:
+            continue
+        category = by_id.get(category_id)
+        group = _effective_spending_type(category, by_id)
+        if group is None:
+            continue          # unclassified — `_unsorted_section` owns it
+        bucket = out[group]
+        bucket['actual'] += float(amount or 0)
+        bucket['categories'].append({
+            'id': category.id,
+            'name': category.name,
+            'actual': round(float(amount or 0), 2),
+        })
+    for bucket in out.values():
+        bucket['actual'] = round(bucket['actual'], 2)
+        bucket['categories'].sort(key=lambda c: c['actual'], reverse=True)
+    return out
+
+
+def _unsorted_section(all_categories, by_id, scope_ids, unsorted_budgets,
+                      spend_rows=None):
     """Unclassified categories that money has actually left through.
 
     *** UNBUDGETED SPENDING IS SHOWN, NOT HIDDEN. *** A budget page that lists
@@ -458,19 +551,8 @@ def _unsorted_section(all_categories, by_id, scope_ids, unsorted_budgets):
     it with every category nobody has spent against buries the real ones. On the
     demo that is the difference between five rows and a hundred and twenty.
     """
-    from sqlalchemy import func
-    from src.utils.household import scope_query
-
-    period_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0,
-                                             microsecond=0)
-    spend_rows = (scope_query(scope_ids)
-                  .filter(Expense.date >= period_start)
-                  .filter(Expense.transaction_type == 'expense')
-                  .filter(Expense.category_id.isnot(None))
-                  .with_entities(Expense.category_id,
-                                 func.sum(Expense.amount))
-                  .group_by(Expense.category_id)
-                  .all())
+    if spend_rows is None:
+        spend_rows = _spend_by_category(scope_ids)
 
     categories = []
     actual = 0.0

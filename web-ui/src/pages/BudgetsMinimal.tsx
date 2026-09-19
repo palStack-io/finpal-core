@@ -179,6 +179,110 @@ export const budgetTitle = (budget: {
   || budget.category?.name?.trim()
   || 'Uncategorized';
 
+
+/** Show this many unbudgeted rows before folding the tail away. */
+const UNBUDGETED_SHOWN = 5;
+
+/**
+ * The categories in a group that money left through with no budget on them.
+ *
+ * *** NO PROGRESS BAR, BECAUSE THERE IS NO DENOMINATOR. *** Every budgeted row
+ * on this page is a fraction of a limit the user chose. These have no limit,
+ * and an empty bar beside 1,800.00 of rent reads as "0% used" when the truth is
+ * "nothing is capping this" — the opposite. Decision 5's rule, one surface
+ * over: the only denominator this product draws is a target somebody picked.
+ *
+ * *** THE GROUP TOTAL IS ON THE HEADER, SO FOLDING NEVER HIDES MONEY. *** Owner
+ * asked what happens to a user with many categories. Measured across the four
+ * demo personas: 2-7 unbudgeted categories a month, so nothing folds today —
+ * but a real import could carry twenty, and the tail goes behind a disclosure
+ * rather than pushing the budgets off the screen. Itemisation is what folds;
+ * the figure is always in view.
+ */
+const UnbudgetedRows: React.FC<{
+  group: SpendingGroup;
+  currency: string;
+  onBudget: (categoryId: number, spentSoFar: number) => void;
+}> = ({ group, currency, onBudget }) => {
+  const [showAll, setShowAll] = useState(false);
+  /* *** DEFAULTED, BECAUSE A SERVER CAN PREDATE THE FIELD. *** Same choice as
+     `Goal.peak` being undefined on a backend older than mountains: a
+     self-hoster on an older image must get the page they always had, not a
+     blank one. Reading `.length` off undefined took the whole Budgets page
+     down, which is how this was found. */
+  const rows = group.unbudgeted_categories ?? [];
+  if (rows.length === 0) return null;
+
+  const shown = showAll ? rows : rows.slice(0, UNBUDGETED_SHOWN);
+  const folded = rows.length - shown.length;
+  const foldedTotal = rows.slice(shown.length)
+    .reduce((sum, row) => sum + row.actual, 0);
+
+  return (
+    <div style={{ marginTop: 4, paddingTop: 12, borderTop: '1px solid var(--border-light)' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        padding: '0 4px 8px',
+      }}>
+        <span style={{
+          fontSize: 12, fontWeight: 600, letterSpacing: '0.04em',
+          textTransform: 'uppercase', color: 'var(--text-secondary)',
+        }}>
+          Not budgeted
+        </span>
+        <strong style={{ fontSize: 15 }}>
+          <Money amount={group.unbudgeted_actual ?? 0} currency={currency} />
+        </strong>
+      </div>
+
+      {shown.map((row) => (
+        <div
+          key={row.id}
+          data-testid={`unbudgeted-${row.id}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '9px 4px', borderTop: '1px solid var(--border-light)',
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5 }}>{row.name}</span>
+          <span style={{ fontSize: 14.5, fontVariantNumeric: 'tabular-nums' }}>
+            <Money amount={row.actual} currency={currency} />
+          </span>
+          <button
+            type="button"
+            onClick={() => onBudget(row.id, row.actual)}
+            style={{
+              background: 'transparent', color: 'var(--g-ink)',
+              border: '1px solid var(--border-medium)', borderRadius: 8,
+              padding: '4px 10px', fontSize: 12.5, fontWeight: 600,
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Budget this
+          </button>
+        </div>
+      ))}
+
+      {folded > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+            background: 'none', border: 0, borderTop: '1px solid var(--border-light)',
+            padding: '9px 4px', cursor: 'pointer',
+            color: 'var(--text-secondary)', fontSize: 13, textAlign: 'left',
+          }}
+        >
+          <ChevronDown size={14} />
+          {folded} more · <Money amount={foldedTotal} currency={currency} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+
 const BudgetsMinimal = () => {
   // The page names its own surface and nothing more; the server owns
   // which acts a `budgets` mutation can move. Fires on mount as well as
@@ -376,6 +480,29 @@ const BudgetsMinimal = () => {
         rollover: false
       });
     }
+    setShowBudgetModal(true);
+  };
+
+  /**
+   * "Budget this", from an unbudgeted row.
+   *
+   * *** THE AMOUNT IS PREFILLED WITH WHAT THEY ACTUALLY SPENT, NOT LEFT BLANK.
+   * *** The whole point of the row is that finPal already knows the number;
+   * making somebody read 216.93 off the screen and retype it into the field
+   * beside it is asking them for a fact they came here to be told. It is a
+   * starting point in an editable field, not a target finPal chose — which is
+   * why it is the observed figure and not a rounded-up "suggestion" the user
+   * could not check against anything.
+   */
+  const startBudgetFor = (categoryId: number, spentSoFar: number) => {
+    setEditingBudget(null);
+    setBudgetFormData({
+      category_id: String(categoryId),
+      amount: spentSoFar > 0 ? spentSoFar.toFixed(2) : '',
+      period: 'monthly',
+      start_date: new Date().toISOString().split('T')[0],
+      rollover: false,
+    });
     setShowBudgetModal(true);
   };
 
@@ -1223,18 +1350,36 @@ const BudgetsMinimal = () => {
 
                       {!collapsed && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                          {group.budgets.length === 0 ? (
+                          {group.budgets.length === 0
+                            && (group.unbudgeted_categories ?? []).length === 0 ? (
                             <p className="fp-hint" style={{ padding: '8px 4px' }}>
                               {/* *** THE FIXED GROUP DOES NOT ASK FOR A TARGET. ***
                                   Every other empty state on this page invites you
                                   to set one; demanding a number for rent is
-                                  theatre, so this one reports and stops. */}
+                                  theatre, so this one reports and stops.
+
+                                  *** AND IT NOW MEANS IT. *** This copy said
+                                  "sort a category into Fixed and it will show
+                                  what it costs" while Housing WAS sorted into
+                                  Fixed with 1,800.00 against it — the group was
+                                  built by looping over budgets, so a classified
+                                  category with no budget landed nowhere. The
+                                  condition above is why the promise is now
+                                  kept: no budgets is not the same as nothing
+                                  here. */}
                               {group.spending_type === 'fixed'
                                 ? 'Nothing here yet. Fixed costs are reported, not budgeted — sort a category into Fixed and it will show what it costs.'
                                 : `No ${group.label.toLowerCase()} budgets yet.`}
                             </p>
                           ) : (
-                            group.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, group.spending_type))
+                            <>
+                              {group.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, group.spending_type))}
+                              <UnbudgetedRows
+                                group={group}
+                                currency={currency}
+                                onBudget={startBudgetFor}
+                              />
+                            </>
                           )}
                         </div>
                       )}

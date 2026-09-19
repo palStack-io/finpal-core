@@ -509,3 +509,77 @@ describe("the sinking-fund group header says which span it is", () => {
     expect(screen.queryByText(/These figures are this month's/)).toBeNull();
   });
 });
+
+describe('spending nobody budgeted is shown inside its own group', () => {
+  /* *** THE PAGE REPORTED 474.28 OF 2,359.72 AND DREW A FULL GREEN BAR. ***
+     `_unsorted_section` promises in its own docstring that unbudgeted spending
+     is shown and not hidden, then skips every category that HAS a spending
+     type — so on the demo, Housing (fixed, 1,800) and four flexible categories
+     appeared in neither the groups nor the unsorted section, and Fixed said
+     "Nothing here yet" while holding the rent. */
+  const withUnbudgeted = overview({
+    groups: [
+      {
+        spending_type: 'fixed', label: 'Fixed',
+        planned: 0, actual: 0, remaining: 0, budgets: [],
+        unbudgeted_actual: 1800,
+        unbudgeted_categories: [{ id: 91, name: 'Housing', actual: 1800 }],
+      },
+      {
+        spending_type: 'flexible', label: 'Flexible',
+        planned: 600, actual: 238, remaining: 362,
+        budgets: [budgetRow(2, 'Food & Dining', 600, 238)],
+        unbudgeted_actual: 290.38,
+        unbudgeted_categories: [
+          { id: 1, name: 'Groceries', actual: 216.93 },
+          { id: 2, name: 'Health & Fitness', actual: 49.99 },
+          { id: 3, name: 'Pharmacy', actual: 23.45 },
+        ],
+      },
+      {
+        spending_type: 'non_monthly', label: 'Non-Monthly',
+        planned: 0, actual: 0, remaining: 0, budgets: [],
+        unbudgeted_actual: 0, unbudgeted_categories: [],
+      },
+    ],
+  });
+
+  it('*** A GROUP WITH NO BUDGETS STILL REPORTS WHAT IT COST ***', async () => {
+    mount(withUnbudgeted);
+
+    // Fixed has zero budgets and 1,800 of rent. The old empty state claimed
+    // there was nothing here while this was true.
+    await screen.findByRole('heading', { name: 'Fixed' });
+    expect(await screen.findByTestId('unbudgeted-91')).toHaveTextContent('Housing');
+    expect(screen.queryByText(/Nothing here yet/)).not.toBeInTheDocument();
+  });
+
+  it('offers to bring an unbudgeted category INTO the budget', async () => {
+    mount(withUnbudgeted);
+
+    const row = await screen.findByTestId('unbudgeted-1');       // Groceries
+    expect(row).toHaveTextContent('Groceries');
+    expect(within(row).getByRole('button', { name: 'Budget this' })).toBeInTheDocument();
+  });
+
+  it('*** DRAWS NO PROGRESS BAR, BECAUSE THERE IS NO LIMIT TO BE A FRACTION OF ***',
+    async () => {
+      /* Decision 5, one surface over: the only denominator this product draws
+         is a target somebody chose. An empty bar beside 1,800 of rent reads as
+         "0% used" when the truth is "nothing is capping this". */
+      mount(withUnbudgeted);
+
+      const row = await screen.findByTestId('unbudgeted-91');
+      expect(row.querySelector('progress')).toBeNull();
+      expect(row).not.toHaveTextContent(/of\s/);
+      expect(row).not.toHaveTextContent('%');
+    });
+
+  it('renders against a server that predates the field, rather than blanking', async () => {
+    /* A self-hoster on an older image must get the page they always had. The
+       first version read `.length` off undefined and took the whole Budgets
+       page down — every test in the file above went red at once. */
+    mount(overview());
+    expect(await screen.findByRole('heading', { name: 'Flexible' })).toBeInTheDocument();
+  });
+});
