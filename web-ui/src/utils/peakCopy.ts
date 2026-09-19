@@ -22,6 +22,9 @@ export interface PeakLike {
   hardest_band: number | null;
   hardest_mountain: { name: string; summit_note: string | null } | null;
   apr: number | null;
+  projection?: {
+    never: boolean; months?: number; monthly_interest?: number; payment: number;
+  } | null;
 }
 
 /** A money formatter, so this module never decides a currency or a locale. */
@@ -136,3 +139,41 @@ export const peakSummitLine = (peak: PeakLike): string | null => {
 /** `Hardest it ever got: Aconcagua`, or `null` when there is no watermark. */
 export const peakHardestLine = (peak: PeakLike): string | null =>
   peak.hardest_mountain ? `Hardest it ever got: ${peak.hardest_mountain.name}` : null;
+
+/** `1 year and 9 months`. Grouped — 21 months reads as nothing. */
+const spanWords = (months: number): string => {
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  const y = `${years} year${years > 1 ? 's' : ''}`;
+  const m = `${rest} month${rest > 1 ? 's' : ''}`;
+  if (years && rest) return `${y} and ${m}`;
+  return years ? y : m;
+};
+
+/**
+ * How long this debt takes to clear, or what stops it clearing.
+ *
+ * *** THE SERVER DOES THE ARITHMETIC; THIS ONLY CHOOSES WORDS. *** Two clients
+ * computing a payoff date from an APR is two chances to disagree with each
+ * other and with the coins engine, which prints the same figure — the whole
+ * reason the maths moved into one module (D-101).
+ *
+ * *** "NEVER" IS NOT A FAILURE TO ANSWER. *** A minimum that does not exceed
+ * the interest means the balance never falls, and saying so plainly is far
+ * more use than a number. Voice rule 11: it names the product, not the person.
+ */
+export const peakPayoffLine = (
+  peak: PeakLike, money: MoneyFormatter,
+): string | null => {
+  const p = peak.projection;
+  if (!p) return null;
+  if (p.never) {
+    const interest = p.monthly_interest != null ? money(p.monthly_interest) : null;
+    return interest
+      ? `At ${money(p.payment)} a month this never clears — the interest alone `
+        + `is ${interest}. That is the product, not you.`
+      : `At ${money(p.payment)} a month this never clears.`;
+  }
+  if (p.months == null) return null;
+  return `${spanWords(p.months)} to clear, paying ${money(p.payment)} a month`;
+};

@@ -6,7 +6,7 @@ import {
 } from '../../utils/rangeSilhouettes';
 import { heightForMagnitude } from '../../utils/mountainGeometry';
 import { formatMoney } from '../../styles/money';
-import { peakElevation, peakKindLabel } from '../../utils/peakCopy';
+import { peakElevation, peakKindLabel, peakPayoffLine } from '../../utils/peakCopy';
 import type { Goal } from '../../types/goal';
 
 /**
@@ -564,6 +564,13 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
             ].filter(Boolean).join(' · '),
             remainingLabel(peak.goal, currency),
             gp?.apr != null ? `${gp.apr}% APR` : '',
+            /* *** HOW LONG IT TAKES, WHICH IS WHAT A PAYOFF GOAL IS ASKING.
+               *** The figure already existed inside the coins engine as a
+               sentence nobody could reuse; it is one shared arithmetic now.
+               It lives in the DETAIL rather than on the caption because it is
+               the longest line either produces, and the caption is what the
+               hover exists to keep short. */
+            gp ? peakPayoffLine(gp, (n) => formatMoney(n, { currency })) ?? '' : '',
           ].filter(Boolean);
           return (
             <g

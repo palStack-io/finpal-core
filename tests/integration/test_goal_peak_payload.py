@@ -232,3 +232,98 @@ def test_THE_ROUTE_ACTUALLY_SENDS_THE_PEAK(seeded, client, auth_headers):
     assert sent['peak']['unmeasured'] is False
     # And it is JSON-safe: a Decimal here would 500 on encode.
     assert isinstance(sent['peak']['magnitude'], float)
+
+
+# ---------------------------------------------------------------------------
+# How long it takes — the question a payoff goal is actually asking
+# ---------------------------------------------------------------------------
+
+def test_a_payoff_goal_projects_how_long_it_takes(seeded):
+    """Owner, 2026-09-19: *"if its debt payment can we make it so we can
+    project how long it will take"*.
+
+    *** THE ARITHMETIC IS NOT NEW — IT MOVED. *** `literacy/payoff.py` has
+    computed this since the coins work and printed it as prose nobody could
+    reuse. Writing it a second time for the goal would be D-101, which this
+    project has hit three times in two days, so both callers now share
+    `goal/projection.py`.
+    """
+    user = UserFactory()
+    card = _card(user.id, balance=-800.0, apr='19.99')
+    card.min_payment = Decimal('35.00')
+    _db.session.commit()
+
+    projection = _peak(_payoff(user.id, [card]))['projection']
+    assert projection['never'] is False
+    assert projection['months'] == 30          # 800 at 19.99%, paying 35
+    assert projection['payment'] == 35.0
+
+
+def test_A_MINIMUM_THAT_CANNOT_OUTRUN_THE_INTEREST_SAYS_NEVER(seeded):
+    """*** "NEVER" IS A RESULT, NOT A MISSING ONE. ***
+
+    If the payment does not exceed the monthly interest the balance never
+    falls, and that is the single most useful thing this payload can say to
+    the person it is true of. Returning `None` would make it indistinguishable
+    from "we do not know" — the two states this codebase keeps insisting must
+    not be collapsed.
+    """
+    user = UserFactory()
+    card = _card(user.id, balance=-800.0, apr='19.99')
+    card.min_payment = Decimal('10.00')        # interest alone is 13.33
+    _db.session.commit()
+
+    projection = _peak(_payoff(user.id, [card]))['projection']
+    assert projection['never'] is True
+    assert round(projection['monthly_interest'], 2) == 13.33
+    assert 'months' not in projection
+
+
+def test_NO_MINIMUM_MEANS_NO_PROJECTION_RATHER_THAN_AN_ASSUMED_ONE(seeded):
+    """A payment finPal was never told is not a payment it may invent.
+
+    `debt_minimums` is already an act the product asks users to fill in
+    precisely because this figure depends on it.
+    """
+    user = UserFactory()
+    card = _card(user.id, balance=-800.0, apr='19.99')   # min_payment is None
+    _db.session.commit()
+    assert _peak(_payoff(user.id, [card]))['projection'] is None
+
+
+def test_A_MULTI_ACCOUNT_GOAL_PROJECTS_NOTHING(seeded):
+    """Same rule as `_sole_apr`, and for the same reason.
+
+    Two cards at two rates have no single payoff date, and a blended one
+    states something about the whole goal that is true of none of it.
+    """
+    user = UserFactory()
+    a = _card(user.id, apr='19.99', name='Visa')
+    b = _card(user.id, apr='24.99', name='Amex')
+    a.min_payment = Decimal('35.00')
+    b.min_payment = Decimal('40.00')
+    _db.session.commit()
+    from src.models.goal_account import GoalAccount
+    goal = _payoff(user.id, [a])
+    for account in (a, b):
+        _db.session.add(GoalAccount(goal_id=goal.id, account_id=account.id,
+                                    start_amount=Decimal(str(account.balance))))
+    _db.session.commit()
+    _db.session.refresh(goal)
+    assert len(goal.links) == 2, 'the fixture did not actually span two accounts'
+
+    assert _peak(goal)['projection'] is None
+
+
+def test_A_SAVINGS_GOAL_PROJECTS_NOTHING(seeded):
+    """There is no interest to outrun, and no minimum to outrun it with."""
+    user = UserFactory()
+    account = AccountFactory(user_id=user.id, name='Savings', type='savings',
+                             balance=2000.0)
+    _db.session.commit()
+    goal = Goal(user_id=user.id, name='Emergency fund', kind='savings',
+                start_amount=Decimal('0.00'), target_amount=Decimal('10000.00'),
+                account_id=account.id, currency_code='USD')
+    _db.session.add(goal)
+    _db.session.commit()
+    assert _peak(goal)['projection'] is None

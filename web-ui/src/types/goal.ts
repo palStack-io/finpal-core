@@ -93,6 +93,21 @@ export interface GoalPeak {
    * "3 accounts" rule, applied to a number that is worse to get wrong.
    */
   apr: number | null;
+  /**
+   * How long this debt takes to clear at the payment on the account.
+   *
+   * *** THREE STATES, AND THEY ARE NOT THE SAME. *** `null` — finPal cannot
+   * say (no rate, no minimum, or a goal spanning two cards at two rates).
+   * `never: true` — the payment does not outrun the interest, so the balance
+   * never falls; that is the single most useful thing this payload can tell
+   * the person it is true of. Otherwise `months`.
+   */
+  projection: {
+    never: boolean;
+    months?: number;
+    monthly_interest?: number;
+    payment: number;
+  } | null;
 }
 
 export interface Goal {

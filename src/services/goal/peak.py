@@ -23,6 +23,7 @@ look like when they ship.
 """
 
 from src.models.mountain import Mountain
+from src.services.goal.projection import months_to_clear
 from src.services.goal.mountains import (
     BAND_ORDER, band_index, mountain_for, peak_accounts, peak_magnitude,
 )
@@ -78,6 +79,49 @@ def _sole_apr(goal):
     return float(apr) if apr is not None else None
 
 
+
+def _projection(goal, scale):
+    """`{months}` or `{never, monthly_interest}` — or `None`, which is usual.
+
+    *** ONE ACCOUNT ONLY, THE SAME RULE `_sole_apr` FOLLOWS, AND FOR THE SAME
+    REASON. *** Two cards at two rates have no single payoff date; projecting
+    a blended one states something about the whole goal that is true of none
+    of it. A user cannot check it against any statement they hold.
+
+    *** AND IT NEEDS A MINIMUM PAYMENT, WHICH IS OFTEN ABSENT. *** No payment,
+    no projection — never an assumed one. `debt_minimums` is already an act
+    finPal asks users to fill in precisely because this figure depends on it,
+    so the honest empty state here is the prompt that already exists.
+
+    *** "NEVER" IS CARRIED, NOT SWALLOWED. *** A minimum that does not exceed
+    the interest means the balance never falls, and that is the single most
+    useful thing this endpoint can say to the person it is true of.
+    """
+    if scale != 'cost':
+        return None
+    accounts = peak_accounts(goal)
+    if len(accounts) != 1:
+        return None
+    account = accounts[0]
+    balance = float(account.balance or 0)
+    if balance >= 0:
+        return None
+    projected = months_to_clear(-balance, account.apr, account.min_payment)
+    if projected is None:
+        return None
+    if projected.never:
+        return {
+            'never': True,
+            'monthly_interest': float(projected.monthly_interest),
+            'payment': float(projected.payment),
+        }
+    return {
+        'never': False,
+        'months': projected.months,
+        'payment': float(projected.payment),
+    }
+
+
 def peak_payload(goal):
     """`{'peak': {...}}`, to be merged into the goal payload."""
     scale, magnitude = peak_magnitude(goal)
@@ -105,5 +149,9 @@ def peak_payload(goal):
             'hardest_band': goal.hardest_band,
             'hardest_mountain': _mountain_dict(hardest),
             'apr': _sole_apr(goal),
+            # *** HOW LONG IT TAKES, WHICH IS THE QUESTION A PAYOFF GOAL IS
+            # ACTUALLY ASKING. *** Owner, 2026-09-19: *"if its debt payment
+            # can we make it so we can project how long it will take"*.
+            'projection': _projection(goal, scale),
         },
     }

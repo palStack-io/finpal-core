@@ -208,6 +208,53 @@ describe('the goal range', () => {
   });
 });
 
+describe('a payoff goal says how long it takes', () => {
+  /* Owner, 2026-09-19: *"if its debt payment can we make it so we can project
+     how long it will take"*. The arithmetic is the SERVER's — the same one the
+     coins engine prints — because two clients computing a payoff date from an
+     APR is two chances to disagree (D-101). */
+  const payoff = (projection: unknown) => withPeak({
+    id: 5, name: 'Pay off the Visa',
+    peak: {
+      scale: 'cost', magnitude: 13.33, unmeasured: false, band: 1,
+      mountain: { slug: 'ben-nevis', name: 'Ben Nevis', elevation_m: 1345 },
+      apr: 19.99, projection,
+    },
+  } as Partial<Goal>);
+
+  it('puts the payoff span in the detail, not on the caption', () => {
+    const { container } = render(
+      <GoalRange goals={[payoff({ never: false, months: 30, payment: 35 })]}
+                 currency="USD" />);
+    // Not printed until asked: the caption is what the hover keeps short.
+    expect(container.textContent).not.toMatch(/to clear/);
+
+    fireEvent.focus(screen.getByRole('button', { name: /Pay off the Visa/ }));
+    expect(container.textContent).toMatch(/2 years and 6 months to clear/);
+  });
+
+  it('*** SAYS "NEVER CLEARS" RATHER THAN GOING QUIET ***', () => {
+    /* A minimum that does not outrun the interest means the balance never
+       falls. Silence there is indistinguishable from "we do not know", and
+       those are the two states this codebase keeps apart. Voice rule 11: it
+       names the product, not the person. */
+    const { container } = render(
+      <GoalRange goals={[payoff({ never: true, monthly_interest: 13.33, payment: 10 })]}
+                 currency="USD" />);
+    fireEvent.focus(screen.getByRole('button', { name: /Pay off the Visa/ }));
+    expect(container.textContent).toMatch(/never clears/);
+    expect(container.textContent).toMatch(/That is the product, not you/);
+  });
+
+  it('says nothing at all when the server could not project', () => {
+    // No rate, no minimum, or a goal spanning two cards at two rates.
+    const { container } = render(
+      <GoalRange goals={[payoff(null)]} currency="USD" />);
+    fireEvent.focus(screen.getByRole('button', { name: /Pay off the Visa/ }));
+    expect(container.textContent).not.toMatch(/to clear|never clears/);
+  });
+});
+
 describe('Everest says what it is doing there', () => {
   const EVEREST = { altitude_m: 7973, summit_m: 8849, at_summit: false };
 

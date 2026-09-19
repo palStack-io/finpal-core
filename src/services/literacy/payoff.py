@@ -327,26 +327,21 @@ def debt_minimums(user_id):
     if payment_s is None:
         return None
 
-    if payment <= interest:
-        return (f'At {payment_s} a month this card never clears — the interest '
-                f'alone is {_money(interest, currency)}. That is the product, '
-                'not you.')
+    # *** THE ARITHMETIC MOVED TO `goal/projection.py` AND BOTH CALLERS USE IT.
+    # *** The goal page needed the same figure, and writing months-to-clear a
+    # second time is D-101 — two computations of one number. The sentence is
+    # still this file's job; the maths is not.
+    from src.services.goal.projection import months_to_clear, span_words
 
-    # Standard amortisation. `rate == 0` would divide by zero, and a 0% card is
-    # a real thing, so it is handled as plain division.
-    if rate == 0:
-        months = int(math.ceil(float(owed / payment)))
-    else:
-        months = int(math.ceil(
-            -math.log(1 - float(owed * rate / payment)) / math.log(1 + float(rate))))
-    years, rem = divmod(months, 12)
-    if years and rem:
-        span = f'{years} year{"s" if years > 1 else ""} and {rem} month{"s" if rem > 1 else ""}'
-    elif years:
-        span = f'{years} year{"s" if years > 1 else ""}'
-    else:
-        span = f'{months} month{"s" if months > 1 else ""}'
-    return (f'Paying {payment_s} a month, this card takes {span} to clear — '
+    projected = months_to_clear(owed, card.apr, payment)
+    if projected is None:
+        return None
+    if projected.never:
+        return (f'At {payment_s} a month this card never clears — the interest '
+                f'alone is {_money(projected.monthly_interest, currency)}. '
+                'That is the product, not you.')
+    return (f'Paying {payment_s} a month, this card takes '
+            f'{span_words(projected.months)} to clear — '
             'which is usually longer than it feels.')
 
 
