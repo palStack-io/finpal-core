@@ -32,6 +32,7 @@ import { TeamMember } from '../types/team';
 import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { useEverest } from '../contexts/CoinAwardContext';
+import { RANGE_BLURB, RANGE_BLURB_EMPTY } from '../utils/peakCopy';
 
 const tableCellMuted: React.CSSProperties = { padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' };
 const tableCellSecondary: React.CSSProperties = { padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' };
@@ -499,9 +500,7 @@ export const Dashboard = () => {
              open to read. Both sentences, always. */
           subtitle={<>
             <span>
-              {goals.length > 0
-                ? 'What you are climbing, and the ground you stand on while you climb.'
-                : 'What you are climbing, once you pick something to climb.'}
+              {goals.length > 0 ? RANGE_BLURB : RANGE_BLURB_EMPTY}
               {' · '}
             </span>
             {/* Its own element, not a bare string beside another one. A

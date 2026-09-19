@@ -111,6 +111,18 @@ export const Kit: React.FC = () => {
     .filter((g) => !g.owned && wallet.balance < g.price)
     .sort((a, b) => a.price - b.price)[0];
 
+  /* *** PARTITIONED ON `coins` ALONE, AND EXHAUSTIVELY — WHICH THE FIRST
+     VERSION WAS NOT. *** It read `coins === 0 && a.open`, and an act arriving
+     without `open` then belonged to NEITHER list and simply stopped being
+     drawn. A row in the wrong list is visible; a row in no list is not, and
+     this page is the only inventory of what earns coins there is.
+
+     `open` would have added nothing anyway: an act at zero coins definitionally
+     still has its work outstanding, which is the only question this heading
+     asks. It stays on the type because the cairns read it. */
+  const earnedActs = wallet.acts.filter((a) => a.coins > 0);
+  const openActs = wallet.acts.filter((a) => a.coins <= 0);
+
   return (
     /* *** THE BARE `<div>` HERE WAS THE PADDING BUG THE OWNER SPOTTED ON THE
        DEMO (2026-09-17). *** Every other content page wraps in
@@ -256,6 +268,20 @@ export const Kit: React.FC = () => {
         })}
       </div>
 
+      {/* *** TWO LISTS, BECAUSE ONE HEADING WAS DESCRIBING BOTH (FINPAL-30). ***
+          `wallet.acts` carries earned acts and unearned ones together, and they
+          were all rendered under "What your coins came from" — so an act the
+          user has never done sat under a heading claiming it paid them, with a
+          dash where its figure would be. That is D-102's shape: a caption that
+          does not describe the row beside it.
+
+          *** AND THE SECOND LIST CARRIES NO FIGURE, DELIBERATELY. *** No
+          ceiling goes on the wire (decision 5), so this page cannot say what an
+          act is worth without inventing it — and "+2,500 available" on
+          something with a predicate the user may not even qualify for is the
+          bluffing bug one surface over. The titles are imperative on purpose;
+          they are the whole answer. */}
+      {earnedActs.length > 0 && (
       <section style={{ marginTop: 30 }}>
         <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px' }}>
           What your coins came from
@@ -263,7 +289,7 @@ export const Kit: React.FC = () => {
         <p style={{ color: 'var(--text-secondary)', fontSize: 13.5, margin: '0 0 12px' }}>
           Every one of these made a figure finPal shows you true.
         </p>
-        {wallet.acts.map((a) => (
+        {earnedActs.map((a) => (
           <div
             key={a.slug}
             data-testid={`act-${a.slug}`}
@@ -297,6 +323,31 @@ export const Kit: React.FC = () => {
           </div>
         ))}
       </section>
+      )}
+
+      {openActs.length > 0 && (
+      <section style={{ marginTop: 30 }} data-testid="acts-open">
+        <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px' }}>
+          What else earns coins
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13.5, margin: '0 0 12px' }}>
+          Nothing here is busywork — each one makes a figure finPal shows you true.
+        </p>
+        {openActs.map((a) => (
+          <div
+            key={a.slug}
+            data-testid={`act-open-${a.slug}`}
+            style={{
+              fontSize: 14.5, padding: '11px 0',
+              borderTop: '1px solid var(--border-light)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {a.title}
+          </div>
+        ))}
+      </section>
+      )}
       </div>
     </div>
   );

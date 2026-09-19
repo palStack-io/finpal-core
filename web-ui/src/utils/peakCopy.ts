@@ -34,9 +34,55 @@ export const peakColorVar = (peak: PeakLike): string =>
 export const peakEyebrow = (peak: PeakLike): string =>
   peak.scale === 'cost' ? "What's costing you" : "What you're building";
 
-/** `1,345 m` — grouped, because four digits of metres read as a year otherwise. */
-const elevation = (metres: number): string =>
+/**
+ * `1,345 m` — grouped, because four digits of metres read as a year otherwise.
+ *
+ * *** EXPORTED BECAUSE THE RANGE CARD WAS FORMATTING IT ITSELF. ***
+ * `GoalRange.tsx` hand-built `name · N m` with a bare `toLocaleString()`, so one
+ * elevation was grouped by the browser's locale on the dashboard and by `en-GB`
+ * on the goals page. Two formatters for one figure is D-101's shape.
+ */
+export const peakElevation = (metres: number): string =>
   `${metres.toLocaleString('en-GB')} m`;
+
+/**
+ * `debt` or `saving` — the word that says which scale a peak is on.
+ *
+ * *** THE COLOUR WAS CARRYING THIS ALONE, AND A COLOUR ALONE CANNOT (FINPAL-26).
+ * *** `peakColorVar` states the never-compare rule, which is right, but on the
+ * range card it left a reader with red peaks and green peaks and nothing saying
+ * which was which: unreadable to anyone who does not separate those two hues,
+ * and a guess for everyone else.
+ *
+ * *** IT READS `scale`, WHICH IS NEVER UNKNOWN. *** `unmeasured` is about the
+ * MAGNITUDE — no account states a rate — while the scale comes from the goal's
+ * direction, so an unmeasured peak is still definitely debt. There is no third
+ * word here because there is no third state for one to name.
+ *
+ * Deliberately not `peakEyebrow`'s wording: that is a heading over a card, this
+ * is one word inside an 11px caption between two middots. One distinction, two
+ * registers, and the register is the whole reason both exist.
+ */
+export const peakKindLabel = (peak: PeakLike): string =>
+  peak.scale === 'cost' ? 'debt' : 'saving';
+
+/**
+ * What the "Your range" card says under its title.
+ *
+ * *** ONE STRING, THREE SURFACES. *** The dashboard card, learnPal's Range page
+ * and mobile's `YourRange` draw the same thing; the copy lived at each of them
+ * and had already drifted into two different sentences. Owner-approved wording,
+ * 2026-09-18 (FINPAL-26): the old line said what the picture was, this one says
+ * why a reader should care that it is slow.
+ */
+export const RANGE_BLURB =
+  "Reaching financial goals can be a slow and steady climb: here's where you "
+  + 'stand in your journey to building savings and decreasing debt.';
+
+/** The same, for a user with no goals — there is no standing to report yet. */
+export const RANGE_BLURB_EMPTY =
+  'Reaching financial goals can be a slow and steady climb: name a goal and '
+  + 'this is where you will see how far up it you are.';
 
 /**
  * `Ben Nevis · 1,345 m · £13.33 a month in interest · 19.99% APR`
@@ -50,7 +96,7 @@ const elevation = (metres: number): string =>
 export const peakSubline = (peak: PeakLike, money: MoneyFormatter): string => {
   const parts: string[] = [];
   if (peak.mountain) {
-    parts.push(peak.mountain.name, elevation(peak.mountain.elevation_m));
+    parts.push(peak.mountain.name, peakElevation(peak.mountain.elevation_m));
   }
   if (peak.magnitude !== null) {
     parts.push(peak.scale === 'cost'

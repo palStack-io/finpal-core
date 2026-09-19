@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { MountainSilhouette } from '../../../components/MountainSilhouette';
 import { BadgeIcon } from '../../../components/BadgeIcon';
 import { heightForMagnitude } from '../../../utils/mountainGeometry';
-import { peakColorVar, peakSubline } from '../../../utils/peakCopy';
+import { RANGE_BLURB, RANGE_BLURB_EMPTY, peakColorVar, peakSubline } from '../../../utils/peakCopy';
 import { formatMoney } from '../../../styles/money';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
 import { learnpalService } from '../service';
@@ -202,7 +202,10 @@ export const Range: React.FC = () => {
       <PageHead
         band="learnpal"
         title="Your range"
-        subtitle="Every goal you have, drawn at the size of what it asks of you — and the ground you stand on while you climb."
+        /* *** THE EMPTY RANGE GETS THE EMPTY SENTENCE. *** "Here's where you
+           stand" over "No goals yet" tells somebody their standing is a thing
+           the page is currently showing them, which it is not. */
+        subtitle={nothingYet ? RANGE_BLURB_EMPTY : RANGE_BLURB}
       />
 
       {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}

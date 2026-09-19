@@ -38,8 +38,23 @@ export const CoinAward: React.FC<{
    * explaining why, and a count fixes exactly that.
    */
   remaining?: number;
+  /**
+   * Open the Kit. Absent means no link is drawn.
+   *
+   * *** THE AWARD HAD NO WAY OUT OF ITSELF, AND THAT WAS THE WHOLE REPORT
+   * (FINPAL-27): *"I can't interact with this pop-up"*. *** Every control on it
+   * made it GO AWAY — the × and nothing else — so the one place that answers
+   * "coins for what?" was reachable only by a user who already knew the Kit
+   * existed.
+   *
+   * *** IT IS A NAMED LINK, NOT A TAPPABLE CARD. *** A card that silently
+   * navigates is a card whose destination you learn by losing your place, and
+   * on web the card already contains a button (the ×), which a wrapping button
+   * cannot legally contain. So the affordance says where it goes.
+   */
+  onOpenKit?: () => void;
   onDismiss?: () => void;
-}> = ({ coins, revealed, teach, remaining = 0, onDismiss }) => {
+}> = ({ coins, revealed, teach, remaining = 0, onOpenKit, onDismiss }) => {
   if (!revealed || coins <= 0) return null;
 
   return (
@@ -109,6 +124,26 @@ export const CoinAward: React.FC<{
               {teach.body}
             </p>
           </div>
+        )}
+        {onOpenKit && (
+          /* Last, so the order is reward, then lesson, then where to go next —
+             a link above the payoff sentence would rank the errand over the
+             thing the user just earned. */
+          <button
+            type="button"
+            data-testid="coin-award-kit"
+            onClick={onOpenKit}
+            style={{
+              marginTop: 12, padding: 0, border: 0, background: 'none',
+              fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+              /* The theme-aware link ink, 6.92 / 8.21 on the card — not the
+                 green FILL token, which is a background colour. */
+              color: 'var(--g-ink)',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            See what else earns coins →
+          </button>
         )}
       </div>
       {onDismiss && (

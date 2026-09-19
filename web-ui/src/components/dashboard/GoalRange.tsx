@@ -6,6 +6,7 @@ import {
 } from '../../utils/rangeSilhouettes';
 import { heightForMagnitude } from '../../utils/mountainGeometry';
 import { formatMoney } from '../../styles/money';
+import { peakElevation, peakKindLabel } from '../../utils/peakCopy';
 import type { Goal } from '../../types/goal';
 
 /**
@@ -112,6 +113,33 @@ const intoRangeOrder = <T,>(sortedDescending: T[]): T[] => {
     else left.unshift(item);
   });
   return [...left, ...right];
+};
+
+/**
+ * A halo, so a caption stays readable where it lands on a NEIGHBOUR'S peak.
+ *
+ * *** THE MOUNTAINS OVERLAP ON PURPOSE, SO THE LABELS OVERLAP THEM TOO. *** A
+ * range is peaks sharing one ground line rather than four icons in a row, which
+ * means a short goal beside a tall one has its caption drawn across the tall
+ * one's flank — 11px grey on a dark red body. It was already marginal at two
+ * lines, and FINPAL-26's kind word is what made it unreadable, on a screenshot
+ * of the very fixture this page is captured from.
+ *
+ * `paint-order: stroke` puts the outline UNDER the glyphs, so it thickens
+ * nothing: over the sky the halo IS the sky, and only over a silhouette does it
+ * show at all. Widening the slots instead would flatten the range back into the
+ * row of clip-art this component exists to not be.
+ */
+const HALO = {
+  /* *** `paintOrder` IS AN ATTRIBUTE HERE, NOT A STYLE KEY, AND THE DIFFERENCE
+     IS THE WHOLE FIX. *** In a `style` object React emits `stroke-width` but
+     drops `paint-order` — so the first version painted a 3px outline OVER every
+     glyph and turned all four captions into white blobs. Seen on the capture,
+     not reasoned about. */
+  paintOrder: 'stroke' as const,
+  stroke: 'var(--bg-card)',
+  strokeWidth: 3,
+  strokeLinejoin: 'round' as const,
 };
 
 export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }) => {
@@ -382,7 +410,7 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
           const blockBottom = Math.max(top - 10, 46);
           const line1 = blockBottom - 28;
           return (
-            <g key={`label-${peak.goal.id}`}>
+            <g key={`label-${peak.goal.id}`} {...HALO}>
               <line
                 x1={cx} y1={blockBottom - 6} x2={cx} y2={top - 3}
                 stroke="var(--border-light)" strokeWidth="1"
@@ -391,12 +419,23 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
                     style={{ fontSize: '12.5px', fontWeight: 600, fill: 'var(--text-primary)' }}>
                 {peak.goal.name}{peak.finished ? ' ✓' : ''}
               </text>
+              {/* *** THE KIND IS A WORD, NOT ONLY A COLOUR (FINPAL-26). ***
+                  The peaks are painted from `peakColorVar`, which says cost or
+                  build in red and green and says it to nobody who cannot tell
+                  those two apart — and the reporter, who can, still asked
+                  "which of these is debt?". So the word goes in the caption
+                  the mountain already has. `peakKindLabel` is never null: the
+                  scale comes from the goal's direction, so an unmeasured peak
+                  is still definitely debt. */}
               <text x={cx} y={line1 + 13} textAnchor="middle"
                     style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>
-                {peak.goal.peak?.mountain?.name}
-                {peak.goal.peak?.mountain?.elevation_m
-                  ? ` · ${peak.goal.peak.mountain.elevation_m.toLocaleString()} m`
-                  : ''}
+                {[
+                  peak.goal.peak?.mountain?.name,
+                  peak.goal.peak?.mountain?.elevation_m
+                    ? peakElevation(peak.goal.peak.mountain.elevation_m)
+                    : null,
+                  peak.goal.peak ? peakKindLabel(peak.goal.peak) : null,
+                ].filter(Boolean).join(' · ')}
               </text>
               <text x={cx} y={line1 + 26} textAnchor="middle"
                     style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>

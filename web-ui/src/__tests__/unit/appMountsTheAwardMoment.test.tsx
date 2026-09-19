@@ -11,8 +11,11 @@
  * `CoinAward.tsx` came to ship with zero consumers in the first place. So the
  * mount is asserted rather than assumed.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'fs';
+import { fireEvent, render, screen } from '@testing-library/react';
+
+import { CoinAward } from '../../components/coins/CoinAward';
 
 const app = readFileSync('src/App.tsx', 'utf8');
 
@@ -106,5 +109,55 @@ describe('login is the index', () => {
     const shell = readFileSync('src/components/auth/AuthShell.tsx', 'utf8');
     expect(shell).toMatch(/to="\/welcome" className="auth-entry-back"/);
     expect(shell).not.toMatch(/to="\/" className="auth-entry-back"/);
+  });
+});
+
+describe('the award leads somewhere other than away (FINPAL-27)', () => {
+  /**
+   * *** EVERY CONTROL ON THE AWARD USED TO MAKE IT GO AWAY. *** The reporter's
+   * words were *"I can't interact with this pop-up"*: the × was the only thing
+   * on it, so the one page that answers "coins for what?" was reachable only by
+   * somebody who already knew the Kit existed.
+   *
+   * *** THE LINK FAILING IS SILENT, WHICH IS WHY THIS IS A GATE. *** Drop the
+   * prop in the container and the award still renders, still dismisses, still
+   * pays — it just quietly goes back to being a dead end. Nothing throws and no
+   * other test notices.
+   */
+  const container = readFileSync('src/components/coins/CoinAwardContainer.tsx', 'utf8');
+
+  it('hands the award a way to the Kit', () => {
+    expect(container).toMatch(/onOpenKit=\{/);
+    expect(container).toMatch(/navigate\('\/kit'\)/);
+  });
+
+  it('acks the award it just acted on', () => {
+    // It is fixed to the corner of the VIEWPORT, so an un-acked award would
+    // ride along on top of the very page it just sent the user to.
+    const openKit = container.slice(container.indexOf('const openKit'));
+    expect(openKit.slice(0, 200)).toMatch(/dismiss\(\)/);
+  });
+
+  it('draws a control that says where it goes', async () => {
+    const onOpenKit = vi.fn();
+    render(
+      <CoinAward
+        coins={600}
+        revealed="Your Visa is at 19.99%."
+        onOpenKit={onOpenKit}
+        onDismiss={() => {}}
+      />
+    );
+    // Named, not a tappable card: a card that silently navigates is a card
+    // whose destination you learn by losing your place.
+    const link = screen.getByTestId('coin-award-kit');
+    expect(link.textContent).toContain('earns coins');
+    fireEvent.click(link);
+    expect(onOpenKit).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws no link at all when there is nowhere to send them', () => {
+    render(<CoinAward coins={600} revealed="Your Visa is at 19.99%." />);
+    expect(screen.queryByTestId('coin-award-kit')).toBeNull();
   });
 });

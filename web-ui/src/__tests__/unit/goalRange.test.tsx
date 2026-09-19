@@ -36,6 +36,53 @@ describe('the goal range', () => {
     expect(screen.getByText(/4,392 m/)).toBeTruthy();
   });
 
+  it('*** SAYS debt OR saving IN WORDS, NOT ONLY IN COLOUR ***', () => {
+    /* FINPAL-26. The peaks are painted from `peakColorVar`, which states the
+       never-compare rule in red and green — and states it to nobody who does
+       not separate those two hues. The reporter, who does, still had to ask
+       which peaks were debt.
+
+       *** ASSERTED ON THE CAPTION, NOT ON THE FILL. *** A test on the colour
+       would pass on exactly the version that caused the report. */
+    render(
+      <GoalRange
+        goals={[
+          withPeak({}),
+          withPeak({
+            id: 2, name: 'Pay off Visa',
+            peak: {
+              scale: 'cost', magnitude: 13.33, unmeasured: false, band: 1,
+              mountain: { slug: 'ben-nevis', name: 'Ben Nevis', elevation_m: 1345 },
+            },
+          } as Partial<Goal>),
+        ]}
+        currency="USD"
+      />
+    );
+    expect(screen.getByText('Mount Rainier · 4,392 m · saving')).toBeTruthy();
+    expect(screen.getByText('Ben Nevis · 1,345 m · debt')).toBeTruthy();
+  });
+
+  it('labels an UNMEASURED peak too — the scale is never unknown', () => {
+    /* `unmeasured` is about the MAGNITUDE: no account states a rate. The scale
+       comes from the goal's direction, so an unmeasured peak is still
+       definitely debt, and leaving the word off the one peak drawn in grey
+       would strand exactly the goal the user most needs to act on. */
+    render(
+      <GoalRange
+        goals={[withPeak({
+          name: 'Store card',
+          peak: {
+            scale: 'cost', magnitude: null, unmeasured: true, band: null,
+            mountain: null,
+          },
+        } as Partial<Goal>)]}
+        currency="USD"
+      />
+    );
+    expect(screen.getByText('debt')).toBeTruthy();
+  });
+
   it('states what is left in the goal\'s OWN terms', () => {
     // A saving goal says what is still to save; a payoff goal says what the
     // debt COSTS, because the balance alone does not say whether to pay it

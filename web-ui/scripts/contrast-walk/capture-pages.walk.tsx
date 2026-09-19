@@ -1204,9 +1204,17 @@ beforeEach(() => {
     http.get('*/api/v1/coins', () => HttpResponse.json({
       earned: 940,
       balance: 140,
+      /* *** BOTH HALVES OF THE SPLIT, OR THE WALK MEASURES ONE OF THEM. ***
+         The kit files earned acts and unearned ones under two headings
+         (FINPAL-30), and a fixture where everything is earned captures the page
+         with the second section absent — the same shape as the savings-bar
+         defect above. `taught_a_rule` deliberately carries no `open` flag: an
+         act that arrives without it must still be drawn. */
       acts: [
-        { slug: 'classify', title: 'Classified a month of spending', coins: 300, sentence: null },
-        { slug: 'budget', title: 'Covered your spending with budgets', coins: 240, sentence: null },
+        { slug: 'classify', title: 'Classified a month of spending', coins: 300, sentence: null, open: false },
+        { slug: 'budget', title: 'Covered your spending with budgets', coins: 240, sentence: null, open: false },
+        { slug: 'has_a_goal', title: 'Name what you are working toward', coins: 0, sentence: null, open: true },
+        { slug: 'taught_a_rule', title: 'Teach finPal a rule', coins: 0, sentence: null },
       ],
       gear: [
         { slug: 'boots', price: 100, owned: true },

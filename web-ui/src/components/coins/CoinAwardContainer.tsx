@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useCoinAwards } from '../../contexts/CoinAwardContext';
 import { CoinAward } from './CoinAward';
@@ -18,6 +19,20 @@ import { CoinAward } from './CoinAward';
 export const CoinAwardContainer: React.FC = () => {
   const { current, remaining, dismiss, loadUnseen } = useCoinAwards();
   const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
+
+  /**
+   * *** OPENING THE KIT ACKS THE AWARD (FINPAL-27). *** Not because the user
+   * pressed dismiss — they did the opposite — but because the award is fixed to
+   * the corner of the VIEWPORT, so leaving it up would park it on top of the
+   * very page it just sent them to. Reading it and acting on it is the most
+   * "seen" an award ever gets; `ack` is ratchet-only, so the next one in the
+   * queue simply takes its place.
+   */
+  const openKit = useCallback(() => {
+    navigate('/kit');
+    dismiss();
+  }, [navigate, dismiss]);
 
   useEffect(() => {
     // *** GATED ON A USER, NOT RUN ON MOUNT. *** `/api/v1/coins` is
@@ -47,6 +62,7 @@ export const CoinAwardContainer: React.FC = () => {
         revealed={current.revealed}
         teach={current.teach}
         remaining={remaining}
+        onOpenKit={openKit}
         onDismiss={dismiss}
       />
     </div>

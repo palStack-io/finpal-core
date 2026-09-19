@@ -16,10 +16,22 @@ const WALLET = {
   earned: 6500,
   balance: 540,
   acts: [
+    // *** `open` IS PART OF THE PAYLOAD AND WAS MISSING FROM THIS FIXTURE. ***
+    // The cast below hides that from TypeScript, so the shape has to be kept
+    // honest by hand: the server sends it for every act, and the kit now reads
+    // it to decide which list a row belongs in.
     { slug: 'debt_rates', title: 'Know what your debt costs', coins: 1200,
+      open: false, surfaces: ['accounts'],
       revealed: 'Visa is at 19.99%, which costs you $13.33 a month.' },
     { slug: 'has_a_goal', title: 'Name what you are working toward', coins: 0,
+      open: true, surfaces: ['goals'],
       revealed: null },
+    // *** DELIBERATELY WITHOUT `open`. *** The first version of the split read
+    // `coins === 0 && a.open`, so this act belonged to neither list and simply
+    // stopped being drawn — the failure the exhaustiveness assertion below
+    // exists for, found by looking at a rendered capture rather than here.
+    { slug: 'taught_a_rule', title: 'Teach finPal a rule', coins: 0,
+      surfaces: ['rules'], revealed: null },
   ],
   gear: [
     { slug: 'map', price: 100, owned: true },
@@ -55,9 +67,70 @@ describe('Your kit', () => {
     render(<Kit />);
     await screen.findByRole('heading', { level: 1, name: 'Your kit' });
 
-    const row = screen.getByTestId('act-has_a_goal');
+    // It lives in the "what else" list now (FINPAL-30) — the point stands
+    // wherever it is drawn: the title, and not one word finPal cannot justify.
+    const row = screen.getByTestId('act-open-has_a_goal');
     expect(row.textContent).toContain('Name what you are working toward');
     expect(row.querySelector('p')).toBeNull();
+  });
+
+  it('*** NEVER FILES AN UNEARNED ACT UNDER "WHAT YOUR COINS CAME FROM" ***',
+    async () => {
+      /* FINPAL-30, and D-102's shape: every act was rendered under that one
+         heading, so a thing the user has never done sat under a caption saying
+         it paid them, with a dash where its figure would be. The two lists are
+         the fix, and this asserts the MEMBERSHIP rather than the headings —
+         a heading can be re-worded, but a row in the wrong list is the defect.
+
+         It also pins the second list's silence about worth: no ceiling goes on
+         the wire, so a figure beside an unearned act could only be invented. */
+      render(<Kit />);
+      await screen.findByRole('heading', { level: 1, name: 'Your kit' });
+
+      // Earned: in the first list, with its figure. Never in the second.
+      expect(screen.getByTestId('act-debt_rates').textContent).toContain('+1,200');
+      expect(screen.queryByTestId('act-open-debt_rates')).toBeNull();
+
+      // Unearned: in the second list, and NOT in the first.
+      expect(screen.queryByTestId('act-has_a_goal')).toBeNull();
+      const open = screen.getByTestId('acts-open');
+      expect(open.textContent).toContain('Name what you are working toward');
+      expect(open.textContent).not.toMatch(/[+\d]/);
+    });
+
+  it('*** DRAWS EVERY ACT SOMEWHERE — NO ROW MAY FALL BETWEEN THE LISTS ***',
+    async () => {
+      /* A row in the wrong list is visible and gets reported. A row in NO list
+         is not, and this page is the only inventory of what earns coins there
+         is. The split's first version read `coins === 0 && a.open`, which
+         dropped any act the server sent without that flag. */
+      render(<Kit />);
+      await screen.findByRole('heading', { level: 1, name: 'Your kit' });
+
+      for (const a of WALLET.acts) {
+        const drawn = screen.queryByTestId(`act-${a.slug}`)
+          ?? screen.queryByTestId(`act-open-${a.slug}`);
+        expect(drawn, `${a.slug} is drawn in neither list`).toBeTruthy();
+      }
+    });
+
+  it('*** DRAWS NO HEADING OVER AN EMPTY LIST ***', async () => {
+    /* A brand-new user has every act at zero coins — base camp's own audience —
+       and "What your coins came from" over nothing is the empty-caption half of
+       the defect the split exists to fix. The heading is inside the guard, not
+       beside it. */
+    vi.mocked(coinService.getWallet).mockResolvedValue({
+      ...WALLET,
+      earned: 0,
+      acts: WALLET.acts.map((a) => ({ ...a, coins: 0, revealed: null })),
+    } as never);
+    render(<Kit />);
+    await screen.findByRole('heading', { level: 1, name: 'Your kit' });
+
+    expect(screen.queryByRole('heading', { name: 'What your coins came from' }))
+      .toBeNull();
+    expect(screen.getByRole('heading', { name: 'What else earns coins' }))
+      .toBeTruthy();
   });
 
   it('offers Buy only for gear the balance can actually cover', async () => {
