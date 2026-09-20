@@ -904,6 +904,63 @@ class AnalyticsService:
                     total += balance
         return total
 
+    def _essential_monthly_spend(self, user_id, scope_ids=None):
+        """What a month of essentials costs — the divisor an emergency fund needs.
+
+        *** THE OLD DIVISOR WAS `total_expenses / 12` AND IT WAS NOT A MONTH OF
+        ANYTHING. *** Measured on the demo: that produced 591.85 for a
+        household spending 2,892.52 a month, because the numerator is not a
+        full year's expenses. Paired with the 30% asset guess the two errors
+        partly cancelled and the headline looked plausible; fixing only the
+        guess took it from 4.1 months to 13.5, which is the dangerous
+        direction — telling somebody they are safe when they are not.
+
+        *** ESSENTIALS, NOT EVERYTHING. *** An emergency fund covers what
+        arrives whatever you do. finPal knows which categories those are:
+        `spending_type == 'fixed'`, the same field the Budgets page groups by.
+        Flexible spending is what you would cut in an emergency, so counting
+        it makes the buffer look shorter than it is.
+
+        Falls back to the observed monthly average when nothing is sorted yet,
+        and returns `None` when there is nothing to measure — never a zero,
+        which would divide into an infinite runway.
+        """
+        from src.models.category import Category
+        from src.models.transaction import Expense
+        from src.utils.household import read_scope
+
+        household_ids = scope_ids or read_scope(user_id)
+        first_of_this = datetime.utcnow().replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_month_end = first_of_this - timedelta(seconds=1)
+        last_month_start = last_month_end.replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        rows = (Expense.query
+                .filter(Expense.user_id.in_(household_ids),
+                        Expense.date >= last_month_start,
+                        Expense.date <= last_month_end,
+                        Expense.transaction_type == 'expense')
+                .all())
+        if not rows:
+            return None
+
+        types = {c.id: c.spending_type for c in Category.query.filter(
+            Category.user_id.in_(household_ids)).all()}
+        fixed = Decimal('0')
+        total = Decimal('0')
+        for row in rows:
+            amount = Decimal(str(row.amount or 0))
+            total += amount
+            if types.get(row.category_id) == 'fixed':
+                fixed += amount
+
+        if fixed > 0:
+            return fixed
+        # Nothing sorted yet: the whole month is the honest stand-in, and it
+        # errs SHORT (a bigger divisor, fewer months) rather than long.
+        return total or None
+
     def get_financial_health(self, user_id, scope_ids=None):
         """Calculate financial health metrics"""
         from datetime import datetime
@@ -947,10 +1004,10 @@ class AnalyticsService:
         # one was a heuristic over a figure sitting in the database, which is
         # the fabricated-figures shape rather than an honest approximation.
         emergency_fund_months = 0
-        if total_expenses > 0:
-            monthly_expenses = total_expenses / 12
+        monthly_need = self._essential_monthly_spend(user_id, scope_ids)
+        if monthly_need and monthly_need > 0:
             liquid_assets = self._liquid_assets(user_id, scope_ids)
-            emergency_fund_months = round(liquid_assets / monthly_expenses, 1) if monthly_expenses > 0 else 0
+            emergency_fund_months = round(liquid_assets / monthly_need, 1)
 
         # Calculate liquidity ratio (current assets / current liabilities)
         liquidity_ratio = 0
