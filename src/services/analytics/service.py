@@ -877,6 +877,33 @@ class AnalyticsService:
 
         return result
 
+    def _liquid_assets(self, user_id, scope_ids=None):
+        """Cash a user could actually reach this week.
+
+        *** CHECKING AND SAVINGS ONLY, AND POSITIVE BALANCES ONLY. *** An
+        investment is not an emergency fund — selling it takes days and may
+        crystallise a loss — and a credit card's negative balance is a debt,
+        not a negative buffer. Both exclusions are the point: a figure that
+        counts a brokerage account as "three months of expenses" tells
+        somebody they are safe when they are not.
+        """
+        from src.models.account import Account
+        from src.utils.household import read_scope
+
+        # `read_scope` is what every other figure on this page is scoped by —
+        # the same helper `get_dashboard_data` uses — so the buffer covers the
+        # same people as the expenses it is divided by. Scoping the two
+        # differently is how a ratio comes to describe two households.
+        household_ids = scope_ids or read_scope(user_id)
+        accounts = Account.query.filter(Account.user_id.in_(household_ids)).all()
+        total = Decimal('0')
+        for account in accounts:
+            if account.type in ('checking', 'savings'):
+                balance = Decimal(str(account.balance or 0))
+                if balance > 0:
+                    total += balance
+        return total
+
     def get_financial_health(self, user_id, scope_ids=None):
         """Calculate financial health metrics"""
         from datetime import datetime
@@ -906,11 +933,23 @@ class AnalyticsService:
             debt_to_income = round(monthly_debt_payment / (total_income / 12), 2) if total_income > 0 else 0
 
         # Calculate emergency fund months
+        #
+        # *** LIQUID ASSETS ARE SUMMED, NOT GUESSED AT 30%. *** This read
+        # `total_assets * Decimal('0.3')` with the comment "Assume liquid
+        # assets are 30% of total assets". Measured on the demo: demo1 holds
+        # 5,000.00 in checking and 3,000.00 in savings, so the knowable figure
+        # is 8,000.00 and the guess produced 2,400.00 — the headline was
+        # understating their buffer by 3.3x. Which accounts are liquid is not
+        # something finPal has to estimate; `Account.type` says so.
+        #
+        # The other rule-of-thumb ratios in this method are heuristics over
+        # figures nobody can know (what share of a debt is paid monthly). This
+        # one was a heuristic over a figure sitting in the database, which is
+        # the fabricated-figures shape rather than an honest approximation.
         emergency_fund_months = 0
         if total_expenses > 0:
             monthly_expenses = total_expenses / 12
-            # Assume liquid assets are 30% of total assets for this calculation
-            liquid_assets = total_assets * Decimal('0.3')
+            liquid_assets = self._liquid_assets(user_id, scope_ids)
             emergency_fund_months = round(liquid_assets / monthly_expenses, 1) if monthly_expenses > 0 else 0
 
         # Calculate liquidity ratio (current assets / current liabilities)
