@@ -113,6 +113,22 @@ export interface CoinWallet {
    * finPal chose about the user's FINANCES; this one is about effort.
    */
   everest: { altitude_m: number; summit_m: number; at_summit: boolean };
+  /**
+   * Badges the user HOLDS. *** EARNED ONES ONLY — AN UNEARNED BADGE IS ABSENT,
+   * NEVER PRESENT-AND-FALSE *** , so no client can render a locked grid
+   * telling somebody they have not paid their debt.
+   *
+   * Optional because a backend older than `earned_badges` omits the key, and
+   * `wallet.badges.length` on a missing key is what throws.
+   */
+  badges?: CoinBadge[];
+}
+
+/** One earned badge, as the wallet sends it. */
+export interface CoinBadge {
+  slug: string;
+  title: string;
+  earned_at: string | null;
 }
 
 /** One award, as `/coins/refresh` and the wallet's `unseen` both send it. */

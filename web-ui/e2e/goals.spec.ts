@@ -202,7 +202,18 @@ test('a credit card shows its available credit, computed from a real limit', asy
 
   // This block was UNREACHABLE until B1 put `credit_limit` in the payload, and
   // the arithmetic behind it was wrong when it first became reachable (D-176).
-  // Seeded: a 3200 limit against an 800 debt, so 2400 available.
-  await expect(page.getByText('Available Credit')).toBeVisible();
+  //
+  // *** `getByText('Available Credit')` WENT AMBIGUOUS WHEN THE DEMO GREW A
+  // SECOND CARD, AND STRICT MODE IS RIGHT TO REFUSE IT. *** The budgeter now
+  // carries a Visa, a 0% store card and a student loan, so the debt plan has an
+  // ordering to demonstrate. A bare text match that happened to be unique is
+  // a test pinned to the fixture's size rather than to its arithmetic.
+  //
+  // Both cards are asserted, because two is the state that broke this and one
+  // of them is the 0% promotional case:
+  //   Visa   3,200 limit − 800 debt = 2,400
+  //   Store  1,000 limit − 350 debt =   650
+  await expect(page.getByText('Available Credit').first()).toBeVisible();
   await expect(page.getByText('$2,400.00')).toBeVisible();
+  await expect(page.getByText('$650.00')).toBeVisible();
 });

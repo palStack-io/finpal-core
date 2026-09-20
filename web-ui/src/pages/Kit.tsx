@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
 import { GearIcon } from '../components/GearIcon';
+import { BadgeIcon } from '../components/BadgeIcon';
+import { badgeGlyph } from '../utils/badgeGlyph';
 import { PageHead } from '../components/PageHead';
 import { CoinPurse } from '../components/coins/CoinPurse';
 import { coinService, type CoinWallet } from '../services/coinService';
@@ -122,6 +124,9 @@ export const Kit: React.FC = () => {
      asks. It stays on the type because the cairns read it. */
   const earnedActs = wallet.acts.filter((a) => a.coins > 0);
   const openActs = wallet.acts.filter((a) => a.coins <= 0);
+  /* `?? []` because a backend older than `earned_badges` omits the key, and
+     `.length` on `undefined` is what throws. */
+  const badges = wallet.badges ?? [];
 
   return (
     /* *** THE BARE `<div>` HERE WAS THE PADDING BUG THE OWNER SPOTTED ON THE
@@ -348,6 +353,50 @@ export const Kit: React.FC = () => {
         ))}
       </section>
       )}
+      {/* *** THE WALLET HAS SENT `badges` SINCE THE ECONOMY SHIPPED AND NO
+          CLIENT READ IT. *** Seven badges — `debt-clear`, `goal-reached`, the
+          three on-budget runs and the two on-plan runs — were earned, stored
+          and invisible, which is D-187's shape: a payload is not proof
+          anything renders it. AUDIT D-274.
+
+          *** EARNED ONES ONLY, AND THE SECTION IS ABSENT WHEN THERE ARE
+          NONE. *** A locked grid would read as "you have not paid your debt",
+          which is the report card decision 5 forbids. */}
+      {badges.length > 0 && (
+      <section style={{ marginTop: 30 }} data-testid="badges">
+        <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px' }}>
+          What you have kept up
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13.5, margin: '0 0 12px' }}>
+          These are not bought and never taken back — a hard month cannot
+          remove one you have already earned.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+          {badges.map((b) => (
+            <div
+              key={b.slug}
+              data-testid={`badge-${b.slug}`}
+              style={{
+                display: 'flex', gap: 10, alignItems: 'center',
+                padding: '10px 13px', borderRadius: 10,
+                border: '1px solid var(--border-light)',
+              }}
+            >
+              <BadgeIcon slug={badgeGlyph(b.slug)} size={32} title={b.title} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{b.title}</div>
+                {b.earned_at && (
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                    {new Date(b.earned_at).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+      )}
+
       </div>
     </div>
   );

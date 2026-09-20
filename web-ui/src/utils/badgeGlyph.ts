@@ -1,0 +1,53 @@
+/**
+ * The drawing a literacy badge borrows.
+ *
+ * *** A BADGE SLUG IS NOT A GEAR SLUG, AND RENDERING ONE AS THE OTHER DREW A
+ * BULLET. *** On web, `BadgeIcon` asks `GearIcon` for `/gear/<slug>.svg`;
+ * there is no `goal-reached.svg`, so every literacy badge fell through to the
+ * `'•'` fallback AND put a 404 in the console on every visit. Found on the
+ * deployed demo, not in a test: the unit tests render `BadgeIcon` happily
+ * because the fetch is mocked away. AUDIT D-276.
+ *
+ * On mobile the same mistake is quieter and worse — `GEAR_PNG` is a STATIC
+ * require map (Metro will not bundle a computed path), so an unmapped slug
+ * renders nothing at all rather than a visible bullet.
+ *
+ * *** THE MAPPING IS PRESENTATIONAL, SO IT LIVES IN THE CLIENT. *** Same line
+ * `mountainGeometry.ts` sits on: the server decides which badge you hold, the
+ * client decides what it looks like. Sending a glyph name on the wire would
+ * make the artwork a release-coupled API field for no gain.
+ *
+ * *** THIS FILE IS BYTE-IDENTICAL IN `web-ui/src/utils/` AND `mobile/src/utils/`,
+ * AND A TEST DIFFS THEM RATHER THAN TRUSTING THIS SENTENCE. *** Two clients
+ * drawing one badge differently is D-101 in pictures. `peakCopy.ts` is kept
+ * the same way and for the same reason.
+ *
+ * *** REUSING THE GEAR ART IS THE OWNER'S DECISION (2026-09-17), NOT A
+ * SHORTCUT: *** badges reuse the glyph inside a disc, and the disc is what
+ * distinguishes a badge from equipment.
+ */
+export const BADGE_GLYPH: Record<string, string> = {
+  // Cutting through the thing that was in the way.
+  'debt-free': 'ice-axe',
+  // You arrived somewhere you had named.
+  'goal-reached': 'signpost',
+  // Knowing what you are carrying, three months running.
+  'on-budget-3': 'pack-scale',
+  'on-budget-6': 'slope-gauge',
+  'on-budget-12': 'compass',
+  // Keeping to a start time is the whole of a paydown plan.
+  'on-plan-3': 'alpine-start',
+  'on-plan-6': 'carabiner',
+};
+
+/**
+ * The gear slug to draw for a badge.
+ *
+ * *** FALLS BACK TO THE BADGE SLUG, NOT TO A DEFAULT PICTURE. *** A badge
+ * registered by a module (`register_badge`) has no entry here, and giving it
+ * somebody else's drawing would say something false about it. Passing the slug
+ * through means it finds its own file if one exists and draws nothing if it
+ * does not — absent rather than wrong, the same rule the badges themselves
+ * follow.
+ */
+export const badgeGlyph = (slug: string): string => BADGE_GLYPH[slug] ?? slug;

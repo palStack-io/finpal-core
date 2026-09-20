@@ -60,9 +60,37 @@ describe('badges are not gear', () => {
     expect(src).toMatch(/border:/);
   });
 
-  it('the Kit shop still renders GEAR, not badges', () => {
-    const kit = readFileSync('src/pages/Kit.tsx', 'utf8');
-    expect(kit).toMatch(/<GearIcon\b/);
-    expect(kit).not.toMatch(/<BadgeIcon\b/);
+  /*
+   * *** THIS USED TO BE A WHOLE-FILE RULE AND THE FILE OUTGREW IT. *** It read
+   * `expect(kit).not.toMatch(/<BadgeIcon/)`, which is a fair proxy for "the
+   * shop does not render badges" only while the kit page IS the shop. It
+   * stopped being one when the page grew a badges section — the wallet had
+   * been sending `badges` since the economy shipped and no client read it
+   * (D-274), and Kit is where the wallet payload lands.
+   *
+   * *** SO IT IS SCOPED TO THE GRID, AND MIRRORED. *** Narrowing a gate is how
+   * a gate goes blind, so the badge half is asserted too: the shop grid must
+   * render gear and no badge, and the badges section must render a badge and
+   * no gear. Either swap still fails.
+   */
+  const kitSource = () => readFileSync('src/pages/Kit.tsx', 'utf8');
+  const region = (src: string, from: string, to: string) => {
+    const a = src.indexOf(from);
+    const b = to ? src.indexOf(to, a) : src.length;
+    expect(a).toBeGreaterThan(-1);
+    expect(b).toBeGreaterThan(a);
+    return src.slice(a, b);
+  };
+
+  it('the Kit SHOP GRID still renders GEAR, not badges', () => {
+    const shop = region(kitSource(), 'data-testid="kit-grid"', '{earnedActs.length');
+    expect(shop).toMatch(/<GearIcon\b/);
+    expect(shop).not.toMatch(/<BadgeIcon\b/);
+  });
+
+  it('the Kit BADGES section renders BADGES, not gear', () => {
+    const badges = region(kitSource(), 'data-testid="badges"', '');
+    expect(badges).toMatch(/<BadgeIcon\b/);
+    expect(badges).not.toMatch(/<GearIcon\b/);
   });
 });

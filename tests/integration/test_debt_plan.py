@@ -131,3 +131,188 @@ def test_no_plan_is_a_null_not_an_error(client, db, auth_headers):
     user = UserFactory()
     body = client.get(URL, headers=auth_headers(user)).get_json()
     assert body['success'] is True and body['plan'] is None
+
+
+# ---------------------------------------------------------------------------
+# How the plan is going — derived from payments, never stored
+# ---------------------------------------------------------------------------
+
+def _transfer(user, account, amount, when):
+    from src.models.transaction import Expense
+    row = Expense(description='Card payment', amount=amount, date=when,
+                  user_id=user.id, paid_by=user.id, card_used='',
+                  split_method='none', account_id=account.id,
+                  transaction_type='transfer', currency_code='USD')
+    _db.session.add(row)
+    _db.session.commit()
+    return row
+
+
+def _this_month():
+    from datetime import datetime
+    return datetime.utcnow().replace(day=2, hour=12, minute=0, second=0, microsecond=0)
+
+
+def test_it_says_ahead_on_or_behind_and_offers_nothing(db):
+    """*** THE FIGURE IS THE MESSAGE. *** Owner decision, 2026-09-19.
+
+    Somebody behind is usually behind because they could not pay, not because
+    they forgot, and a prompt they cannot act on is a reminder that they are
+    failing. The payload carries a number and a word, and no call to action.
+    """
+    from src.models.debt_plan import AVALANCHE, DebtPlan
+    from src.services.goal.plan_status import plan_status
+
+    user = UserFactory()
+    card = _card(user.id, 'Visa', -800.0, 19.99)
+    _db.session.add(DebtPlan(user_id=user.id, method=AVALANCHE,
+                             monthly_amount=Decimal('100.00')))
+    _db.session.commit()
+    _transfer(user, card, 120.0, _this_month())
+
+    status = plan_status(user.id, [user.id])
+    assert status['state'] == 'ahead'
+    assert status['difference'] == 20.0
+    assert 'prompt' not in status and 'suggestion' not in status
+
+
+def test_behind_is_stated_plainly(db):
+    from src.models.debt_plan import AVALANCHE, DebtPlan
+    from src.services.goal.plan_status import plan_status
+
+    user = UserFactory()
+    card = _card(user.id, 'Visa', -800.0, 19.99)
+    _db.session.add(DebtPlan(user_id=user.id, method=AVALANCHE,
+                             monthly_amount=Decimal('100.00')))
+    _db.session.commit()
+    _transfer(user, card, 40.0, _this_month())
+
+    status = plan_status(user.id, [user.id])
+    assert status['state'] == 'behind'
+    assert status['difference'] == -60.0
+
+
+def test_A_PLAN_WITH_NO_AMOUNT_REPORTS_NO_STATUS(db):
+    """There is nothing to be ahead OF. Not a zero, not "behind"."""
+    from src.models.debt_plan import DebtPlan, SNOWBALL
+    from src.services.goal.plan_status import plan_status
+
+    user = UserFactory()
+    _card(user.id, 'Visa', -800.0, 19.99)
+    _db.session.add(DebtPlan(user_id=user.id, method=SNOWBALL))
+    _db.session.commit()
+
+    assert plan_status(user.id, [user.id]) is None
+
+
+def test_THE_STREAK_IS_THE_BEST_RUN_NEVER_THE_CURRENT(db):
+    """A hard month cannot erase a run from the spring.
+
+    Decision 1: nothing earned is ever taken away. Same rule
+    `best_on_budget_run` follows, and the reason a badge can be an outcome at
+    all when earning coins for one is refused.
+    """
+    from datetime import datetime, timedelta
+    from src.models.debt_plan import AVALANCHE, DebtPlan
+    from src.services.goal.plan_status import best_on_plan_run
+
+    user = UserFactory()
+    card = _card(user.id, 'Visa', -5000.0, 19.99)
+    _db.session.add(DebtPlan(user_id=user.id, method=AVALANCHE,
+                             monthly_amount=Decimal('100.00')))
+    _db.session.commit()
+
+    now = datetime.utcnow().replace(day=1)
+    def month_back(n):
+        d = now
+        for _ in range(n):
+            d = (d - timedelta(days=1)).replace(day=1)
+        return d.replace(day=10, hour=12)
+
+    # *** TWO RUNS, THE LONGER ONE OLDER — THAT IS WHAT MAKES THIS
+    # DISCRIMINATE. *** The scan runs newest-first, so with a single run
+    # `best = run` and `best = max(best, run)` agree and the sabotage passes.
+    # The first version of this test had one run and did exactly that.
+    #
+    #   month 1  missed
+    #   months 2-4  met      <- the long run, older in the scan
+    #   month 5  missed
+    #   months 6-7  met      <- a shorter run, oldest of all
+    #
+    # `best = run` would end holding 2. The rule holds 3.
+    _transfer(user, card, 10.0, month_back(1))
+    for n in (2, 3, 4):
+        _transfer(user, card, 150.0, month_back(n))
+    _transfer(user, card, 10.0, month_back(5))
+    for n in (6, 7):
+        _transfer(user, card, 150.0, month_back(n))
+
+    assert best_on_plan_run(user.id, [user.id]) == 3
+
+
+def test_the_payload_names_the_currency_its_figures_are_in(client, db, auth_headers):
+    """D-278. A payload of bare numbers in mixed currencies cannot be rendered.
+
+    *** FOUND ON THE iOS SIMULATOR, NOT BY A TEST. *** A euro household's
+    DOLLAR card printed as `€600.00` — the client had no per-figure currency
+    and reached for the first account's. Two faults, and only one was the
+    client's: the server was sending `balance` straight off the row while the
+    reader's symbol came from somewhere else entirely. That is **D-156**, the
+    defect owner decision B1 (2026-09-08) settled for the dashboard.
+    """
+    user = UserFactory()
+    _card(user.id, 'Visa', -800, apr=19.99)
+    client.put(URL, json={'method': 'avalanche', 'monthly_amount': 250},
+               headers=auth_headers(user))
+
+    plan = client.get(URL, headers=auth_headers(user)).get_json()['plan']
+
+    # *** THE KEY MUST BE PRESENT. *** Without it a client has to guess, and
+    # the guess it reached for was "the first account's code".
+    assert 'currency_code' in plan, 'no currency on a payload full of money'
+
+
+def test_snowball_ranks_by_the_CONVERTED_size(db):
+    """*** THE FIXTURE IS CHOSEN SO THE TWO ORDERS DISAGREE. ***
+
+    Three sabotages passed in this session, every one a fixture hole. The hole
+    here is balances whose ranking is the same converted or not — a test built
+    on those passes whether or not the conversion happens. So the raw numbers
+    say one thing and the converted ones say the opposite: 900 of a currency
+    worth half as much is SMALLER than 500 of the base, and only a comparison
+    that converts can see it.
+    """
+    user = UserFactory()
+    small_but_big_number = _card(user.id, 'Weak currency card', -900)
+    big_but_small_number = _card(user.id, 'Base currency card', -500)
+
+    # Raw: 500 < 900, so the base card sorts first.
+    raw = order_debts([small_but_big_number, big_but_small_number], SNOWBALL)
+    assert [a.name for a in raw] == ['Base currency card', 'Weak currency card']
+
+    # Converted: the 900 is worth 450, so it sorts first. Opposite answer.
+    converted = order_debts(
+        [small_but_big_number, big_but_small_number], SNOWBALL,
+        balances={small_but_big_number.id: Decimal('-450'),
+                  big_but_small_number.id: Decimal('-500')})
+    assert [a.name for a in converted] == ['Weak currency card', 'Base currency card']
+
+
+def test_avalanche_does_not_need_the_conversion(db):
+    """A rate is unitless, so the ordering by APR cannot move.
+
+    Asserted because the opposite mistake — threading `balances` into avalanche
+    as though it changed the answer — would look like caution and would hide a
+    real failure: if this order DID move with the balances, the sort key would
+    be reading the wrong thing.
+    """
+    user = UserFactory()
+    cheap_big = _card(user.id, 'Cheap and large', -9000, apr=3.0)
+    dear_small = _card(user.id, 'Dear and small', -200, apr=24.99)
+
+    without = order_debts([cheap_big, dear_small], AVALANCHE)
+    with_rates = order_debts([cheap_big, dear_small], AVALANCHE,
+                             balances={cheap_big.id: Decimal('-1'),
+                                       dear_small.id: Decimal('-99999')})
+    assert [a.name for a in without] == ['Dear and small', 'Cheap and large']
+    assert [a.name for a in with_rates] == [a.name for a in without]

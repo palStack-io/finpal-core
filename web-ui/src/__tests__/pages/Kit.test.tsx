@@ -169,3 +169,50 @@ describe('Your kit', () => {
     expect(document.body.textContent).not.toMatch(/7,853\s*\/\s*\d/);
   });
 });
+
+/**
+ * *** THE WALLET HAS SENT `badges` SINCE THE ECONOMY SHIPPED AND NO CLIENT
+ * READ IT — AUDIT D-274. *** Seven badges were earned, stored and invisible:
+ * `earned_badges` is in the payload at `api/v1/coins.py`, and a grep of
+ * `web-ui/src` and `mobile/src` for it found the word only in comments. That
+ * is D-187's shape — a payload is not proof anything renders it — and it is
+ * what would have made `on-plan-3` and `on-plan-6` dead rows on arrival.
+ */
+describe('badges', () => {
+  it('renders the earned ones', async () => {
+    vi.mocked(coinService.getWallet).mockResolvedValue({
+      ...WALLET,
+      badges: [
+        { slug: 'on-plan-3', title: 'Three months on plan', earned_at: '2026-09-01T00:00:00' },
+        { slug: 'goal-reached', title: 'Goal reached', earned_at: null },
+      ],
+    } as never);
+    render(<Kit />);
+
+    expect(await screen.findByTestId('badge-on-plan-3')).toBeTruthy();
+    expect(screen.getByText('Three months on plan')).toBeTruthy();
+    /* `earned_at: null` is a real case — the badge still renders, without a
+       date, rather than printing "Invalid Date". */
+    expect(screen.getByTestId('badge-goal-reached').textContent)
+      .not.toMatch(/Invalid Date/);
+  });
+
+  it('draws NO section when none are held, never a locked grid', async () => {
+    /* An unearned badge is absent, not present-and-false. A grid of greyed
+       discs would read as *you have not paid your debt*, which is the report
+       card decision 5 forbids. */
+    vi.mocked(coinService.getWallet).mockResolvedValue({ ...WALLET, badges: [] } as never);
+    render(<Kit />);
+
+    await screen.findByRole('heading', { level: 1, name: 'Your kit' });
+    expect(screen.queryByTestId('badges')).toBeNull();
+  });
+
+  it('does not throw on a backend that predates the key', async () => {
+    /* `WALLET` has no `badges`, which is exactly a deployed backend older than
+       `earned_badges`. `.length` on `undefined` is what throws. */
+    render(<Kit />);
+    await screen.findByRole('heading', { level: 1, name: 'Your kit' });
+    expect(screen.queryByTestId('badges')).toBeNull();
+  });
+});

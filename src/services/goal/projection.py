@@ -74,8 +74,19 @@ def span_words(months):
     return f'{months} month{"s" if months > 1 else ""}'
 
 
-def order_debts(accounts, method):
+def order_debts(accounts, method, balances=None):
     """The debts in the order a method says to clear them.
+
+    *** `balances` IS `{account_id: amount}` IN ONE CURRENCY, AND SNOWBALL IS
+    WRONG WITHOUT IT ON A MULTI-CURRENCY HOUSEHOLD. *** "Smallest balance
+    first" compares magnitudes, and comparing €600 with $800 as bare numbers
+    ranks them by whichever currency happens to be weaker. That is D-156's
+    shape — a figure summed across currencies as though they were one — and the
+    caller owns the conversion because it also owns which currency labels the
+    answer. Omitted means "they are already comparable", which is the truth on
+    a single-currency instance and the identity conversion everywhere else.
+
+    Avalanche does NOT need it: an APR is a rate, and a rate is unitless.
 
     *** THIS IS THE ONLY THING THE METHOD ACTUALLY DECIDES. *** Avalanche is
     highest rate first — it costs least in total. Snowball is smallest balance
@@ -92,9 +103,15 @@ def order_debts(accounts, method):
     from decimal import Decimal
 
     owed = [a for a in accounts if float(a.balance or 0) < 0]
+
+    def magnitude(account):
+        if balances is not None and account.id in balances:
+            return abs(float(balances[account.id] or 0))
+        return abs(float(account.balance or 0))
+
     if method == SNOWBALL:
-        return sorted(owed, key=lambda a: abs(float(a.balance or 0)))
+        return sorted(owed, key=magnitude)
     # Avalanche. `apr is None` sorts last via the first key.
     return sorted(
         owed,
-        key=lambda a: (a.apr is None, -float(a.apr or 0), abs(float(a.balance or 0))))
+        key=lambda a: (a.apr is None, -float(a.apr or 0), magnitude(a)))

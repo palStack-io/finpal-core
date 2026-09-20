@@ -164,6 +164,17 @@ def _has_reached_a_goal(user_id):
 # boundary `get_checks()` and `get_acts()` already draw, and the same reason
 # `test_literacy_boundary.py` gives in as many words: *"a predicate that needs a
 # module's tables belongs in that module"*.
+
+def _best_on_plan_run(user_id):
+    """Imported lazily: `goal.plan_status` reads models this module does not.
+
+    Kept a thin wrapper rather than inlined so the streak has exactly one
+    implementation, in the module that owns the plan.
+    """
+    from src.services.goal.plan_status import best_on_plan_run
+    return best_on_plan_run(user_id)
+
+
 BADGES = {
     'debt-free': (
         'Debt clear',
@@ -184,6 +195,22 @@ BADGES = {
     'on-budget-12': (
         'A year on budget',
         lambda uid: best_on_budget_run(uid) >= 12,
+    ),
+    # *** A BADGE, NOT COINS, AND THAT IS THE WHOLE REASON IT IS ALLOWED. ***
+    # Owner decision, 2026-09-19. Meeting a paydown plan is an OUTCOME, and
+    # §14.1 excludes outcomes from EARNING because a careful person on a low
+    # wage may never manage it. Badges survive that rule on the two properties
+    # this file's model docstring sets out — recorded when first observed and
+    # never re-evaluated, and absent rather than present-and-false — so a hard
+    # month can never take one back, and no client can render a grid saying
+    # *you did not keep to your plan*.
+    'on-plan-3': (
+        'Three months on plan',
+        lambda uid: _best_on_plan_run(uid) >= 3,
+    ),
+    'on-plan-6': (
+        'Six months on plan',
+        lambda uid: _best_on_plan_run(uid) >= 6,
     ),
 }
 

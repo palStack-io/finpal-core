@@ -42,9 +42,15 @@ export const BufferCalculator: React.FC<{ currency: string }> = ({ currency }) =
         border: '1px solid var(--border-light)', borderRadius: 12,
       }}
     >
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+      {/* *** h2, NOT h3, AND THE PAGE'S ONLY HEADING ABOVE IT IS THE h1. ***
+          `every-page.spec.ts` fails a jump of more than one level, and it
+          failed `/goals` in both themes on exactly this: an h3 sitting
+          directly under the page title with no h2 anywhere between them. A
+          reader tabbing headings hears a level that promises a section that
+          does not exist. */}
+      <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
         How much is enough?
-      </h3>
+      </h2>
       <p className="fp-hint" style={{ margin: '4px 0 12px', lineHeight: 1.55 }}>
         You spend <strong>{money(picture.essential_monthly)}</strong> a month on
         things that arrive whatever you do, and hold{' '}

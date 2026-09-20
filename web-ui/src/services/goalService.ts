@@ -46,12 +46,47 @@ export interface GoalSuggestion {
   check: string;
 }
 
+/**
+ * How the current month is going against the plan.
+ *
+ * *** `paid` IS WHAT finPal COULD SEE, NOT WHAT THEY PAID. *** It counts
+ * transfers recorded against a debt account, so somebody paying their card
+ * from a bank finPal does not hold scores zero and reads as `behind`. The
+ * panel prints that basis beside the figure; see `plan_status.py`.
+ */
+export interface DebtPlanStatus {
+  method: 'avalanche' | 'snowball';
+  planned: number;
+  paid: number;
+  /** Positive is ahead, negative behind. NOT clamped and NOT a verdict. */
+  difference: number;
+  state: 'ahead' | 'on' | 'behind';
+}
+
 export interface DebtPlan {
   method: 'avalanche' | 'snowball';
   /** `null` is allowed: the ordering is useful before an amount is known. */
   monthly_amount: number | null;
+  /**
+   * The code EVERY figure in this payload is in — `order` balances and the
+   * `planned`/`paid` inside `status`.
+   *
+   * *** IT IS ONE CODE BECAUSE THE SERVER CONVERTS THEM ALL INTO IT. D-278. ***
+   * Before this, the balances were sent straight off the row and a euro
+   * household's dollar card rendered as `€600.00`: the panel had no per-figure
+   * currency and reached for the first account's. Optional so an older server
+   * still parses; the caller falls back to the page's own currency.
+   */
+  currency_code?: string;
   /** What the chosen method implies, stated back. Absent on a write. */
   order?: Array<{ id: number; name: string; balance: number; apr: number | null }>;
+  /**
+   * *** ABSENT ON A WRITE, `null` WHEN THERE IS NOTHING TO MEASURE. *** The
+   * PUT returns method and amount only, so a caller that stores the write's
+   * answer over the read's would blank the order and the status at the exact
+   * moment the reader expects to see them. `setDebtPlan` therefore re-reads.
+   */
+  status?: DebtPlanStatus | null;
 }
 
 export const goalService = {
@@ -84,9 +119,14 @@ export const goalService = {
   async setDebtPlan(method: 'avalanche' | 'snowball', monthlyAmount?: number): Promise<DebtPlan> {
     const body: Record<string, unknown> = { method };
     if (monthlyAmount !== undefined) body.monthly_amount = monthlyAmount;
-    const response = await api.put<{ success: boolean; plan: DebtPlan }>(
+    await api.put<{ success: boolean; plan: DebtPlan }>(
       '/api/v1/goals/debt-plan', body);
-    return response.data.plan;
+    /* *** THE WRITE'S ANSWER IS NOT THE WHOLE PLAN. *** `PUT` returns method
+       and amount only; `order` and `status` come from the read. Returning the
+       write's payload would blank both the instant somebody picks a method,
+       which is when they most expect the ordering to appear. */
+    const plan = await goalService.getDebtPlan();
+    return plan as DebtPlan;
   },
   async getGoals(): Promise<Goal[]> {
     const response = await api.get<{ success: boolean; goals: Goal[] }>('/api/v1/goals');

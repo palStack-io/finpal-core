@@ -965,17 +965,48 @@ class DebtPlanResource(Resource):
             return {'success': True, 'plan': None}, 200
 
         from src.models.account import Account
+        from src.utils.currency_converter import RateTable
+
         accounts = Account.query.filter(Account.user_id == caller).all()
-        ordered = order_debts(accounts, plan.method)
+
+        # *** EVERY FIGURE IN THIS PAYLOAD IS RESTATED IN THE ONE CURRENCY THAT
+        # LABELS IT, AND THAT CODE GOES ON THE WIRE. D-156, owner decision B1.
+        # *** Found on the iOS simulator: a euro household's DOLLAR card was
+        # printed as `€600.00`, because the client had no per-figure currency
+        # and reached for the first account's. Two things were wrong and only
+        # one of them was the client's — a payload of bare numbers in mixed
+        # currencies cannot be rendered correctly by anybody.
+        #
+        # *** SNOWBALL'S ORDER DEPENDS ON THIS, NOT JUST ITS LABELS. ***
+        # "Smallest balance first" compares magnitudes, so unconverted it ranks
+        # by whichever currency is weaker. Avalanche does not care: a rate is
+        # unitless.
+        rates = RateTable()
+        display_code = rates.base_code
+        balances = {a.id: rates.convert(a.balance, rates.code_of(a), display_code)
+                    for a in accounts}
+        ordered = order_debts(accounts, plan.method, balances=balances)
+        from src.services.goal.plan_status import plan_status
+
         return {'success': True, 'plan': {
             'method': plan.method,
             'monthly_amount': float(plan.monthly_amount) if plan.monthly_amount is not None else None,
+            # The code every figure below is in — `order` balances, and the
+            # `planned`/`paid` inside `status`. One code, because they are all
+            # converted into it.
+            'currency_code': display_code,
             # Names, never a recommendation: this is what the method the user
             # chose implies, stated back to them.
             'order': [{'id': a.id, 'name': a.name,
-                       'balance': float(a.balance or 0),
+                       'balance': float(balances.get(a.id) or 0),
                        'apr': float(a.apr) if a.apr is not None else None}
                       for a in ordered],
+            # *** COMPUTED HERE, NOT STORED BY A WEEKLY JOB. *** finPal has no
+            # push notifications, so "weekly" can only mean "what it says when
+            # they next look" -- and a stored status is a second copy of an
+            # arithmetic that already has one home. `None` when there is no
+            # monthly amount to measure against.
+            'status': plan_status(caller, to_code=display_code),
         }}, 200
 
     @ns.doc('set_debt_plan', security='Bearer')

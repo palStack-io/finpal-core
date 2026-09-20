@@ -27,6 +27,7 @@ import { apiErrorMessage } from '../utils/apiError';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 import { GoalSuggestions } from '../components/goals/GoalSuggestions';
 import { BufferCalculator } from '../components/goals/BufferCalculator';
+import { DebtPlanPanel } from '../components/goals/DebtPlanPanel';
 
 /**
  * Goals.
@@ -738,6 +739,11 @@ export const Goals: React.FC = () => {
           draws an empty state. */}
       <GoalSuggestions onStart={openCreate} />
       <BufferCalculator currency={currency} />
+      {/* *** THIRD, AND ONLY FOR SOMEBODY WITH MORE THAN ONE DEBT. *** The
+          methods are ORDERINGS, so the question it answers does not exist for
+          one card. Like the two above it, it draws nothing when it has
+          nothing to say. */}
+      <DebtPlanPanel accounts={accounts} currency={currency} />
 
       {/* *** THE FORM COMES IN FROM THE SIDE, LIKE EVERY OTHER PAGE'S. ***
           `SlidePanel` is already used by Accounts, Transactions, Budgets, Groups

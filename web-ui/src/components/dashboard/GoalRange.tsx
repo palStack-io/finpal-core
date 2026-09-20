@@ -361,10 +361,22 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
           and the wrapper above scrolls horizontally when the viewport is
           narrower. `height="auto"` lets the box follow its own aspect ratio
           rather than reserving space the drawing does not use. */}
+      {/* *** `role="group"`, NOT `role="img"`, AND THAT CHANGED WHEN THE PEAKS
+          BECAME FOCUSABLE. *** `img` declares the whole subtree to be one
+          picture, so assistive technology is told to ignore what is inside it —
+          which made the peak buttons added this session unreachable in
+          principle and a `nested-interactive` violation in fact. axe called it
+          on `/dashboard` in both themes, serious, and `standards.spec.ts`
+          called it too.
+
+          The label stays, because the group still needs naming; what changes
+          is the promise. `img` says "there is nothing in here to operate";
+          `group` says "here are some controls, and this is what they are
+          about", which is now the truth. */}
       <svg
         viewBox={`0 0 ${width} ${BOX_HEIGHT}`}
         preserveAspectRatio="xMidYMax meet"
-        role="img"
+        role="group"
         aria-label={`Your goals as a mountain range: ${ordered.map((p) => p.goal.name).join(', ')}`}
         style={{ display: 'block', width: '100%', minWidth: 680, height: 'auto' }}
       >
@@ -493,7 +505,9 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
             had to guess which was which. Each block now hangs just over its own
             summit with a short leader, clamped so it never leaves the box. Every
             figure the picture carries is written here, which is why the whole
-            `<svg>` can carry one `role="img"` label and lose nothing. */}
+            `<svg>` can carry one group label and lose nothing. (It was
+            `role="img"` until the peaks became focusable — see the note on the
+            `<svg>` above.) */}
         {/* Everest's own label, in METRES — the goals' are in money, and that
             difference is deliberate: the two are not on one scale and nothing
             here pretends they are. */}

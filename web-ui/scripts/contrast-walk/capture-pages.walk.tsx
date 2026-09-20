@@ -279,6 +279,73 @@ beforeEach(() => {
       gear: [],
     })),
 
+    /*
+     * *** THREE NEW GOALS HANDLERS, AND WITHOUT THEM THE CAPTURE DOES NOT FAIL
+     * QUIETLY — IT DIES. *** MSW runs with `onUnhandledRequest: 'error'`, so
+     * the Goals page's three new fetches raised, the capture timed out and
+     * `preflight.sh web` reported "capture for the walks (pages)". That is the
+     * gate doing its job, and it is the second time this exact shape has been
+     * hit on this page (see the C1c note further down).
+     *
+     * *** POPULATED, NEVER EMPTY, BECAUSE ALL THREE RENDER NOTHING WHEN THEY
+     * HAVE NOTHING TO SAY. *** Each one returns `null` or `[]` to mean "no
+     * advice", which is deliberate product behaviour — and a fixture that
+     * returned it would leave the walk measuring a page with three new panels
+     * and none of them drawn. D-165: a page being in the walk is not the walk
+     * seeing what changed.
+     *
+     * The strings are LONG on purpose. `John Lewis Partnership Card` and
+     * `Marcus Online Savings Account` fit at 1440 and are the candidates to
+     * overflow at 390, which is the whole point of the responsive walk.
+     */
+    http.get('*/api/v1/goals/buffer-picture', () => HttpResponse.json({
+      success: true,
+      buffer: {
+        essential_monthly: 2480.5,
+        held: 8200,
+        months_covered: 3.3,
+        targets: [
+          // 3 months is already covered; 6 is not. Both branches of the
+          // "to go" / "covered, with X over" caption therefore render.
+          { months: 3, target: 7441.5, short_by: -758.5 },
+          { months: 6, target: 14883, short_by: 6683 },
+        ],
+      },
+    })),
+    http.get('*/api/v1/goals/suggestions', () => HttpResponse.json({
+      success: true,
+      suggestions: [
+        { kind: 'savings', headline: 'Put six months of essentials aside',
+          because: 'You are carrying debt on three cards and have no savings goal.',
+          lesson_slug: 'why-a-buffer-comes-first',
+          check: 'has_debt_and_no_savings_goal' },
+      ],
+    })),
+    /*
+     * *** WITH AN AMOUNT AND A `behind` STATUS, WHICH IS THE ONE WORTH
+     * MEASURING. *** `behind` is the only state that paints in `--re-ink`, and
+     * D-269 is about exactly this: a state that is carried by colour. Both the
+     * word and the ratio have to be in the capture for the contrast walk to
+     * measure the ink and for a reader to see the word is there.
+     */
+    http.get('*/api/v1/goals/debt-plan', () => HttpResponse.json({
+      success: true,
+      plan: {
+        method: 'avalanche',
+        monthly_amount: 400,
+        order: [
+          { id: 7, name: 'Chase Amazon', balance: -1125.41, apr: 24.99 },
+          { id: 9, name: 'Barclaycard Rewards', balance: -524.59, apr: 19.99 },
+          // *** NO APR, WHICH IS WHY IT SORTS LAST. *** It also renders the
+          // "rate not recorded" caption, the one string that says finPal is
+          // missing a figure rather than guessing it as zero.
+          { id: 12, name: 'John Lewis Partnership Card', balance: -612.25, apr: null },
+        ],
+        status: { method: 'avalanche', planned: 400, paid: 175,
+                  difference: -225, state: 'behind' },
+      },
+    })),
+
     http.get('*/api/v1/goals', () => HttpResponse.json({
       success: true,
       goals: [
@@ -397,22 +464,36 @@ beforeEach(() => {
      *   11  connected, NEVER synced          RED, the worrying case
      *   12  manual                           silent — nothing to be stale about
      */
+    /*
+     * *** THE KEY IS `account_type`, NOT `type`, AND THIS FIXTURE HAD IT
+     * WRONG SINCE IT WAS WRITTEN. *** `AccountSchema` declares
+     * `account_type = fields.Str(attribute='type')`, so the wire name is
+     * `account_type`; `capture-accounts.walk.tsx` had it right and this file
+     * did not. Nothing noticed because the accounts PAGE has its own capture
+     * file, and every consumer here read only `id`, `name` and `balance`.
+     *
+     * It stopped being harmless when the goals page grew a panel that gates on
+     * the type: with `type` the client saw `account_type: undefined`, counted
+     * zero debts and drew nothing — the walk would have reported goals green
+     * having rendered none of the new panel. D-52's exact shape, one client
+     * spelling a key the server does not send.
+     */
     http.get('*/api/v1/accounts', () => HttpResponse.json({
       success: true,
       accounts: [
-        { id: 7, name: 'Chase Amazon', type: 'credit', balance: -1125.41,
+        { id: 7, name: 'Chase Amazon', account_type: 'credit', balance: -1125.41,
           currency_code: 'USD', user_id: 'demo@finpal.app',
           import_source: 'simplefin', type_source: 'user',
           last_sync: new Date(Date.now() - 3 * 86400000).toISOString() },
-        { id: 9, name: 'Barclaycard Rewards', type: 'credit', balance: -524.59,
+        { id: 9, name: 'Barclaycard Rewards', account_type: 'credit', balance: -524.59,
           currency_code: 'USD', user_id: 'demo@finpal.app',
           import_source: 'simplefin', type_source: 'inferred',
           last_sync: new Date(Date.now() - 23 * 86400000).toISOString() },
-        { id: 11, name: 'Marcus Online Savings Account', type: 'savings',
+        { id: 11, name: 'Marcus Online Savings Account', account_type: 'savings',
           balance: 8200, currency_code: 'USD', user_id: 'demo@finpal.app',
           import_source: 'simplefin', type_source: 'default', last_sync: null },
         // Goal 4's card. Long on purpose, same reason as Barclaycard above.
-        { id: 12, name: 'John Lewis Partnership Card', type: 'credit',
+        { id: 12, name: 'John Lewis Partnership Card', account_type: 'credit',
           balance: -612.25, currency_code: 'USD', user_id: 'demo@finpal.app',
           import_source: null, type_source: 'user', last_sync: null },
       ],
@@ -1226,6 +1307,20 @@ beforeEach(() => {
            a fixture that cannot draw the art cannot notice when the art
            breaks. */
         { slug: 'headlamp', price: 500, owned: false },
+      ],
+      /* *** THE BADGES SECTION IS NEW AND THE FIXTURE IS WHAT MAKES THE WALK
+         SEE IT (D-165). *** Without these rows the kit capture renders the
+         page exactly as it shipped before, and the contrast walk reports it
+         green having measured no badge at all. Two rows, because one row
+         cannot wrap and wrapping at 390px is the thing at risk.
+
+         `Three months on plan` is deliberately one of the NEW ones: the badges
+         earned and never rendered are what D-274 is about. */
+      badges: [
+        { slug: 'on-plan-3', title: 'Three months on plan',
+          earned_at: '2026-07-01T04:30:00' },
+        { slug: 'on-budget-3', title: 'Three months on budget',
+          earned_at: '2026-08-01T04:30:00' },
       ],
     })),
 

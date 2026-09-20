@@ -106,7 +106,12 @@ const HEADINGS: Record<string, RegExp> = {
 
 /** Routes that exist but are deliberately not walked here, each with a reason. */
 const NOT_WALKED: Record<string, string> = {
-  '/': 'the landing page is signed-out; auth.spec.ts owns it',
+  // *** `/` IS THE LOGIN PAGE NOW, NOT THE LANDING PAGE. *** Owner decision
+  // 2026-09-17; the pitch moved to `/welcome`. The reason for skipping it is
+  // unchanged — both are signed-out — but the sentence was describing the
+  // wrong page, which is how a skip stops meaning anything.
+  '/': 'signed-out; it is the login page, and auth.spec.ts drives the real form',
+  '/welcome': 'signed-out; the marketing pitch, and data-statement.spec.ts asserts its claims',
   '/login': 'signed-out; auth.spec.ts drives the real form',
   '/register': 'signed-out, and registration is invitation-gated (D-119)',
   '/forgot-password': 'signed-out',

@@ -129,3 +129,49 @@ def test_external_id_still_applies_on_update(client, db, auth_headers):
 
     assert resp.status_code == 200, resp.get_data(as_text=True)[:300]
     assert db.session.get(Account, account.id).external_id == 'simplefin-abc-123'
+
+
+class TestSimpleFinStatusIsAQuestion:
+    """D-275. A read whose answer is knowable must not answer 503.
+
+    *** THE OTHER FOUR SimpleFin ROUTES STILL 503, AND THAT IS THE POINT. ***
+    A gate that only proved the new behaviour would be green on a change that
+    dropped `_simplefin_required` everywhere — which would let a disabled
+    server accept a sync request. Both halves are asserted here.
+    """
+
+    def test_status_answers_200_and_not_connected_when_disabled(
+            self, client, db, auth_headers, app, monkeypatch):
+        # *** `monkeypatch.setitem`, NOT A BARE ASSIGNMENT. *** `app` is shared
+        # across the session, so writing the flag directly LEAKS: the first
+        # version of this test turned SimpleFin off for everything that ran
+        # after it, and five unrelated tests went red in the full suite while
+        # passing in isolation. `test_no_write_route_answers_a_malformed_body_
+        # _with_a_5xx` was the loudest — with the integration off, the SimpleFin
+        # write routes answer 503, and 503 IS a 5xx.
+        monkeypatch.setitem(app.config, 'SIMPLEFIN_ENABLED', False)
+        headers = auth_headers(UserFactory())
+        response = client.get('/api/v1/accounts/simplefin/status', headers=headers)
+        assert response.status_code == 200
+        body = response.get_json()
+        # *** THE PAYLOAD, NOT THE STATUS CODE. *** Every bug found in this
+        # project across eight sessions returned 200 and rendered fine.
+        assert body['connected'] is False
+        # Distinguishes "off on this server" from "on, and you have not linked
+        # an account" — two different sentences to show a user.
+        assert body['enabled'] is False
+
+    def test_the_ACTIONS_still_refuse_when_disabled(
+            self, client, db, auth_headers, app, monkeypatch):
+        monkeypatch.setitem(app.config, 'SIMPLEFIN_ENABLED', False)
+        headers = auth_headers(UserFactory())
+        # Connect and disconnect are things the server would have to DO, and a
+        # server that cannot do them should say so rather than pretend.
+        for method, path in (
+            ('post', '/api/v1/accounts/simplefin/connect'),
+            ('post', '/api/v1/accounts/simplefin/disconnect'),
+            ('post', '/api/v1/accounts/1/sync'),
+        ):
+            response = getattr(client, method)(path, headers=headers, json={})
+            assert response.status_code == 503, (
+                f'{path} answered {response.status_code}, not 503')
