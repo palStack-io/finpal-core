@@ -137,12 +137,29 @@ describe('the buffer calculator', () => {
     expect(await screen.findByText(/sorted as Fixed/)).toBeInTheDocument();
   });
 
-  it('*** DRAWS NO ZERO TARGET WHEN finPal CANNOT SAY ***', async () => {
-    // "You need $0.00" is a sentence finPal cannot justify — the same
-    // fail-closed rule the coin payoffs follow.
+  it('*** STILL STATES NO FIGURE WHEN finPal CANNOT SAY ***', async () => {
+    /* *** THIS TEST USED TO ASSERT AN EMPTY DOM, AND THE BEHAVIOUR CHANGED ON
+       PURPOSE (2026-09-20) — SO THE ASSERTION MOVED TO THE INVARIANT RATHER
+       THAN BEING DELETED. *** What must never happen is finPal naming a
+       figure it cannot compute: "you need $0.00" is the sentence the
+       fail-closed rule exists to prevent, and it is the shape four coin
+       payoffs were caught in on 2026-09-14.
+
+       Silence was how that was achieved while there was no alternative to
+       offer. There is one now: somebody with nothing sorted as Fixed is
+       exactly who this calculator is for, so the panel says it cannot work it
+       out and offers the by-hand path. No money figure is printed either way,
+       which is the part that was ever load-bearing. */
     vi.mocked(goalService.getBufferPicture).mockResolvedValue(null);
     const { container } = render(<BufferCalculator currency="USD" />);
     await settled(vi.mocked(goalService.getBufferPicture));
-    expect(container).toBeEmptyDOMElement();
+
+    // No target, no zero, no currency symbol at all until the reader types.
+    expect(container.textContent).not.toMatch(/[$£€]/);
+    expect(container.textContent).not.toMatch(/\b0\.00\b/);
+    expect(screen.queryByTestId('buffer-target-3')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('buffer-target-6')).not.toBeInTheDocument();
+    // And it says WHY, rather than leaving a blank somebody reads as broken.
+    expect(container.textContent).toMatch(/cannot work this out yet/);
   });
 });

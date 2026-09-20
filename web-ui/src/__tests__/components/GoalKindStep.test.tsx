@@ -91,6 +91,94 @@ describe('the buffer calculator as a target picker', () => {
   });
 });
 
+describe('working the buffer out by hand', () => {
+  /* *** THE MEASURED PATH FAILS EXACTLY THE PEOPLE WHO NEED IT MOST. ***
+     `_essential_monthly_spend` reads categories sorted as Fixed, so somebody
+     who has just arrived gets silence — and "I have no buffer and no idea how
+     big one should be" is the state this whole feature is for. */
+
+  it('offers the by-hand path even when finPal measured NOTHING', async () => {
+    /* It used to render nothing at all for a null picture. That was right
+       when there was no alternative to offer and wrong the moment there was. */
+    vi.mocked(goalService.getBufferPicture).mockResolvedValue(null);
+    render(<BufferCalculator currency="USD" />);
+
+    expect(await screen.findByTestId('buffer-by-hand-toggle')).toBeInTheDocument();
+    expect(screen.getByText(/none of your spending is sorted as Fixed/))
+      .toBeInTheDocument();
+  });
+
+  it('is CLOSED until asked for', async () => {
+    /* A second set of figures shown unasked is the real-estate complaint this
+       whole change came from. */
+    vi.mocked(goalService.getBufferPicture).mockResolvedValue(BUFFER);
+    render(<BufferCalculator currency="USD" />);
+
+    await screen.findByTestId('buffer-by-hand-toggle');
+    expect(screen.queryByTestId('buffer-by-hand')).not.toBeInTheDocument();
+  });
+
+  it('keeps the MEASURED figures on screen beside the typed ones', async () => {
+    /* *** finPal NEVER SILENTLY REPLACES A MEASURED FIGURE WITH A GUESS. ***
+       Owner decision: both shown, the typed one labelled. */
+    vi.mocked(goalService.getBufferPicture).mockResolvedValue(BUFFER);
+    render(<BufferCalculator currency="USD" />);
+
+    await userEvent.click(await screen.findByTestId('buffer-by-hand-toggle'));
+    await userEvent.type(screen.getByLabelText(/Fixed costs a month/), '2050');
+
+    // The measured six-month target is still there...
+    expect(screen.getByTestId('buffer-target-6').textContent).toContain('$12,356.94');
+    // ...beside the typed one, which says whose figure it is.
+    const typed = screen.getByTestId('by-hand-target-6');
+    expect(typed.textContent).toContain('$12,300.00');
+    expect(typed.textContent).toContain('from what you said');
+  });
+
+  it('states what is spare and how long half of it takes', async () => {
+    vi.mocked(goalService.getBufferPicture).mockResolvedValue(BUFFER);
+    render(<BufferCalculator currency="USD" />);
+
+    await userEvent.click(await screen.findByTestId('buffer-by-hand-toggle'));
+    await userEvent.type(screen.getByLabelText(/Fixed costs a month/), '2050');
+    await userEvent.type(screen.getByLabelText(/Income a month/), '4200');
+
+    /* Scoped to the sentence, not the whole document: "12" also appears in
+       the measured $12,356.94 above, and an ambiguous matcher is a test that
+       passes on the wrong element. */
+    const spare = screen.getByTestId('buffer-by-hand');
+    expect(spare.textContent).toContain('$2,150.00');
+    expect(spare.textContent).toMatch(/reaches six months in\s*12\s*months/);
+    /* *** THE ASSUMPTION IS NAMED. *** finPal has no basis for choosing a
+       savings rate, so "half" has to be visible as an illustration. */
+    expect(screen.getByText(/not a recommendation/)).toBeInTheDocument();
+  });
+
+  it('says the costs exceed the income rather than showing nothing spare', async () => {
+    vi.mocked(goalService.getBufferPicture).mockResolvedValue(BUFFER);
+    render(<BufferCalculator currency="USD" />);
+
+    await userEvent.click(await screen.findByTestId('buffer-by-hand-toggle'));
+    await userEvent.type(screen.getByLabelText(/Fixed costs a month/), '2500');
+    await userEvent.type(screen.getByLabelText(/Income a month/), '2200');
+
+    expect(screen.getByText(/\$300\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/not the first thing to solve/)).toBeInTheDocument();
+  });
+
+  it('needs only the fixed costs — income is optional', async () => {
+    vi.mocked(goalService.getBufferPicture).mockResolvedValue(BUFFER);
+    const onPickTarget = vi.fn();
+    render(<BufferCalculator currency="USD" onPickTarget={onPickTarget} />);
+
+    await userEvent.click(await screen.findByTestId('buffer-by-hand-toggle'));
+    await userEvent.type(screen.getByLabelText(/Fixed costs a month/), '1000');
+    await userEvent.click(screen.getByTestId('by-hand-target-3'));
+
+    expect(onPickTarget).toHaveBeenCalledWith(3000);
+  });
+});
+
 describe('the sinking-fund calculator', () => {
   it('states the twelfth, which the buffer calculator deliberately does not', async () => {
     /* An emergency fund's size is a judgement finPal cannot make, so that one

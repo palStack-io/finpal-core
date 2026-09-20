@@ -857,6 +857,8 @@ export const Goals: React.FC = () => {
               <BufferCalculator
                 currency={currency}
                 onPickTarget={(target) => setTargetAmount(String(target))}
+                /* Same gate as the debt step's: only when learnPal answered. */
+                onOpenLesson={range ? () => navigate('/learnpal/lessons') : undefined}
               />
             )}
             {editingId === null && kind === 'sinking' && (
