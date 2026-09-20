@@ -20,6 +20,7 @@ real users.
 import logging
 from datetime import datetime
 
+from decimal import Decimal
 from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource, fields
@@ -85,6 +86,26 @@ goal_account_model = ns.model('GoalAccountLink', {
                     'already linked.'),
 })
 
+
+
+debt_plan_model = ns.model('DebtPlan', {
+    'method': fields.String(
+        required=True, enum=['avalanche', 'snowball'],
+        description='How to order the debts. `avalanche` is highest rate '
+                    'first and costs least overall; `snowball` is smallest '
+                    'balance first and clears an account soonest. finPal '
+                    'states what each does and does not recommend one -- '
+                    'which is right depends on whether the cheaper total or '
+                    'the earlier win keeps this person going.'),
+    'monthly_amount': fields.Float(
+        required=False,
+        description='What the caller intends to put toward debt each month, '
+                    'in total. OPTIONAL: the ordering is useful before '
+                    'somebody knows what they can afford, and refusing the '
+                    'choice until they name a number loses the choice. '
+                    'Omitting it on a later call leaves the stored figure '
+                    'UNCHANGED rather than clearing it.'),
+})
 
 def _parse_date(value, field):
     """A date string, or None. Raises ValueError with the field named."""
@@ -864,3 +885,135 @@ class GoalAccountDetail(Resource):
         db.session.commit()
         return {'success': True, 'goal': _serialize(goal, svc),
                 'message': 'Account removed from goal'}, 200
+
+
+@ns.route('/buffer-picture')
+class BufferPicture(Resource):
+    """What an emergency fund would need to be, in the caller's own figures.
+
+    *** IT OFFERS THREE AND SIX MONTHS AND PICKS NEITHER. *** Those are
+    conventions, not facts, and which is right depends on job security,
+    dependants and health -- none of which finPal knows. It states what each
+    would cost and what the caller already holds; the choice is theirs. The
+    same line `avalanche-vs-snowball` walks.
+
+    *** `null` IS A REAL ANSWER. *** A caller with no spending recorded has no
+    essential monthly cost, and "you need $0.00" is a sentence finPal cannot
+    justify.
+    """
+
+    @ns.doc('goal_buffer_picture', security='Bearer')
+    @jwt_required()
+    def get(self):
+        caller = get_jwt_identity()
+        # Scoped by `read_scope` inside the service, the same helper the health
+        # tab's own buffer figure uses — so this calculator and that headline
+        # cannot describe two different households.
+        try:
+            from src.services.goal.buffer import buffer_picture
+            picture = buffer_picture(caller)
+        except Exception:
+            logger.exception('Buffer picture failed')
+            return {'success': False,
+                    'error': 'Could not work out the buffer'}, 500
+        return {'success': True, 'buffer': picture}, 200
+
+
+@ns.route('/suggestions')
+class GoalSuggestions(Resource):
+    """Goals the caller's own figures argue for. An empty list is a fine answer.
+
+    *** IT PAYS NOTHING. *** `acts.py` refuses to pay for a SITUATION by
+    construction, and having debt is a situation. Creating a goal may earn
+    later, because it makes a figure computable; being in the circumstance may
+    not.
+    """
+
+    @ns.doc('goal_suggestions', security='Bearer')
+    @jwt_required()
+    def get(self):
+        caller = get_jwt_identity()
+        try:
+            from src.services.goal.suggest import suggestions_for
+            suggestions = suggestions_for(caller)
+        except Exception:
+            # Silent on purpose: a suggestion is an extra, and a failure here
+            # must not take the goals page down with it.
+            logger.exception('Goal suggestions failed')
+            suggestions = []
+        return {'success': True, 'suggestions': suggestions}, 200
+
+
+@ns.route('/debt-plan')
+class DebtPlanResource(Resource):
+    """The method a caller has chosen for clearing their debts.
+
+    *** ONE PLAN PER USER, BECAUSE THE METHODS ARE ORDERINGS ACROSS DEBTS. ***
+    "Pay this one first because it costs the most" is meaningless about a
+    single goal considered alone.
+    """
+
+    @ns.doc('get_debt_plan', security='Bearer')
+    @jwt_required()
+    def get(self):
+        from src.models.debt_plan import DebtPlan
+        from src.services.goal.projection import order_debts
+
+        caller = get_jwt_identity()
+        plan = DebtPlan.query.filter_by(user_id=caller).first()
+        if plan is None:
+            return {'success': True, 'plan': None}, 200
+
+        from src.models.account import Account
+        accounts = Account.query.filter(Account.user_id == caller).all()
+        ordered = order_debts(accounts, plan.method)
+        return {'success': True, 'plan': {
+            'method': plan.method,
+            'monthly_amount': float(plan.monthly_amount) if plan.monthly_amount is not None else None,
+            # Names, never a recommendation: this is what the method the user
+            # chose implies, stated back to them.
+            'order': [{'id': a.id, 'name': a.name,
+                       'balance': float(a.balance or 0),
+                       'apr': float(a.apr) if a.apr is not None else None}
+                      for a in ordered],
+        }}, 200
+
+    @ns.doc('set_debt_plan', security='Bearer')
+    @ns.expect(debt_plan_model)
+    @jwt_required()
+    def put(self):
+        from src.models.debt_plan import DebtPlan, VALID_METHODS
+
+        caller = get_jwt_identity()
+        body = request.get_json(silent=True) or {}
+        method = body.get('method')
+        if method not in VALID_METHODS:
+            return {'success': False,
+                    'error': 'method must be one of %s' % ', '.join(VALID_METHODS)}, 400
+
+        amount = body.get('monthly_amount')
+        if amount is not None:
+            try:
+                amount = Decimal(str(amount))
+            except Exception:
+                return {'success': False,
+                        'error': 'monthly_amount must be a number'}, 400
+            if amount <= 0:
+                return {'success': False,
+                        'error': 'monthly_amount must be greater than zero'}, 400
+
+        plan = DebtPlan.query.filter_by(user_id=caller).first()
+        if plan is None:
+            plan = DebtPlan(user_id=caller, method=method, monthly_amount=amount)
+            db.session.add(plan)
+        else:
+            plan.method = method
+            # *** ABSENT MEANS UNCHANGED, NOT CLEARED. *** Somebody switching
+            # method should not silently lose the amount they had recorded.
+            if amount is not None:
+                plan.monthly_amount = amount
+        db.session.commit()
+        return {'success': True, 'plan': {
+            'method': plan.method,
+            'monthly_amount': float(plan.monthly_amount) if plan.monthly_amount is not None else None,
+        }}, 200

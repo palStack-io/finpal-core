@@ -13,7 +13,81 @@ import type {
   UpdateGoalData,
 } from '../types/goal';
 
+
+/**
+ * What an emergency fund would need to be, in the caller's own figures.
+ *
+ * *** `null` IS A REAL ANSWER. *** A caller with no spending recorded has no
+ * essential monthly cost, and "you need $0.00" is a sentence finPal cannot
+ * justify — the same fail-closed rule the coin payoffs follow.
+ */
+export interface BufferPicture {
+  /** What arrives whatever you do, per month. The divisor, stated. */
+  essential_monthly: number;
+  /** Cash reachable this week: checking + savings, positive balances only. */
+  held: number;
+  months_covered: number;
+  /** Three and six, offered as options. finPal recommends neither. */
+  targets: Array<{
+    months: number;
+    target: number;
+    /** Negative means already past it. NOT clamped — that is worth knowing. */
+    short_by: number;
+  }>;
+}
+
+/** A goal the caller's own figures argue for. Never paid for; see `acts.py`. */
+export interface GoalSuggestion {
+  kind: 'savings' | 'payoff';
+  headline: string;
+  /** The condition finPal observed, so the premise can be disagreed with. */
+  because: string;
+  lesson_slug: string;
+  check: string;
+}
+
+export interface DebtPlan {
+  method: 'avalanche' | 'snowball';
+  /** `null` is allowed: the ordering is useful before an amount is known. */
+  monthly_amount: number | null;
+  /** What the chosen method implies, stated back. Absent on a write. */
+  order?: Array<{ id: number; name: string; balance: number; apr: number | null }>;
+}
+
 export const goalService = {
+
+  /** `null` when finPal cannot say — never a zero target. */
+  async getBufferPicture(): Promise<BufferPicture | null> {
+    const response = await api.get<{ success: boolean; buffer: BufferPicture | null }>(
+      '/api/v1/goals/buffer-picture');
+    return response.data.buffer;
+  },
+
+  /** `[]` is a fine answer: a page that always has advice has none. */
+  async getSuggestions(): Promise<GoalSuggestion[]> {
+    const response = await api.get<{ success: boolean; suggestions: GoalSuggestion[] }>(
+      '/api/v1/goals/suggestions');
+    return response.data.suggestions;
+  },
+
+  async getDebtPlan(): Promise<DebtPlan | null> {
+    const response = await api.get<{ success: boolean; plan: DebtPlan | null }>(
+      '/api/v1/goals/debt-plan');
+    return response.data.plan;
+  },
+
+  /**
+   * *** OMIT `monthly_amount` TO LEAVE IT UNCHANGED. *** Sending `null` is not
+   * the same as omitting it: somebody switching ordering should not silently
+   * lose the figure they recorded.
+   */
+  async setDebtPlan(method: 'avalanche' | 'snowball', monthlyAmount?: number): Promise<DebtPlan> {
+    const body: Record<string, unknown> = { method };
+    if (monthlyAmount !== undefined) body.monthly_amount = monthlyAmount;
+    const response = await api.put<{ success: boolean; plan: DebtPlan }>(
+      '/api/v1/goals/debt-plan', body);
+    return response.data.plan;
+  },
   async getGoals(): Promise<Goal[]> {
     const response = await api.get<{ success: boolean; goals: Goal[] }>('/api/v1/goals');
     return response.data.goals;

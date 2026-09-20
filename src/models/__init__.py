@@ -57,6 +57,7 @@ from src.models.mountain import Mountain, MountainBand  # noqa: F401
 # them at boot; a new COLUMN would have been invisible to it (D-121).
 from src.models.act_event import ActEvent, BadgeEarned, EverestWatermark, TeachingSeen  # noqa: F401,E402
 from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase  # noqa: F401,E402
+from src.models.debt_plan import DebtPlan  # noqa: F401,E402
 
 from src.modules.pointspal.manifest import PointsPalModule as _PointsPalModule
 if _PointsPalModule().is_enabled():

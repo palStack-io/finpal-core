@@ -25,6 +25,8 @@ import type { Goal, GoalContribution } from '../types/goal';
 import { useToast } from '../contexts/ToastContext';
 import { apiErrorMessage } from '../utils/apiError';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
+import { GoalSuggestions } from '../components/goals/GoalSuggestions';
+import { BufferCalculator } from '../components/goals/BufferCalculator';
 
 /**
  * Goals.
@@ -728,6 +730,14 @@ export const Goals: React.FC = () => {
           </button>
         }
       />
+
+      {/* *** SUGGESTIONS FIRST, THE CALCULATOR SECOND, AND BOTH RENDER NOTHING
+          WHEN THEY HAVE NOTHING TO SAY. *** A suggestion answers "should I have
+          a goal at all", which precedes "how big should it be" — and a page
+          that always has advice is a page whose advice means nothing. Neither
+          draws an empty state. */}
+      <GoalSuggestions onStart={openCreate} />
+      <BufferCalculator currency={currency} />
 
       {/* *** THE FORM COMES IN FROM THE SIDE, LIKE EVERY OTHER PAGE'S. ***
           `SlidePanel` is already used by Accounts, Transactions, Budgets, Groups

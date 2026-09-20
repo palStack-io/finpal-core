@@ -1227,6 +1227,14 @@ class DemoService:
                 logger.info('Backfilling demo recurring expenses for %s (C1c)',
                             user.id)
                 DemoService._seed_demo_recurring(user, account_data)
+        # *** BACKFILLED, OR IT NEVER REACHES A DEMO THAT ALREADY EXISTS. ***
+        # D-178's rule: a seed change is not shipped until a condition-keyed
+        # correction exists for the rows the old seeder made. Every live demo
+        # stack already has its four users.
+        for account_data in DEMO_ACCOUNTS:
+            demo_user = User.query.filter_by(id=account_data['email']).first()
+            if demo_user is not None:
+                DemoService._seed_debt_plan(demo_user)
         DemoService._backfill_non_tour_household_goals()
         DemoService._backfill_multi_account_demo_goal()
         DemoService._seed_demo_co_owners()
@@ -1565,6 +1573,37 @@ class DemoService:
                     added_at=base + timedelta(seconds=offset)))
             svc.sync_links(goal)
             db.session.add(goal)
+        db.session.flush()
+
+    @staticmethod
+    def _seed_debt_plan(user):
+        """A chosen paydown method, so the feature is evaluable at all.
+
+        *** A FEATURE THE DEMO CANNOT SHOW IS A FEATURE NOBODY CAN EVALUATE
+        (D-77, D-175, D-177). *** An empty plan panel is indistinguishable
+        from a broken one, and `test_the_demo_covers_every_feature` refuses a
+        table with no demo rows for exactly that reason.
+
+        *** ONLY FOR A USER WHO ACTUALLY OWES SOMETHING. *** A plan for
+        clearing debts belongs to somebody with debts; seeding one on a
+        debt-free persona would demo a screen that cannot honestly exist, and
+        `order_debts` would return an empty ordering under it.
+
+        Avalanche rather than snowball is an arbitrary demo choice, not a
+        recommendation -- the product states what each does and picks neither.
+        """
+        from src.models.account import Account
+        from src.models.debt_plan import AVALANCHE, DebtPlan
+
+        if DebtPlan.query.filter_by(user_id=user.id).first():
+            return
+        owes = Account.query.filter(
+            Account.user_id == user.id,
+            Account.balance < 0).first()
+        if owes is None:
+            return
+        db.session.add(DebtPlan(user_id=user.id, method=AVALANCHE,
+                                monthly_amount=Decimal('250.00')))
         db.session.flush()
 
     @staticmethod

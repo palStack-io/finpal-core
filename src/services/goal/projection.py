@@ -16,6 +16,8 @@ codebase keeps insisting must not be collapsed.
 import math
 from decimal import Decimal
 
+from src.models.debt_plan import AVALANCHE, SNOWBALL  # noqa: F401
+
 
 class Projection:
     """`months` to clear, or `never` when the payment cannot outrun interest.
@@ -70,3 +72,29 @@ def span_words(months):
     if years:
         return f'{years} year{"s" if years > 1 else ""}'
     return f'{months} month{"s" if months > 1 else ""}'
+
+
+def order_debts(accounts, method):
+    """The debts in the order a method says to clear them.
+
+    *** THIS IS THE ONLY THING THE METHOD ACTUALLY DECIDES. *** Avalanche is
+    highest rate first — it costs least in total. Snowball is smallest balance
+    first — it clears an account soonest, which is the thing people report
+    keeps them going. finPal states both effects and orders by the one chosen;
+    it does not rank them.
+
+    *** AN ACCOUNT WITH NO RATE SORTS LAST UNDER AVALANCHE, NOT FIRST. ***
+    A missing APR is not 0%. Treating it as zero would quietly send it to the
+    back for the wrong reason, and treating it as huge would send it to the
+    front on a number nobody gave — both are the unmeasured-versus-zero
+    collapse this codebase keeps refusing.
+    """
+    from decimal import Decimal
+
+    owed = [a for a in accounts if float(a.balance or 0) < 0]
+    if method == SNOWBALL:
+        return sorted(owed, key=lambda a: abs(float(a.balance or 0)))
+    # Avalanche. `apr is None` sorts last via the first key.
+    return sorted(
+        owed,
+        key=lambda a: (a.apr is None, -float(a.apr or 0), abs(float(a.balance or 0))))
