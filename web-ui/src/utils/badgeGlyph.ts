@@ -38,6 +38,20 @@ export const BADGE_GLYPH: Record<string, string> = {
   // Keeping to a start time is the whole of a paydown plan.
   'on-plan-3': 'alpine-start',
   'on-plan-6': 'carabiner',
+
+  // *** pointsPal's CONTRIBUTOR BADGES, WHICH SHIPPED WITH NO GLYPH AT ALL.
+  // *** They are registered at boot through `PointsPalModule.get_badges()`,
+  // so they never appeared in core's `BADGES` dict — and the gate that was
+  // supposed to catch a missing drawing derives its list from that dict.
+  // Result: a bullet on web and, because Metro needs a STATIC require map,
+  // nothing whatsoever on mobile. D-276's shape, in the half of the system
+  // its fix did not reach.
+  //
+  // A cairn is a pile of stones marking the route for whoever comes next,
+  // which is what a contribution is; the map and the signpost follow it.
+  'first-light': 'headlamp',
+  'cairn-builder': 'cache',
+  'map-maker': 'map',
 };
 
 /**

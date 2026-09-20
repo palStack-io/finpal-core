@@ -19,7 +19,7 @@
 import React, {
   createContext, useCallback, useContext, useEffect, useRef, useState,
 } from 'react';
-import { coinService, type CoinAwardItem, type CoinGear, type CoinSurface } from '../services/coinService';
+import { coinService, type CoinAwardItem, type CoinBadge, type CoinGear, type CoinSurface } from '../services/coinService';
 import { useAuthStore } from '../store/authStore';
 
 interface CoinAwardContextType {
@@ -65,6 +65,15 @@ interface CoinAwardContextType {
   everest: { altitude_m: number; summit_m: number; at_summit: boolean } | null;
   /** Gear the climber actually owns, so the drawing can show what coins bought. */
   ownedGear: CoinGear[];
+  /**
+   * Badges the user HOLDS, newest first.
+   *
+   * *** IT LIVES HERE SO THE RAIL DOES NOT FETCH THE WALLET AGAIN. *** The
+   * sidebar renders on every page; a second `GET /coins` per navigation would
+   * be a request per page view for two small discs. This provider already
+   * loads the wallet for the award queue, the purse and Everest.
+   */
+  badges: CoinBadge[];
 }
 
 const CoinAwardContext = createContext<CoinAwardContextType | undefined>(undefined);
@@ -87,6 +96,7 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     { altitude_m: number; summit_m: number; at_summit: boolean } | null
   >(null);
   const [ownedGear, setOwnedGear] = useState<CoinGear[]>([]);
+  const [badges, setBadges] = useState<CoinBadge[]>([]);
 
   // *** A REF, NOT STATE. *** Two mutations in quick succession would both
   // read a stale `queue` from the closure and the second would drop the
@@ -155,6 +165,15 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setOpenSurfaces(open);
       setEverest(wallet.everest ?? null);
       setOwnedGear((wallet.gear ?? []).filter((g) => g.owned));
+      /* *** NEWEST FIRST, AND A MISSING DATE SORTS OLDEST. *** `earned_at` is
+         nullable on the wire, and `new Date(null)` is 1970 rather than an
+         error — which would silently put an undated badge at the front of a
+         list whose whole job is "most recent". */
+      setBadges([...(wallet.badges ?? [])].sort((a, b) => {
+        const at = a.earned_at ? Date.parse(a.earned_at) : -Infinity;
+        const bt = b.earned_at ? Date.parse(b.earned_at) : -Infinity;
+        return bt - at;
+      }));
     } catch {
       /* same reasoning as refresh */
     }
@@ -173,7 +192,7 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         current: queue[0] ?? null, remaining: Math.max(0, queue.length - 1),
         refresh, dismiss, balance, loadUnseen,
-        openSurfaces, everest, ownedGear,
+        openSurfaces, everest, ownedGear, badges,
       }}
     >
       {children}
@@ -291,6 +310,15 @@ export const useEverest = () => {
  * kit a user actually bought onto the mountain they are climbing — the loop
  * closing in one place: acts pay coins, coins buy kit, kit rides up with you.
  */
+/**
+ * Badges the user holds, newest first.
+ *
+ * *** `[]` IS A REAL ANSWER AND MUST NOT BE AN EMPTY GRID. *** An unearned
+ * badge is absent, never present-and-false, so every caller renders nothing
+ * rather than a row of locked discs — the report card decision 5 forbids.
+ */
+export const useBadges = (): CoinBadge[] => useCoinAwards().badges;
+
 export const useBestGear = (): string | null => {
   const context = useContext(CoinAwardContext);
   const owned = context?.ownedGear ?? [];

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 
 import { GearIcon } from '../components/GearIcon';
 import { BadgeIcon } from '../components/BadgeIcon';
-import { badgeGlyph } from '../utils/badgeGlyph';
 import { PageHead } from '../components/PageHead';
 import { CoinPurse } from '../components/coins/CoinPurse';
 import { coinService, type CoinWallet } from '../services/coinService';
@@ -382,7 +381,7 @@ export const Kit: React.FC = () => {
                 border: '1px solid var(--border-light)',
               }}
             >
-              <BadgeIcon slug={badgeGlyph(b.slug)} size={32} title={b.title} />
+              <BadgeIcon slug={b.slug} size={32} title={b.title} />
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{b.title}</div>
                 {b.earned_at && (
