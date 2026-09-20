@@ -36,6 +36,24 @@ export interface BufferPicture {
   }>;
 }
 
+/**
+ * What the bills that are not monthly cost, and a twelfth of that.
+ *
+ * *** THIS ONE NAMES A FIGURE AND `BufferPicture` DELIBERATELY DOES NOT. ***
+ * An emergency fund's size is a judgement about job security and dependants,
+ * so that endpoint offers three months and six. A sinking fund has no such
+ * judgement in it: the total is observed and the divisor is twelve.
+ */
+export interface SinkingPicture {
+  /** Observed spending in `non_monthly` categories, last 12 complete months. */
+  annual: number;
+  /** The twelfth. ROUNDED UP — a plan that quietly misses is worse. */
+  monthly: number;
+  months_counted: number;
+  /** D-278: a money figure travels with the code it is in. */
+  currency_code: string;
+}
+
 /** A goal the caller's own figures argue for. Never paid for; see `acts.py`. */
 export interface GoalSuggestion {
   kind: 'savings' | 'payoff';
@@ -96,6 +114,13 @@ export const goalService = {
     const response = await api.get<{ success: boolean; buffer: BufferPicture | null }>(
       '/api/v1/goals/buffer-picture');
     return response.data.buffer;
+  },
+
+  /** `null` when nothing is classified `non_monthly` — never a zero target. */
+  async getSinkingPicture(): Promise<SinkingPicture | null> {
+    const response = await api.get<{ success: boolean; sinking: SinkingPicture | null }>(
+      '/api/v1/goals/sinking-picture');
+    return response.data.sinking;
   },
 
   /** `[]` is a fine answer: a page that always has advice has none. */

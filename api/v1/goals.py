@@ -919,6 +919,36 @@ class BufferPicture(Resource):
         return {'success': True, 'buffer': picture}, 200
 
 
+@ns.route('/sinking-picture')
+class SinkingPicture(Resource):
+    """What the bills that are not monthly cost, and what a twelfth of that is.
+
+    *** THIS ONE DOES NAME A FIGURE, AND `buffer-picture` DELIBERATELY DOES
+    NOT. *** An emergency fund's size is a judgement about job security and
+    dependants, so that endpoint offers three months and six and refuses to
+    choose. A sinking fund has no such judgement in it: the annual total is
+    observed and the divisor is twelve. Stating the twelfth is arithmetic, not
+    advice.
+
+    *** `null` IS A REAL ANSWER. *** A caller who has classified nothing as
+    `non_monthly` has no annual total, and an invented one would be the
+    bluffing shape four coin payoffs were caught doing on 2026-09-14.
+    """
+
+    @ns.doc('goal_sinking_picture', security='Bearer')
+    @jwt_required()
+    def get(self):
+        caller = get_jwt_identity()
+        try:
+            from src.services.goal.sinking import sinking_picture
+            picture = sinking_picture(caller)
+        except Exception:
+            logger.exception('Sinking picture failed')
+            return {'success': False,
+                    'error': 'Could not work out the sinking fund'}, 500
+        return {'success': True, 'sinking': picture}, 200
+
+
 @ns.route('/suggestions')
 class GoalSuggestions(Resource):
     """Goals the caller's own figures argue for. An empty list is a fine answer.

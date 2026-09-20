@@ -16,7 +16,16 @@ import { formatMoney } from '../../styles/money';
  * — the dangerous direction. The basis is printed and points at Categories,
  * which exists to fix exactly that.
  */
-export const BufferCalculator: React.FC<{ currency: string }> = ({ currency }) => {
+export const BufferCalculator: React.FC<{
+  currency: string;
+  /**
+   * *** THE WHOLE REASON THIS MOVED INTO THE CREATE PANEL. *** Standing on
+   * the page it stated a figure the reader then had to retype into a form.
+   * Here the target field is directly below it, so a target becomes a button
+   * and the calculator stops being decorative.
+   */
+  onPickTarget?: (target: number) => void;
+}> = ({ currency, onPickTarget }) => {
   const [picture, setPicture] = useState<BufferPicture | null | 'loading'>('loading');
 
   useEffect(() => {
@@ -59,26 +68,48 @@ export const BufferCalculator: React.FC<{ currency: string }> = ({ currency }) =
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-        {picture.targets.map((t) => (
-          <div
-            key={t.months}
-            data-testid={`buffer-target-${t.months}`}
-            style={{
-              flex: '1 1 180px', padding: '10px 12px',
-              border: '1px solid var(--border-light)', borderRadius: 10,
-            }}
-          >
-            <div className="fp-hint" style={{ fontSize: 12 }}>{t.months} months</div>
-            <div style={{ fontSize: 18, fontWeight: 600, marginTop: 2 }}>
-              {money(t.target)}
+        {picture.targets.map((t) => {
+          const body = (
+            <>
+              <div className="fp-hint" style={{ fontSize: 12 }}>{t.months} months</div>
+              <div style={{ fontSize: 18, fontWeight: 600, marginTop: 2 }}>
+                {money(t.target)}
+              </div>
+              <div className="fp-hint" style={{ fontSize: 12.5, marginTop: 2 }}>
+                {t.short_by > 0
+                  ? `${money(t.short_by)} to go`
+                  : `covered, with ${money(-t.short_by)} over`}
+              </div>
+            </>
+          );
+          const shell: React.CSSProperties = {
+            flex: '1 1 180px', padding: '10px 12px', textAlign: 'left',
+            border: '1px solid var(--border-light)', borderRadius: 10,
+          };
+          /* *** A BUTTON ONLY WHEN THERE IS SOMEWHERE FOR IT TO GO. *** An
+             affordance that looks clickable and does nothing is worse than a
+             plain figure — so without `onPickTarget` this stays a `<div>`
+             rather than a button with no handler. */
+          return onPickTarget ? (
+            <button
+              key={t.months} type="button"
+              data-testid={`buffer-target-${t.months}`}
+              onClick={() => onPickTarget(t.target)}
+              style={{ ...shell, background: 'transparent',
+                       color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              {body}
+              <div style={{ fontSize: 12.5, marginTop: 6, color: 'var(--g-ink)',
+                            fontWeight: 600 }}>
+                Use this target
+              </div>
+            </button>
+          ) : (
+            <div key={t.months} data-testid={`buffer-target-${t.months}`} style={shell}>
+              {body}
             </div>
-            <div className="fp-hint" style={{ fontSize: 12.5, marginTop: 2 }}>
-              {t.short_by > 0
-                ? `${money(t.short_by)} to go`
-                : `covered, with ${money(-t.short_by)} over`}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* *** THE BASIS IS STATED, NOT ASSUMED. *** A reader whose categories

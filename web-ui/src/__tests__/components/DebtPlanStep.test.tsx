@@ -1,5 +1,13 @@
 /**
- * The debt-plan panel: the method picker, the order, and the status.
+ * The debt plan, now in two places: a STEP in the create panel and a STRIP on
+ * the goal card.
+ *
+ * *** IT USED TO BE ONE PANEL PARKED ON THE GOALS PAGE. *** Owner,
+ * 2026-09-20: the advice panels *"need to show only when a user is trying to
+ * create a goal... currently it just takin alot of real estate"*. The picker
+ * moved into the create flow; the status moved onto the payoff goal's own
+ * card, because otherwise the plan becomes write-once and `plan_status` has
+ * nowhere to be read.
  *
  * *** THE ORDER FIXTURE MUST DISCRIMINATE THE TWO METHODS. *** Three
  * sabotages passed this session, every one of them a fixture hole. The
@@ -16,7 +24,8 @@ vi.mock('../../services/goalService', () => ({
   goalService: { getDebtPlan: vi.fn(), setDebtPlan: vi.fn() },
 }));
 import { goalService } from '../../services/goalService';
-import { DebtPlanPanel } from '../../components/goals/DebtPlanPanel';
+import { DebtMethodStep } from '../../components/goals/DebtMethodStep';
+import { DebtPlanStatus } from '../../components/goals/DebtPlanStatus';
 import type { Account } from '../../services/accountService';
 
 /** See `GoalHelpers.test.tsx`: a LOADING component is empty too. */
@@ -62,7 +71,7 @@ describe('when there is nothing to order', () => {
   it('draws nothing at all for somebody with no debt', async () => {
     vi.mocked(goalService.getDebtPlan).mockResolvedValue(null);
     const { container } = render(
-      <DebtPlanPanel
+      <DebtMethodStep
         accounts={[account(3, 'Everyday', 'checking'), account(4, 'Rainy day', 'savings')]}
         currency="USD"
       />,
@@ -78,9 +87,9 @@ describe('when there is nothing to order', () => {
          showed nothing of the feature at all. "Which one first" is meaningless
          about a single card; "am I keeping to what I said I would pay" is not. */
       vi.mocked(goalService.getDebtPlan).mockResolvedValue(null);
-      render(<DebtPlanPanel accounts={ONE_DEBT} currency="USD" />);
+      render(<DebtMethodStep accounts={ONE_DEBT} currency="USD" />);
 
-      expect(await screen.findByTestId('debt-plan-panel')).toBeInTheDocument();
+      expect(await screen.findByTestId('debt-method-step')).toBeInTheDocument();
       expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
       expect(screen.getByLabelText(/put at this a month/i)).toBeInTheDocument();
       expect(screen.getByText(/will not tell you off/i)).toBeInTheDocument();
@@ -94,7 +103,7 @@ describe('when there is nothing to order', () => {
     vi.mocked(goalService.setDebtPlan).mockResolvedValue({
       method: 'avalanche', monthly_amount: 150, order: [], status: null,
     });
-    render(<DebtPlanPanel accounts={ONE_DEBT} currency="USD" />);
+    render(<DebtMethodStep accounts={ONE_DEBT} currency="USD" />);
 
     await userEvent.type(await screen.findByLabelText(/put at this a month/i), '150');
     await userEvent.click(screen.getByTestId('debt-amount-save'));
@@ -106,7 +115,7 @@ describe('when there is nothing to order', () => {
        does NOT derive one — that would be a second computation of a figure
        the server already owns (D-101). */
     vi.mocked(goalService.getDebtPlan).mockResolvedValue(null);
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     expect(await screen.findByTestId('debt-method-avalanche')).toBeInTheDocument();
     expect(screen.getByTestId('debt-method-avalanche')).toHaveAttribute('aria-checked', 'false');
@@ -120,7 +129,7 @@ describe('the order the chosen method implies', () => {
     vi.mocked(goalService.getDebtPlan).mockResolvedValue({
       method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER, status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     const rows = (await screen.findByTestId('debt-order')).querySelectorAll('li');
     expect([...rows].map((r) => r.textContent)).toEqual([
@@ -135,7 +144,7 @@ describe('the order the chosen method implies', () => {
     vi.mocked(goalService.getDebtPlan).mockResolvedValue({
       method: 'snowball', monthly_amount: 300, order: SNOWBALL_ORDER, status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     const rows = (await screen.findByTestId('debt-order')).querySelectorAll('li');
     expect([...rows].map((r) => r.textContent)).toEqual([
@@ -151,7 +160,7 @@ describe('the order the chosen method implies', () => {
       method: 'avalanche', monthly_amount: null,
       order: [{ id: 2, name: 'Car loan', balance: -900, apr: null }], status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     expect(await screen.findByText(/rate not recorded/)).toBeInTheDocument();
     expect(screen.queryByText(/0%/)).not.toBeInTheDocument();
@@ -163,7 +172,7 @@ describe('the order the chosen method implies', () => {
     vi.mocked(goalService.getDebtPlan).mockResolvedValue({
       method: 'snowball', monthly_amount: 300, order: SNOWBALL_ORDER, status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     const snowball = await screen.findByTestId('debt-method-snowball');
     expect(snowball).toHaveAttribute('aria-checked', 'true');
@@ -173,60 +182,35 @@ describe('the order the chosen method implies', () => {
   });
 });
 
-describe('how the month is going', () => {
-  it('states behind, and offers nothing', async () => {
-    /* Owner decision 2026-09-19. The person who is behind is usually behind
-       because they could not pay; a prompt they cannot act on is a reminder
-       that they are failing. The figure is the message. */
+describe('the lesson offer', () => {
+  it('is OFFERED, and the goal saves either way', async () => {
+    /* Owner decision 2026-09-20: an offer, not a gate. finPal has never
+       withheld a user's own money from them, and a form that refuses to
+       submit until you have read something is a nag with a lock on it. The
+       step says so in as many words. */
     vi.mocked(goalService.getDebtPlan).mockResolvedValue({
-      method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER,
-      status: { method: 'avalanche', planned: 300, paid: 120, difference: -180, state: 'behind' },
+      method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER, status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    const onOpenLesson = vi.fn();
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD"
+                           onOpenLesson={onOpenLesson} />);
 
-    const status = await screen.findByTestId('debt-plan-status');
-    expect(status.textContent).toContain('Behind by');
-    expect(status.textContent).toContain('$180.00');
-    expect(status.querySelector('button')).toBeNull();
-    expect(status.querySelector('a')).toBeNull();
+    await userEvent.click(await screen.findByTestId('debt-open-lesson'));
+    expect(onOpenLesson).toHaveBeenCalled();
+    expect(screen.getByText(/skip this and set it later/i)).toBeInTheDocument();
   });
 
-  it('prints the BASIS of `paid`, because a zero is "not observed"', async () => {
-    /* `paid_toward_debt` counts transfers recorded against a debt account.
-       Somebody paying their card from a bank finPal does not hold scores zero
-       and reads as behind — so the panel must say what it counted, or it is a
-       caption that does not describe its figure (D-102) with a scold on top. */
+  it('shows NO lesson link when learnPal is not running', async () => {
+    /* *** A LINK TO A 404 IS WORSE THAN NO LINK. *** The caller passes the
+       handler only when the module answered, so its absence must remove the
+       affordance rather than leave a dead one. */
     vi.mocked(goalService.getDebtPlan).mockResolvedValue({
-      method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER,
-      status: { method: 'avalanche', planned: 300, paid: 0, difference: -300, state: 'behind' },
+      method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER, status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
-
-    const status = await screen.findByTestId('debt-plan-status');
-    expect(status.textContent).toMatch(/transfers recorded against these accounts/);
-    expect(status.textContent).toMatch(/bank finPal does not hold/);
-  });
-
-  it('draws no status block when there is no amount to measure against', async () => {
-    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
-      method: 'avalanche', monthly_amount: null, order: AVALANCHE_ORDER, status: null,
-    });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     await screen.findByTestId('debt-order');
-    expect(screen.queryByTestId('debt-plan-status')).not.toBeInTheDocument();
-  });
-
-  it('says ahead with a WORD, not only a colour', async () => {
-    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
-      method: 'snowball', monthly_amount: 300, order: SNOWBALL_ORDER,
-      status: { method: 'snowball', planned: 300, paid: 450, difference: 150, state: 'ahead' },
-    });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
-
-    const status = await screen.findByTestId('debt-plan-status');
-    expect(status.textContent).toContain('Ahead by');
-    expect(status.textContent).toContain('$150.00');
+    expect(screen.queryByTestId('debt-open-lesson')).not.toBeInTheDocument();
   });
 });
 
@@ -239,7 +223,7 @@ describe('writing a plan', () => {
     vi.mocked(goalService.setDebtPlan).mockResolvedValue({
       method: 'avalanche', monthly_amount: null, order: AVALANCHE_ORDER, status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     await userEvent.click(await screen.findByTestId('debt-method-avalanche'));
 
@@ -260,7 +244,7 @@ describe('writing a plan', () => {
     vi.mocked(goalService.setDebtPlan).mockResolvedValue({
       method: 'snowball', monthly_amount: 250, order: SNOWBALL_ORDER, status: null,
     });
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     await userEvent.type(await screen.findByLabelText(/put at this a month/i), '250');
     await userEvent.click(screen.getByTestId('debt-amount-save'));
@@ -271,9 +255,122 @@ describe('writing a plan', () => {
   it('says the plan is unchanged when the write fails', async () => {
     vi.mocked(goalService.getDebtPlan).mockResolvedValue(null);
     vi.mocked(goalService.setDebtPlan).mockRejectedValue(new Error('nope'));
-    render(<DebtPlanPanel accounts={TWO_DEBTS} currency="USD" />);
+    render(<DebtMethodStep accounts={TWO_DEBTS} currency="USD" />);
 
     await userEvent.click(await screen.findByTestId('debt-method-avalanche'));
     expect(await screen.findByText(/did not save/i)).toBeInTheDocument();
+  });
+});
+
+
+/**
+ * The status strip, which lives on the payoff goal's own card.
+ *
+ * *** IT EXISTS BECAUSE THE PICKER MOVED. *** With the panel gone from the
+ * page, a plan with no visible status would be write-once — and
+ * `plan_status` was built so that "every week we tell them how they are
+ * doing" has somewhere to be read.
+ */
+describe('the status strip on the card', () => {
+  it('states behind, and offers nothing', async () => {
+    /* Owner decision 2026-09-19. The person who is behind is usually behind
+       because they could not pay; a prompt they cannot act on is a reminder
+       that they are failing. The figure is the message. */
+    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
+      method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER,
+      status: { method: 'avalanche', planned: 300, paid: 120,
+                difference: -180, state: 'behind' },
+    });
+    render(<DebtPlanStatus currency="USD" />);
+
+    const status = await screen.findByTestId('debt-plan-status');
+    expect(status.textContent).toContain('Behind by');
+    expect(status.textContent).toContain('$180.00');
+    /* No button and no link: `onChangePlan` was not passed, so the strip must
+       offer literally nothing. */
+    expect(status.querySelector('button')).toBeNull();
+    expect(status.querySelector('a')).toBeNull();
+  });
+
+  it('prints the BASIS of `paid`, because a zero is "not observed"', async () => {
+    /* `paid_toward_debt` counts transfers recorded against a debt account, so
+       somebody paying their card from a bank finPal does not hold scores zero
+       and reads as behind. Saying so is the difference between a figure and a
+       scold — and without it this is D-102 with teeth. */
+    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
+      method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER,
+      status: { method: 'avalanche', planned: 300, paid: 0,
+                difference: -300, state: 'behind' },
+    });
+    render(<DebtPlanStatus currency="USD" />);
+
+    const status = await screen.findByTestId('debt-plan-status');
+    expect(status.textContent).toMatch(/transfers recorded against these accounts/);
+    expect(status.textContent).toMatch(/bank finPal does not hold/);
+  });
+
+  it('says ahead with a WORD, not only a colour', async () => {
+    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
+      method: 'snowball', monthly_amount: 300, order: SNOWBALL_ORDER,
+      status: { method: 'snowball', planned: 300, paid: 450,
+                difference: 150, state: 'ahead' },
+    });
+    render(<DebtPlanStatus currency="USD" />);
+
+    const status = await screen.findByTestId('debt-plan-status');
+    expect(status.textContent).toContain('Ahead by');
+    expect(status.textContent).toContain('$150.00');
+  });
+
+  it('names the method even when there is no amount to measure against', async () => {
+    /* *** AN ORDERING WITH NO MONTHLY FIGURE IS A PLAN HALF MADE, AND SAYING
+       SO IS THE POINT. *** Rendering the method and then nothing would leave
+       the reader unable to tell "on plan" from "not measured". */
+    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
+      method: 'snowball', monthly_amount: null, order: SNOWBALL_ORDER, status: null,
+    });
+    render(<DebtPlanStatus currency="USD" />);
+
+    const status = await screen.findByTestId('debt-plan-status');
+    expect(status.textContent).toContain('Smallest balance first');
+    expect(status.textContent).toMatch(/nothing to measure this month against/);
+  });
+
+  it('draws nothing at all when no plan exists', async () => {
+    vi.mocked(goalService.getDebtPlan).mockResolvedValue(null);
+    const { container } = render(<DebtPlanStatus currency="USD" />);
+    await settled(vi.mocked(goalService.getDebtPlan));
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('offers Change plan only when there is somewhere for it to go', async () => {
+    /* An affordance that looks clickable and does nothing is worse than no
+       affordance — D-05's class, and the reason the card passes a handler
+       while a bare strip does not. */
+    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
+      method: 'avalanche', monthly_amount: 300, order: AVALANCHE_ORDER, status: null,
+    });
+    const onChangePlan = vi.fn();
+    render(<DebtPlanStatus currency="USD" onChangePlan={onChangePlan} />);
+
+    await userEvent.click(await screen.findByTestId('debt-change-plan'));
+    expect(onChangePlan).toHaveBeenCalled();
+  });
+
+  it('renders the currency the SERVER converted into, not the page\'s', async () => {
+    /* D-278: a euro household's dollar card printed as EUR600.00 because the
+       client reached for the page's currency. The server now converts every
+       figure into one code and ships it. */
+    vi.mocked(goalService.getDebtPlan).mockResolvedValue({
+      method: 'avalanche', monthly_amount: 300, currency_code: 'USD',
+      order: AVALANCHE_ORDER,
+      status: { method: 'avalanche', planned: 300, paid: 120,
+                difference: -180, state: 'behind' },
+    });
+    render(<DebtPlanStatus currency="EUR" />);
+
+    const status = await screen.findByTestId('debt-plan-status');
+    expect(status.textContent).toContain('$180.00');
+    expect(status.textContent).not.toContain('€');
   });
 });

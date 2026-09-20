@@ -119,6 +119,58 @@ beforeEach(() => {
      * purpose: it has to be a string that fits at 1440 and can overflow at 390,
      * and a short fixture cannot produce one.
      */
+    /*
+     * *** THE THREE ADVICE ENDPOINTS, BECAUSE THE PANELS MOVED IN HERE. ***
+     * On 2026-09-20 the buffer calculator, the sinking-fund figure and the
+     * debt method picker left the Goals PAGE and became steps inside the
+     * create panel. The panel portals to `document.body`, so the pages walk
+     * cannot reach it (D-165) and this is now the only walk that renders any
+     * of them. Without handlers MSW's `onUnhandledRequest: 'error'` raises
+     * and the capture dies rather than degrading.
+     *
+     * *** POPULATED, NEVER EMPTY, BECAUSE ALL THREE DRAW NOTHING WHEN THEY
+     * HAVE NOTHING TO SAY. *** A `null` fixture would leave this walk
+     * measuring a panel with three new steps and none of them rendered,
+     * which is the exact shape D-165 records.
+     */
+    http.get('*/api/v1/goals/buffer-picture', () => HttpResponse.json({
+      success: true,
+      buffer: {
+        essential_monthly: 2480.5, held: 8200, months_covered: 3.3,
+        targets: [
+          // One covered, one not: both branches of the caption render.
+          { months: 3, target: 7441.5, short_by: -758.5 },
+          { months: 6, target: 14883, short_by: 6683 },
+        ],
+      },
+    })),
+    http.get('*/api/v1/goals/sinking-picture', () => HttpResponse.json({
+      success: true,
+      sinking: { annual: 1284.6, monthly: 107.05, months_counted: 12,
+                 currency_code: 'GBP' },
+    })),
+    http.get('*/api/v1/goals/suggestions', () => HttpResponse.json({
+      success: true, suggestions: [],
+    })),
+    http.get('*/api/v1/goals/debt-plan', () => HttpResponse.json({
+      success: true,
+      plan: {
+        method: 'avalanche', monthly_amount: 400, currency_code: 'GBP',
+        order: [
+          { id: 7, name: 'Chase Amazon', balance: -1125.41, apr: 24.99 },
+          { id: 9, name: 'Barclaycard Rewards', balance: -524.59, apr: 19.99 },
+          // No rate: renders "rate not recorded", the one string that says
+          // finPal is missing a figure rather than guessing it as zero.
+          { id: 12, name: 'John Lewis Partnership Card', balance: -612.25, apr: null },
+        ],
+        status: { method: 'avalanche', planned: 400, paid: 175,
+                  difference: -225, state: 'behind' },
+      },
+    })),
+    http.put('*/api/v1/goals/debt-plan', () => HttpResponse.json({
+      success: true, plan: { method: 'avalanche', monthly_amount: 400 },
+    })),
+
     http.get('*/api/v1/goals', () => HttpResponse.json({
       success: true,
       goals: [{
@@ -593,6 +645,52 @@ const cases: Case[] = [
       await screen.findByRole('button', { name: /New goal/ }, { timeout: 6000 });
       await userEvent.click(screen.getByRole('button', { name: /New goal/ }));
       return (await screen.findByRole('dialog')) as HTMLElement;
+    },
+  },
+  {
+    /*
+     * *** THE SAME PANEL WITH `Debt paydown` CHOSEN, AND IT IS A DIFFERENT
+     * SHAPE. *** The kind picker decides what the rest of the form shows, so
+     * the default (`Emergency fund`, the buffer calculator) and this one
+     * (the method radios, the ordering, the amount field) are two distinct
+     * layouts. Capturing only the default would measure neither the radios
+     * nor the three-row ordered list — a page being in the walk is not the
+     * walk seeing what changed (D-165), and that is the defect this whole
+     * change could most easily have shipped with.
+     *
+     * The ordering rows are the widest content the panel can hold: a name,
+     * a money figure and a rate on one line, inside a 500px drawer.
+     */
+    name: 'slidepanel-goal-create-payoff',
+    Page: Goals as React.FC,
+    open: async () => {
+      await screen.findByRole('button', { name: /New goal/ }, { timeout: 6000 });
+      await userEvent.click(screen.getByRole('button', { name: /New goal/ }));
+      const dialog = (await screen.findByRole('dialog')) as HTMLElement;
+      await userEvent.selectOptions(
+        await screen.findByLabelText(/What kind of goal is this/), 'payoff');
+      // Wait for the step's own fetch to land, or the capture is of a panel
+      // mid-load — the empty-while-loading trap `settled()` exists for.
+      await screen.findByTestId('debt-order');
+      return dialog;
+    },
+  },
+  {
+    /*
+     * And with `Bills that are not monthly`, whose helper is the one that
+     * NAMES a figure rather than offering options. Cheap to add and it is the
+     * only place the sinking-fund copy is ever rendered by a gate.
+     */
+    name: 'slidepanel-goal-create-sinking',
+    Page: Goals as React.FC,
+    open: async () => {
+      await screen.findByRole('button', { name: /New goal/ }, { timeout: 6000 });
+      await userEvent.click(screen.getByRole('button', { name: /New goal/ }));
+      const dialog = (await screen.findByRole('dialog')) as HTMLElement;
+      await userEvent.selectOptions(
+        await screen.findByLabelText(/What kind of goal is this/), 'sinking');
+      await screen.findByTestId('sinking-calculator');
+      return dialog;
     },
   },
   {

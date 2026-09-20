@@ -75,13 +75,23 @@ describe('goal suggestions', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('starts a goal of the suggested kind', async () => {
+  it('opens the create panel on the suggestion\'s own KIND CHOICE', async () => {
+    /* *** IT USED TO HAND BACK THE STORED KIND, WHICH IS LOSSY. *** Both
+       savings suggestions arrive as `'savings'`, so a picker preselected
+       from that alone cannot tell an emergency fund from a sinking fund.
+       `choiceForSuggestion` keys on the CHECK name instead — an identifier,
+       not copy somebody will reword.
+
+       The whole row is the button now, not a "Start one" inside it: the card
+       shrank to one line on 2026-09-20 because three always-on panels were
+       half the first screen. */
     vi.mocked(goalService.getSuggestions).mockResolvedValue([SUGGESTION]);
     const onStart = vi.fn();
     render(<GoalSuggestions onStart={onStart} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Start one' }));
-    expect(onStart).toHaveBeenCalledWith('savings');
+    await userEvent.click(
+      await screen.findByTestId(`suggestion-${SUGGESTION.check}`));
+    expect(onStart).toHaveBeenCalledWith('buffer');
   });
 });
 
