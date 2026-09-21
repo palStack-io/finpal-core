@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { GearIcon } from './GearIcon';
 import { BADGE_ART, badgeGlyph } from '../utils/badgeGlyph';
 
@@ -12,68 +12,30 @@ import { BADGE_ART, badgeGlyph } from '../utils/badgeGlyph';
  * mistakable for equipment at a glance, or the distinction is a caption
  * nobody reads.
  *
- * *** BADGE ART LIVES IN `/badges/`, NOT `/gear/`, AND THAT MISMATCH WAS A
- * REAL BUG. *** The art spec (`2026-09-17-contributor-badge-art-prompt.md`)
- * has always said files go to `public/badges/<slug>.svg` — and this component
- * delegated straight to `GearIcon`, which only ever looks in `/gear/`. Art
- * dropped where the spec said would have rendered NOTHING, silently, on both
- * clients. Two directories is also the right shape: it is what stops a badge
- * and a purchasable gear piece ever being the same file, which is D-219 in
- * storage rather than on screen.
+ * *** IT MASKS RATHER THAN FETCHES, FOR THE REASON `GearIcon`'s DOCSTRING
+ * SETS OUT. *** Every glyph in the app rendered as an empty box in a real
+ * browser while Playwright saw them fine; the difference was the request
+ * TYPE, and a mask goes through the image pipeline rather than `fetch`.
  *
- * *** THE FALLBACK IS WHAT MAKES THE ART OPTIONAL. *** With no badge file,
- * `badgeGlyph` borrows a gear drawing, which is what ships today. Dropping a
- * correctly-named file into `public/badges/` is the whole migration — no code
- * change, no release coupling, exactly what the gear promised and got.
+ * *** BADGE ART LIVES IN `/badges/`, GEAR IN `/gear/`, AND TWO DIRECTORIES
+ * IS THE POINT. *** It is what stops a badge and a purchasable gear piece
+ * ever being the same file — D-219 in storage rather than on screen.
+ * `BADGE_ART` says which slugs have their own drawing; anything else borrows
+ * one through `badgeGlyph`. Asking for art that does not exist cost 480
+ * console errors in a single walkthrough before that set existed.
  */
-
-/** slug -> markup, or `null` once we know there is no badge-specific file. */
-const cache = new Map<string, string | null>();
-
 export const BadgeIcon: React.FC<{
   slug?: string | null;
   size?: number;
   title?: string;
 }> = ({ slug, size = 24, title }) => {
-  const [markup, setMarkup] = useState<string | null | undefined>(
-    () => (slug ? cache.get(slug) : null));
-
-  useEffect(() => {
-    /* *** ONLY FETCH FOR A SLUG WE KNOW HAS ART. *** Asking for every badge
-       and letting the 404 answer cost 480 console errors in one walkthrough,
-       because the rail renders on every page. */
-    if (!slug || !BADGE_ART.has(slug)) return;
-    if (cache.has(slug)) { setMarkup(cache.get(slug)); return; }
-    let alive = true;
-    fetch(`/badges/${slug}.svg`)
-      .then((r) => (r.ok ? r.text() : null))
-      .then((text) => {
-        /* *** THE `<svg` PREFIX IS THE WHOLE GUARD. *** An SPA dev server
-           answers an unknown path with index.html and a status 200, so `r.ok`
-           alone would cache the entire application as an icon. Same guard
-           `GearIcon` carries, and for the same measured reason. */
-        const value = text && text.trim().startsWith('<svg') ? text : null;
-        cache.set(slug, value);
-        if (alive) setMarkup(value);
-      })
-      .catch(() => { cache.set(slug, null); if (alive) setMarkup(null); });
-    return () => { alive = false; };
-  }, [slug]);
-
   // *** THE DISC INSETS THE GLYPH, SO A SMALL `size` HURTS MORE HERE THAN IT
   // DID FOR BARE GEAR. *** At 58% a 32px disc leaves an 18.6px drawing.
   // `gearIsLegible.test.ts` holds callers to a floor rather than clamping
   // here: silently resizing would hide the caller's mistake.
   const glyph = Math.round(size * 0.58);
-
-  const shell: React.CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    width: size, height: size, borderRadius: '50%', flexShrink: 0,
-    border: '1.5px solid var(--border-medium)',
-    background: 'var(--bg-secondary)',
-    color: 'var(--text-secondary)',
-    boxSizing: 'border-box',
-  };
+  const own = slug && BADGE_ART.has(slug);
+  const url = own ? `url("/badges/${slug}.svg")` : null;
 
   return (
     <span
@@ -82,16 +44,34 @@ export const BadgeIcon: React.FC<{
       aria-hidden={title ? undefined : true}
       data-testid="badge-icon"
       title={title}
-      style={shell}
+      style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: size, height: size, borderRadius: '50%', flexShrink: 0,
+        /* A struck disc: a ring plus a slightly recessed face. Both tokens
+           are role tokens already measured by `tokenContrast.test.ts`. */
+        border: '1.5px solid var(--border-medium)',
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-secondary)',
+        boxSizing: 'border-box',
+      }}
     >
-      {markup
-        ? <span style={{ width: glyph, height: glyph, display: 'inline-flex' }}
-                // The file is ours, served from our own `public/` directory.
-                dangerouslySetInnerHTML={{ __html: markup }} />
-        /* No badge-specific art: borrow a gear drawing. `markup === undefined`
-           (still fetching) takes this branch too, so the disc never flashes
-           empty on a badge that has always had a fallback. */
-        : <GearIcon slug={badgeGlyph(slug ?? '')} size={glyph} />}
+      {url ? (
+        <span
+          aria-hidden="true"
+          data-badge={slug}
+          style={{
+            width: glyph, height: glyph, display: 'inline-block',
+            backgroundColor: 'currentColor',
+            maskImage: url, WebkitMaskImage: url,
+            maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center', WebkitMaskPosition: 'center',
+            maskSize: 'contain', WebkitMaskSize: 'contain',
+          }}
+        />
+      ) : (
+        /* No badge-specific art: borrow a gear drawing. */
+        <GearIcon slug={badgeGlyph(slug ?? '')} size={glyph} />
+      )}
     </span>
   );
 };

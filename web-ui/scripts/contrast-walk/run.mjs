@@ -89,6 +89,26 @@ const TEXT_FLOORS = {
   'forgot-password': 7,
   // Two fields, a rule line and a button.
   'reset-password': 11,
+  /* *** THE CAPTURES USED TO COUNT EMOJI, AND STOPPED ON 2026-09-20. ***
+     `GearIcon` fetched its SVG and fell back to an emoji when the fetch
+     failed — which it ALWAYS did in the capture environment, where there is
+     no server. So every gear glyph on every captured page was a text-bearing
+     emoji span, and the contrast walk was measuring stand-ins it would never
+     see in a browser. Converting the icon to a CSS mask removed the text:
+     goals fell 87 -> 65, learnpal-lessons 65 -> 46, learnpal-home 34 -> 31
+     and this page 23 -> 19, each drop exactly the number of glyphs it draws.
+
+     Only this one crossed the shared floor. 19 is the page COMPLETE — the
+     drop is four emoji that were never really there — so it gets a floor
+     rather than the walk getting a lower default, which is what the header
+     above means by "an exemption list, and an empty one is the goal".
+
+     *** AND THE HONEST NOTE: THE WALK NEVER MEASURED THE REAL ARTWORK AND
+     STILL DOES NOT. *** It measured emoji; now it measures nothing, because
+     a mask paints through CSS with a URL the capture cannot load. That is
+     the better of the two: an icon is not text, and a contrast figure for a
+     stand-in glyph was noise dressed as a measurement. */
+  'learnpal-range': 16,
 };
 
 const DEFAULT_TEXT_FLOOR = 20;

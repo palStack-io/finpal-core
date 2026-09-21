@@ -1,114 +1,90 @@
 /**
- * learnPal gear: SVG if the file is there, emoji if it is not.
+ * learnPal gear: a CSS mask painted with `currentColor`.
  *
- * Owner decision 2026-09-11 — *"make a path on the folder for svg with the names
- * they need to be with fallback to emoji when no svg found."* Dropping a
- * correctly-named file into `public/gear/` is the whole migration.
+ * *** THIS FILE USED TO TEST A `fetch`, AND THE FETCH IS GONE — SO THE TESTS
+ * CHANGED MEANING RATHER THAN BEING DELETED. *** 2026-09-20: every glyph in
+ * the app rendered as an empty box in a real browser while Playwright, on
+ * the identical URL, rendered them fine. The difference was the request
+ * TYPE: a tab loading the SVG is a `document` request, `fetch()` is an
+ * `xhr` request, and a content blocker that STALLS rather than rejects
+ * produces exactly that — no artwork, and no emoji fallback either, because
+ * the old code only fell back on a REJECTED promise and this one never
+ * settled. Mobile was never affected, which is the tell: it maps bundled
+ * assets and makes no runtime request at all.
  *
- * *** THE TEST THAT MATTERS MOST IS THAT THE SVG IS INLINED RATHER THAN PUT IN
- * AN `<img src>`. *** An `<img>` cannot inherit `color`, so `fill="currentColor"`
- * would resolve to nothing and every icon would be invisible in one theme. That
- * is D-60's bug class — a value that renders as nothing while every test passes
- * — so it is asserted directly rather than trusted.
+ * *** THE PROPERTY THAT STILL MATTERS MOST IS THE SAME ONE. *** The old
+ * version inlined markup because an `<img>` cannot inherit `color`, so
+ * `fill="currentColor"` would resolve to nothing and every icon would be
+ * invisible in one theme — D-60's bug class. A mask keeps that guarantee by
+ * a different route: it has no colour of its own, and
+ * `background-color: currentColor` paints through it.
+ *
+ * *** AND TWO OLD TESTS ARE GONE BECAUSE THE RISK IS GONE, NOT IGNORED. ***
+ * "Refuses an HTML 404 page served with status 200" and "refuses a body
+ * that is not an svg" both guarded `dangerouslySetInnerHTML` against an SPA
+ * dev server answering an unknown path with index.html. There is no
+ * `innerHTML` any more: a mask that cannot load paints nothing. The
+ * injection surface was removed rather than defended.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { GearIcon, GEAR_EMOJI } from '../../components/GearIcon';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { GearIcon, GEAR_EMOJI, GEAR_SLUGS } from '../../components/GearIcon';
 
-const SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 1h2v2z"/></svg>';
-
-const mockFetch = (impl: (url: string) => Partial<Response> | null) => {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    const r = impl(String(url));
-    if (r === null) throw new Error('network');
-    return { ok: true, headers: new Headers({ 'content-type': 'image/svg+xml' }),
-             text: async () => SVG, ...r } as Response;
-  }));
-};
-
-beforeEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+const maskOf = (el: HTMLElement) =>
+  el.style.getPropertyValue('mask-image') || el.style.getPropertyValue('-webkit-mask-image');
 
 describe('GearIcon', () => {
-  it('*** INLINES THE SVG SO `currentColor` CAN INHERIT ***', async () => {
-    mockFetch(() => ({}));
-    const { container } = render(<GearIcon slug="rope" />);
-
-    await waitFor(() => expect(container.querySelector('svg')).toBeTruthy());
-    // A real <svg> element in the document — not an <img>, which could not
-    // inherit `color` and would render nothing.
-    expect(container.querySelector('img')).toBeNull();
-    expect(container.querySelector('svg')?.getAttribute('fill')).toBe('currentColor');
+  it('*** PAINTS `currentColor` THROUGH A MASK, SO IT INHERITS ***', () => {
+    /* The whole reason this component exists rather than an `<img>`. If the
+       colour stops being `currentColor`, every icon goes one fixed shade and
+       is invisible in one theme — silently, which is D-60. */
+    render(<GearIcon slug="rope" size={40} label="Rope" />);
+    const el = screen.getByRole('img', { name: 'Rope' });
+    expect(el.style.backgroundColor).toBe('currentcolor');
+    expect(maskOf(el)).toContain('/gear/rope.svg');
   });
 
-  it('falls back to the emoji when the file is absent', async () => {
-    // *** A DIFFERENT SLUG PER TEST, ON PURPOSE. *** The fetch cache is
-    // module-level and deliberately never invalidated — the files cannot change
-    // during a session — so reusing `rope` here would read the SVG the first
-    // test cached and assert nothing about the fallback. Found by this test
-    // failing for exactly that reason.
-    mockFetch(() => ({ ok: false }));
-    render(<GearIcon slug="oxygen" />);
-    await waitFor(() => expect(screen.getByText(GEAR_EMOJI.oxygen)).toBeInTheDocument());
+  it('*** MAKES NO NETWORK REQUEST AT ALL ***', () => {
+    /* The bug this rewrite fixes. A mask loads through the image pipeline;
+       if this component ever reaches for `fetch` again it becomes stallable
+       by the same thing that broke it. */
+    const spy = vi.fn();
+    vi.stubGlobal('fetch', spy);
+    render(<GearIcon slug="tent" size={40} />);
+    expect(spy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
-  it('falls back when the network fails outright', async () => {
-    mockFetch(() => null);
-    render(<GearIcon slug="compass" />);
-    await waitFor(() => expect(screen.getByText(GEAR_EMOJI.compass)).toBeInTheDocument());
+  it('sizes the mask to CONTAIN, so wider drawings are not cropped', () => {
+    render(<GearIcon slug="map" size={40} label="Map" />);
+    const el = screen.getByRole('img', { name: 'Map' });
+    const size = el.style.getPropertyValue('mask-size')
+      || el.style.getPropertyValue('-webkit-mask-size');
+    expect(size).toBe('contain');
   });
 
-  it('*** REFUSES AN HTML 404 PAGE SERVED WITH STATUS 200 ***', async () => {
-    // An SPA dev server answers an unknown path with index.html and a 200.
-    // Trusting `r.ok` alone would cache that as an icon and render the entire
-    // application inside a 24px box.
-    mockFetch(() => ({
-      ok: true,
-      headers: new Headers({ 'content-type': 'text/html' }),
-      text: async () => '<!doctype html><html><body>app</body></html>',
-    }));
-    render(<GearIcon slug="tent" />);
-    await waitFor(() => expect(screen.getByText(GEAR_EMOJI.tent)).toBeInTheDocument());
+  it('renders a dot for a slug nobody has drawn, rather than a broken mask', () => {
+    /* A mask pointing at a file that does not exist paints NOTHING — an
+       invisible hole with no clue it is broken. An unknown slug is caught
+       before it gets that far. */
+    const { container } = render(<GearIcon slug="not-a-real-slug" size={24} />);
+    expect(container.textContent).toBe('•');
+    expect(maskOf(container.firstChild as HTMLElement)).toBe('');
   });
 
-  it('refuses a body that is not an svg even with the right content-type', async () => {
-    mockFetch(() => ({ text: async () => 'not markup at all' }));
-    render(<GearIcon slug="helmet" />);
-    await waitFor(() => expect(screen.getByText(GEAR_EMOJI.helmet)).toBeInTheDocument());
-  });
+  it('is announced when it carries meaning and hidden when it does not', () => {
+    const { rerender, container } = render(<GearIcon slug="boots" size={24} label="Boots" />);
+    expect(screen.getByRole('img', { name: 'Boots' })).toBeInTheDocument();
 
-  it('renders a dot for a slug nobody has drawn OR chosen an emoji for', async () => {
-    // Never blank and never a crash: an unknown slug is a seeding typo, and the
-    // milestone it belongs to still has to render.
-    mockFetch(() => ({ ok: false }));
-    render(<GearIcon slug="nonsense-slug" />);
-    await waitFor(() => expect(screen.getByText('•')).toBeInTheDocument());
-  });
-
-  it('fetches each slug ONCE across renders', async () => {
-    mockFetch(() => ({}));
-    const { unmount } = render(<GearIcon slug="boots" />);
-    await waitFor(() => expect(screen.queryByText(GEAR_EMOJI.boots)).toBeNull());
-    unmount();
-    render(<GearIcon slug="boots" />);
-    await waitFor(() => expect(document.querySelector('svg')).toBeTruthy());
-    expect((globalThis.fetch as any).mock.calls.length).toBe(1);
-  });
-
-  it('is announced when it carries meaning and hidden when it does not', async () => {
-    mockFetch(() => ({ ok: false }));
-    const { rerender } = render(<GearIcon slug="bivvy" label="Bivvy" />);
-    await waitFor(() => expect(screen.getByRole('img', { name: 'Bivvy' })).toBeInTheDocument());
-
-    rerender(<GearIcon slug="bivvy" />);
-    await waitFor(() => expect(screen.queryByRole('img')).toBeNull());
+    rerender(<GearIcon slug="boots" size={24} />);
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('every slug learnPal seeds has an emoji fallback', () => {
-    // A milestone whose gear has neither a file nor a glyph renders a bare dot.
-    // These eight are what C1b seeds today.
-    for (const slug of ['map', 'boots', 'rope', 'headlamp', 'ice-axe', 'gloves',
-                        'compass', 'trekking-poles']) {
-      expect(GEAR_EMOJI[slug], slug).toBeTruthy();
-    }
+    /* Unchanged in intent: a slug with no emoji entry is one this component
+       cannot draw at all, mask or not. */
+    expect(GEAR_SLUGS.length).toBe(21);
+    for (const slug of GEAR_SLUGS) expect(GEAR_EMOJI[slug]).toBeTruthy();
   });
 });
