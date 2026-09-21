@@ -15,7 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { BADGE_GLYPH, badgeGlyph } from '../../utils/badgeGlyph';
+import { BADGE_ART, BADGE_GLYPH, badgeGlyph } from '../../utils/badgeGlyph';
 
 /**
  * Every badge slug the server can award — CORE **and** MODULES.
@@ -73,6 +73,18 @@ describe('badge glyphs', () => {
     expect(missing).toEqual([]);
   });
 
+  it('declares exactly the badge art that is on disk', () => {
+    /* *** A FILE WITHOUT A LINE IS INVISIBLE; A LINE WITHOUT A FILE IS A
+       404 ON EVERY PAGE. *** `BADGE_ART` is what stops `BadgeIcon` asking
+       for art that does not exist — the thing that cost 480 console errors
+       in one walkthrough before it existed. Both directions fail here. */
+    const dir = join(process.cwd(), 'public', 'badges');
+    const onDisk = existsSync(dir)
+      ? readdirSync(dir).filter((f) => f.endsWith('.svg')).map((f) => f.replace(/\.svg$/, ''))
+      : [];
+    expect([...BADGE_ART].sort()).toEqual(onDisk.sort());
+  });
+
   it('loads badge art from /badges/, and gear art only as a FALLBACK', () => {
     /* *** THE SPEC AND THE CODE DISAGREED, AND THE CODE WOULD HAVE WON
        SILENTLY. *** `2026-09-17-contributor-badge-art-prompt.md` has always
@@ -86,6 +98,9 @@ describe('badge glyphs', () => {
        rather than on screen. */
     const src = readFileSync(join(process.cwd(), 'src/components/BadgeIcon.tsx'), 'utf8');
     expect(src).toMatch(/\/badges\/\$\{slug\}\.svg/);
+    // And it must ask only for slugs known to have art, or every badge
+    // without its own drawing logs a 404 on every page.
+    expect(src).toMatch(/BADGE_ART\.has\(slug\)/);
     // And the fallback survives, or every badge goes blank until art lands.
     expect(src).toMatch(/badgeGlyph\(/);
   });

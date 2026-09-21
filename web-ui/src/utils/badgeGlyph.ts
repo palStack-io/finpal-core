@@ -26,6 +26,30 @@
  * SHORTCUT: *** badges reuse the glyph inside a disc, and the disc is what
  * distinguishes a badge from equipment.
  */
+/**
+ * The badge slugs that have their OWN drawing, as opposed to borrowing one.
+ *
+ * *** THIS EXISTS TO STOP A 404 PER BADGE PER PAGE. *** The first version of
+ * `BadgeIcon` tried `/badges/<slug>.svg` for every badge and fell back to
+ * gear on a 404 — which made "drop a file in, no code change" true, and made
+ * every page in the app log a failed request for every badge without art.
+ * Measured on the demo: **480 console errors across one walkthrough**, from a
+ * rail that renders on every page. That is D-275's lesson, reintroduced three
+ * days after it was closed — a page that always has an error in its console
+ * is a page whose console nobody reads.
+ *
+ * *** SO LANDING NEW ART IS A FILE PLUS A LINE, ON BOTH CLIENTS. *** Mobile
+ * always needed the line (Metro will not bundle a computed path); web now
+ * needs it too, which at least makes the two identical rather than subtly
+ * different. `badgeGlyphsExist.test.ts` asserts this set matches the files on
+ * disk exactly, so a file without a line — or a line without a file — fails.
+ */
+export const BADGE_ART = new Set<string>([
+  'first-light',
+  'cairn-builder',
+  'map-maker',
+]);
+
 export const BADGE_GLYPH: Record<string, string> = {
   // Cutting through the thing that was in the way.
   'debt-free': 'ice-axe',

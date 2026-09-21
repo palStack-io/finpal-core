@@ -25,7 +25,8 @@ import { useAuthStore } from '../../store/authStore';
 import { moduleRegistry } from '../../modules';
 import { useReviewStore } from '../../store/reviewStore';
 import type { ModuleManifest } from '../../modules/registry';
-import { useCoinBalance, useOpenSurfaces } from '../../contexts/CoinAwardContext';
+import { useBadges, useCoinBalance, useOpenSurfaces } from '../../contexts/CoinAwardContext';
+import { BadgeIcon } from '../BadgeIcon';
 import { Cairn } from '../Cairn';
 
 /**
@@ -304,6 +305,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
   type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }> };
 
   const coinBalance = useCoinBalance();
+  /* Newest first, already sorted by the provider. TWO, because a third would
+     wrap the line and the rail has no vertical room to give. */
+  const badges = useBadges();
+  const recentBadges = badges.slice(0, 2);
   const openSurfaces = useOpenSurfaces();
 
   /**
@@ -422,11 +427,48 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       {/* User Profile Header */}
       <div className="sidebar-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="user-profile-header" onClick={() => navigate('/settings')} style={{ flex: 1 }}>
+          {/* *** THIS WENT TO /settings UNTIL 2026-09-20, BECAUSE THERE WAS
+              NO PROFILE PAGE. *** The link had been pointing at the
+              preferences screen since the rail was built. */}
+          <div className="user-profile-header" onClick={() => navigate('/profile')} style={{ flex: 1 }}>
             <div className="user-avatar">{user?.profile_emoji || '👤'}</div>
             <div className="user-info">
               <div className="user-name">{user?.name || 'User'}</div>
-              <div className="user-email">View profile</div>
+              {/* *** THE TWO MOST RECENT BADGES, OR THE OLD LINE. *** Owner
+                  chose discs over a named badge: two fit where one name does,
+                  and the rail is the one place in the app with no room for
+                  words. `useBadges` reads the wallet this provider has
+                  already loaded — a second fetch here would be one request
+                  per page view for two small discs.
+
+                  *** EACH DISC IS LABELLED, NOT TOOLTIPPED. *** `GoalStrip`
+                  next door carries its meaning in a `title` attribute, which
+                  does not exist on touch — so on every phone that row is
+                  permanently unexplained. Not repeating it here: `title` is
+                  the hover affordance and `aria-label` is the real one. */}
+              {recentBadges.length > 0 ? (
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}
+                  data-testid="rail-badges"
+                >
+                  {/* *** 32, NOT 20 — `gearIsLegible` REFUSED THE SMALLER
+                      ONE AND WAS RIGHT. *** The disc insets its glyph to
+                      58%, so 20 draws an 11.6px device: the same illegible
+                      smudge the goal strip was shipping. The approved mockup
+                      drew these at 18px, which the floor also forbids, so
+                      the mockup was showing something that cannot ship. */}
+                  {recentBadges.map((b) => (
+                    <BadgeIcon key={b.slug} slug={b.slug} size={32} title={b.title} />
+                  ))}
+                  {badges.length > recentBadges.length && (
+                    <span className="user-email" style={{ fontSize: 11.5 }}>
+                      +{badges.length - recentBadges.length}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="user-email">View profile</div>
+              )}
             </div>
           </div>
           <button

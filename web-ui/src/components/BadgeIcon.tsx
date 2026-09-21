@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GearIcon } from './GearIcon';
-import { badgeGlyph } from '../utils/badgeGlyph';
+import { BADGE_ART, badgeGlyph } from '../utils/badgeGlyph';
 
 /**
  * A badge: its own drawing if one exists, otherwise a borrowed gear glyph,
@@ -39,7 +39,10 @@ export const BadgeIcon: React.FC<{
     () => (slug ? cache.get(slug) : null));
 
   useEffect(() => {
-    if (!slug) return;
+    /* *** ONLY FETCH FOR A SLUG WE KNOW HAS ART. *** Asking for every badge
+       and letting the 404 answer cost 480 console errors in one walkthrough,
+       because the rail renders on every page. */
+    if (!slug || !BADGE_ART.has(slug)) return;
     if (cache.has(slug)) { setMarkup(cache.get(slug)); return; }
     let alive = true;
     fetch(`/badges/${slug}.svg`)

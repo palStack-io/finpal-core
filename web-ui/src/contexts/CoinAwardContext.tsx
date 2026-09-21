@@ -317,7 +317,20 @@ export const useEverest = () => {
  * badge is absent, never present-and-false, so every caller renders nothing
  * rather than a row of locked discs — the report card decision 5 forbids.
  */
-export const useBadges = (): CoinBadge[] => useCoinAwards().badges;
+const NO_BADGES: CoinBadge[] = [];
+
+/**
+ * *** A READ DEGRADES, THE QUEUE DOES NOT — AND THIS IS THE FOURTH TIME. ***
+ * The first version was `useCoinAwards().badges`, which THROWS without a
+ * provider, and it took the whole Sidebar suite down the moment the rail
+ * started reading badges: five tests that mount no provider, failing with
+ * "useCoinAwards must be used within CoinAwardProvider". `useSurfaceCoins`,
+ * `useCoinBalance`, `useOpenSurfaces` and `useEverest` all already degrade
+ * for exactly that reason — a reward feature must never be able to blank a
+ * page it is bolted onto.
+ */
+export const useBadges = (): CoinBadge[] =>
+  useContext(CoinAwardContext)?.badges ?? NO_BADGES;
 
 export const useBestGear = (): string | null => {
   const context = useContext(CoinAwardContext);

@@ -102,6 +102,12 @@ const HEADINGS: Record<string, RegExp> = {
   // A gate nobody runs protects nothing.
   '/review': /Review/,
   '/kit': /Your kit/,
+  /* *** THE PAGE'S h1 IS THE USER'S OWN NAME. *** `PageHead` takes
+     `title={user?.name}`, so the heading is "Alex Demo" for the seeded
+     persona rather than a fixed string — a page about somebody's climb is
+     titled with who they are. Matched loosely so a different seed does not
+     break the sweep. */
+  '/profile': /Demo|Your climb/,
 };
 
 /** Routes that exist but are deliberately not walked here, each with a reason. */

@@ -34,6 +34,7 @@ import { Accounts } from './pages/Accounts';
 import { Goals } from './pages/Goals';
 import Review from './pages/Review';
 import { Kit } from './pages/Kit';
+import { Profile } from './pages/Profile';
 import BudgetsMinimal from './pages/BudgetsMinimal';
 // The canonical categories UI is the component Settings used to host, NOT the
 // 441-line `pages/Categories.tsx` that used to answer this route — that page was
@@ -235,6 +236,20 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AppLayout><Kit /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* *** "View profile" IN THE RAIL WENT TO /settings UNTIL NOW,
+                BECAUSE THERE WAS NO PROFILE PAGE AT ALL. *** Kit is the SHOP
+                — the 21-piece grid, the prices, the acts that pay for them.
+                This is the mantelpiece: what you own and what you have kept
+                up. Two pages, two jobs; the badges moved here rather than
+                being duplicated. */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Profile /></AppLayout>
                 </ProtectedRoute>
               }
             />
