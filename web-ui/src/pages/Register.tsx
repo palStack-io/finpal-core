@@ -32,6 +32,7 @@ import { FINPAL_PRIVACY, FINPAL_TERMS } from '../constants/links';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import AuthShell from '../components/auth/AuthShell';
 import { useToast } from '../contexts/ToastContext';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
 import { apiErrorMessage } from '../utils/apiError';
@@ -146,518 +147,450 @@ export const Register: React.FC = () => {
     showToast('Google Sign-Up coming soon!', 'info');
   };
 
+  /*
+   * *** THE SHELL IS THE PAGE NOW, SO THIS RETURN IS ONE ELEMENT. ***
+   *
+   * This used to open a 100vh wash, paint a background grid inside it, position
+   * its own "Back to Home", and centre a 46rem column — all of which existed
+   * because `AuthShell` was a CARD that needed a page around it. It IS the page
+   * now: full-bleed, with the frieze positioned against its own box. Nesting it
+   * in a centred column would put the horizon inside the card instead of on the
+   * floor.
+   *
+   * "Back to Home" and the palStack footer moved INTO the shell, because both
+   * were duplicated verbatim here and on the other sign-in screen, and three of
+   * the five pre-auth pages had no way home at all.
+   *
+   * (Written as a JS comment rather than a JSX one deliberately: `{/* … *\/}`
+   * immediately after `return (` is not a comment, it is an object-literal
+   * expression sitting beside the root element, and JSX has no two roots. That
+   * was the first version of this, and `tsc` was right to refuse it.)
+   */
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0E1711 0%, #16241A 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Money Grid Background */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(12, 1fr)',
-        gap: '1rem',
-        padding: '2rem',
-        opacity: 0.03,
-        pointerEvents: 'none',
-        fontSize: '2rem',
-        color: '#fbbf24'
+    <AuthShell
+      art="unclimbed"
+      kicker="Your first peak"
+      headline="Every goal in finPal is a mountain."
+      blurb="Pick one, and the range fills in as you climb. That's what pals do — they show up and help with the everyday stuff."
+    >
+      {/* *** THE HEAD IS NO LONGER A CENTRED LOGO. *** A 5rem 💲 medallion and a
+          gradient-clipped 2rem title above a form is a lot of chrome for a
+          screen whose job is four fields; the art panel beside it now carries
+          the identity, so this side carries the instruction. The h1 stays an
+          h1 — it is the page's only one, and `every-page.spec.ts` asserts
+          exactly that. */}
+      <h1 style={{
+        margin: '0 0 0.25rem',
+        fontSize: '1.1875rem',
+        fontWeight: 700,
+        color: '#ffffff'
       }}>
-        {Array.from({ length: 96 }).map((_, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: `pulse 3s ease-in-out infinite`,
-            animationDelay: `${i * 0.05}s`
-          }}>
-            💲
-          </div>
-        ))}
-      </div>
+        Create account
+      </h1>
+      {/* *** finPal, NOT DollarPal — AND THIS FILE NEVER IMPORTED `getBranding`. ***
+          `DollarPal` is a real feature: `config/branding.ts` brands the app by
+          the reader's currency (DollarPal, EuroPal, PoundPal, RupeePal...), and
+          `Landing.tsx` advertises exactly that. But it was HARDCODED here, so
+          every prospective user in the world was invited to join the US one.
+          And at signup there is no currency yet to brand with — the account
+          does not exist — so no branded name is correct and the unbranded
+          product name is the only honest option.
+          `Onboarding.tsx` already carries this rule in a comment: "never
+          `brandingMap.USD`'s fallback, which would label every unbranded
+          currency DollarPal". Same mistake, one screen earlier. */}
+      <p style={{ color: '#9CB3A3', fontSize: '0.8125rem', margin: '0 0 1.125rem' }}>
+        Join finPal today
+      </p>
 
-      {/* Back to Home Link */}
-      <Link
-        to="/"
+      {/* Google Sign Up Button */}
+      <button
+        type="button"
+        onClick={handleGoogleSignUp}
         style={{
-          position: 'absolute',
-          top: '1rem',
-          left: '1rem',
-          zIndex: 20,
-          color: '#94a3b8',
-          textDecoration: 'none',
+          width: '100%',
+          padding: '0.875rem 1.5rem',
+          borderRadius: '0.5rem',
+          border: '1px solid #517E60',
+          background: 'transparent',
+          color: '#ffffff',
+          fontSize: '0.9375rem',
+          fontWeight: '500',
+          cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          transition: 'color 0.2s',
-          fontSize: '0.875rem'
+          justifyContent: 'center',
+          gap: '0.75rem',
+          transition: 'all 0.2s',
+          marginBottom: '1.5rem'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(81, 126, 96, 0.3)';
+          e.currentTarget.style.borderColor = '#86efac';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.borderColor = '#517E60';
+        }}
       >
-        <svg style={{ height: '1.25rem', width: '1.25rem' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
         </svg>
-        Back to Home
-      </Link>
+        Continue with Google
+      </button>
 
-      {/* Sign Up Card */}
-      <div style={{
-        width: '100%',
-        maxWidth: '28rem',
-        zIndex: 10,
-        position: 'relative'
-      }}>
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.8)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: '1rem',
-          padding: '2.5rem',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-          border: '1px solid rgba(148, 163, 184, 0.1)'
-        }}>
-          {/* Logo and Title */}
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '5rem',
-              height: '5rem',
-              borderRadius: '9999px',
-              background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-              marginBottom: '1rem',
-              fontSize: '2rem'
-            }}>
-              💲
-            </div>
-            <h1 style={{
-              fontSize: '2rem',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #15803d 0%, #fbbf24 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '0.5rem'
-            }}>
-              Create Account
-            </h1>
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-              Join DollarPal today
-            </p>
-          </div>
+      {/* Divider */}
+      <div style={{ position: 'relative', margin: '1.5rem 0' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: '100%', borderTop: '1px solid #517E60' }}></div>
+        </div>
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+          <span style={{ padding: '0 1rem', background: 'rgba(22, 36, 26, 0.8)', color: '#9CB3A3', fontSize: '0.875rem' }}>
+            Or continue with email
+          </span>
+        </div>
+      </div>
 
-          {/* Google Sign Up Button */}
-          <button
-            type="button"
-            onClick={handleGoogleSignUp}
+      {/* Register Form */}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {/* Full Name Input */}
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+            Full Name
+          </label>
+          <input
+            type="text"
+            name="username"
+            placeholder="John Doe"
+            value={formData.username}
+            onChange={handleChange}
+            autoComplete="name"
             style={{
               width: '100%',
-              padding: '0.875rem 1.5rem',
+              padding: '0.875rem 1rem',
               borderRadius: '0.5rem',
-              border: '1px solid #334155',
-              background: 'transparent',
+              border: errors.username ? '1px solid #ef4444' : '1px solid #517E60',
+              background: 'rgba(14, 23, 17, 0.5)',
               color: '#ffffff',
               fontSize: '0.9375rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-              transition: 'all 0.2s',
-              marginBottom: '1.5rem'
+              outline: 'none',
+              transition: 'all 0.2s'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(51, 65, 85, 0.3)';
-              e.currentTarget.style.borderColor = '#475569';
+            onFocus={(e) => {
+              if (!errors.username) {
+                e.currentTarget.style.borderColor = '#15803d';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+              }
             }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = '#334155';
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = errors.username ? '#ef4444' : '#517E60';
+              e.currentTarget.style.boxShadow = 'none';
             }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-              <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-              <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
-              <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-            </svg>
-            Continue with Google
-          </button>
-
-          {/* Divider */}
-          <div style={{ position: 'relative', margin: '1.5rem 0' }}>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: '100%', borderTop: '1px solid #334155' }}></div>
-            </div>
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-              <span style={{ padding: '0 1rem', background: 'rgba(30, 41, 59, 0.8)', color: '#64748b', fontSize: '0.875rem' }}>
-                Or continue with email
-              </span>
-            </div>
-          </div>
-
-          {/* Register Form */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Full Name Input */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                Full Name
-              </label>
-              <input
-                type="text"
-                name="username"
-                placeholder="John Doe"
-                value={formData.username}
-                onChange={handleChange}
-                autoComplete="name"
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1rem',
-                  borderRadius: '0.5rem',
-                  border: errors.username ? '1px solid #ef4444' : '1px solid #334155',
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  color: '#ffffff',
-                  fontSize: '0.9375rem',
-                  outline: 'none',
-                  transition: 'all 0.2s'
-                }}
-                onFocus={(e) => {
-                  if (!errors.username) {
-                    e.currentTarget.style.borderColor = '#15803d';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                  }
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.username ? '#ef4444' : '#334155';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              />
-              {errors.username && (
-                <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                  {errors.username}
-                </p>
-              )}
-            </div>
-
-            {/* Email Input */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                autoComplete="email"
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1rem',
-                  borderRadius: '0.5rem',
-                  border: errors.email ? '1px solid #ef4444' : '1px solid #334155',
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  color: '#ffffff',
-                  fontSize: '0.9375rem',
-                  outline: 'none',
-                  transition: 'all 0.2s'
-                }}
-                onFocus={(e) => {
-                  if (!errors.email) {
-                    e.currentTarget.style.borderColor = '#15803d';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                  }
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#334155';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              />
-              {errors.email && (
-                <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Password Input */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    paddingRight: '3rem',
-                    borderRadius: '0.5rem',
-                    border: errors.password ? '1px solid #ef4444' : '1px solid #334155',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    color: '#ffffff',
-                    fontSize: '0.9375rem',
-                    outline: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                  onFocus={(e) => {
-                    if (!errors.password) {
-                      e.currentTarget.style.borderColor = '#15803d';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                    }
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#334155';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '1rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    padding: '0.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#94a3b8'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {errors.password && (
-                <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                  {errors.password}
-                </p>
-              )}
-
-              {/* Password Strength Indicator */}
-              {formData.password && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.5rem' }}>
-                    {[1, 2, 3, 4, 5].map((level) => (
-                      <div
-                        key={level}
-                        style={{
-                          flex: 1,
-                          height: '0.25rem',
-                          borderRadius: '0.125rem',
-                          background: passwordStrength.strength >= level
-                            ? passwordStrength.strength <= 2 ? '#ef4444'
-                            : passwordStrength.strength <= 3 ? '#fbbf24'
-                            : '#22c55e'
-                            : '#334155',
-                          transition: 'background 0.2s'
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    {[
-                      { key: 'length', label: 'At least 8 characters' },
-                      { key: 'uppercase', label: 'One uppercase letter' },
-                      { key: 'lowercase', label: 'One lowercase letter' },
-                      { key: 'number', label: 'One number' },
-                      { key: 'special', label: 'One special character' }
-                    ].map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                        {passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? (
-                          <Check size={12} color="#22c55e" />
-                        ) : (
-                          <X size={12} color="#64748b" />
-                        )}
-                        <span style={{ color: passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? '#94a3b8' : '#64748b' }}>
-                          {label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Confirm Password Input */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
-                Confirm Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    paddingRight: '3rem',
-                    borderRadius: '0.5rem',
-                    border: errors.confirmPassword ? '1px solid #ef4444' : '1px solid #334155',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    color: '#ffffff',
-                    fontSize: '0.9375rem',
-                    outline: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                  onFocus={(e) => {
-                    if (!errors.confirmPassword) {
-                      e.currentTarget.style.borderColor = '#15803d';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
-                    }
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = errors.confirmPassword ? '#ef4444' : '#334155';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '1rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    padding: '0.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#94a3b8'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-
-            {/* *** BOTH OF THESE WERE RELATIVE PATHS AND NEITHER IS A ROUTE. ***
-                `/terms` and `/privacy` fell through to the catch-all, so a user
-                on the one screen where they are asked to AGREE to something
-                clicked "Terms of Service" and was bounced off the form they were
-                filling in. They are external pages and are now linked as such,
-                from `constants/links.ts` so the URL is spelled once. D-201. */}
-            <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
-              By creating an account, you agree to our{' '}
-              <a
-                href={FINPAL_TERMS}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#15803d', textDecoration: 'none' }}
-              >
-                Terms of Service
-              </a>
-              {' '}and{' '}
-              <a
-                href={FINPAL_PRIVACY}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#15803d', textDecoration: 'none' }}
-              >
-                Privacy Policy
-              </a>.
+          />
+          {errors.username && (
+            <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+              {errors.username}
             </p>
-
-            {/* Create Account Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.5rem',
-                borderRadius: '0.5rem',
-                border: 'none',
-                background: isLoading ? '#64748b' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-                color: '#ffffff',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              }}
-              onMouseEnter={(e) => {
-                if (!isLoading) {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-              }}
-            >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-            </button>
-          </form>
-
-          {/* Sign In Link */}
-          <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
-            Already have an account?{' '}
-            <Link
-              to="/login"
-              style={{
-                color: '#15803d',
-                textDecoration: 'none',
-                fontWeight: '500',
-                transition: 'color 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#166534'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#15803d'}
-            >
-              Sign in
-            </Link>
-          </p>
+          )}
         </div>
 
-        {/* Footer */}
-        <p style={{
-          textAlign: 'center',
-          marginTop: '1.5rem',
-          color: '#64748b',
-          fontSize: '0.8125rem'
-        }}>
-          part of palStack ecosystem
+        {/* Email Input */}
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            value={formData.email}
+            onChange={handleChange}
+            autoComplete="email"
+            style={{
+              width: '100%',
+              padding: '0.875rem 1rem',
+              borderRadius: '0.5rem',
+              border: errors.email ? '1px solid #ef4444' : '1px solid #517E60',
+              background: 'rgba(14, 23, 17, 0.5)',
+              color: '#ffffff',
+              fontSize: '0.9375rem',
+              outline: 'none',
+              transition: 'all 0.2s'
+            }}
+            onFocus={(e) => {
+              if (!errors.email) {
+                e.currentTarget.style.borderColor = '#15803d';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+              }
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#517E60';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          />
+          {errors.email && (
+            <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+              {errors.email}
+            </p>
+          )}
+        </div>
+
+        {/* Password Input */}
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+            Password
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              autoComplete="new-password"
+              style={{
+                width: '100%',
+                padding: '0.875rem 1rem',
+                paddingRight: '3rem',
+                borderRadius: '0.5rem',
+                border: errors.password ? '1px solid #ef4444' : '1px solid #517E60',
+                background: 'rgba(14, 23, 17, 0.5)',
+                color: '#ffffff',
+                fontSize: '0.9375rem',
+                outline: 'none',
+                transition: 'all 0.2s'
+              }}
+              onFocus={(e) => {
+                if (!errors.password) {
+                  e.currentTarget.style.borderColor = '#15803d';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+                }
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#517E60';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'transparent',
+                border: 'none',
+                color: '#9CB3A3',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {errors.password && (
+            <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+              {errors.password}
+            </p>
+          )}
+
+          {/* Password Strength Indicator */}
+          {formData.password && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <div
+                    key={level}
+                    style={{
+                      flex: 1,
+                      height: '0.25rem',
+                      borderRadius: '0.125rem',
+                      background: passwordStrength.strength >= level
+                        ? passwordStrength.strength <= 2 ? '#ef4444'
+                        : passwordStrength.strength <= 3 ? '#fbbf24'
+                        : '#22c55e'
+                        : '#517E60',
+                      transition: 'background 0.2s'
+                    }}
+                  />
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {[
+                  { key: 'length', label: 'At least 8 characters' },
+                  { key: 'uppercase', label: 'One uppercase letter' },
+                  { key: 'lowercase', label: 'One lowercase letter' },
+                  { key: 'number', label: 'One number' },
+                  { key: 'special', label: 'One special character' }
+                ].map(({ key, label }) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                    {passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? (
+                      <Check size={12} color="#22c55e" />
+                    ) : (
+                      <X size={12} color="#9CB3A3" />
+                    )}
+                    <span style={{ color: passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? '#ffffff' : '#9CB3A3' }}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Confirm Password Input */}
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.875rem', fontWeight: '500' }}>
+            Confirm Password
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              name="confirmPassword"
+              placeholder="••••••••"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              autoComplete="new-password"
+              style={{
+                width: '100%',
+                padding: '0.875rem 1rem',
+                paddingRight: '3rem',
+                borderRadius: '0.5rem',
+                border: errors.confirmPassword ? '1px solid #ef4444' : '1px solid #517E60',
+                background: 'rgba(14, 23, 17, 0.5)',
+                color: '#ffffff',
+                fontSize: '0.9375rem',
+                outline: 'none',
+                transition: 'all 0.2s'
+              }}
+              onFocus={(e) => {
+                if (!errors.confirmPassword) {
+                  e.currentTarget.style.borderColor = '#15803d';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(21, 128, 61, 0.1)';
+                }
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = errors.confirmPassword ? '#ef4444' : '#517E60';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'transparent',
+                border: 'none',
+                color: '#9CB3A3',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#9CB3A3'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#9CB3A3'}
+            >
+              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {errors.confirmPassword && (
+            <p style={{ marginTop: '0.375rem', color: '#ef4444', fontSize: '0.75rem' }}>
+              {errors.confirmPassword}
+            </p>
+          )}
+        </div>
+
+        {/* *** BOTH OF THESE WERE RELATIVE PATHS AND NEITHER IS A ROUTE. ***
+            `/terms` and `/privacy` fell through to the catch-all, so a user
+            on the one screen where they are asked to AGREE to something
+            clicked "Terms of Service" and was bounced off the form they were
+            filling in. They are external pages and are now linked as such,
+            from `constants/links.ts` so the URL is spelled once. D-201. */}
+        <p style={{ fontSize: '0.75rem', color: '#9CB3A3', margin: 0 }}>
+          By creating an account, you agree to our{' '}
+          <a
+            href={FINPAL_TERMS}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#22c55e', textDecoration: 'none' }}
+          >
+            Terms of Service
+          </a>
+          {' '}and{' '}
+          <a
+            href={FINPAL_PRIVACY}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#22c55e', textDecoration: 'none' }}
+          >
+            Privacy Policy
+          </a>.
         </p>
-      </div>
-    </div>
+
+        {/* Create Account Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          style={{
+            width: '100%',
+            padding: '0.875rem 1.5rem',
+            borderRadius: '0.5rem',
+            border: 'none',
+            background: isLoading ? '#6b7280' : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+            color: '#ffffff',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+          }}
+        >
+          {isLoading ? 'Creating Account...' : 'Create Account'}
+        </button>
+      </form>
+
+      {/* Sign In Link */}
+      <p style={{ marginTop: '1.5rem', textAlign: 'center', color: '#9CB3A3', fontSize: '0.875rem' }}>
+        Already have an account?{' '}
+        <Link
+          to="/login"
+          style={{
+            color: '#22c55e',
+            textDecoration: 'none',
+            fontWeight: '500',
+            transition: 'color 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#86efac'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#22c55e'}
+        >
+          Sign in
+        </Link>
+      </p>
+    </AuthShell>
   );
 };

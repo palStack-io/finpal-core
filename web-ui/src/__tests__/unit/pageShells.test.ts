@@ -74,9 +74,28 @@ describe('the shells are actually used', () => {
    * condition that let `.page-title` drift away from the app unnoticed. A rule
    * nothing references cannot be wrong, so nothing keeps it right.
    */
-  const sources = import.meta.glob('../../pages/*.tsx', {
-    query: '?raw', import: 'default', eager: true,
-  }) as Record<string, string>;
+  /*
+   * *** THE GLOB READ `pages/*.tsx` ONLY, SO IT WAS BLIND TO ALL EIGHT MODULE
+   * PAGES — AND ONE OF THEM HAND-ROLLS ITS OWN HEAD. *** learnPal contributes
+   * three routed pages and pointsPal five, every one of them a top-level route
+   * in `App.tsx`'s module manifests, and `pointspal/pages/Redeem.tsx` defines a
+   * local `PageHeader` component and renders it twice. The property below —
+   * "no page hand-rolls a title instead" — is exactly what should have caught
+   * that, and could not see the file. D-222's lesson a second time: a gate's
+   * coverage is a lower bound on the shapes it can see, so the question to ask
+   * of any sweep is which files it OMITS.
+   */
+  const sources = {
+    ...import.meta.glob('../../pages/*.tsx', {
+      query: '?raw', import: 'default', eager: true,
+    }) as Record<string, string>,
+    ...import.meta.glob('../../modules/*/pages/*.tsx', {
+      query: '?raw', import: 'default', eager: true,
+    }) as Record<string, string>,
+    ...import.meta.glob('../../modules/*/*.tsx', {
+      query: '?raw', import: 'default', eager: true,
+    }) as Record<string, string>,
+  } as Record<string, string>;
 
   const usages = (name: string) =>
     Object.entries(sources).filter(([, s]) => s.includes(`className="${name}"`));
@@ -98,7 +117,15 @@ describe('the shells are actually used', () => {
    * page rendered 32px).
    */
   it('page-title has a consumer, and no page hand-rolls a title instead', () => {
-    const viaHead = Object.entries(sources).filter(([, src]) => src.includes('<PageHead'));
+    /* *** `includes('<PageHead')` ALSO MATCHES `<PageHeader />`, AND THAT IS
+       NOT A TYPO — `pointspal/pages/Redeem.tsx` DEFINES ITS OWN LOCAL
+       `PageHeader` COMPONENT AND RENDERS IT TWICE. *** So the file passed this
+       gate for hand-rolling precisely the thing the gate forbids, by a prefix
+       collision in the needle. This project's own lesson: guards keyed to a
+       spelling go blind. Matched on the closing punctuation instead, so only a
+       real `<PageHead ...>` or `<PageHead/>` counts. */
+    const RENDERS_PAGE_HEAD = /<PageHead[\s/>]/;
+    const viaHead = Object.entries(sources).filter(([, src]) => RENDERS_PAGE_HEAD.test(src));
     const direct = usages('page-title');
     expect(viaHead.length + direct.length,
       'nothing references .page-title any more').toBeGreaterThanOrEqual(5);
@@ -126,25 +153,66 @@ describe('the shells are actually used', () => {
       // that changes per step, not a page title.
       'Onboarding.tsx',
       /**
-       * *** SETTINGS IS EXEMPT FOR NOW, AND THIS ENTRY IS A TODO WITH A
-       * REASON. *** It is a genuine app page, but it has a TWO-PANE shell of
-       * its own — a nav rail beside a content column — and its h1 is the
-       * rail's own 18px title, not a page head. Dropping `PageHead` in would
-       * put a 27px title and a 52px ridge band inside a 240px rail.
+       * *** SETTINGS IS EXEMPT BY DECISION, NOT BY OMISSION — AND THIS ENTRY
+       * STOPPED BEING A TODO ON 2026-09-15. *** It is a genuine app page, but
+       * it has a TWO-PANE shell of its own — a nav rail beside a content
+       * column — and its h1 is the rail's own 18px title, not a page head.
+       * Dropping `PageHead` in would put a 27px title and a 52px ridge band
+       * inside a 232px rail.
        *
-       * It is the largest page in the app by element count and it has no
-       * mockup; what its head should be is a design decision, not a
-       * conversion. Remove this line when that mockup exists.
+       * This entry previously read "a TODO with a reason ... remove this line
+       * when that mockup exists". The mockup now exists
+       * (`docs/mockups/settings-web.html`, outer repo) and it decided the
+       * opposite of what that sentence assumed: Settings is **the one page that
+       * does not get the title and the band**, because every other page opens
+       * that way for being ONE subject and Settings is nine. What the sheet
+       * changed instead is that the rail carries each section's state
+       * (`utils/settingsRailTags.ts`), which is chrome this page already had.
+       *
+       * So the line stays, and removing it would now be the regression. It is
+       * a recorded design decision with a drawn alternative behind it.
        */
       'Settings.tsx',
+      /**
+       * *** THE 404 IS NOT A SUBJECT, SO IT HAS NO SUBJECT LINE. *** `PageHead`
+       * is a title, a sentence saying what the page is FOR, an action slot and a
+       * ridge band — the opening of a page about one thing. A page that does not
+       * exist is not about one thing; it is an answer to a mistake. It renders
+       * its own centred panel with the `404`, an h1, one sentence and two
+       * destinations, and a ridge band over that would be decoration on an
+       * error.
+       *
+       * Listed here rather than given a head, deliberately, and the alternative
+       * was drawn first: `docs/mockups/entry-web.html`.
+       */
+      'NotFound.tsx',
+      /* *** THE FIVE pointsPal EXEMPTIONS ARE GONE, AND THE DECISION THEY
+         WERE WAITING ON IS THE REASON. *** They said: "REMOVE THESE when the
+         coins spec is approved and pointsPal is redrawn, OR when a decision
+         says pointsPal keeps its own type scale." The owner took the second
+         kind of decision on 2026-09-16 — adopt the app's head, keep Bricolage
+         Grotesque for the figures and card faces — so all five now render
+         `PageHead` and need no exemption.
+
+         *** AND THE PREMISE THE EXEMPTION WAS WRITTEN ON TURNED OUT TO BE
+         WRONG. *** It said converting them "would pre-empt a decision the
+         owner has not taken", because `coins/pages-web-2.html` draws pointsPal.
+         Reading that sheet instead of assuming: it draws the Overview with
+         `<h1>` + subtitle + a `right` slot + a ridge band, which IS
+         `PageHead`'s shape. The coins design was drawn assuming this
+         conversion, so adopting the head implements it rather than pre-empting
+         it. `docs/mockups/pointspal-web.html` records that finding.
+
+         `Redeem`'s local `<PageHeader />` — the prefix match that hid it from
+         this very gate (D-234) — is deleted rather than worked around. */
     ];
 
     for (const [file, src] of Object.entries(sources)) {
       if (NOT_AN_APP_PAGE.some((name) => file.endsWith(name))) continue;
       // Pages that are not a top-level route shell have no page title at all.
-      if (!/<h1/.test(src) && !src.includes('<PageHead')) continue;
+      if (!/<h1/.test(src) && !RENDERS_PAGE_HEAD.test(src)) continue;
       expect(
-        src.includes('<PageHead') || src.includes('className="page-title"'),
+        RENDERS_PAGE_HEAD.test(src) || src.includes('className="page-title"'),
         `${file} renders an h1 without PageHead or .page-title`,
       ).toBe(true);
     }

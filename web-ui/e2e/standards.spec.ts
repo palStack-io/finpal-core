@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, pageIsLoaded } from './fixtures';
+import { DASHBOARD_HEADING, expect, pageIsLoaded, test } from './fixtures';
 
 /**
  * Does the UI meet the standard, in a real browser, on real data.
@@ -31,7 +31,7 @@ import { test, expect, pageIsLoaded } from './fixtures';
 const STANDARD = ['wcag2a', 'wcag2aa'];
 
 const PAGES: Array<[string, string, string | RegExp]> = [
-  ['dashboard', '/dashboard', /Dashboard|Welcome|Overview/],
+  ['dashboard', '/dashboard', DASHBOARD_HEADING],
   ['accounts', '/accounts', /Accounts/],
   ['transactions', '/transactions', /Transactions/],
   ['goals', '/goals', /Goals/],
@@ -71,7 +71,7 @@ test('dark mode meets the same standard, not a lower one', async ({ page }) => {
   await page.evaluate(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
   });
-  await pageIsLoaded(page, /Dashboard|Welcome|Overview/);
+  await pageIsLoaded(page, DASHBOARD_HEADING);
 
   const results = await new AxeBuilder({ page })
     .withTags(STANDARD)

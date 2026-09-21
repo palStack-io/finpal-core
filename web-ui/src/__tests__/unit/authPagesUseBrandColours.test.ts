@@ -32,6 +32,15 @@ const PAGES = [
   'src/pages/ForgotPassword.tsx',
   'src/pages/ResetPassword.tsx',
   'src/pages/Landing.tsx',
+  // *** ADDED 2026-09-16, AND BOTH ADDITIONS ARE THE POINT. ***
+  // `AuthShell` is the split layout all five auth screens now sit in, so it
+  // paints more pre-auth pixels than any single page does and was governed by
+  // nothing. `OidcCallback` was the one pre-auth screen using `var(--…)`: an
+  // OIDC failure dropped a light-mode reader onto a LIGHT page in the middle of
+  // an otherwise dark flow. A list that exempts by omission is how the Redeem
+  // page passed a gate for months.
+  'src/components/auth/AuthShell.tsx',
+  'src/pages/OidcCallback.tsx',
 ];
 
 /** finPal's greens, from finpal-theme.css. */
@@ -52,6 +61,32 @@ const SURFACES = ['#0E1711', '#16241A'];
  *   blue    — Login's old primary button
  */
 const BANNED = ['#10b981', '#059669', '#0f172a', '#1e293b', '#3b82f6', '#1d4ed8'];
+
+/**
+ * *** AND THE SAME COLOURS WRITTEN AS rgb, BECAUSE THE HEX LIST ABOVE MISSED
+ * EVERY ONE OF THEM. ***
+ *
+ * Measured 2026-09-16: 21 occurrences of four banned colours across the five
+ * pre-auth pages, all in `rgba(r, g, b, a)` form and every one of them behind a
+ * green run of this file.
+ *
+ *   rgba(15, 23, 42, …)   slate-900 = #0f172a   Login x7, Register x4, Landing x1
+ *   rgba(30, 41, 59, …)   slate-800 = #1e293b   Login x3, Register x2
+ *   rgba(59, 130, 246, …) blue-500  = #3b82f6   Login x4, Landing x1
+ *   rgba(16, 185, 129, …) emerald   = #10b981   ForgotPassword x2, ResetPassword x4
+ *
+ * Register's sign-up card was `rgba(30, 41, 59, 0.8)` — the banned slate was the
+ * card's own background, on a page this file asserts is not slate. That is
+ * "guards keyed to a spelling go blind" for the third time in this repo, and it
+ * is why the channels are derived from the hex rather than typed out again: a
+ * fifth banned colour added above is covered here for free.
+ */
+const asRgbChannels = (hex: string) => {
+  const h = hex.replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ');
+};
+
+const BANNED_RGB = BANNED.map((hex) => ({ hex, rgb: asRgbChannels(hex) }));
 
 const source = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8');
 
@@ -120,12 +155,37 @@ describe('no pre-auth page uses an off-brand colour', () => {
     PAGES.forEach((p) => expect(source(p).length).toBeGreaterThan(0));
   });
 
-  it.each(PAGES)('%s', (rel) => {
+  it.each(PAGES)('%s uses no banned hex', (rel) => {
     const code = codeOnly(source(rel));
     const found = BANNED.filter((c) =>
       new RegExp(c.replace('#', '#'), 'i').test(code),
     );
     expect(found, `${rel} still uses ${found.join(', ')}`).toEqual([]);
+  });
+
+  it.each(PAGES)('%s uses no banned colour written as rgb either', (rel) => {
+    const code = codeOnly(source(rel));
+    const found = BANNED_RGB
+      .filter(({ rgb }) => code.includes(rgb))
+      .map(({ hex, rgb }) => `${hex} as rgba(${rgb}, …)`);
+    expect(found, `${rel} still uses ${found.join('; ')}`).toEqual([]);
+  });
+
+  it('the rgb derivation is right, or the sweep above sweeps nothing', () => {
+    // A `.map` that produced malformed channel strings would make every
+    // assertion above pass while matching no source at all — the exact way the
+    // module-slug regex in `every-page.spec.ts` stopped exempting anything.
+    expect(asRgbChannels('#1e293b')).toBe('30, 41, 59');
+    expect(asRgbChannels('#10b981')).toBe('16, 185, 129');
+    expect(BANNED_RGB).toHaveLength(BANNED.length);
+  });
+
+  it('reproduces the miss, on the value that was actually in the tree', () => {
+    // Register's card background, verbatim. The hex check cannot see it; the
+    // rgb check must.
+    const wasInRegister = "background: 'rgba(30, 41, 59, 0.8)'";
+    expect(BANNED.some((c) => wasInRegister.includes(c))).toBe(false);
+    expect(BANNED_RGB.some(({ rgb }) => wasInRegister.includes(rgb))).toBe(true);
   });
 });
 

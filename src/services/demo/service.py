@@ -161,7 +161,31 @@ class DemoService:
 
     @staticmethod
     def get_demo_timeout_minutes():
-        """Get demo session timeout in minutes"""
+        """The configured demo session timeout, in minutes.
+
+        *** NOTHING ENFORCES THIS, AND ANY CLIENT THAT PRESENTS IT AS A LIMIT IS
+        MAKING A CLAIM finPal DOES NOT KEEP. *** AUDIT D-232. Measured from a
+        real token issued by the live demo on 2026-09-16: `iat → exp` is
+        **86400 seconds — 24 hours** — while this returned 120.
+
+        `src/utils/session_timeout.py` is the extension that would do the
+        expiring, and it contains **zero** occurrences of `before_request`,
+        `after_request`, `abort(` or `401`. It registers no request hook, so it
+        cannot expire anything; `init_app` sets three config defaults and
+        stashes the instance in `app.extensions`, and that is the whole of it.
+        All four of its methods have **zero production callers**.
+
+        The web UI used to render this as "N minute session limit" on the login
+        page and no longer does — owner decision, 2026-09-16: stop making the
+        claim rather than implement expiry, which would change behaviour for
+        every demo visitor and is outward-facing security work.
+
+        The field is kept in `/api/v1/demo/status` on purpose, because removing
+        it is a contract change for any self-hoster's client. This docstring is
+        the guard rail instead: it is a CONFIGURED INTENTION, not an enforced
+        limit, and a client should not tell a user otherwise until something
+        registers a hook.
+        """
         return current_app.config.get('DEMO_TIMEOUT_MINUTES', 10)
 
     @staticmethod

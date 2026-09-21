@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { PageHead } from '../../../components/PageHead';
 import { Pencil, Trash2, Plus, Search, X, CheckCircle, ExternalLink, ChevronDown } from 'lucide-react';
 import { pointspalService, WalletCard, CardTransaction, Program } from '../service';
 import CardFace from '../components/CardFace';
@@ -628,17 +629,21 @@ const MyCards: React.FC = () => {
 
   return (
     <div style={{ padding: '24px 28px', background: 'var(--bg)', minHeight: '100%' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>My Cards</h1>
-          <div style={{ marginTop: 6 }}><ScopeTag scope="yours" /></div>
-          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Balances, earn rates, cap rules, and verification status.</p>
-        </div>
-        <button onClick={() => setEditingCard(null)} style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-          <Plus size={15} /> Add Card
-        </button>
-      </div>
+      {/* *** THE APP'S HEAD — see `CapTracker.tsx` for the full reasoning.
+          *** Owner decision 2026-09-16; the coins spec already draws this
+          module with a head, so this implements that drawing rather than
+          pre-empting it. Bricolage stays on the card faces and the figures. */}
+      <PageHead
+        band="pointspal"
+        title="My Cards"
+        subtitle="Balances, earn rates, cap rules, and verification status."
+        right={<>
+          <ScopeTag scope="yours" />
+          <button onClick={() => setEditingCard(null)} style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <Plus size={15} /> Add Card
+          </button>
+        </>}
+      />
 
       {cards.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '64px 24px' }}>

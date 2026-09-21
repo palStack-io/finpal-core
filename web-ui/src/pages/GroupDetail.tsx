@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import PageHead from '../components/PageHead';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
+import { useAuthStore } from '../store/authStore';
+import { settlementFor } from '../utils/groupSettlement';
+import type { GroupBalance } from '../services/api/groups';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, DollarSign, TrendingUp, TrendingDown, CheckCircle, Settings, UserPlus, Receipt, X, Trash2 } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { useToast } from '../contexts/ToastContext';
 import { api } from '../services/api';
@@ -22,17 +26,30 @@ interface Member {
   balance: number; // positive = they owe, negative = they're owed
 }
 
-interface Balance {
-  from: string;
-  to: string;
-  amount: number;
-}
+/**
+ * *** `Balance` IS NOW THE SHARED `GroupBalance`, IDS AND ALL. *** The local
+ * copy declared `from`/`to`/`amount` only, so this page could not tell WHICH
+ * member a debt belonged to and had to fall back to the per-member `balance`
+ * field for that — which is how the same debt came to be on screen twice. See
+ * the settlement note below.
+ */
+type Balance = GroupBalance;
 
 interface GroupData {
   id: number;
   name: string;
   description: string;
   created_by: string;
+  /**
+   * How many expenses are recorded against this group.
+   *
+   * *** OPTIONAL BECAUSE A SELF-HOSTER'S SERVER MAY NOT SEND IT. *** The field
+   * was added to `GET /groups/<id>` on 2026-09-16; a deployment on an older
+   * image omits it, and `undefined` must render as "we were not told", never as
+   * the number 0. An empty group and an unanswerable question are different
+   * statements and only one of them is about the group.
+   */
+  expense_count?: number;
   members: Member[];
 }
 
@@ -47,6 +64,56 @@ const subheadStyle: React.CSSProperties = { fontSize: '18px', fontWeight: '600',
 const smallBodyStyle: React.CSSProperties = { fontSize: '14px', color: 'var(--text-secondary)' };
 const labelStyle: React.CSSProperties = { color: 'var(--text-primary)', fontWeight: '500', marginBottom: '4px' };
 const smallMetaStyle: React.CSSProperties = { fontSize: '13px', color: 'var(--text-secondary)' };
+
+/* Lifted out of the render: an object literal in JSX is a new object on every
+   keystroke in the group-name field, and `sidebarAndStatCardsMeasured` reads
+   these as declarations rather than as inline noise. */
+/* *** `--g-wash` / `--g-ink`, BECAUSE THIS BUTTON MOVED ONTO A DIFFERENT
+   SURFACE AND THAT IS THE WHOLE OF D-229. *** It was
+   `rgba(21, 128, 61, 0.2)` with `--brand-main-green` on top, which is legible
+   on the page card (5.27:1) and NOT on a page head's sky: the translucent wash
+   composites to #b4d2be there, and #15803d on that is 4.38:1. Moving
+   Investments' actions into `PageHead` failed exactly this way, and the opaque
+   token was created for it. Moving these actions into `PageHead` failed the
+   same way within one run of the contrast walk — the second time, on a surface
+   the walk could only see because `groupdetail` was added to the capture in the
+   same commit. */
+const addMemberButtonStyle: React.CSSProperties = {
+  padding: '10px 20px',
+  background: 'var(--g-wash)',
+  border: '1px solid var(--g-wash)',
+  borderRadius: '8px',
+  color: 'var(--g-ink)',
+  cursor: 'pointer',
+  fontWeight: '600',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontSize: '14px',
+};
+
+const groupSettingsButtonStyle: React.CSSProperties = {
+  padding: '10px',
+  background: 'var(--surface-hover)',
+  border: 'none',
+  borderRadius: '8px',
+  color: 'var(--text-primary)',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+};
+
+/** Marks which member the reader is. A fact, not a figure. */
+const youTagStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 600,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: 'var(--text-secondary)',
+  border: '1px solid var(--border-medium)',
+  borderRadius: '999px',
+  padding: '3px 9px',
+};
 
 export const GroupDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -69,6 +136,42 @@ export const GroupDetail: React.FC = () => {
   const [defaultSplitMethod, setDefaultSplitMethod] = useState('equal');
   const [customSplitValues, setCustomSplitValues] = useState<{ [email: string]: string }>({});
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
+  /**
+   * *** ONE FIGURE PER FACT, AND THAT IS THE WHOLE FIX. ***
+   *
+   * This page showed one debt as two different numbers, eight lines apart. On
+   * the live demo `/groups/1` listed Alex Demo at **$178.03** in Members and
+   * said *"Alex Demo owes Jordan Demo $178.02"* in Balances directly below it.
+   * Neither was a bug in isolation: the true figure is `-178.025`, the members
+   * list rounded half-up from `members[].balance`, and `simplified_debts`
+   * arrives from the server already rounded to 178.02. Two roundings of one
+   * half-cent, rendered next to each other. AUDIT D-235.
+   *
+   * The fix is not a rounding mode — a rounding mode makes the two agree today
+   * and leaves two sources to disagree tomorrow. It is to stop showing the same
+   * debt twice: `simplified_debts` is the server's canonical answer and the one
+   * `/groups` already sums, so the settlement comes from there and the members
+   * list lists PEOPLE. There is no second source left on the screen for the
+   * first one to disagree with.
+   *
+   * And it reuses `settlementFor` rather than adding a sum here: the Groups
+   * page's totals and this page's totals are now the same arithmetic on the
+   * same field, which is the other half of not having two answers. A group with
+   * any id-less line is refused whole rather than partly counted — see that
+   * file for why a name match would be the defect.
+   */
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
+  const settlement = settlementFor(currentUserId, [{
+    groupId: Number(id),
+    groupName: group?.name ?? '',
+    balances,
+  }]);
+  const unreadable = settlement.unreadable.length > 0;
+
+  /** Pluralised once, because "1 members" is the tell of a count printed raw. */
+  const memberCount = group?.members?.length ?? 0;
+  const memberCountLabel = `${memberCount} ${memberCount === 1 ? 'member' : 'members'}`;
 
   useEffect(() => {
     loadGroupData();
@@ -243,7 +346,7 @@ export const GroupDetail: React.FC = () => {
         <div className="page-container">
 
           {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
+          <div>
             <button
               onClick={() => navigate('/groups')}
               style={{
@@ -263,49 +366,100 @@ export const GroupDetail: React.FC = () => {
               <ArrowLeft size={16} /> Back to Groups
             </button>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-              <div>
-                <h1 className="page-title">
-                  {group.name}
-                </h1>
-                <p className="fp-hint">{group.description || 'No description'}</p>
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => setShowAddMemberModal(true)}
-                  style={{
-                    padding: '10px 20px',
-                    background: 'rgba(21, 128, 61, 0.2)',
-                    border: '1px solid rgba(21, 128, 61, 0.3)',
-                    borderRadius: '8px',
-                    color: 'var(--brand-main-green)',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '14px'
-                  }}
-                >
-                  <UserPlus size={16} /> Add Member
-                </button>
-                <button
-                  onClick={() => setShowSettingsModal(true)}
-                  style={{
-                    padding: '10px',
-                    background: 'var(--surface-hover)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <Settings size={16} />
-                </button>
-              </div>
-            </div>
+            {/* *** THIS PAGE WAS NEVER REACHED BY THE PAGE-SHELL SWEEP. ***
+                `pageShells.test.ts` flags a page that renders an `h1` WITHOUT
+                `PageHead`, and this one rendered its title through
+                `className="page-title"` on an h1 inside a hand-rolled flex row
+                — so the sweep saw an h1, saw no head, and… actually it did flag
+                it; what it never got was a mockup, because no sheet covered
+                `/groups/:id`. `docs/mockups/orphan-pages-web.html` is that
+                sheet. Unlike Settings there is no competing shell here and no
+                exemption to delete: it is a top-level route with one subject,
+                reached from a card that already has a head. */}
+            <PageHead
+              band="groups"
+              title={group.name}
+              subtitle={
+                group.description
+                  ? `${group.description} · ${memberCountLabel}`
+                  : memberCountLabel
+              }
+              right={
+                <>
+                  <button
+                    onClick={() => setShowAddMemberModal(true)}
+                    style={addMemberButtonStyle}
+                  >
+                    <UserPlus size={16} /> Add Member
+                  </button>
+                  <button
+                    onClick={() => setShowSettingsModal(true)}
+                    aria-label="Group settings"
+                    style={groupSettingsButtonStyle}
+                  >
+                    <Settings size={16} />
+                  </button>
+                </>
+              }
+            >
+              {/* *** THE THREE HEADLINE FIGURES, EACH FROM EXACTLY ONE SOURCE.
+                  *** Inside the head's card rather than in cards of their own —
+                  `sidebarAndStatCardsMeasured` refuses a hand-rolled stat grid
+                  where `TotalsRow` exists. */}
+              <TotalsRow cells={[
+                {
+                  label: 'You owe',
+                  value: unreadable
+                    ? '—'
+                    : `${branding.currencySymbol}${settlement.youOwe.toFixed(2)}`,
+                  valueColor: settlement.youOwe > 0 ? 'var(--re-ink)' : undefined,
+                  note: unreadable
+                    ? 'this server does not say who owes whom'
+                    : (settlement.yourDebts.length
+                      ? `to ${settlement.yourDebts.map((d) => d.to).join(', ')}`
+                      : 'you owe nothing here'),
+                },
+                {
+                  label: 'You are owed',
+                  value: unreadable
+                    ? '—'
+                    : `${branding.currencySymbol}${settlement.youAreOwed.toFixed(2)}`,
+                  note: unreadable
+                    ? 'this server does not say who owes whom'
+                    : (settlement.youAreOwed > 0
+                      ? 'waiting to be settled'
+                      : 'nobody owes you here'),
+                },
+                {
+                  /* *** ABSENT IS NOT ZERO, AND THIS FIELD IS THE REASON THE
+                     PANEL BELOW USED TO LIE. *** `expense_count` arrives from
+                     the server; `undefined` means an older deployment did not
+                     send it, and rendering that as "0 expenses" is the false
+                     statement D-236 is about. */
+                  label: 'Recorded',
+                  value: group.expense_count === undefined
+                    ? '—'
+                    : `${group.expense_count} ${group.expense_count === 1 ? 'expense' : 'expenses'}`,
+                  note: group.expense_count === undefined
+                    ? 'this server does not report a count'
+                    : 'since the group was made',
+                },
+              ]} />
+            </PageHead>
+
+            {/* Repeated from `/groups` on purpose, not by drift: it is the one
+                thing a reader must not get wrong about this page, and the two
+                screens are one flow. Repeating a SENTENCE is not D-101;
+                repeating a CALCULATION is, which is what the settlement above
+                stopped doing. */}
+            <p style={{
+              margin: '0 0 24px',
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+            }}>
+              A bill you are splitting is not money you spent, so none of this
+              touches your budgets or your goals.
+            </p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '24px' }}>
@@ -341,18 +495,21 @@ export const GroupDetail: React.FC = () => {
                       <div style={labelStyle}>{member.name || member.email}</div>
                       <div style={smallMetaStyle}>{member.email}</div>
                     </div>
-                    {member.balance !== 0 && (
-                      <div style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        background: member.balance > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                        border: `1px solid ${member.balance > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
-                        color: member.balance > 0 ? 'var(--accent-red)' : 'var(--brand-green-glow)',
-                        fontSize: '14px',
-                        fontWeight: '600'
-                      }}>
-                        {member.balance > 0 ? '+' : ''}{branding.currencySymbol}{Math.abs(member.balance).toFixed(2)}
-                      </div>
+                    {/* *** THE PER-MEMBER FIGURE IS GONE, AND IT IS THE HALF OF
+                        D-235 THAT HAD TO GO. *** This rendered
+                        `Math.abs(member.balance).toFixed(2)` — a SECOND rounding
+                        of the same debt the settlement above states, from a
+                        different field, eight lines apart on screen. `-178.025`
+                        became $178.03 here and $178.02 there. Deleting one of
+                        the two sources is the only fix that cannot recur; a
+                        rounding mode would make them agree today.
+                        `member.balance` is still in the payload and still typed,
+                        because the SettleUp modal and the API contract both use
+                        it — what changed is that the page does not render two
+                        answers to one question. Who is `you` is marked instead,
+                        which is a fact the list can state without arithmetic. */}
+                    {member.id === currentUserId && (
+                      <span style={youTagStyle}>you</span>
                     )}
                   </div>
                 ))}
@@ -398,7 +555,16 @@ export const GroupDetail: React.FC = () => {
                           {' owes '}
                           <span style={{ fontWeight: '600' }}>{balance.to}</span>
                         </div>
-                        <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--brand-green-glow)' }}>
+                        {/* *** `--brand-green-glow` IS 2.27:1 ON THE LIGHT CARD, AND
+                            THIS IS THE FIGURE A USER IS ABOUT TO SEND MONEY
+                            AGAINST. *** Pre-existing, not introduced here — and
+                            unmeasured until `groupdetail` joined the contrast
+                            capture, because one green was being used against two
+                            very different backgrounds. `--amount-income` is the
+                            theme-aware pair the theme file created for exactly
+                            this: #15803d at 4.87:1 in light, the glow at 6.42:1
+                            in dark. */}
+                        <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--amount-income)' }}>
                           {branding.currencySymbol}{balance.amount.toFixed(2)}
                         </div>
                       </div>
@@ -438,9 +604,42 @@ export const GroupDetail: React.FC = () => {
               </h2>
             </div>
 
+            {/* *** "No transactions yet" WAS A FALSE STATEMENT ABOUT A GROUP WITH
+                TWO OF THEM. *** Measured on the live demo: `/groups` showed
+                "Apartment Roommates · 2 expenses", and this panel — whose only
+                source is `/api/v1/transactions/?group_id=1`, which returns 0
+                rows while the unfiltered list returns 37 — greeted the reader
+                with a cheerful empty state. `/api/v1/groups/1/expenses` is a
+                404; there is no such route. AUDIT D-236.
+
+                Whether the filter is unsupported or those two expenses are
+                scoped away from this user is a backend question this change
+                does NOT answer, and claiming a cause without proving it is how
+                three earlier passes went wrong. What it does is stop the panel
+                asserting something the page contradicts: with a count in hand
+                it says the expenses exist and could not be listed, and only
+                calls the group empty when the server says it is empty.
+
+                This is D-77's lesson — an empty demo hid three defects — turned
+                into a dependency rather than a decoration. */}
             {transactions.length === 0 ? (
               <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                No transactions yet
+                {group.expense_count === undefined ? (
+                  <>
+                    Nothing to show here. This server does not report how many
+                    expenses the group has, so finPal cannot tell an empty group
+                    from a list it failed to load.
+                  </>
+                ) : group.expense_count > 0 ? (
+                  <>
+                    This group has {group.expense_count}{' '}
+                    {group.expense_count === 1 ? 'expense' : 'expenses'} recorded,
+                    and none of them could be listed here. They are still counted
+                    in the balances above.
+                  </>
+                ) : (
+                  <>No expenses have been added to this group yet.</>
+                )}
               </div>
             ) : (
               <div style={flexColGap12}>

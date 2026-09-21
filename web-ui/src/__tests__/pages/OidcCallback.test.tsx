@@ -97,7 +97,24 @@ describe('OidcCallback', () => {
     );
   });
 
-  it('surfaces an error if the profile request fails', async () => {
+  /**
+   * *** THE COPY CHANGED ON 2026-09-16 AND THESE ASSERTIONS CHANGED WITH IT. ***
+   * The page used to render the literal string
+   * "Authentication failed: could not load user profile." — which was accurate
+   * and was also the only thing a human ever reads on this screen, because on
+   * success it redirects and nobody sees it. "No tokens received" is
+   * provider-speak for "the sign-in did not complete", and the thing a person
+   * wants to know when a money app will not let them in is whether anything
+   * happened to their account.
+   *
+   * *** AND THE TWO FAILURES MUST STAY DISTINGUISHABLE. *** A single friendly
+   * message for both would be a nicer screen that tells a support reader less:
+   * "your provider returned no session" and "we had a session and your profile
+   * would not load" are different faults with different next steps. So both are
+   * asserted, and asserted to DIFFER — one shared string would pass a test that
+   * only checked each one individually.
+   */
+  it('says what happened, and that the account is untouched, when the profile fails', async () => {
     server.use(
       http.get(`${BASE}/api/v1/auth/me`, () =>
         HttpResponse.json({ error: 'nope' }, { status: 404 })
@@ -107,8 +124,36 @@ describe('OidcCallback', () => {
     renderCallback();
 
     expect(
-      await screen.findByText('Authentication failed: could not load user profile.')
+      await screen.findByRole('heading',
+        { level: 1, name: /could not finish signing you in/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/profile would not load/i)
+    ).toBeInTheDocument();
+    // The reassurance is the load-bearing sentence, not decoration.
+    expect(
+      screen.getByText(/Nothing has changed on your account/i)
     ).toBeInTheDocument();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('gives a DIFFERENT reason when the provider returned no session at all', async () => {
+    // No fragment, so there is no access token to store and /auth/me is never
+    // reached — the other half of the error path, which had no test.
+    window.history.replaceState(null, '', '/auth/callback');
+    render(
+      <MemoryRouter>
+        <OidcCallback />
+      </MemoryRouter>
+    );
+
+    expect(
+      await screen.findByText(/did not return a session/i)
+    ).toBeInTheDocument();
+    // *** AND NOT THE OTHER REASON. *** This negative is what keeps the two
+    // failures distinguishable: if the component ever collapsed both into one
+    // friendly message, every positive assertion in this file would still pass
+    // and the screen would have stopped telling a provider fault from ours.
+    expect(screen.queryByText(/profile would not load/i)).toBeNull();
   });
 });

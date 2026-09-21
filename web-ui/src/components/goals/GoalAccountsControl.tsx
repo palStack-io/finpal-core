@@ -43,9 +43,28 @@ export interface GoalAccountsControlProps {
   onChanged: () => void | Promise<void>;
 }
 
+/*
+ * *** `var(--accent-primary)` DOES NOT EXIST, AND THIS IS THE SECOND FILE TO
+ * USE IT. *** Measured: zero occurrences in `finpal-theme.css`. An undefined
+ * custom property makes the declaration invalid at computed-value time, and
+ * `color` is inherited — so this button silently took its parent's ink and the
+ * accent never applied. Not illegible, which is why nothing caught it: the
+ * contrast walk resolves against the actual background and an inherited legible
+ * colour passes. The failure is "the styling did nothing", which is D-60's
+ * shape again — a Tailwind-shaped class resolving to no rule at all.
+ *
+ * Found by grepping the deployed bundle for the token after fixing the same
+ * typo in `NotFound.tsx`, where it DID fail visibly (white on near-white at
+ * 1.03:1, because there the property was `background`, which does not inherit).
+ * One typo, two files, two completely different symptoms.
+ *
+ * `--g-ink` is the green that is legible AS TEXT on a card and a wash, which is
+ * what a link button on a panel needs; `--brand-main-green` is the button
+ * BACKGROUND green and is 3.22:1 as text.
+ */
 const linkButtonStyle: React.CSSProperties = {
   background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-  color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 600,
+  color: 'var(--g-ink)', fontSize: '13px', fontWeight: 600,
 };
 
 const hintStyle: React.CSSProperties = {
@@ -55,13 +74,13 @@ const hintStyle: React.CSSProperties = {
 const chipStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 8,
   padding: '4px 10px', borderRadius: 999,
-  border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
+  border: '1px solid var(--border-light)', background: 'var(--bg-primary)',
   color: 'var(--text-primary)', fontSize: '13px',
 };
 
 const addButtonStyle: React.CSSProperties = {
   padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
-  border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
+  border: '1px solid var(--border-light)', background: 'var(--bg-primary)',
   color: 'var(--text-primary)', fontSize: '13px', textAlign: 'left',
 };
 
@@ -109,7 +128,7 @@ export const GoalAccountsControl: React.FC<GoalAccountsControlProps> = ({
     <div
       style={{
         marginBottom: 12, paddingBottom: 12,
-        borderBottom: '1px solid var(--border-color)',
+        borderBottom: '1px solid var(--border-light)',
       }}
     >
       <p style={{ ...hintStyle, marginTop: 0 }}>

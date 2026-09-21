@@ -34,7 +34,17 @@ def load_default_categories(user_id):
             # Create parent category
             parent_category = Category(
                 name=parent_name,
-                icon=convert_icon(parent_data['icon']),  # Convert FontAwesome to emoji
+                # *** NOT "Convert FontAwesome to emoji" ANY MORE, AND THAT
+                # STALE COMMENT DESCRIBED THE BUG. *** `default_categories.py`
+                # holds EMOJI and has since it was migrated; this call was
+                # converting already-converted data, and `convert_icon` used to
+                # answer the fallback for anything not in its `fa-*` keyed map.
+                # So every fresh seed wrote 147 identical folders — measured on
+                # the live demo as 275 categories with one distinct icon.
+                # `convert_icon` is idempotent now, so this is a no-op for emoji
+                # and still protects a self-hoster whose fork left `fa-*` names
+                # in this file. Kept for that reason, not removed.
+                icon=convert_icon(parent_data['icon']),
                 color=parent_data['color'],
                 user_id=user_id,
                 # *** D-182: ONLY "Other" IS A SYSTEM CATEGORY. ***
@@ -70,7 +80,8 @@ def load_default_categories(user_id):
             for subcat in parent_data.get('subcategories', []):
                 subcategory = Category(
                     name=subcat['name'],
-                    icon=convert_icon(subcat['icon']),  # Convert FontAwesome to emoji
+                    # See the note on the parent: emoji in, emoji out.
+                    icon=convert_icon(subcat['icon']),
                     color=subcat['color'],
                     parent_id=parent_category.id,
                     user_id=user_id,

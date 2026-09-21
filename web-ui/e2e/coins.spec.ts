@@ -1,4 +1,4 @@
-import { expect, pageIsLoaded, test } from './fixtures';
+import { DASHBOARD_HEADING, expect, pageIsLoaded, test } from './fixtures';
 
 /**
  * Coins, gear, and the one rule a unit test cannot check.
@@ -31,7 +31,7 @@ import { expect, pageIsLoaded, test } from './fixtures';
  * marketing page (D-200).
  */
 const SURFACES: Array<[string, string, string | RegExp, boolean?]> = [
-  ['/dashboard', 'Dashboard', /dashboard/i],
+  ['/dashboard', 'Dashboard', DASHBOARD_HEADING],
   ['/goals', 'Goals', 'Goals'],
   ['/kit', 'Kit', 'Your kit'],
   ['/review', 'Review', 'Review'],

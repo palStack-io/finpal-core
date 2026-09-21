@@ -149,9 +149,37 @@
     }
 
     // Non-text: an SVG icon or a bordered/filled shape carrying meaning.
+    //
+    // *** TWO THINGS THIS MEASURED THAT IT SHOULD NOT, BOTH FOUND 2026-09-16
+    // WHEN SIX NEW SCOPES JOINED THE CAPTURE. ***
+    //
+    // 1. It reads the svg's inherited `color` and calls that the icon's colour.
+    //    That is only true when something inside actually uses `currentColor`.
+    //    `AuthShell`'s range gives every path an explicit `fill`, so the
+    //    inherited `color` paints NOTHING — and the walk reported four pages
+    //    failing on #17301f, a value that is not on the screen. A gate that
+    //    reports a colour nobody can see is a gate that gets argued with, and
+    //    then ignored.
+    //
+    // 2. It ignores `aria-hidden`. WCAG 1.4.11 exempts purely decorative
+    //    components in as many words, and `aria-hidden="true"` is the author
+    //    declaring exactly that. Every `PageHead` ridge band and every range
+    //    silhouette in this app is so marked. An icon that is hidden from
+    //    assistive technology AND carries meaning visually is already a
+    //    different defect, and axe's own rules are where that belongs.
+    //
+    // Both checks are conservative: an svg without `aria-hidden` is still
+    // measured, and one that uses `currentColor` is still measured. What is
+    // skipped is decoration, by the author's own declaration, or a colour with
+    // nothing painted in it.
     if (el.tagName === 'svg' || el.tagName === 'SVG') {
+      const decorative = el.getAttribute('aria-hidden') === 'true'
+        || el.getAttribute('role') === 'presentation';
+      const usesCurrentColor = /currentcolor/i.test(el.innerHTML || '')
+        || /currentcolor/i.test(el.getAttribute('fill') || '')
+        || /currentcolor/i.test(el.getAttribute('stroke') || '');
       const stroke = parseColor(cs.color);
-      if (stroke && stroke.a > 0) {
+      if (!decorative && usesCurrentColor && stroke && stroke.a > 0) {
         const bg = effectiveBackground(el);
         const r = ratio(over(stroke, bg), bg);
         findings.push({

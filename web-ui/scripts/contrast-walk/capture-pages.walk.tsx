@@ -8,7 +8,7 @@
 import { it, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { http, HttpResponse } from 'msw';
@@ -29,6 +29,148 @@ import CapTracker from '../../src/modules/pointspal/pages/CapTracker';
 import BestCard from '../../src/modules/pointspal/pages/BestCard';
 import MyCards from '../../src/modules/pointspal/pages/MyCards';
 import Redeem from '../../src/modules/pointspal/pages/Redeem';
+import { Sidebar } from '../../src/components/layout/Sidebar';
+import EmptyRange from '../../src/components/dashboard/EmptyRange';
+import IncomeFlowChart from '../../src/components/analytics/IncomeFlowChart';
+import { incomeFlow } from '../../src/utils/incomeFlow';
+import PeriodCompareChart from '../../src/components/analytics/PeriodCompareChart';
+import { comparePeriods } from '../../src/utils/periodComparison';
+
+/**
+ * The rail in the ONE state a phone user can ever see it in.
+ *
+ * *** CAPTURED WITH `isOpen`, BECAUSE WITHOUT IT THE 390px WALK MEASURES AN
+ * ELEMENT DESIGNED TO BE INVISIBLE. *** Below `--bp-phone` the sidebar is
+ * `transform: translateX(-100%)` and `isOpen` is what lifts the `is-open` class
+ * that undoes it. Rendered closed, the responsive walk reported eighteen
+ * "clipped" nav icons at 390px with **+0px of overflow** — every one of them
+ * correct, and every one of them about a drawer that is shut. Above 767px the
+ * class is inert, so one capture is valid at all four widths.
+ */
+const SidebarOpen: React.FC = () => <Sidebar isOpen onClose={() => {}} />;
+
+/** The no-goals range, in the card the dashboard puts it in. */
+const EmptyRangeFixture: React.FC = () => (
+  <div style={{
+    background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+    borderRadius: 16, padding: 24,
+  }}>
+    <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+      Your range
+    </h1>
+    <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '4px 0 18px' }}>
+      What you are climbing, once you pick something to climb.
+    </p>
+    <EmptyRange />
+  </div>
+);
+
+/**
+ * The comparison chart, on a fixture that contains all three of its states.
+ *
+ * *** THE FIXTURE IS THE TEST HERE AS MUCH AS THE WALK IS. *** A comparison
+ * where every category merely grew is the easy case and the one a careless
+ * fixture picks. This one carries a category that STOPPED (Gym), one that is
+ * NEW (Streaming, which must show no percentage — there is none from zero), one
+ * that did not move at all (Housing, the largest, which must not vanish) and
+ * one that grew. Capture the comfortable case and the walk measures the version
+ * of the chart nobody has a problem with — the trap D-227's `cost_basis`
+ * fixture taught.
+ *
+ * Captured as the COMPONENT, not the page: `/analytics` reads seven endpoints
+ * and is still one of the surfaces the walk does not cover. Stated rather than
+ * implied.
+ */
+const CompareChartFixture: React.FC = () => {
+  const cmp = comparePeriods(
+    [
+      { name: 'Housing', amount: 5400 }, { name: 'Groceries', amount: 500.49 },
+      { name: 'Coffee', amount: 60 }, { name: 'Streaming', amount: 25 },
+      { name: 'Transport', amount: 215.5 },
+    ],
+    [
+      { name: 'Housing', amount: 5400 }, { name: 'Groceries', amount: 300 },
+      { name: 'Gym', amount: 240 }, { name: 'Transport', amount: 260 },
+    ],
+  )!;
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+      borderRadius: 16, padding: 24,
+    }}>
+      <h1 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+        Spending, this period against the last
+      </h1>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '4px 0 20px' }}>
+        Last 30 days vs the 30 days before
+      </p>
+      <PeriodCompareChart
+        comparison={cmp}
+        format={(a) => `£${a.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+        nowLabel="Last 30 days"
+        beforeLabel="the 30 days before"
+        upIsGood={false}
+      />
+    </div>
+  );
+};
+
+/**
+ * The flow chart, on the live demo's own figures.
+ *
+ * *** CAPTURED AS THE COMPONENT, NOT THE PAGE, AND THAT IS A STATED LIMIT
+ * RATHER THAN A SHORTCUT. *** `/analytics` reads seven endpoints and is not in
+ * the capture at all — it is one of the five surfaces this walk still does not
+ * cover. Wiring all seven fixtures to reach one tab would be a bigger change
+ * than the chart, and leaving the chart UNMEASURED because the page is
+ * unmeasured is how the six surfaces in D-243 stayed invisible.
+ *
+ * So this measures what is new: the bands, the three ink roles, and whether
+ * eight labelled nodes fit at 390px. The page around it is still uncovered and
+ * the roadmap says so.
+ *
+ * *** AND IT USES THE OVERSPENT CASE. *** The demo's September is 250.00 in
+ * against 2,359.72 out, which is the state that adds a red "From savings or
+ * credit" inflow and relabels the middle node — the widest content and the only
+ * place `--re-ink` appears on this chart. Capturing the comfortable case would
+ * measure the version of the chart nobody has a problem with.
+ */
+const FlowChartFixture: React.FC = () => {
+  const flow = incomeFlow(
+    [{ name: 'Income', amount: 9000 }, { name: 'Uncategorised', amount: 1900 }],
+    [
+      { name: 'Housing', amount: 12400 }, { name: 'Groceries', amount: 500.49 },
+      { name: 'Shopping', amount: 357.11 }, { name: 'Transportation', amount: 215.5 },
+      { name: 'Health & Fitness', amount: 149.97 }, { name: 'Electricity', amount: 134.5 },
+      { name: 'Food & Dining', amount: 99.24 }, { name: 'Internet', amount: 79.99 },
+      { name: 'Phone', amount: 60 }, { name: 'Subscriptions', amount: 45.99 },
+    ],
+  )!;
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+      borderRadius: 16, padding: 24,
+    }}>
+      <h1 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+        Where it went
+      </h1>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '4px 0 20px' }}>
+        Last 30 days
+      </p>
+      <IncomeFlowChart
+        flow={flow}
+        format={(a) => `£${a.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+      />
+    </div>
+  );
+};
+import { Kit } from '../../src/pages/Kit';
+import GroupDetail from '../../src/pages/GroupDetail';
+import NotFound from '../../src/pages/NotFound';
+import { Login } from '../../src/pages/Login';
+import { Register } from '../../src/pages/Register';
+import { ForgotPassword } from '../../src/pages/ForgotPassword';
+import { ResetPassword } from '../../src/pages/ResetPassword';
 import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { RecurringTransactions } from '../../src/components/RecurringTransactions';
 import { TransactionRules } from '../../src/components/TransactionRules';
@@ -84,7 +226,16 @@ beforeAll(() => {
 beforeAll(() => { api.defaults.adapter = 'http'; });
 beforeEach(() => {
   useAuthStore.setState({
-    user: { id: 'alice@test.com', name: 'Alice', default_currency_code: 'GBP' } as any,
+    /* *** `modules` IS HERE FOR THE SIDEBAR SCOPE AND IT IS LOAD-BEARING. ***
+       The rail renders a module section only for a slug in `user.modules`, and
+       the two AA failures that prompted adding this scope were IN that section.
+       Without these, the capture would serialize a rail with no module rows and
+       the walk would measure it clean — the walk-fixture trap that made both
+       browser gates report a $0.00 Investments page as green (D-227). */
+    user: {
+      id: 'alice@test.com', name: 'Alice', default_currency_code: 'GBP',
+      modules: ['pointspal', 'learnpal'],
+    } as any,
     token: 'tok', refreshToken: 'r', isAuthenticated: true,
   });
 });
@@ -940,17 +1091,42 @@ beforeEach(() => {
        * pass's overflow numbers — were measured against a page in an error state.
        * Verified against the real endpoint with a token: `purchase_price`,
        * `current_price`, `current_value`, `gain_loss`, `gain_loss_percentage`.
+       *
+       * *** AND THAT LIST WAS ITSELF INCOMPLETE — `cost_basis` AND `last_update`
+       * ARE ALSO SENT, AND WERE MISSING HERE UNTIL 2026-09-15. *** Re-read from
+       * the deployed payload, the holding keys are: `cost_basis`,
+       * `current_price`, `current_value`, `gain_loss`, `gain_loss_percentage`,
+       * `id`, `industry`, `last_update`, `name`, `notes`, `portfolio`,
+       * `portfolio_id`, `purchase_date`, `purchase_price`, `sector`, `shares`,
+       * `symbol`, `transactions`. Their absence was the SAME defect this comment
+       * describes, one field further on: `holdingTotals` refuses a holding whose
+       * `cost_basis` it cannot read, so all three rows landed in "not counted
+       * above" and both walks would have measured a page reporting $0.00 —
+       * an error state that has a contrast ratio and does not overflow.
+       *
+       * `cost_basis` here is `shares * purchase_price`, which is what the server
+       * computes (`src/models/investment.py`, `@property`), and each one
+       * reconciles with this fixture's own `gain_loss`: 25452-20664=4788,
+       * 13494-10092=3402, 9275.2-7282=1993.2. Not invented — derived, then
+       * checked against a figure that was already here.
+       *
+       * `last_update` has NO timezone suffix on purpose. That is the shape the
+       * API sends, and it is what `lastPriceUpdate` has to read as UTC rather
+       * than as local time.
        */
       holdings: [
         { id: 1, symbol: 'VWRP', name: 'Vanguard FTSE All-World Acc', shares: 210,
           purchase_price: 98.4, current_price: 121.2, current_value: 25452,
-          gain_loss: 4788, gain_loss_percentage: 23.2, portfolio_id: 1 },
+          cost_basis: 20664, gain_loss: 4788, gain_loss_percentage: 23.2,
+          last_update: '2026-09-16T04:09:22.458182', portfolio_id: 1 },
         { id: 2, symbol: 'AAPL', name: 'Apple Inc.', shares: 60, purchase_price: 168.2,
-          current_price: 224.9, current_value: 13494, gain_loss: 3402,
-          gain_loss_percentage: 33.7, portfolio_id: 1 },
+          current_price: 224.9, current_value: 13494, cost_basis: 10092,
+          gain_loss: 3402, gain_loss_percentage: 33.7,
+          last_update: '2026-09-16T04:09:22.631104', portfolio_id: 1 },
         { id: 3, symbol: 'MSFT', name: 'Microsoft Corporation', shares: 22,
           purchase_price: 331.0, current_price: 421.6, current_value: 9275.2,
-          gain_loss: 1993.2, gain_loss_percentage: 27.4, portfolio_id: 1 },
+          cost_basis: 7282, gain_loss: 1993.2, gain_loss_percentage: 27.4,
+          last_update: '2026-09-16T04:09:22.702551', portfolio_id: 1 },
       ],
     })),
     /*
@@ -1020,6 +1196,95 @@ beforeEach(() => {
         },
       },
     })),
+    /* Kit's wallet. `balance` is deliberately BELOW the cheapest unowned
+       price: the savings bar only draws for a piece you cannot yet afford, and
+       a fixture that can afford everything captures the page without it —
+       which is how the "7,853 / 200" defect recorded in `Kit.tsx` survived
+       every test that had one. */
+    http.get('*/api/v1/coins', () => HttpResponse.json({
+      earned: 940,
+      balance: 140,
+      acts: [
+        { slug: 'classify', title: 'Classified a month of spending', coins: 300, sentence: null },
+        { slug: 'budget', title: 'Covered your spending with budgets', coins: 240, sentence: null },
+      ],
+      gear: [
+        { slug: 'boots', price: 100, owned: true },
+        { slug: 'compass', price: 120, owned: true },
+        { slug: 'rope', price: 200, owned: false },
+        { slug: 'tent', price: 350, owned: false },
+        /* Real slugs only. All 21 have both art and an emoji fallback
+           (checked), and an invented slug would render the fallback's blank —
+           a fixture that cannot draw the art cannot notice when the art
+           breaks. */
+        { slug: 'headlamp', price: 500, owned: false },
+      ],
+    })),
+
+    // ── the six surfaces added 2026-09-16 ──────────────────────────────────
+    /*
+     * *** THE GROUP FIXTURE CARRIES `expense_count`, AND THAT FIELD IS THE
+     * POINT. *** The walk fixture for holdings once omitted `cost_basis`, so
+     * both browser gates measured an Investments page reporting $0.00 — a page
+     * in a defect's own shape, reported green. GroupDetail's head now shows
+     * "Recorded: N expenses" from `expense_count`, and the settlement from
+     * `simplified_debts` with BOTH ids: a fixture missing the ids would make
+     * `settlementFor` refuse the group and capture the "this server does not
+     * say who owes whom" state, which is a real state and not the one being
+     * designed.
+     *
+     * The amount is `178.02` on purpose — the figure from the live demo that
+     * disagreed with the members list's 178.03 (D-235).
+     */
+    http.get('*/api/v1/groups/1', () => HttpResponse.json({
+      group: {
+        id: 1, name: 'Apartment Roommates',
+        description: 'Shared apartment expenses',
+        created_by: 'alice@test.com',
+        default_split_method: 'equal', default_payer: null,
+        auto_include_all: false,
+        expense_count: 2,
+        members: [
+          { id: 'alice@test.com', name: 'Alice', email: 'alice@test.com',
+            balance: -178.025 },
+          { id: 'jordan@test.com', name: 'Jordan Demo',
+            email: 'jordan@test.com', balance: 178.025 },
+        ],
+      },
+    })),
+    http.get('*/api/v1/groups/1/balances', () => HttpResponse.json({
+      balances: [{
+        from: 'Alice', to: 'Jordan Demo',
+        from_id: 'alice@test.com', to_id: 'jordan@test.com',
+        amount: 178.02,
+      }],
+    })),
+    /*
+     * *** ZERO ROWS, WHICH IS THE LIVE BEHAVIOUR AND THE WHOLE OF D-236. ***
+     * `/transactions/?group_id=1` returns nothing on the demo while the group
+     * has two expenses. Returning rows here would capture a page nobody has,
+     * and would hide the honest empty state this pass wrote.
+     */
+    http.get('*/api/v1/transactions/', () =>
+      HttpResponse.json({ transactions: [] })),
+    /*
+     * Demo mode ON, so Login is captured in the state a visitor to the public
+     * demo actually sees — the personas are the widest content in its form
+     * column and the reason its layout was two different widths.
+     */
+    http.get('*/api/v1/demo/status', () => HttpResponse.json({
+      enabled: true, timeout_minutes: 120,
+    })),
+    http.get('*/api/v1/demo/accounts', () => HttpResponse.json([
+      { email: 'demo1@finpal.demo', name: 'Alex Demo', password: 'x',
+        currency: 'USD', persona: 'personal finances' },
+      { email: 'demo2@finpal.demo', name: 'Morgan Demo', password: 'x',
+        currency: 'EUR', persona: 'international spending' },
+      { email: 'demo3@finpal.demo', name: 'Jordan Demo', password: 'x',
+        currency: 'USD', persona: 'group expenses' },
+      { email: 'demo4@finpal.demo', name: 'Taylor Demo', password: 'x',
+        currency: 'GBP', persona: 'investments' },
+    ])),
   );
 });
 
@@ -1029,10 +1294,124 @@ beforeEach(() => {
  * `<table>` elements Tier 3 covers — is behind a form submit, so capturing the page
  * as it first paints captures the empty state and measures nothing.
  */
-type Case = [string, React.FC, ((c: HTMLElement) => Promise<void>)?];
+/**
+ * A fourth element, `entry`, for the pages that read the URL.
+ *
+ * *** SIX SURFACES CHANGED ON 2026-09-16 AND THIS WALK COULD SEE NONE OF THEM.
+ * *** `captured/` held eighteen pages and not one of them was `/groups/:id`,
+ * the 404, or any of the five pre-auth screens — so a redesign of all of those
+ * could be reported "walks green" having been measured nowhere. That is the
+ * gate-coverage failure this repo keeps paying for: a walk's scope list is a
+ * lower bound on what it can notice, and nothing in the walk says what it is
+ * blind to.
+ *
+ * `/groups/:id` needs a real id in the path, and `ResetPassword` bounces to
+ * `/login` without a `token` and an `email` in the query, so those two are
+ * rendered through a `<Routes>` at a concrete URL rather than as a bare
+ * component at `/`.
+ */
+type Case = [
+  string,
+  React.FC,
+  ((c: HTMLElement) => Promise<void>)?,
+  { pattern: string; url: string }?,
+  /**
+   * The element floor for THIS page, when 50 is the wrong number for it.
+   *
+   * *** THE 50 FLOOR EXISTS TO CATCH A STUB, AND ON A SMALL PAGE IT CATCHES THE
+   * PAGE. *** It was set when every scope was a data-dense app page: the
+   * Investments capture once raced its fetch and serialized a two-element stub,
+   * and a stub overflows nowhere and has no contrast pairs, so both walks
+   * reported it clean. 50 is a good floor for a table of holdings.
+   *
+   * It is a bad floor for a 404. `NotFound` renders nine elements when it is
+   * COMPLETE — a panel, a figure, a heading, a sentence, two destinations and a
+   * ridge — and ForgotPassword is twenty-four with every field present. Given
+   * as a per-page number with a reason rather than by lowering the shared
+   * floor, because lowering it would blind the guard on the eighteen pages it
+   * was written for.
+   */
+  number?,
+];
 
 const cases: Case[] = [
   ['dashboard', Dashboard as React.FC],
+  /**
+   * *** THE SIX SCOPES ADDED 2026-09-16, ALL OF WHICH WERE REDESIGNED WHILE
+   * INVISIBLE TO BOTH WALKS. *** Grouped here rather than scattered, because
+   * the useful fact about them is that they are a set: `/groups/:id`, the new
+   * 404, and the five pre-auth screens. `AuthShell` paints more pre-auth pixels
+   * than any of the pages does, and until this list grew, nothing in either
+   * walk had ever rendered it.
+   */
+  ['groupdetail', GroupDetail as React.FC, undefined,
+    { pattern: '/groups/:id', url: '/groups/1' }],
+  /**
+   * *** THE SIDEBAR, WHICH IS NOT A PAGE AND HELD TWO AA FAILURES. ***
+   * Every capture here renders a page component ALONE, without `AppLayout`, so
+   * the rail — on screen on all 21 signed-in routes — had never been measured
+   * by either walk. Reported by the owner as "on the sidenav the look like its
+   * disabled", and it was: the module rows were 2.13:1 and the section headings
+   * 1.52:1 in light.
+   *
+   * Captured with its module sections EXPANDED. Collapsed is the default for a
+   * new visitor and it hides the sub-links entirely, which is exactly the shape
+   * of capture that measures a page it is not looking at.
+   */
+  ['analytics-flow', FlowChartFixture],
+  ['analytics-compare', CompareChartFixture],
+  /* The dashboard a NEW user sees. Captured as the component because the
+     dashboard scope is seeded with goals — and a state only a brand-new
+     account reaches is exactly the one nothing else renders. D-77's lesson:
+     an empty demo hid three defects. */
+  ['dashboard-empty-range', EmptyRangeFixture, undefined, undefined, 6],
+  /* *** KIT HAD NEVER BEEN IN THE WALK EITHER. *** It is a sidebar route every
+     user can reach, and it was redesigned on 2026-09-16 without a single
+     measured pixel behind it. Captured with a MIXED wallet — owned and unowned
+     gear, and a balance that cannot afford the cheapest remaining piece, which
+     is the only state that renders the savings bar. */
+  ['kit', Kit as React.FC],
+  ['sidebar', SidebarOpen, async () => {
+    // Both module headers, by name — clicking by index would silently click
+    // the same row twice if the registry order changed.
+    for (const label of ['pointsPal', 'learnPal']) {
+      const row = await screen.findByText(label);
+      await userEvent.click(row);
+    }
+    // A nav-link label, not a page heading: 'Redemption Optimizer' is what
+    // /pointspal/redeem is TITLED, and the rail says 'Redeem'. Waiting on the
+    // wrong string made this capture fail rather than pass quietly, which is
+    // the right direction — but it is the same class of mistake as guessing a
+    // heading from a route (MODULE_HEADINGS in every-page.spec.ts).
+    await screen.findByText('Redeem');
+    await screen.findByText('Your range');
+  }, undefined, 40],
+  // Nine elements is this page COMPLETE: a panel, the figure, a heading, a
+  // sentence, two destinations and the unmeasured ridge. See `Case`'s `floor`.
+  ['notfound', NotFound as React.FC, undefined,
+    { pattern: '*', url: '/a-link-that-went-stale' }, 8],
+  /*
+   * The pre-auth screens are dark in BOTH themes and use no CSS variables, so
+   * the walk will measure two identical captures — and that is exactly the
+   * assertion worth having: a `var(--…)` leaking into one of these files would
+   * resolve to LIGHT values on a background that never changes, which is the
+   * 3.00:1 defect `authPagesUseBrandColours.test.ts` was written for. The walk
+   * resolves colours against their ACTUAL background, so it can see that where
+   * a source scan cannot.
+   */
+  ['login', Login as React.FC],
+  ['register', Register as React.FC],
+  // One field and one button, which is the whole screen. 24 when complete.
+  ['forgot-password', ForgotPassword as React.FC, undefined, undefined, 22],
+  /*
+   * `ResetPassword` navigates to `/login` without both query params — captured
+   * without them, this scope would serialize whatever `/login` renders under a
+   * file named `reset-password.html`, which is worse than not capturing it.
+   */
+  // Two fields, two reveal toggles and a button. 35 when complete.
+  ['reset-password', ResetPassword as React.FC, undefined,
+    { pattern: '/reset-password', url: '/reset-password?token=walk&email=demo1%40finpal.demo' },
+    32],
   /**
    * *** CAPTURED AFTER TOUCHING A GROUP CONTROL, NOT AS IT FIRST PAINTS. ***
    * Same reason goals is captured with its panel open. The `<select>` carries
@@ -1196,9 +1575,17 @@ const cases: Case[] = [
   }],
 ];
 
-it.each(cases)('captures %s', async (name, Page, drive) => {
+it.each(cases)('captures %s', async (name, Page, drive, entry, floor) => {
+  // 50 unless the page says otherwise; see the `floor` note on `Case`.
+  const minElements = floor ?? 50;
   const { container } = render(
-    <MemoryRouter><ThemeProvider><ToastProvider><Page /></ToastProvider></ThemeProvider></MemoryRouter>
+    <MemoryRouter initialEntries={[entry?.url ?? '/']}>
+      <ThemeProvider><ToastProvider>
+        {entry
+          ? <Routes><Route path={entry.pattern} element={<Page />} /></Routes>
+          : <Page />}
+      </ToastProvider></ThemeProvider>
+    </MemoryRouter>
   );
   // Wait for the loading spinner to go, or we capture a spinner and report zero.
   /**
@@ -1222,7 +1609,8 @@ it.each(cases)('captures %s', async (name, Page, drive) => {
   // final bar here — BestCard's empty state is a form and no results — so the full
   // threshold cannot be applied until after the drive.
   await waitFor(() => {
-    expect(container.querySelectorAll('*').length).toBeGreaterThanOrEqual(20);
+    expect(container.querySelectorAll('*').length)
+      .toBeGreaterThanOrEqual(Math.min(20, minElements));
     expect(container.querySelector('.animate-spin')).toBeNull();
   }, { timeout: 6000 });
 
@@ -1230,11 +1618,16 @@ it.each(cases)('captures %s', async (name, Page, drive) => {
 
   // The real readiness gate, applied to every page once it is in its final state.
   await waitFor(() => {
-    expect(container.querySelectorAll('*').length).toBeGreaterThanOrEqual(50);
+    expect(container.querySelectorAll('*').length)
+      .toBeGreaterThanOrEqual(minElements);
   }, { timeout: 6000 });
 
   const painted = container.querySelectorAll('*').length;
-  if (painted < 50) throw new Error(`${name}: only ${painted} elements — captured a stub`);
+  if (painted < minElements) {
+    throw new Error(
+      `${name}: only ${painted} elements against a floor of ${minElements} — `
+      + 'captured a stub');
+  }
 
   /*
    * *** AN EMPTY HEADING IS A NAME THAT DID NOT RESOLVE, AND NOTHING ELSE FAILS

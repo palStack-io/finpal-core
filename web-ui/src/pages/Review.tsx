@@ -127,7 +127,7 @@ const selectStyle: React.CSSProperties = {
   // `background` shorthand, which would reset the chevron away. FINPAL-28.
   padding: '7px 10px', paddingRight: 30, borderRadius: 8,
   border: '1px solid var(--border-medium)',
-  backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)',
+  background: 'var(--input-bg)', color: 'var(--text-primary)',
   fontSize: 14,
 };
 

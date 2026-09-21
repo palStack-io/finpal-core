@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { PageHead } from '../../../components/PageHead';
 import { Loader2 } from 'lucide-react';
 import { GearIcon } from '../../../components/GearIcon';
-import { SlidePanel } from '../../../components/SlidePanel';
-import LessonBody from '../LessonBody';
+import { useLessonReader } from '../LessonReader';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
 import { learnpalService } from '../service';
 import { apiErrorMessage } from '../../../utils/apiError';
-import type { LessonDetail, LessonRow } from '../../../types/learnpal';
+import type { LessonRow } from '../../../types/learnpal';
 
 /**
  * Every lesson — the "place where they can see all the lessons".
@@ -55,8 +55,9 @@ export const Lessons: React.FC = () => {
   const [counts, setCounts] = useState<{ read: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<LessonDetail | null>(null);
-  const [opening, setOpening] = useState<string | null>(null);
+  /* The reader is shared with `Home`, which lists recently-finished lessons and
+     could not open any of them until 2026-09-16. See `LessonReader`. */
+  const reader = useLessonReader();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,16 +75,6 @@ export const Lessons: React.FC = () => {
 
   useEffect(() => { void load(); }, [load]);
 
-  const openLesson = async (row: LessonRow) => {
-    setOpening(row.slug);
-    try {
-      setOpen(await learnpalService.getLesson(row.slug));
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Could not open that lesson.'));
-    } finally {
-      setOpening(null);
-    }
-  };
 
   if (loading) {
     return (
@@ -96,24 +87,44 @@ export const Lessons: React.FC = () => {
   if (!rows) {
     return (
       <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-        <h1 className="page-title">Lessons</h1>
-        <p className="fp-hint">learnPal is not enabled on this instance.</p>
+        {/* The module being absent is not an error, and it still gets a real
+            head: a bare sentence on an empty page reads as a failure rather
+            than as an answer. */}
+        <PageHead
+          band="learnpal"
+          title="Lessons"
+          subtitle="learnPal is not enabled on this instance."
+        />
       </div>
     );
   }
 
   return (
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <div style={{ marginBottom: 18 }}>
-        <h1 className="page-title">Lessons</h1>
-        <p className="fp-hint">
+      {/* *** learnPal'S PAGES NOW OPEN THE WAY EVERY OTHER PAGE DOES. ***
+          Owner, 2026-09-16: *"can we redesign our pointPal and also the
+          learnPal"*. AUDIT D-233 recorded that these three already use
+          `className="page-title"` rather than inventing their own title scale;
+          what they lacked is the head — a hand-rolled `h1` plus `p.fp-hint` in a
+          margin wrapper, the exact shape `PageHead` replaced on eleven core
+          pages.
+
+          *** THE SUBTITLE STAYS JSX HERE, AND THAT IS WHY `subtitle` IS A
+          ReactNode. *** This one carries a live count, so flattening it to a
+          template string would freeze "0 lessons read" into the markup. The
+          other two learnPal pages pass plain strings because they say the same
+          thing to everybody. */}
+      <PageHead
+        band="learnpal"
+        title="Lessons"
+        subtitle={<>
           {counts
             ? `${counts.read} ${counts.read === 1 ? 'lesson' : 'lessons'} read.`
             : null}{' '}
           A lesson opens when your own figures make it relevant — not on a
           schedule, and never because you clicked something.
-        </p>
-      </div>
+        </>}
+      />
 
       {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}
 
@@ -136,34 +147,21 @@ export const Lessons: React.FC = () => {
               </div>
             </div>
             {/* Only offered when there is something to open: earned AND written. */}
-            {row.earned && row.has_body && (
+            {row.earned && reader.canOpen(row) && (
               <button
                 type="button"
                 style={linkButtonStyle}
-                onClick={() => void openLesson(row)}
-                disabled={opening === row.slug}
+                onClick={() => reader.open(row)}
+                disabled={reader.opening === row.slug}
               >
-                {opening === row.slug ? 'Opening…' : 'Read'}
+                {reader.opening === row.slug ? 'Opening…' : 'Read'}
               </button>
             )}
           </div>
         ))}
       </div>
 
-      <SlidePanel
-        isOpen={open !== null}
-        onClose={() => setOpen(null)}
-        title={open?.title ?? 'Lesson'}
-      >
-        {/* *** THIS WAS A `pre-wrap` DIV AND THE DEFERRED DECISION IS TAKEN.
-            *** The comment here recorded markdown rendering as postponed on a
-            sanitisation question, which the C1d bodies then made urgent:
-            nineteen lessons of `###` and `**` render as literal syntax in a
-            pre-wrap div. `LessonBody` answers the question by not raising it —
-            it builds React elements and never produces HTML, so there is
-            nothing to sanitise. Its header carries the rest. */}
-        <LessonBody markdown={open?.body_md ?? null} />
-      </SlidePanel>
+      {reader.panel}
     </div>
   );
 };

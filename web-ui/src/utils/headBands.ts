@@ -83,10 +83,6 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
   },
   /* The dashboard's own band is the quietest of all: the goal range sits
      directly below it and two ranges competing is one too many. */
-  dashboard: {
-    d: 'M0,52 L160,36 L280,52 L420,30 L540,52 L700,34 L820,52 L960,30 L1060,52 L1100,44 L1100,52 Z',
-    opacity: 0.26,
-  },
   /* Groups: shared costs, so an even social ridge rather than a dramatic one. */
   groups: {
     d: 'M0,52 L150,32 L270,52 L400,26 L520,52 L670,30 L790,52 L930,24 L1030,52 L1100,38 L1100,52 Z',
@@ -96,5 +92,75 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
   rules: {
     d: 'M0,52 L130,28 L240,52 L370,22 L480,52 L620,32 L740,52 L880,24 L980,52 L1100,38 L1100,52 Z',
     opacity: 0.36,
+  },
+  /* Investments RISES left to right — the only band that trends, because the
+     page is about a gap that has grown. Each peak clears the one before it
+     (24 -> 20 -> 16 -> 12) rather than alternating like the others. It is a
+     shape, NOT a claim about this user's return: a portfolio that is down
+     still gets this ridge, because the alternative is a page whose decoration
+     argues with its own figures. */
+  investments: {
+    d: 'M0,52 L140,40 L250,52 L390,32 L500,52 L650,24 L770,52 L910,18 L1020,52 L1100,14 L1100,52 Z',
+    opacity: 0.32,
+  },
+  /* *** learnPal's BAND IS A STAIRCASE, AND THAT IS THE ONE THING ITS PAGES
+     ARE ABOUT. *** Every other ridge here is a range: peaks at whatever heights
+     the page's character suggests. learnPal is lessons that unlock from your own
+     figures rather than on a schedule, and its own design doc calls the sequence
+     a climb — so the ridge steps UP in even increments (46, 40, 34, 28, 22, 16,
+     10) instead of wandering. It reads as progress rather than as scenery, which
+     is the distinction the module exists to make.
+
+     Quieter than Investments at 0.26: these pages carry a tally row and a long
+     prose card, and a busy page gets a quieter band — the rule stated at
+     `HeadBand.opacity`. */
+  learnpal: {
+    /* *** 0.34, NOT 0.26, AND THE STEPS ARE DEEPER THAN THE FIRST DRAFT. ***
+       Rendered at 0.26 with a 46->10 rise, the staircase read as a vague
+       horizon: `--head-ridge` (#B7CBBC) on `--head-sky` (#DCE7DE) is a quiet
+       pair by design, and a shallow shape in a quiet pair is no shape at all.
+       A band that is meant to SAY something has to be legible enough to say it,
+       which is the difference between this one and the ridges that are only
+       scenery. Seen by rendering the capture, not decided from the numbers. */
+    d: 'M0,52 L110,50 L220,50 L240,42 L370,42 L390,34 L520,34 L540,26 L670,26 '
+      + 'L690,18 L820,18 L840,10 L970,10 L990,4 L1100,4 L1100,52 Z',
+    opacity: 0.34,
+  },
+  /* *** pointsPal's BAND IS A CAP LINE, NOT A RANGE, AND THAT IS THE ONE FACT
+     THE MODULE EXISTS TO TELL YOU. *** Every other ridge here is peaks at
+     whatever heights suit the page; learnPal's is a staircase because that
+     module is about progress. pointsPal is about CEILINGS — a 3x category earns
+     3x until you hit the cap and then it does not — so peaks that would have
+     gone higher are CUT FLAT, and the two that have not reached the cap rise
+     freely. The flats all sit at y=20, which is where `PageHead` draws nothing:
+     the line itself is not in this path, because a `HeadBand` is one filled
+     ridge and a dashed rule is a second stroke. *** SO THE CAP IS READ FROM THE
+     FLATS BEING LEVEL WITH EACH OTHER *** rather than from a drawn line, which
+     is quieter and survives the band being 52px tall.
+
+     Verified by rendering the shape alone at 4x, because at 52px the difference
+     between "the flats are level" and "nearly level" is two pixels. */
+  /* *** KIT'S BAND CARRIES A CAIRN, BECAUSE KIT IS WHAT YOU TOOK UP THERE. ***
+     A cairn is the stack of stones climbers build at a summit to say somebody
+     reached it — which is exactly what a piece of gear is on this page: proof
+     of a climb, and nothing more. *** GEAR GATES NOTHING *** (owner decision,
+     recorded in `Kit.tsx`), so the band must not read as a locked gate or a
+     trophy case; a cairn is the quietest possible "you were here".
+
+     One filled path, three subpaths: the ridge, then the cairn's three stones
+     stacked on the tallest peak at x=900. Drawn as stacked trapezoids rather
+     than rectangles so they read as stones at 52px instead of as a bar chart. */
+  kit: {
+    d: 'M0,52 L120,34 L230,52 L360,20 L500,52 L640,28 L760,52 L900,16 L1010,52 '
+      + 'L1100,36 L1100,52 Z '
+      + 'M892,16 L908,16 L906,11 L894,11 Z '
+      + 'M894,11 L906,11 L904,6.5 L896,6.5 Z '
+      + 'M896,6.5 L904,6.5 L902,2.5 L898,2.5 Z',
+    opacity: 0.36,
+  },
+  pointspal: {
+    d: 'M0,52 L70,34 L120,34 L180,52 L250,20 L360,20 L420,52 L500,38 L560,38 '
+      + 'L620,52 L700,20 L820,20 L880,52 L960,30 L1020,30 L1075,52 L1100,46 L1100,52 Z',
+    opacity: 0.42,
   },
 };
