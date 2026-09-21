@@ -604,12 +604,14 @@ class SimpleFinService:
             existing = SimpleFin.query.filter_by(user_id=user_id).first()
 
             if existing:
-                existing.access_url = access_url
+                # D-280: through the accessor. This assignment is the line
+                # that proved the column's "encrypted" comment false.
+                existing.set_access_url(access_url)
                 existing.updated_at = datetime.utcnow()
             else:
                 simplefin = SimpleFin(
                     user_id=user_id,
-                    access_url=access_url,
+                    access_url=access_url,   # encrypted by SimpleFin.__init__
                 )
                 db.session.add(simplefin)
 
@@ -689,7 +691,7 @@ class SimpleFinService:
             sf_client = SimpleFinClient(current_app)
             # Fetch with days_back=1 just to get current balances — no transactions needed
             raw_data = sf_client.get_accounts_with_transactions(
-                settings.access_url, days_back=1
+                settings.get_access_url(), days_back=1
             )
             if not raw_data:
                 return False, 'Failed to fetch accounts from SimpleFin', []
@@ -805,7 +807,7 @@ class SimpleFinService:
         try:
             sf_client = SimpleFinClient(current_app)
             raw_data = sf_client.get_accounts_with_transactions(
-                settings.access_url, days_back=days_back
+                settings.get_access_url(), days_back=days_back
             )
             if not raw_data:
                 return False, 'Failed to fetch data from SimpleFin', 0

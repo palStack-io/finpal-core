@@ -254,7 +254,10 @@ class UserApiSettings(db.Model):
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False, unique=True)
     fmp_api_key = db.Column(db.String(100))  # Encrypted API key
     simplefin_enabled = db.Column(db.Boolean, default=False)  # SimpleFin integration enabled
-    simplefin_access_url = db.Column(db.Text, nullable=True)  # SimpleFin access URL (encrypted)
+    #: *** FERNET-ENCRYPTED AT REST SINCE D-280. USE THE ACCESSORS BELOW. ***
+    #: The trailing "(encrypted)" on this line was false for the whole life
+    #: of the column — nothing in the write path encrypted it.
+    simplefin_access_url = db.Column(db.Text, nullable=True)
     investment_tracking_enabled = db.Column(db.Boolean, default=False)  # Investment tracking enabled
     last_used = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -283,6 +286,17 @@ class UserApiSettings(db.Model):
             return
         f = self._get_fernet()
         self.fmp_api_key = f.encrypt(api_key.encode()).decode()
+
+    def set_simplefin_access_url(self, url):
+        """Encrypt and store the SimpleFin access URL (D-280)."""
+        from src.utils.credential_crypto import encrypt
+        self.simplefin_access_url = encrypt(url)
+
+    def get_simplefin_access_url(self):
+        """Decrypt the stored SimpleFin access URL, or None."""
+        from src.utils.credential_crypto import decrypt
+        return decrypt(self.simplefin_access_url,
+                       context=f'UserApiSettings user={self.user_id}')
 
     def get_api_key(self):
         """Decrypt and return the API key."""

@@ -82,7 +82,16 @@ class SimpleFin(db.Model):
     __tablename__ = 'SimpleFin'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False, unique=True)
-    access_url = db.Column(db.Text, nullable=False)  # Encoded/encrypted access URL
+    #: *** FERNET-ENCRYPTED AT REST SINCE D-280. USE THE ACCESSORS BELOW. ***
+    #: This line used to say "Encoded/encrypted access URL" while the write
+    #: path (`services/account/service.py`) assigned the pasted string
+    #: straight in. The comment is why it survived review for so long: it
+    #: reads as answered. A SimpleFin access URL embeds a bearer token that
+    #: grants read access to the holder's bank transactions.
+    #:
+    #: Rows written before D-280 hold plaintext; `get_access_url()` still
+    #: reads them and the boot backfill re-encrypts them.
+    access_url = db.Column(db.Text, nullable=False)
     last_sync = db.Column(db.DateTime, nullable=True)
     enabled = db.Column(db.Boolean, default=True)
     sync_frequency = db.Column(db.String(20), default='daily')  # 'daily', 'weekly', etc.
@@ -95,3 +104,33 @@ class SimpleFin(db.Model):
     
     def __repr__(self):
         return f"<SimpleFin settings for user {self.user_id}>"
+
+
+    def __init__(self, **kwargs):
+        """`SimpleFin(access_url=...)` encrypts, exactly like the setter.
+
+        The constructor is a real write path. Leaving it as the one that
+        bypasses encryption means every caller has to remember to build the
+        row empty and then call `set_access_url` — and the one that forgets
+        writes a plaintext credential with no error.
+
+        SQLAlchemy does not call `__init__` when loading a row, so an
+        already-stored value is never re-encrypted.
+        """
+        url = kwargs.pop('access_url', None)
+        super().__init__(**kwargs)
+        if url is not None:
+            self.set_access_url(url)
+
+    def set_access_url(self, url):
+        """Encrypt and store the SimpleFin access URL."""
+        from src.utils.credential_crypto import encrypt
+        self.access_url = encrypt(url)
+
+    def get_access_url(self):
+        """Decrypt the stored access URL, or None.
+
+        Reads pre-D-280 plaintext rows too — see `credential_crypto.decrypt`.
+        """
+        from src.utils.credential_crypto import decrypt
+        return decrypt(self.access_url, context=f'SimpleFin user={self.user_id}')
