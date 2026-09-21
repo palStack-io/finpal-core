@@ -24,6 +24,15 @@ The bridge is mocked at `integrations.simplefin.client.requests`. No test here r
 the network: a suite that talks to beta-bridge.simplefin.org would be red whenever
 someone else's service is down, and a claim token can only be spent once anyway.
 """
+#
+# *** READ THROUGH `get_access_url()`, NOT THE COLUMN (D-280). ***
+# `SimpleFin.access_url` is Fernet-encrypted at rest as of D-280 — it used to
+# be plaintext behind a comment that claimed otherwise. These assertions ask
+# WHICH VALUE was stored, which is still exactly the right question; only the
+# way to read it changed. `tests/integration/
+# test_simplefin_credentials_are_encrypted.py` is the file that asserts on the
+# raw column, deliberately, and proves it is not plaintext.
+
 import base64
 from unittest.mock import patch
 
@@ -101,10 +110,10 @@ def test_a_setup_token_is_exchanged_for_an_access_url_and_the_url_is_what_is_sto
 
     row = _stored(user.id)
     assert row is not None, 'a successful exchange stored nothing'
-    assert row.access_url == ACCESS_URL, (
+    assert row.get_access_url() == ACCESS_URL, (
         'the setup token was stored instead of the access URL it was exchanged for'
     )
-    assert SETUP_TOKEN not in (row.access_url or ''), (
+    assert SETUP_TOKEN not in (row.get_access_url() or ''), (
         'the one-time setup token is being kept as the long-lived credential'
     )
 
@@ -157,7 +166,7 @@ def test_a_working_access_url_is_still_accepted(db):
         success, message = service.connect_simplefin(user.id, ACCESS_URL)
 
     assert success is True, message
-    assert _stored(user.id).access_url == ACCESS_URL
+    assert _stored(user.id).get_access_url() == ACCESS_URL
 
 
 def test_reconnecting_replaces_the_credential_rather_than_adding_a_second_row(db):
@@ -173,7 +182,7 @@ def test_reconnecting_replaces_the_credential_rather_than_adding_a_second_row(db
 
     rows = SimpleFin.query.filter_by(user_id=user.id).all()
     assert len(rows) == 1, 'reconnecting left %d rows' % len(rows)
-    assert rows[0].access_url == second_url
+    assert rows[0].get_access_url() == second_url
 
 
 @pytest.mark.parametrize('key', ['access_url', 'setup_token'])
@@ -240,4 +249,4 @@ def test_the_endpoint_accepts_a_setup_token_at_all(client, db, auth_headers, app
 
     assert resp.get_json().get('connected') is True, (
         'a valid setup token was refused by the endpoint: %r' % resp.get_json())
-    assert _stored(user.id).access_url == ACCESS_URL
+    assert _stored(user.id).get_access_url() == ACCESS_URL

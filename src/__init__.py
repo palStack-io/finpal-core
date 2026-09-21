@@ -380,6 +380,25 @@ def create_app(config_name=None):
                     'balances through the legacy account_id path, but multi-account '
                     'goals will not work until this succeeds')
 
+            # D-280: encrypt SimpleFin credentials that earlier releases wrote
+            # in plaintext. Beside the goal backfill for the reason that one
+            # gives — both are "make an existing database match the code" —
+            # and condition-keyed the same way, so it fixes an instance that
+            # was already running rather than skipping it (D-178).
+            #
+            # This one is a SECURITY backfill, not a correctness one: until it
+            # runs, bank bearer tokens sit in the clear in the database and in
+            # every backup taken of it.
+            try:
+                from src.services.account.simplefin_backfill import (
+                    backfill_simplefin_encryption)
+                backfill_simplefin_encryption()
+            except Exception:
+                app.logger.exception(
+                    'SimpleFin credential encryption backfill could not run; '
+                    'credentials written before this release may still be '
+                    'stored in plaintext (AUDIT D-280)')
+
             # Mountains and their bands. CORE CONTENT, seeded at boot, because a
             # goal is drawn as a peak whether or not learnPal is installed.
             #

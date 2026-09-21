@@ -81,8 +81,12 @@ def test_a_real_setup_token_is_exchanged_and_syncs(client, auth_headers, db):
     row = SimpleFin.query.filter_by(user_id=user.id).first()
     assert row is not None, 'reported success and wrote no credential'
     # D-110's exact symptom, stated as the thing that must not be true.
-    assert row.access_url != token, 'the setup token was stored unexchanged (D-110)'
-    assert row.access_url.startswith('http'), f'not an access URL: {row.access_url[:40]}'
+    # D-280: the column is ciphertext now, so read through the accessor.
+    # This test is skipped without live Bridge credentials, so it would not
+    # have failed the gate — it would have failed the next person to run it.
+    assert row.get_access_url() != token, 'the setup token was stored unexchanged (D-110)'
+    assert (row.get_access_url() or '').startswith('http'), (
+        f'not an access URL: {(row.get_access_url() or "")[:40]}')
 
     # --- fetch: the credential must actually answer Bridge ------------------
     resp = client.post('/api/v1/accounts/simplefin/fetch', headers=headers)
