@@ -719,7 +719,7 @@ export const Dashboard = () => {
                 aria-label="Cash flow time range"
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                style={{ padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                style={{ padding: '8px 12px', paddingRight: '34px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}
               >
                 <option value="week">Last 7 days</option>
                 <option value="month">Last 30 days</option>

@@ -60,9 +60,25 @@ describe('a bare date is a CALENDAR day, which is the opposite rule', () => {
 
   it('does not apply the UTC rule to a bare date', () => {
     // The distinction is the whole point: appending `Z` here would re-create
-    // D-206. Local midnight is not the same instant as UTC midnight.
+    // D-206. A bare date must be LOCAL midnight.
+    //
+    // *** ASSERTED AS AN EQUALITY, NOT AS `not.toBe` THE UTC STRING. ***
+    // This test previously read:
+    //
+    //     expect(local.toISOString()).not.toBe('2026-09-01T00:00:00.000Z');
+    //
+    // which can never pass in CI. GitHub Actions runs in UTC, and in UTC
+    // local midnight IS UTC midnight — so `toISOString()` equals that string
+    // and the negation fails. It passed on a developer machine at -0600 and
+    // failed every CI run, blocking #196 from 2026-09-17.
+    //
+    // Comparing against a locally-constructed midnight asserts the real
+    // invariant in every timezone, UTC included, and still catches the
+    // `Z`-appending regression it was written for: if `parseServerDate`
+    // appended `Z`, this would differ by the machine's offset everywhere
+    // that offset is non-zero.
     const local = parseServerDate('2026-09-01')!;
-    expect(local.toISOString()).not.toBe('2026-09-01T00:00:00.000Z');
+    expect(local.getTime()).toBe(new Date(2026, 8, 1, 0, 0, 0, 0).getTime());
   });
 });
 

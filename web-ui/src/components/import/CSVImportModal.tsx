@@ -373,7 +373,9 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: 'var(--input-bg)',
+                  // Room for the chevron — see FINPAL-28.
+                  paddingRight: '38px',
+                  backgroundColor: 'var(--input-bg)',
                   border: '1px solid var(--border-light)',
                   borderRadius: '8px',
                   color: 'var(--text-primary)',
@@ -484,7 +486,9 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  background: 'var(--input-bg)',
+                  // Room for the chevron — see FINPAL-28.
+                  paddingRight: '38px',
+                  backgroundColor: 'var(--input-bg)',
                   border: '1px solid var(--border-light)',
                   borderRadius: '8px',
                   color: 'var(--text-primary)',
@@ -546,7 +550,9 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '8px 12px',
-                      background: 'var(--input-bg)',
+                      // Room for the chevron — see FINPAL-28.
+                      paddingRight: '34px',
+                      backgroundColor: 'var(--input-bg)',
                       border: '1px solid var(--border-light)',
                       borderRadius: '6px',
                       color: 'var(--text-primary)',

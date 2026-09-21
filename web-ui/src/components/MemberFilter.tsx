@@ -60,7 +60,9 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
         style={{
           flex: 1,
           padding: '12px 16px',
-          background: 'var(--input-bg)',
+          // Room for the chevron — see FINPAL-28.
+          paddingRight: '38px',
+          backgroundColor: 'var(--input-bg)',
           border: '1px solid var(--input-border)',
           borderRadius: '8px',
           color: 'var(--text-primary)',

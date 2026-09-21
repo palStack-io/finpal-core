@@ -439,10 +439,11 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
 
                       {/* Cap period */}
                       <select
+                        className="fp-select-compact"
                         value={e.cap_period}
                         onChange={(ev) => updateEarn(slug, 'cap_period', ev.target.value)}
                         disabled={!active || e.cap_amount === ''}
-                        style={{ width: '100%', padding: '4px 4px', border: '1px solid var(--border)', borderRadius: 6, background: active && e.cap_amount !== '' ? 'var(--white)' : 'var(--input-bg)', color: 'var(--ink)', fontSize: 11, outline: 'none', opacity: active && e.cap_amount !== '' ? 1 : 0.4 }}
+                        style={{ width: '100%', padding: '4px 4px', paddingRight: '22px', border: '1px solid var(--border)', borderRadius: 6, backgroundColor: active && e.cap_amount !== '' ? 'var(--white)' : 'var(--input-bg)', color: 'var(--ink)', fontSize: 11, outline: 'none', opacity: active && e.cap_amount !== '' ? 1 : 0.4 }}
                       >
                         <option value="">—</option>
                         <option value="monthly">Monthly</option>
