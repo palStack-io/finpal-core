@@ -446,9 +446,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                   does not exist on touch — so on every phone that row is
                   permanently unexplained. Not repeating it here: `title` is
                   the hover affordance and `aria-label` is the real one. */}
+              {/* *** THE LABEL STAYS EVEN WHEN BADGES SHOW, BECAUSE
+                  REPLACING IT COST THE ONLY CLUE THE HEADER IS CLICKABLE.
+                  *** The first version swapped "View profile" out for the
+                  discs, and the owner then went looking for the shelf under
+                  Settings — which is what a name plus an unlabelled disc
+                  invites. The discs are an ornament ON the link, not a
+                  replacement for it. */}
+              <div className="user-email">View profile</div>
               {recentBadges.length > 0 ? (
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}
                   data-testid="rail-badges"
                 >
                   {/* *** 32, NOT 20 — `gearIsLegible` REFUSED THE SMALLER
@@ -466,9 +474,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                     </span>
                   )}
                 </div>
-              ) : (
-                <div className="user-email">View profile</div>
-              )}
+              ) : null}
             </div>
           </div>
           <button
