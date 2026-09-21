@@ -1,4 +1,4 @@
-import { test, expect, DEMO_USER, pageIsLoaded } from './fixtures';
+import { DASHBOARD_HEADING, DEMO_USER, expect, pageIsLoaded, test } from './fixtures';
 
 /**
  * The goals flow, end to end, against a real API and the real demo seed.
@@ -17,7 +17,7 @@ import { test, expect, DEMO_USER, pageIsLoaded } from './fixtures';
 
 test('a signed-in user reaches Goals from the sidebar', async ({ page }) => {
   await page.goto('/dashboard');
-  await pageIsLoaded(page, /Dashboard|Welcome|Overview/);
+  await pageIsLoaded(page, DASHBOARD_HEADING);
 
   await page.getByRole('link', { name: 'Goals' }).click();
 

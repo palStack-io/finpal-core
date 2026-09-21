@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { parseServerDate } from '../../utils/serverDate';
 import { X, TrendingUp, TrendingDown, DollarSign, Calendar, Briefcase, Activity, Edit2, Save } from 'lucide-react';
 import { investmentService } from '../../services/api/investments';
 import { useToast } from '../../contexts/ToastContext';
@@ -124,8 +125,20 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
     return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
   };
 
+  /* *** `new Date(dateString)` WAS WRONG FOR A QUARTER OF ALL PURCHASES. ***
+     `purchase_date` arrives as naive UTC — `2026-01-15T22:15:39.768484`, no
+     offset — and JavaScript reads a suffix-less date-TIME as LOCAL. So a
+     purchase stamped `2026-01-15T02:00:00` UTC (which is 14 January in Denver)
+     rendered as "January 15, 2026". Wrong for every timestamp in the small
+     hours UTC, right for the rest, which is why it survived: the demo's own
+     rows sit at 22:15 UTC and render correctly.
+
+     Returns a dash rather than "Invalid Date" when there is nothing to show —
+     an Invalid Date is truthy and formats as that literal string on screen. */
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const d = parseServerDate(dateString);
+    if (d === null) return '—';
+    return d.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'

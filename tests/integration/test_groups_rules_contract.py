@@ -130,7 +130,21 @@ def test_group_list_shape(client, headers, group_id, slash):
 
 @BOTH_SPELLINGS
 def test_group_detail_shape(client, headers, group_id, slash):
-    """No created_at and no member_count here, but members carry a balance."""
+    """No created_at and no member_count here, but members carry a balance.
+
+    *** `expense_count` IS HERE NOW, AND THE ASYMMETRY ABOVE IT IS STILL REAL.
+    *** The list route has carried `expense_count` since 2026-09-15 and this one
+    did not, so `/groups` could report a group as having 2 expenses while
+    `/groups/<id>` had no way to say so — and the detail PAGE, reading a
+    `/transactions/?group_id=` filter that returns nothing, printed "No
+    transactions yet" about that same group (D-236). Adding it closes the
+    server's half.
+
+    `created_at` and `member_count` are STILL absent, on purpose. Two of the
+    three fields moving together would have made this test agree with whatever
+    the endpoint happened to return; the asymmetry is a documented contract and
+    only one field was in question.
+    """
     resp = client.get(f'/api/v1/groups/{group_id}{slash}', headers=headers)
 
     assert resp.status_code == 200
@@ -139,10 +153,13 @@ def test_group_detail_shape(client, headers, group_id, slash):
     group = body['group']
     assert set(group) == {
         'id', 'name', 'description', 'created_by', 'default_split_method',
-        'default_payer', 'auto_include_all', 'members',
+        'default_payer', 'auto_include_all', 'expense_count', 'members',
     }
     assert set(group['members'][0]) == {'id', 'email', 'name', 'balance'}
     assert isinstance(group['members'][0]['balance'], float)
+    # An int, never None — the client compares it to 0, and `None` would render
+    # as "nothing recorded yet" for a group that has plenty.
+    assert isinstance(group['expense_count'], int)
 
 
 @BOTH_SPELLINGS

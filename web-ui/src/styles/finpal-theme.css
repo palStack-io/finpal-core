@@ -265,6 +265,16 @@
      white, so it clears both. A fixed hex like --g800 cannot do this job — it does
      not theme, and it measures 1.86:1 on the dark wash. */
   --g-ink: #166534; --au-ink: #b45309; --re-ink: #b91c1c;
+  /* *** OPAQUE ON PURPOSE, BECAUSE THE TRANSLUCENT VERSION FAILED AA THE MOMENT
+     ITS SURFACE CHANGED. *** The secondary green button used
+     `rgba(21, 128, 61, 0.2)`, so what `--g-ink` actually sat on depended on
+     whatever was behind it: measured 2026-09-15, that composite is #cde3d3 on
+     the page card (5.27:1, fine) and #b4d2be on `--head-sky` (**4.38:1, fail**).
+     Moving Investments' actions into `PageHead` changed the surface and the
+     contrast walk caught it as a new failing pair. This value IS the old
+     page-card composite, so nothing looks different — it just no longer
+     re-derives itself from its parent. `--g-ink` on it: 5.27:1. */
+  --g-wash: #cde3d3;
   /* *** A FOURTH INK, FOR THE SAME REASON AS THE OTHER THREE. *** The Edit and
      Delete icon buttons paint a 10% tint of their own accent and put the accent
      itself on top: #3b82f6 on #dbe6eb measures **2.90:1** against a 3:1
@@ -489,6 +499,10 @@
      both themes above and below) and these three keep the brand values, unchanged,
      for the surfaces they paint. */
   --g-ink: #5fce8b;
+  /* The dark twin of `--g-wash` — see the light block. This is the wash's
+     composite over `--head-sky` in dark, where the button now sits.
+     `--g-ink` #5fce8b on it: 6.94:1. */
+  --g-wash: #133421;
   --au-ink: #fbbf24;
   --re-ink: #f87171;
   /* The dark half of `--bl-ink`. #60a5fa measures 5.79 and 5.11 on the two dark
@@ -728,6 +742,16 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 20px;
+  /* *** IT INHERITED THE PAGE INK ONTO A GREEN DISC: #17301F on #15803d is
+     2.83:1, and 1.99:1 at the dark end of the gradient. *** Most of the time
+     the glyph is an EMOJI, which paints its own colours and ignores this — but
+     `user.profile_emoji` is user-chosen and plenty of symbols are
+     text-presentation (✦, ⛰, ★) and do take it, and the default is 👤. So the
+     inherited value was wrong for every case where it mattered and unmeasurable
+     in the rest. White is 5.02:1 at the light end and 7.13:1 at the dark one.
+     Found by adding the sidebar to the contrast capture — it had never been
+     rendered by either walk, because every capture renders a page alone. */
+  color: #ffffff;
 }
 
 .user-info {
@@ -1526,4 +1550,173 @@ body {
 @media (max-width: 767px) {
   .range-sides { flex-direction: column; gap: 22px; }
   .range-sides > [aria-hidden='true'] { display: none; }
+}
+
+/* ── The pre-auth entry ──────────────────────────────────────────────────────
+   LAYOUT ONLY, AND THAT SPLIT IS THE POINT. `AuthShell.tsx` keeps every colour
+   inline and hardcoded, because the pre-auth pages are dark in BOTH themes and
+   a token here would resolve to light values on a background that never
+   changes — the defect `authPagesUseBrandColours.test.ts` pins. What cannot be
+   done inline is a width query, so the grid lives here and nothing else does.
+
+   *** THIS REPLACED `.auth-split`, WHICH PUT THE RANGE IN A COLUMN. *** The
+   range is a horizon and a horizon belongs on a ground line, so it moved to the
+   bottom of the page and the left column became copy — see `AuthShell`'s own
+   header and `docs/mockups/entry-pantrypal-treatment-web.html`. */
+.auth-entry {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  padding: 40px 52px 0;
+  /* The frieze is absolutely positioned against this box, and `isolation`
+     keeps its stacking context local so a page can still portal a modal over
+     the whole thing without fighting the z-indexes below. */
+  isolation: isolate;
+  overflow: hidden;
+  align-items: center;
+}
+
+.auth-entry-back {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-entry-hero {
+  /* Bottom padding is the frieze's room: the hero sits in the left column and
+     the horizon runs under BOTH columns, so the copy has to stop above it.
+     *** 120px RATHER THAN 150: THE FRIEZE HAS TO BE ABOVE THE FOLD OR IT IS
+     NOT THE FLOOR OF ANYTHING. *** On the demo-mode login — four personas, a
+     note and a disclosure — the panel is the tallest thing on the page, and at
+     1440x900 the original budget pushed the horizon just past the bottom of
+     the viewport. A page-bottom decoration you have to scroll to find is a page
+     without it, which is the whole thing this treatment was for. */
+  padding-bottom: 120px;
+  min-width: 0;
+  z-index: 2;
+}
+
+.auth-entry-panel {
+  border-radius: 18px;
+  padding: 26px 24px;
+  justify-self: stretch;
+  z-index: 2;
+  min-width: 0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+.auth-entry-frieze {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 150px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* *** IT STACKS RATHER THAN NARROWING, AND THE HERO GOES FIRST. *** Two columns
+   at 390px gives a headline too cramped to land beside a form too narrow to
+   hold an email field. Stacked, the copy introduces the product and the panel
+   follows it, which is the order a phone reader wants anyway. The frieze
+   shortens to 104px and stays at the bottom of the page — on a phone it is a
+   footer band, which is what a horizon is when there is no room for a view. */
+@media (max-width: 767px) {
+  .auth-entry {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 64px 20px 0;
+    align-items: start;
+  }
+  .auth-entry-hero { padding-bottom: 0; }
+  .auth-entry-panel { padding: 22px; margin-bottom: 128px !important; }
+  .auth-entry-frieze { height: 104px; }
+}
+
+@media (max-width: 1023px) and (min-width: 768px) {
+  .auth-entry { padding: 48px 32px 0; gap: 28px; }
+  .auth-entry-hero { padding-bottom: 130px; }
+}
+
+/* ── The empty range's invitation ────────────────────────────────────────────
+   The marker a user with no goals sees on the dashboard. A real link rather
+   than a hover tooltip: hover is unreachable by keyboard and absent on touch,
+   so the sentence is revealed on `:hover` AND `:focus-visible`, and the link
+   carries its own accessible name either way. See `EmptyRange.tsx`. */
+.fp-empty-range-cta {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  text-decoration: none;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--card-shadow);
+  padding: 6px;
+  transition: gap 0.18s ease, padding 0.18s ease;
+}
+
+.fp-empty-range-bang {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 50%;
+  background: var(--g-wash);
+  color: var(--g-ink);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Collapsed by default; `max-width` rather than `display` so it can animate and
+   so the text stays in the accessibility tree for a screen reader that walks
+   the link's contents. */
+.fp-empty-range-hint {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: max-width 0.22s ease, opacity 0.18s ease, padding 0.18s ease;
+}
+
+.fp-empty-range-cta:hover .fp-empty-range-hint,
+.fp-empty-range-cta:focus-visible .fp-empty-range-hint {
+  max-width: 320px;
+  opacity: 1;
+  padding: 0 10px 0 8px;
+}
+
+/* A focus ring on the link itself, because the reveal alone is not a focus
+   indicator — 2.4.7 wants something visible regardless of what the hover does. */
+.fp-empty-range-cta:focus-visible {
+  outline: 2px solid var(--brand-main-green);
+  outline-offset: 2px;
+}
+
+/* *** NO MOTION MEANS NO MOTION, INCLUDING THIS. *** The reveal is a width
+   transition, which is exactly the kind of thing that triggers vestibular
+   symptoms. The hint still appears; it simply appears at once. */
+@media (prefers-reduced-motion: reduce) {
+  .fp-empty-range-cta,
+  .fp-empty-range-hint { transition: none; }
 }

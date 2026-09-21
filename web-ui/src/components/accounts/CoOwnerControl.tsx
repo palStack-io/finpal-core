@@ -89,7 +89,7 @@ export const CoOwnerControl: React.FC<CoOwnerControlProps> = ({
       onClick={(e) => e.stopPropagation()}
       style={{
         marginTop: 10, padding: 12, borderRadius: 10,
-        background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+        background: 'var(--bg-secondary)', border: '1px solid var(--border-light)',
       }}
     >
       <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)' }}>

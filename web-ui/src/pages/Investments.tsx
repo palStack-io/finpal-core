@@ -23,6 +23,9 @@ import { ScopeTag } from '../components/ScopeTag';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
+import { PageHead } from '../components/PageHead';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
+import { holdingTotals, valueSplit, lastPriceUpdate } from '../utils/holdingTotals';
 import { AddHoldingModal } from '../components/investment/AddHoldingModal';
 import { StockDetailModal } from '../components/investment/StockDetailModal';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
@@ -44,6 +47,17 @@ interface Holding {
   shares: number;
   purchase_price: number;
   current_price: number;
+  /* *** THESE FOUR WERE ON THE WIRE THE WHOLE TIME AND THIS INTERFACE DID NOT
+     DECLARE THEM. *** `src/models/investment.py` exposes them as `@property`
+     (`shares * purchase_price`, `shares * current_price`), so they are always
+     present — not nullable columns. Verified against the live payload before
+     being declared here, because an interface in this codebase has claimed a
+     field the endpoint does not send five times over, and a green typecheck is
+     reassuring the whole time it happens. */
+  cost_basis: number;
+  current_value: number;
+  gain_loss: number;
+  gain_loss_percentage: number;
   purchase_date: string;
   notes: string;
   sector: string;
@@ -56,6 +70,90 @@ const tableHeaderRightStyle: React.CSSProperties = { padding: '16px', textAlign:
 const tableHeaderLeftStyle: React.CSSProperties = { padding: '16px', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' };
 const bigNumberStyle: React.CSSProperties = { color: 'var(--text-primary)', fontSize: '28px', fontWeight: '700' };
 const tableCellRightStyle: React.CSSProperties = { padding: '16px', textAlign: 'right', color: 'var(--text-primary)', fontSize: '14px' };
+
+/* Lifted out of the JSX when the actions moved into `PageHead`'s `right` slot.
+   The colours and both D-103 comments are carried over verbatim — they were
+   MEASURED, and moving markup is not a reason to re-derive a ratio. */
+const addHoldingButtonStyle: React.CSSProperties = {
+  padding: '10px 16px',
+  background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+  border: 'none',
+  borderRadius: '8px',
+  /* *** WHITE, NOT `--text-primary`. *** This is a filled green button, so its
+     label sits on the brand green in BOTH themes while `--text-primary` flips
+     with the page: it measured 2.83:1 in light (#17301f on #15803d) and 4.32:1
+     in dark (#e9f0e6). White measures 5.02:1 on the gradient's first stop.
+     `color: 'white'` on coloured buttons is this app's deliberate convention,
+     not an oversight. D-103. */
+  color: 'white',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontSize: '14px',
+  fontWeight: '600',
+  transition: 'transform 0.2s',
+};
+
+const refreshPricesButtonStyle: React.CSSProperties = {
+  padding: '10px 16px',
+  /* *** `--g-wash`, NOT `rgba(21, 128, 61, 0.2)` — AND THE WALK IS WHY. ***
+     A translucent background means the text's real contrast is decided by
+     whatever is behind the button. On the page card the 20% wash composited to
+     #cde3d3 and `--g-ink` measured 5.27:1; moving these actions into `PageHead`
+     put the same wash on `--head-sky`, composited to #b4d2be, and the ratio
+     fell to **4.38:1** — a genuine AA failure introduced by moving markup, with
+     no colour changed. `[investments:light] new failing pair #166534|#b4d2be`
+     is what the contrast tree-walk reported, and it is the only reason this was
+     found: 930 unit tests and a typecheck were green over it.
+     `--g-wash` is that old page-card composite made OPAQUE, so it looks the
+     same and cannot be re-derived from its parent again.
+
+     The border stays translucent deliberately — it carries no text, so it has
+     no ratio to fail, and it keeps the button's edge reading against both
+     surfaces. The original note still holds and is why the hue is this one:
+     `--brand-light-green` (#86efac) over the wash on a light page measured
+     1.04:1, the worst pair on this surface. The wash was the problem, not the
+     hue. D-103. */
+  background: 'var(--g-wash)',
+  border: '1px solid rgba(21, 128, 61, 0.5)',
+  borderRadius: '8px',
+  color: 'var(--g-ink)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontSize: '14px',
+  fontWeight: '600',
+  transition: 'all 0.3s',
+};
+
+const valueSplitWrapStyle: React.CSSProperties = {
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border-light)',
+  borderRadius: '12px',
+  padding: '20px',
+  marginBottom: '24px',
+};
+const valueSplitLabelStyle: React.CSSProperties = {
+  color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600,
+  letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px',
+};
+const valueSplitBarStyle: React.CSSProperties = {
+  display: 'flex', height: '10px', borderRadius: '5px', overflow: 'hidden',
+};
+const valueSplitLegendStyle: React.CSSProperties = {
+  display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '10px',
+  color: 'var(--text-secondary)', fontSize: '13px',
+};
+const valueSplitNoteStyle: React.CSSProperties = {
+  color: 'var(--text-secondary)', fontSize: '13px', marginTop: '10px',
+};
+const priceAgeStyle: React.CSSProperties = {
+  padding: '14px 16px',
+  borderTop: '1px solid var(--border-light)',
+  color: 'var(--text-secondary)',
+  fontSize: '13px',
+};
 
 export const Investments: React.FC = () => {
   const { showToast } = useToast();
@@ -134,26 +232,34 @@ export const Investments: React.FC = () => {
   };
 
   // Calculate portfolio statistics
-  const calculateStats = () => {
-    const filteredHoldings = selectedPortfolio
-      ? holdings.filter(h => h.portfolio_id === selectedPortfolio)
-      : holdings;
+  /* *** THIS PAGE USED TO DO THE SERVER'S ARITHMETIC AGAIN, IN TYPESCRIPT. ***
+     It summed `current_price * shares` and `purchase_price * shares` while the
+     payload already carried `current_value` and `cost_basis` — which the server
+     computes with those exact two expressions (`src/models/investment.py`,
+     `@property`). Measured against the live demo they agreed to the cent, so
+     deleting the client copy changes no figure: it removes a second place that
+     had to stay right, which is D-101's shape. `holdingTotals` only ADDS UP
+     what the server sent and refuses what it cannot read. */
+  const visibleHoldings = selectedPortfolio
+    ? holdings.filter(h => h.portfolio_id === selectedPortfolio)
+    : holdings;
 
-    const totalValue = filteredHoldings.reduce((sum, h) => sum + (h.current_price * h.shares), 0);
-    const totalCost = filteredHoldings.reduce((sum, h) => sum + (h.purchase_price * h.shares), 0);
-    const totalGain = totalValue - totalCost;
-    const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
+  const totals = holdingTotals(visibleHoldings);
+  const split = valueSplit(visibleHoldings);
+  const pricesUpdatedAt = lastPriceUpdate(visibleHoldings);
 
-    return {
-      totalValue,
-      totalCost,
-      totalGain,
-      totalGainPercent,
-      holdingsCount: filteredHoldings.length
-    };
-  };
+  /* The count moved out of a stat card and into a note under the cost, where it
+     qualifies a figure instead of being one. */
+  const holdingCountLabel = visibleHoldings.length === 1
+    ? 'one holding'
+    : `${visibleHoldings.length} holdings`;
 
-  const stats = calculateStats();
+  /* The portfolio's name when exactly one is in view, so "Worth now" says what
+     it is the worth OF. Absent rather than guessed when several are mixed. */
+  const selectedPortfolioName = selectedPortfolio
+    ? portfolios.find(p => p.id === selectedPortfolio)?.name
+    : portfolios.length === 1 ? portfolios[0]?.name : undefined;
+  const portfolioNote = selectedPortfolioName ?? 'all portfolios';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -189,39 +295,20 @@ export const Investments: React.FC = () => {
     <>
       <div style={pageContainerStyle}>
         <div className="page-container">
-          {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <h1 className="page-title">
-                  Investments
-                </h1>
-                <p style={bodyTextStyle}>Track and manage your investment portfolio</p>
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
+          {/* *** THE ACTIONS GO THROUGH `PageHead`'s `right` SLOT, NOT BESIDE AN h1. ***
+              The two buttons keep their own colours and their D-103 comments —
+              those were measured, and a redesign is not a reason to re-derive
+              them. What changes is that the title, the sentence and the ridge
+              now come from one component instead of this page's own markup. */}
+          <PageHead
+            title="Investments"
+            subtitle="What you put in, what it is worth now, and the gap between them."
+            band="investments"
+            right={(
+              <>
                 <button
                   onClick={handleOpenAddModal}
-                  style={{
-                    padding: '10px 16px',
-                    background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    /* *** WHITE, NOT `--text-primary`. *** This is a filled green
-                       button, so its label sits on the brand green in BOTH themes
-                       while `--text-primary` flips with the page: it measured
-                       2.83:1 in light (#17301f on #15803d) and 4.32:1 in dark
-                       (#e9f0e6). White measures 5.02:1 on the gradient's first
-                       stop. `color: 'white'` on coloured buttons is this app's
-                       deliberate convention, not an oversight. D-103. */
-                    color: 'white',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    transition: 'transform 0.2s'
-                  }}
+                  style={addHoldingButtonStyle}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
@@ -232,145 +319,113 @@ export const Investments: React.FC = () => {
                   onClick={refreshPrices}
                   disabled={isRefreshing}
                   style={{
-                    padding: '10px 16px',
-                    background: 'rgba(21, 128, 61, 0.2)',
-                    border: '1px solid rgba(21, 128, 61, 0.5)',
-                    borderRadius: '8px',
-                    /* `--brand-light-green` (#86efac) over a 20% green wash on a
-                       LIGHT page composites to 1.04:1 — the worst pair measured on
-                       this surface. The wash is the problem, not the hue: the same
-                       token is fine on the dark page. The darker green reads on
-                       both. D-103. */
-                    color: 'var(--g-ink)',
+                    ...refreshPricesButtonStyle,
                     cursor: isRefreshing ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
                     opacity: isRefreshing ? 0.6 : 1,
-                    transition: 'all 0.3s'
                   }}
-                  onMouseEnter={(e) => !isRefreshing && (e.currentTarget.style.background = 'rgba(21, 128, 61, 0.3)')}
-                  onMouseLeave={(e) => !isRefreshing && (e.currentTarget.style.background = 'rgba(21, 128, 61, 0.2)')}
+                  /* Hover restores the base token rather than re-introducing the
+                     translucent wash the fix removed — otherwise hovering would
+                     put the failing pair back. */
+                  onMouseEnter={(e) => !isRefreshing && (e.currentTarget.style.filter = 'brightness(0.96)')}
+                  onMouseLeave={(e) => !isRefreshing && (e.currentTarget.style.filter = 'none')}
                 >
                   <RefreshCw size={16} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
                   {isRefreshing ? 'Refreshing...' : 'Refresh Prices'}
                 </button>
-              </div>
-            </div>
-          </div>
+              </>
+            )}
+          />
 
-          {/* Portfolio Stats */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '20px',
-            marginBottom: '32px'
-          }}>
-            {/* Total Value */}
-            <div style={{
-              padding: '24px',
-              background: 'var(--bg-card)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ padding: '8px', background: 'rgba(21, 128, 61, 0.2)', borderRadius: '8px' }}>
-                  {/* On a 20% wash of itself: #15803d measured 2.63:1 on the
-                      dark wash (#163621) against a 3:1 floor. `--g-ink` themes —
-                      #166534 light, #5fce8b dark — which a fixed brand hex
-                      cannot do. D-103. */}
-                  <DollarSign size={20} style={{ color: 'var(--g-ink)' }} />
-                </div>
-                <span style={bodyTextStyle}>Total Value</span>
-                <ScopeTag scope="household" />
-              </div>
-              <div style={bigNumberStyle}>
-                {formatCurrency(stats.totalValue)}
-              </div>
-            </div>
+          {/* *** THE GAIN LEADS, AND THE "Holdings: 2" CARD IS GONE. ***
+              Four cards stood here: Total Value, Total Gain/Loss, Total Cost and
+              a count of the user's own rows. Counting your own holdings is not
+              information — the table below is right there — and it took a
+              quarter of the page's most valuable strip to say it.
+              `sidebarAndStatCardsMeasured` refuses a hand-rolled stat grid
+              where `TotalsRow` exists, which is what this now uses.
 
-            {/* Total Gain/Loss */}
-            <div style={{
-              padding: '24px',
-              background: 'var(--bg-card)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{
-                  padding: '8px',
-                  background: stats.totalGain >= 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                  borderRadius: '8px'
-                }}>
-                  {stats.totalGain >= 0 ? (
-                    <TrendingUp size={20} style={{ color: 'var(--amount-income)' }} />
-                  ) : (
-                    <TrendingDown size={20} style={{ color: 'var(--re-ink)' }} />
-                  )}
-                </div>
-                <span style={bodyTextStyle}>Total Gain/Loss</span>
-                <ScopeTag scope="household" />
-              </div>
-              <div style={{
-                color: stats.totalGain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)',
-                fontSize: '28px',
-                fontWeight: '700'
-              }}>
-                {formatCurrency(stats.totalGain)}
-              </div>
-              <div style={{
-                color: stats.totalGain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)',
-                fontSize: '14px',
-                marginTop: '4px'
-              }}>
-                {formatPercent(stats.totalGainPercent)}
-              </div>
-            </div>
+              The figures are the SERVER's, summed by `holdingTotals` — see that
+              file for why recomputing them here was D-101 rather than a bug. */}
+          <TotalsRow cells={[
+            {
+              label: 'Worth now',
+              value: formatCurrency(totals.worthNow),
+              note: portfolioNote,
+            },
+            {
+              label: 'You put in',
+              value: formatCurrency(totals.youPutIn),
+              note: `across ${holdingCountLabel}`,
+            },
+            {
+              label: 'Ahead by',
+              value: `${totals.gain >= 0 ? '+' : ''}${formatCurrency(totals.gain)}`,
+              valueColor: totals.gain >= 0 ? 'var(--amount-income)' : 'var(--re-ink)',
+              /* `gainPercent` is null when nothing was put in — a portfolio you
+                 paid nothing for has no percentage return, and 0% would read as
+                 "flat". The helper returns null and this renders the reason. */
+              note: totals.gainPercent === null
+                ? 'no cost to measure against'
+                : `${formatPercent(totals.gainPercent)} on what you paid`,
+            },
+          ]} />
 
-            {/* Total Cost */}
-            <div style={{
-              padding: '24px',
-              background: 'var(--bg-card)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ padding: '8px', background: 'rgba(251, 191, 36, 0.2)', borderRadius: '8px' }}>
-                  <Package size={20} style={{ color: 'var(--au-ink)' }} />
-                </div>
-                <span style={bodyTextStyle}>Total Cost</span>
-                <ScopeTag scope="household" />
+          {/* Where the value sits — only worth drawing when there is more than
+              one holding to split between. One holding is 100% of itself. */}
+          {split.length > 1 && (
+            <div style={valueSplitWrapStyle}>
+              <div style={valueSplitLabelStyle}>Where the value sits</div>
+              <div style={valueSplitBarStyle}>
+                {split.map((seg, i) => (
+                  <div
+                    key={seg.symbol}
+                    style={{
+                      width: `${seg.share}%`,
+                      /* *** seg-1 AND seg-4, NOT seg-1 AND seg-2. *** The five
+                         segment tokens are ordered for a donut with five wedges
+                         and a legend beside it. `--kt-seg-1` (#15803D) next to
+                         `--kt-seg-2` (#3F7D5C) are both greens: at this height
+                         they read as one continuous bar, so a two-holding split
+                         looked like a single holding. A two-segment bar needs the
+                         two ENDS of the ramp. `--kt-seg-4` carries no text here,
+                         which is the only way it may be used — it measures
+                         3.06:1 and the kit file says so. */
+                      background: i === 0 ? 'var(--kt-seg-1)' : 'var(--kt-seg-4)',
+                    }}
+                  />
+                ))}
               </div>
-              <div style={bigNumberStyle}>
-                {formatCurrency(stats.totalCost)}
+              <div style={valueSplitLegendStyle}>
+                {split.map((seg, i) => (
+                  <span key={seg.symbol} style={flexRowGap8}>
+                    <span style={{
+                      width: '8px', height: '8px', borderRadius: '50%',
+                      background: i === 0 ? 'var(--kt-seg-1)' : 'var(--kt-seg-4)',
+                    }} />
+                    {seg.symbol} {seg.share.toFixed(1)}%
+                  </span>
+                ))}
               </div>
+              {/* Said once, as a fact about the shape of this account rather than
+                  as advice. finPal does not know the reader's risk tolerance and
+                  must not imply that it does. */}
+              {split.length === 2 && (
+                <p style={valueSplitNoteStyle}>
+                  Two holdings is a concentration, not a portfolio.
+                </p>
+              )}
             </div>
+          )}
 
-            {/* Holdings Count */}
-            <div style={{
-              padding: '24px',
-              background: 'var(--bg-card)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ padding: '8px', background: 'rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
-                  {/* #3b82f6 on its own 20% wash measured 2.84:1 light
-                      (#d5e4f8). `--bl-ink` was added for precisely this pair on
-                      the Edit/Delete buttons and is the same fix here. */}
-                  <BarChart3 size={20} style={{ color: 'var(--bl-ink)' }} />
-                </div>
-                <span style={bodyTextStyle}>Holdings</span>
-              </div>
-              <div style={bigNumberStyle}>
-                {stats.holdingsCount}
-              </div>
-            </div>
-          </div>
+          {/* A holding the server could not describe is NAMED, never dropped —
+              a total quietly missing a row is the failure `holdingTotals`
+              exists to prevent. */}
+          {totals.unreadable.length > 0 && (
+            <p style={valueSplitNoteStyle}>
+              Not counted above: {totals.unreadable.join(', ')} — the server did not
+              send figures for {totals.unreadable.length === 1 ? 'it' : 'them'}.
+            </p>
+          )}
 
           {/* Holdings Table */}
           {holdings.length > 0 ? (
@@ -402,10 +457,23 @@ export const Investments: React.FC = () => {
                   </thead>
                   <tbody>
                     {holdings.map((holding) => {
-                      const marketValue = holding.current_price * holding.shares;
-                      const costBasis = holding.purchase_price * holding.shares;
-                      const gain = marketValue - costBasis;
-                      const gainPercent = costBasis > 0 ? (gain / costBasis) * 100 : 0;
+                      /* *** THE SERVER'S FIGURES, NOT A FOURTH COPY OF ITS
+                         ARITHMETIC. *** These four lines used to read
+                           marketValue = current_price * shares
+                           costBasis   = purchase_price * shares
+                           gain        = marketValue - costBasis
+                           gainPercent = gain / costBasis * 100
+                         which is exactly what `src/models/investment.py`
+                         computes as `@property` and sends as `current_value`,
+                         `cost_basis`, `gain_loss` and `gain_loss_percentage`.
+                         The D-101 duplication was removed from the page TOTALS
+                         and was still live here, one level down, per row — so
+                         the fix had been half-done. Measured against the live
+                         payload the two agree to the cent on both holdings, so
+                         no figure on screen changes. */
+                      const marketValue = holding.current_value;
+                      const gain = holding.gain_loss;
+                      const gainPercent = holding.gain_loss_percentage;
 
                       return (
                         <tr
@@ -460,6 +528,24 @@ export const Investments: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              {/* *** THE FIGURES ABOVE ARE NEVER "LIVE", AND THE PAGE SAYS SO. ***
+                  `current_value` is `shares * current_price`, and `current_price`
+                  is whatever the last refresh wrote — so every total on this page
+                  is exactly as old as this line. A screen that hid that would be
+                  inviting a decision on a stale number. Absent, not "unknown",
+                  when no holding carries a timestamp. */}
+              {pricesUpdatedAt && (
+                <div style={priceAgeStyle}>
+                  Prices last updated{' '}
+                  <strong style={{ color: 'var(--text-primary)' }}>
+                    {pricesUpdatedAt.toLocaleString(undefined, {
+                      day: 'numeric', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </strong>
+                  {' '}— not a live quote.
+                </div>
+              )}
             </div>
           ) : (
             <div style={{

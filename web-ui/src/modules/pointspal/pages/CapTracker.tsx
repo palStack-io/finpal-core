@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { PageHead } from '../../../components/PageHead';
 import { pointspalService, CapCard, CapSummary } from '../service';
 import CapProgressCard from '../components/CapProgressCard';
 import { Loading } from '../../../components/common/Loading';
@@ -75,16 +76,29 @@ const CapTracker: React.FC = () => {
 
   return (
     <div style={{ padding: '24px 28px', background: 'var(--bg)', minHeight: '100%' }}>
-      {/* Page header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--ink)', margin: 0 }}>
-          Cap Tracker
-        </h1>
-        <div style={{ marginTop: 6 }}><ScopeTag scope="yours" /></div>
-        <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-          Real-time spend vs. earn caps — know exactly when to switch cards.
-        </p>
-      </div>
+      {/* *** THE APP'S HEAD, NOT A FIFTH HAND-ROLLED COPY OF ONE. ***
+          All five pointsPal pages opened with the same `<div marginBottom:20>`
+          holding an `h1` at Bricolage 800/22 and a `<p>` at 13px — the eleven-
+          page duplication `PageHead` was created to remove, repeated five more
+          times inside one module. D-233 recorded these as EXEMPTIONS with a
+          stated reason, and the reason was that a decision was pending; this is
+          that decision (owner, 2026-09-16).
+
+          *** AND IT DOES NOT WRITE PAST THE COINS SPEC — IT IMPLEMENTS IT. ***
+          `docs/mockups/coins/pages-web-2.html` draws this page with
+          `<h1>` + subtitle + a `right` slot + a ridge band, which is
+          `PageHead`'s exact shape. The purse it puts in that corner is what
+          `PageHead` calls `right`, so when coins ship it drops in beside the
+          scope tag and nothing else moves.
+
+          Bricolage Grotesque stays everywhere it is doing real work — the card
+          faces and the figures. What changed is the page TITLE only. */}
+      <PageHead
+        band="pointspal"
+        title="Cap Tracker"
+        subtitle="Real-time spend vs. earn caps — know exactly when to switch cards."
+        right={<ScopeTag scope="yours" />}
+      />
 
       {/* Period toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>

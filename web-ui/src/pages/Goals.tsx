@@ -46,7 +46,7 @@ const fieldLabelStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--bg-secondary)',
-  border: '1px solid var(--border-color)',
+  border: '1px solid var(--border-light)',
   borderRadius: '12px',
   padding: '20px',
 };
@@ -71,14 +71,14 @@ const primaryButtonStyle: React.CSSProperties = {
 
 const secondaryButtonStyle: React.CSSProperties = {
   padding: '10px 20px', background: 'transparent',
-  border: '1px solid var(--border-color)', borderRadius: '10px',
+  border: '1px solid var(--border-light)', borderRadius: '10px',
   color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer',
   fontSize: '15px',
 };
 
 const iconButtonStyle: React.CSSProperties = {
   padding: '6px', background: 'transparent',
-  border: '1px solid var(--border-color)', borderRadius: '8px',
+  border: '1px solid var(--border-light)', borderRadius: '8px',
   color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex',
   alignItems: 'center',
 };

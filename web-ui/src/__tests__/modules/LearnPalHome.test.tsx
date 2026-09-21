@@ -9,7 +9,7 @@
  */
 import React from 'react';
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
@@ -301,5 +301,86 @@ describe('the learnPal home', () => {
     draw();
     const link = await screen.findByText('See your whole range');
     expect(link.getAttribute('href')).toBe('/learnpal/range');
+  });
+});
+
+describe('a recently finished lesson opens, which it could not until 2026-09-16', () => {
+  /**
+   * *** THE OWNER'S REPORT, AS AN ASSERTION. *** *"on learnpal, i cant seem to
+   * click on my recently finished lessons. we should be able to do that"*.
+   *
+   * They were plain `<li>`s with a gear icon and two lines of text — the one
+   * list in the app that names lessons you have EARNED, with no way to read any
+   * of them, while `Lessons` had a working reader one file away. Nothing failed:
+   * a list that is not clickable renders perfectly, passes axe, and overflows
+   * nowhere. The only way to find it is to try to use the page.
+   */
+  const READABLE = {
+    slug: 'apr-costs-you', title: 'What your APR actually costs you',
+    gear_slug: null, has_body: true, verified_by: 'seed',
+    unlocked_at: '2026-09-02T00:00:00', goal_name: 'Clear the card',
+  } as never;
+  const UNWRITTEN = {
+    slug: 'no-text-yet', title: 'Where your money actually goes',
+    gear_slug: null, has_body: false, verified_by: 'seed',
+    unlocked_at: '2026-08-28T00:00:00', goal_name: null,
+  } as never;
+
+  it('is a real button, so a keyboard reaches it', async () => {
+    serve({ ...EMPTY, recent: [READABLE] });
+    draw();
+    // By its accessible name, not by clicking a div: a `<div onClick>` looks
+    // identical on screen and is unreachable without a mouse.
+    expect(await screen.findByRole('button', { name: /Read: What your APR/ }))
+      .toBeInTheDocument();
+  });
+
+  it('opens the reader with the lesson body when clicked', async () => {
+    serve({ ...EMPTY, recent: [READABLE] });
+    server.use(http.get(`${BASE}/api/v1/learnpal/lessons/apr-costs-you`, () =>
+      HttpResponse.json({
+        success: true,
+        lesson: {
+          slug: 'apr-costs-you', title: 'What your APR actually costs you',
+          body_md: '## The short version\n\nInterest is charged daily.',
+          earned: true, has_body: true,
+        },
+      })));
+
+    draw();
+    const row = await screen.findByRole('button', { name: /Read: What your APR/ });
+    row.click();
+
+    // The panel is keyed on the FETCHED detail, not on the click, so this is
+    // the assertion that the request actually landed and rendered.
+    await waitFor(() => expect(screen.getByText(/Interest is charged daily/))
+      .toBeInTheDocument());
+  });
+
+  it('does NOT offer a reader for an earned lesson with no write-up', async () => {
+    /* *** NOT AN OVERSIGHT — ELEVEN APPROVED DRAFTS ARE UNSEEDED AND FOUR
+       LESSONS ARE DELIBERATELY UNWRITTEN. *** So an earned lesson with nothing
+       to read is an expected state. A button onto blank space looks broken,
+       which is the same call `Lessons` already made through `has_body`, and
+       `reader.canOpen` is now that one rule. The row still SAYS so. */
+    serve({ ...EMPTY, recent: [UNWRITTEN] });
+    draw();
+    await screen.findByText(/Where your money actually goes/);
+    expect(screen.queryByRole('button', { name: /Read: Where your money/ })).toBeNull();
+    /* Scoped to the section, because the "Lessons read" tally ALSO says
+       "N have no write-up yet" from `stats.lessons.without_body` — an unscoped
+       match found two elements and would have passed on the wrong one the day
+       the row stopped saying it. */
+    const recent = within(screen.getByTestId('learnpal-recent'));
+    expect(recent.getByText(/no write-up yet/)).toBeInTheDocument();
+  });
+
+  it('shows both kinds in one list without making the unwritten one clickable', async () => {
+    // The mixed case, because that is what a real user has and it is where a
+    // condition applied to the list rather than the row would show up.
+    serve({ ...EMPTY, recent: [READABLE, UNWRITTEN] });
+    draw();
+    await screen.findByText(/Where your money actually goes/);
+    expect(screen.getAllByRole('button', { name: /^Read: / })).toHaveLength(1);
   });
 });

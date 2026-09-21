@@ -72,11 +72,28 @@ const navGroups = [
   { heading: 'Shared', items: [{ name: 'Groups', path: '/groups', icon: Users }] },
 ];
 
+/*
+ * *** THE RAIL'S SECTION HEADINGS WERE 1.52:1 IN LIGHT AND 2.61:1 IN DARK —
+ * BELOW AA IN BOTH THEMES, WHICH IS WORSE THAN THE MODULE LABELS BELOW. ***
+ *
+ * `rgba(148,163,184,0.5)` is slate-400 at HALF alpha: #c8d0d9 over the light
+ * sidebar and #556469 over the dark one. "INSIGHT", "SHARED" and "MODULES" are
+ * 10px uppercase text — too small for the large-text exemption — so 4.5:1 is
+ * the floor and neither theme came near it.
+ *
+ * *** THE HIERARCHY IS CARRIED BY SIZE, WEIGHT, CASE AND TRACKING, NOT BY
+ * FADING THE TEXT. *** That is the whole point: a heading reads as a heading
+ * here because it is 10px, 700, uppercase and letterspaced beside 14px
+ * sentence-case items. Turning the contrast down was doing a job four other
+ * properties already do, and it did that job by making the text illegible.
+ * `--text-secondary` is 5.77:1 light and 7.22:1 dark and the rail still reads
+ * with exactly the same structure.
+ */
 const navGroupHeadingStyle: React.CSSProperties = {
   padding: '4px 12px 2px',
   fontSize: 10,
   fontWeight: 700,
-  color: 'rgba(148,163,184,0.5)',
+  color: 'var(--text-secondary)',
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
   fontFamily: "'Bricolage Grotesque', sans-serif",
@@ -124,10 +141,30 @@ const ModuleNavSection: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) 
     <>
       <div
         onClick={toggle}
+        /* *** THIS READ AS DISABLED, AND IT WAS 2.13:1. ***
+           The colour was `rgba(148,163,184,0.85)` — slate-400 at 85% alpha,
+           hardcoded, where every sibling nav item takes `--text-secondary` from
+           the `.nav-item` role class. Composited over the light sidebar
+           (`--bg-secondary` = #FBFCF9) that is **#a3b0c2 at 2.13:1**, so
+           `pointsPal` and `learnPal` were the only two items in the rail a
+           reader could not comfortably read, and the owner's report was that
+           they "look like its disabled" — which is exactly what a greyed label
+           beside sharp ones means to anyone.
+
+           *** IT PASSED IN DARK AND FAILED IN LIGHT, WHICH IS WHY NOBODY SAW
+           IT. *** The same value measures 4.94:1 over the dark card. This file
+           has a whole comment about that failure mode under `--amount-income`:
+           one value used against two very different backgrounds. The token is
+           5.77:1 light and 7.22:1 dark.
+
+           *** AND NO GATE COULD SEE IT: THE SIDEBAR IS NOT IN ANY WALK. *** The
+           page captures render page components alone, without `AppLayout`, so
+           the rail has never been measured by the contrast walk — the same
+           class of gap as D-243, one component out. */
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '8px 16px', cursor: 'pointer', borderRadius: 8,
-          margin: '1px 8px', color: 'rgba(148,163,184,0.85)',
+          margin: '1px 8px', color: 'var(--text-secondary)',
           transition: 'background 0.15s',
         }}
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
@@ -137,9 +174,13 @@ const ModuleNavSection: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) 
         <span style={{ flex: 1, fontSize: 13, fontWeight: 600, fontFamily: "'Bricolage Grotesque', sans-serif" }}>
           {manifest.label}
         </span>
+        {/* `opacity: 0.6` put this at 2.53:1 in light against a 3:1 floor for a
+            control's affordance — the chevron is the only thing saying this row
+            expands. 0.85 measures 4.14:1 light / 5.61:1 dark and still reads as
+            quieter than the label. */}
         <ChevronRight
           size={14}
-          style={{ transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.6 }}
+          style={{ transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.85 }}
         />
       </div>
 
@@ -283,7 +324,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 marginLeft: 'auto', minWidth: 20, padding: '1px 7px',
                 borderRadius: 999, fontSize: 12, fontWeight: 700,
                 textAlign: 'center',
-                background: '#3b82f6', color: 'white',
+                /* *** WHITE ON BLUE-500 IS 3.68:1 AND THIS IS THE ONLY
+                   BADGE IN THE RAIL. *** `#3b82f6` is one of the four
+                   semantic accents this project deliberately does not
+                   variablize, and that convention is about SURFACES working in
+                   both themes — it is not a claim that white text clears AA on
+                   them, and here it does not, in either theme. Blue-700 keeps
+                   the meaning (attention, not error, not success) and takes
+                   white at 6.70:1. */
+                background: '#1d4ed8', color: 'white',
               }}
             >
               {reviewTotal}
@@ -380,7 +429,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         <div
           className="nav-item"
           onClick={handleLogout}
-          style={{ cursor: 'pointer', color: 'var(--accent-red)', marginBottom: '12px' }}
+          /* `--accent-red` is #EF4444, which is 3.38:1 on the rail's hover
+             surface and 3.65:1 at rest — below AA on the one control that
+             signs you out. `--re-ink` is the theme's red for TEXT and exists
+             for exactly this asymmetry: #b91c1c light (5.81 / 6.28) and
+             #f87171 dark (5.83). The same split as --g-ink vs the brand
+             green, and the same reason. */
+          style={{ cursor: 'pointer', color: 'var(--re-ink)', marginBottom: '12px' }}
         >
           <LogOut size={18} />
           <span style={{ fontSize: '13px', fontWeight: 600 }}>Logout</span>
