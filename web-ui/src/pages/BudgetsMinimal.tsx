@@ -10,13 +10,18 @@ import { categoriesApi, type Category } from '../services/api/categories';
 import { useToast } from '../contexts/ToastContext';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
-import { StatCard } from '../components/StatCard';
+import { TotalsRow } from '../components/dashboard/TotalsRow';
+import type { BudgetTotals } from '../services/budgetService';
+import { teamService } from '../services/teamService';
+import type { TeamMember } from '../types/team';
+import { householdScopeNote } from '../utils/scope';
 import { apiErrorMessage } from '../utils/apiError';
 import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
 import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
 import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
 import { PageHead } from '../components/PageHead';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -178,7 +183,115 @@ export const budgetTitle = (budget: {
   || budget.category?.name?.trim()
   || 'Uncategorized';
 
+
+/** Show this many unbudgeted rows before folding the tail away. */
+const UNBUDGETED_SHOWN = 5;
+
+/**
+ * The categories in a group that money left through with no budget on them.
+ *
+ * *** NO PROGRESS BAR, BECAUSE THERE IS NO DENOMINATOR. *** Every budgeted row
+ * on this page is a fraction of a limit the user chose. These have no limit,
+ * and an empty bar beside 1,800.00 of rent reads as "0% used" when the truth is
+ * "nothing is capping this" — the opposite. Decision 5's rule, one surface
+ * over: the only denominator this product draws is a target somebody picked.
+ *
+ * *** THE GROUP TOTAL IS ON THE HEADER, SO FOLDING NEVER HIDES MONEY. *** Owner
+ * asked what happens to a user with many categories. Measured across the four
+ * demo personas: 2-7 unbudgeted categories a month, so nothing folds today —
+ * but a real import could carry twenty, and the tail goes behind a disclosure
+ * rather than pushing the budgets off the screen. Itemisation is what folds;
+ * the figure is always in view.
+ */
+const UnbudgetedRows: React.FC<{
+  group: SpendingGroup;
+  currency: string;
+  onBudget: (categoryId: number, spentSoFar: number) => void;
+}> = ({ group, currency, onBudget }) => {
+  const [showAll, setShowAll] = useState(false);
+  /* *** DEFAULTED, BECAUSE A SERVER CAN PREDATE THE FIELD. *** Same choice as
+     `Goal.peak` being undefined on a backend older than mountains: a
+     self-hoster on an older image must get the page they always had, not a
+     blank one. Reading `.length` off undefined took the whole Budgets page
+     down, which is how this was found. */
+  const rows = group.unbudgeted_categories ?? [];
+  if (rows.length === 0) return null;
+
+  const shown = showAll ? rows : rows.slice(0, UNBUDGETED_SHOWN);
+  const folded = rows.length - shown.length;
+  const foldedTotal = rows.slice(shown.length)
+    .reduce((sum, row) => sum + row.actual, 0);
+
+  return (
+    <div style={{ marginTop: 4, paddingTop: 12, borderTop: '1px solid var(--border-light)' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        padding: '0 4px 8px',
+      }}>
+        <span style={{
+          fontSize: 12, fontWeight: 600, letterSpacing: '0.04em',
+          textTransform: 'uppercase', color: 'var(--text-secondary)',
+        }}>
+          Not budgeted
+        </span>
+        <strong style={{ fontSize: 15 }}>
+          <Money amount={group.unbudgeted_actual ?? 0} currency={currency} />
+        </strong>
+      </div>
+
+      {shown.map((row) => (
+        <div
+          key={row.id}
+          data-testid={`unbudgeted-${row.id}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '9px 4px', borderTop: '1px solid var(--border-light)',
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5 }}>{row.name}</span>
+          <span style={{ fontSize: 14.5, fontVariantNumeric: 'tabular-nums' }}>
+            <Money amount={row.actual} currency={currency} />
+          </span>
+          <button
+            type="button"
+            onClick={() => onBudget(row.id, row.actual)}
+            style={{
+              background: 'transparent', color: 'var(--g-ink)',
+              border: '1px solid var(--border-medium)', borderRadius: 8,
+              padding: '4px 10px', fontSize: 12.5, fontWeight: 600,
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Budget this
+          </button>
+        </div>
+      ))}
+
+      {folded > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+            background: 'none', border: 0, borderTop: '1px solid var(--border-light)',
+            padding: '9px 4px', cursor: 'pointer',
+            color: 'var(--text-secondary)', fontSize: 13, textAlign: 'left',
+          }}
+        >
+          <ChevronDown size={14} />
+          {folded} more · <Money amount={foldedTotal} currency={currency} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+
 const BudgetsMinimal = () => {
+  // The page names its own surface and nothing more; the server owns
+  // which acts a `budgets` mutation can move. Fires on mount as well as
+  // on demand, so an unwired mutation handler still gets its moment.
+  useSurfaceCoins('budgets');
   const { user } = useAuthStore();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const { showToast } = useToast();
@@ -190,6 +303,13 @@ const BudgetsMinimal = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetWithDetails | null>(null);
+  /* *** THE PAGE HAS TO KNOW THE HOUSEHOLD SIZE TO SAY WHOSE MONEY THIS IS. ***
+     It used to stamp `scope="household"` on four cards without ever asking —
+     true for a shared instance, noise for somebody on their own, since with
+     one member the household and the caller are the same set. Failure is
+     silent and falls back to saying nothing, which is the honest default: a
+     scope claim finPal could not verify is worse than none. */
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [budgetFormData, setBudgetFormData] = useState({
     category_id: '',
     amount: '',
@@ -214,8 +334,10 @@ const BudgetsMinimal = () => {
   const [incomeSection, setIncomeSection] = useState<IncomeSection | null>(null);
   const [unsorted, setUnsorted] = useState<UnsortedSection>(
     { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
-  const [totals, setTotals] = useState<{ planned: number; actual: number; remaining: number }>(
-    { planned: 0, actual: 0, remaining: 0 });
+  const [totals, setTotals] = useState<BudgetTotals>({
+    planned: 0, actual: 0, remaining: 0,
+    budgeted_actual: 0, unbudgeted_actual: 0,
+  });
   const [income, setIncome] = useState<number | null>(null);
   const [leftToBudget, setLeftToBudget] = useState<number | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<SpendingType[]>([]);
@@ -234,6 +356,12 @@ const BudgetsMinimal = () => {
   useEffect(() => {
     loadData();
   }, [selectedMonth]);
+
+  /* Once, not per month: the household does not change when the user pages
+     through the calendar. Failure is swallowed — see the state's own note. */
+  useEffect(() => {
+    teamService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
 
   const loadData = async () => {
     try {
@@ -255,7 +383,10 @@ const BudgetsMinimal = () => {
         || { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] });
       // `?? null`, never `|| 0`: null means "nothing recorded this month" and
       // zero would be a claim that the user earned nothing.
-      setTotals(overview?.totals || { planned: 0, actual: 0, remaining: 0 });
+      setTotals(overview?.totals || {
+        planned: 0, actual: 0, remaining: 0,
+        budgeted_actual: 0, unbudgeted_actual: 0,
+      });
       setIncome(overview?.income ?? null);
       setLeftToBudget(overview?.left_to_budget ?? null);
 
@@ -374,6 +505,29 @@ const BudgetsMinimal = () => {
     setShowBudgetModal(true);
   };
 
+  /**
+   * "Budget this", from an unbudgeted row.
+   *
+   * *** THE AMOUNT IS PREFILLED WITH WHAT THEY ACTUALLY SPENT, NOT LEFT BLANK.
+   * *** The whole point of the row is that finPal already knows the number;
+   * making somebody read 216.93 off the screen and retype it into the field
+   * beside it is asking them for a fact they came here to be told. It is a
+   * starting point in an editable field, not a target finPal chose — which is
+   * why it is the observed figure and not a rounded-up "suggestion" the user
+   * could not check against anything.
+   */
+  const startBudgetFor = (categoryId: number, spentSoFar: number) => {
+    setEditingBudget(null);
+    setBudgetFormData({
+      category_id: String(categoryId),
+      amount: spentSoFar > 0 ? spentSoFar.toFixed(2) : '',
+      period: 'monthly',
+      start_date: new Date().toISOString().split('T')[0],
+      rollover: false,
+    });
+    setShowBudgetModal(true);
+  };
+
   const handleCloseBudgetPanel = () => {
     setShowBudgetModal(false);
     setEditingBudget(null);
@@ -451,6 +605,24 @@ const BudgetsMinimal = () => {
 
   const totalBudgeted = budgets.reduce((sum, b) => sum + b.amount, 0);
   const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+
+  /* *** HOISTED OUT OF THE BUDGET-HEALTH IIFE ON 2026-09-19. *** The totals
+     row moved INSIDE `PageHead` so it sits in the band with the ridge beneath
+     it, the way Accounts does (owner: "the accounts is good because the
+     metrics are inside the header design with mountains under it"). That put
+     it outside the closure these were declared in, and two places now read
+     them — so they belong to the component, not to one block. */
+  const spentPct = totalBudgeted > 0
+    ? ((totals.budgeted_actual || totalSpent) / totalBudgeted) * 100 : 0;
+  // Status tokens, not raw accents: measured on the card, #22c55e was 2.21:1
+  // and #f59e0b 2.09:1 in light. `over` is the direction's clay, which piece 5
+  // reserved for exactly this — "clay ONLY for a broken budget".
+  const spentColor = spentPct >= 100 ? 'var(--status-over)'
+    : spentPct >= 80 ? 'var(--status-warn)' : 'var(--status-ok)';
+  const onTrack = budgets.filter(b => b.percentage < 80).length;
+  const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
+  const over = budgets.filter(b => b.spent > b.amount).length;
+
   const totalRemaining = totalBudgeted - totalSpent;
 
   const daysLeftInMonth = () => {
@@ -838,7 +1010,15 @@ const BudgetsMinimal = () => {
           <PageHead
             band="budgets"
             title="Budgets"
-            subtitle="A limit is only useful for the part of your spending that can move."
+            subtitle={(() => {
+              const note = householdScopeNote(members.length);
+              const base = 'A limit is only useful for the part of your spending that can move.';
+              /* Two spans, not one string: `getByText` matches a node's WHOLE
+                 text, so concatenating makes each half unfindable. */
+              return note ? (
+                <><span>{base}</span>{' · '}<span>{note}</span></>
+              ) : base;
+            })()}
             right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               {/* Compact Month Navigator */}
               <div style={{
@@ -945,80 +1125,110 @@ const BudgetsMinimal = () => {
                 <Plus size={18} /> New Budget
               </button>
             </div>}
-          />
+          >
+              {/* *** ONE HAIRLINE-SEPARATED ROW, NOT FOUR CARDS WITH ICON
+                  CHIPS. *** Owner, 2026-09-19: the KPI "look differes for
+                  each page", and Accounts is the one to match. `TotalsRow`'s
+                  own docstring had already argued this — "four separate cards
+                  under a card is why the page read as out of place", "the
+                  icon chips are gone, and that is the point of the change" —
+                  and this page plus Transactions kept the cards anyway. That
+                  is D-106's shape: a helper adopted in five places and
+                  bypassed in two.
+
+                  *** THE FOUR `HOUSEHOLD` CHIPS GO TOO. *** One fact printed
+                  four times is the duplication D-101 is about in chrome
+                  rather than arithmetic; it is stated once in the head, as
+                  Accounts states it.
+
+                  Nothing else is dropped: the progress bar and every caption
+                  ride in `note`, which takes a node precisely so a caller can
+                  put its own furniture there. */}
+            <div>
+                <TotalsRow cells={[
+                  {
+                    label: 'Total budgeted',
+                    /* The bar belongs HERE, with the plan it is a fraction of
+                       — not under "Total spent", which is now all spending and
+                       is not a fraction of anything. */
+                    value: formatCurrency(totalBudgeted),
+                    note: (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                        <div style={{ flex: 1, height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(spentPct, 100)}%`, height: '100%', background: spentColor, borderRadius: '3px' }} />
+                      </div>
+                        {/* *** THE BAR KEEPS THE STATUS COLOUR; THE LABEL
+                            CANNOT. *** Measured on the band's resolved
+                            #dce7de: `--status-over` is 4.08 and
+                            `--status-warn` 3.95, both under AA for text —
+                            they were only ever safe on the near-white card.
+                            A bar is a graphic (3.0 floor) and clears it, so
+                            the state keeps its colour where the colour is
+                            decoration, and the label states the number in
+                            ink. Nothing is carried by colour alone: the
+                            percentage is right there in words. */}
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {spentPct.toFixed(0)}% used
+                        </span>
+                    </div>
+                    ),
+                  },
+                  {
+                    label: 'Total spent',
+                    /* *** THE SERVER'S FIGURE, AND IT IS ALL SPENDING — D-271.
+                       *** This said `budgets.reduce(...)`, so the headline of
+                       the page could only ever be spending in categories the
+                       user happened to budget: 474.28 against 2,359.72 that
+                       actually left the account, under the words "Total
+                       Spent". Summing it here was also a second arithmetic to
+                       disagree with the server's, which is D-101's rule. */
+                    value: formatCurrency(totals.actual),
+                    note: totals.unbudgeted_actual > 0
+                      ? `${formatCurrency(totals.unbudgeted_actual)} of it not budgeted`
+                      : `Across ${budgets.length} ${budgets.length === 1 ? 'category' : 'categories'}`,
+                  },
+                  {
+                    label: 'Remaining',
+                    value: formatCurrency(Math.abs(totalRemaining)),
+/* *** INK TOKENS, NOT STATUS TOKENS — THE ROW MOVED ONTO THE BAND. ***
+                       Measured against the band's resolved #dce7de: every
+                       `--status-*` fill FAILS AA there (ok/warn 3.95, over
+                       4.08) while every `--*-ink` clears it (g 5.61, re 5.09).
+                       They were fine on the near-white card and are not on
+                       green, which is the theme's own distinction: the inks
+                       are TEXT colours, the status tokens are fills. Caught
+                       by the contrast ratchet, not by eye. */
+                    valueColor: totalRemaining >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
+                    note: `${daysLeftInMonth()} days left this month`,
+                  },
+                  {
+                    label: 'Left to budget',
+                    /* *** null IS NOT ZERO, AND THIS IS THE WHOLE POINT. *** No
+                       income recorded this month means finPal does not know
+                       what they earn; rendering that as 0 turns into
+                       "−$1,400 left to budget" for somebody who has not been
+                       paid yet on the 10th. */
+                    value: leftToBudget === null ? '—' : formatCurrency(leftToBudget),
+                    valueColor: leftToBudget === null
+                      ? 'var(--text-muted)'
+                      : leftToBudget >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
+                    note: income === null
+                      ? 'No income recorded this month yet'
+                      : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`,
+                  },
+                ]} />
+            </div>
+          </PageHead>
 
           {/* Top Stats */}
           {(() => {
-            const spentPct = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
-            // Status tokens, not raw accents: measured on the card, #22c55e was
-            // 2.21:1 and #f59e0b 2.09:1 in light. `over` is the direction's clay,
-            // which piece 5 reserved for exactly this — "clay ONLY for a broken
-            // budget" — so the state finally wears the colour meant for it.
-            const spentColor = spentPct >= 100 ? 'var(--status-over)' : spentPct >= 80 ? 'var(--status-warn)' : 'var(--status-ok)';
-            const onTrack = budgets.filter(b => b.percentage < 80).length;
-            const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
-            const over = budgets.filter(b => b.spent > b.amount).length;
+            /* *** ADHERENCE, SO IT IS THE BUDGETED HALF OVER THE PLAN. ***
+               `totals.actual` is now ALL spending; dividing that by the plan
+               would read 168% for somebody who is not over a single budget,
+               which is the opposite of what this bar is for. */
             return (
+              <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                <StatCard
-                  label="Total Budgeted"
-                  scope="household"
-                  value={formatCurrency(totalBudgeted)}
-                  accentColor="#3b82f6"
-                  icon={<DollarSign size={24} color="#3b82f6" />}
-                  subtitle={<span style={mutedSmallStyle}>Across {budgets.length} categories</span>}
-                />
-                <StatCard
-                  label="Total Spent"
-                  scope="household"
-                  value={formatCurrency(totalSpent)}
-                  accentColor={spentColor}
-                  icon={<TrendingDown size={24} color={spentColor} />}
-                  subtitle={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                      <div style={{ flex: 1, height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.min(spentPct, 100)}%`, height: '100%', background: spentColor, borderRadius: '3px' }} />
-                      </div>
-                      <span style={{ color: spentColor, fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                        {spentPct.toFixed(0)}%
-                      </span>
-                    </div>
-                  }
-                />
-                <StatCard
-                  label="Remaining"
-                  scope="household"
-                  value={formatCurrency(Math.abs(totalRemaining))}
-                  accentColor={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  icon={<TrendingUp size={24} color={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'} />}
-                  valueColor={totalRemaining >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  subtitle={<span style={mutedSmallStyle}>{daysLeftInMonth()} days left this month</span>}
-                />
-                <StatCard
-                  label="Left to budget"
-                  scope="household"
-                  /* *** null IS NOT ZERO, AND THIS IS THE WHOLE POINT. *** No
-                     income recorded this month means finPal does not know what
-                     they earn; rendering that as 0 turns into "-$1,400 left to
-                     budget" for somebody who has not been paid yet on the 10th.
-                     Measured on the live demo, where total income is 9,950 and
-                     this month's is nothing. */
-                  value={leftToBudget === null ? '—' : formatCurrency(leftToBudget)}
-                  accentColor={leftToBudget === null
-                    ? 'var(--text-muted)'
-                    : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  valueColor={leftToBudget === null
-                    ? 'var(--text-muted)'
-                    : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'}
-                  icon={<DollarSign size={24} color={leftToBudget === null ? 'var(--text-muted)' : leftToBudget >= 0 ? 'var(--status-ok)' : 'var(--status-over)'} />}
-                  subtitle={
-                    <span style={mutedSmallStyle}>
-                      {income === null
-                        ? 'No income recorded this month yet'
-                        : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`}
-                    </span>
-                  }
-                />
                 {/* *** FIVE CARDS IN AN auto-fit GRID IS FOUR AND A LONELY
                     ONE. *** At 1440px this grid computes four 273px columns, so
                     the fifth card sat by itself on a second row with ~880px of
@@ -1057,6 +1267,7 @@ const BudgetsMinimal = () => {
                   </div>
                 </div>
               </div>
+              </>
             );
           })()}
 
@@ -1188,6 +1399,24 @@ const BudgetsMinimal = () => {
                             <span className="fp-hint">Actual</span>
                             <Money amount={group.actual} currency={currency} />
                           </span>
+                          {/* *** THE HEADER HAS TO CARRY IT, BECAUSE A GROUP
+                              COLLAPSES. *** Rendering the unbudgeted rows in
+                              the BODY alone put "Actual $0.00" directly above
+                              "NOT BUDGETED $1,800.00" — and collapsing Fixed
+                              hid the rent entirely, which is D-271 again one
+                              interaction later. Seen on the deployed demo,
+                              not reasoned about.
+
+                              A fourth figure rather than folding it into
+                              `Actual`: Planned − Actual = Remaining still
+                              chains, so a reader who checks the arithmetic
+                              finds it true. */}
+                          {(group.unbudgeted_actual ?? 0) > 0 && (
+                            <span style={groupFigureStyle}>
+                              <span className="fp-hint">Not budgeted</span>
+                              <Money amount={group.unbudgeted_actual} currency={currency} />
+                            </span>
+                          )}
                           <span style={groupFigureStyle}>
                             <span className="fp-hint">Remaining</span>
                             {/* Negative renders in clay and is NEVER clamped to
@@ -1218,18 +1447,36 @@ const BudgetsMinimal = () => {
 
                       {!collapsed && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                          {group.budgets.length === 0 ? (
+                          {group.budgets.length === 0
+                            && (group.unbudgeted_categories ?? []).length === 0 ? (
                             <p className="fp-hint" style={{ padding: '8px 4px' }}>
                               {/* *** THE FIXED GROUP DOES NOT ASK FOR A TARGET. ***
                                   Every other empty state on this page invites you
                                   to set one; demanding a number for rent is
-                                  theatre, so this one reports and stops. */}
+                                  theatre, so this one reports and stops.
+
+                                  *** AND IT NOW MEANS IT. *** This copy said
+                                  "sort a category into Fixed and it will show
+                                  what it costs" while Housing WAS sorted into
+                                  Fixed with 1,800.00 against it — the group was
+                                  built by looping over budgets, so a classified
+                                  category with no budget landed nowhere. The
+                                  condition above is why the promise is now
+                                  kept: no budgets is not the same as nothing
+                                  here. */}
                               {group.spending_type === 'fixed'
                                 ? 'Nothing here yet. Fixed costs are reported, not budgeted — sort a category into Fixed and it will show what it costs.'
                                 : `No ${group.label.toLowerCase()} budgets yet.`}
                             </p>
                           ) : (
-                            group.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, group.spending_type))
+                            <>
+                              {group.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, group.spending_type))}
+                              <UnbudgetedRows
+                                group={group}
+                                currency={currency}
+                                onBudget={startBudgetFor}
+                              />
+                            </>
                           )}
                         </div>
                       )}

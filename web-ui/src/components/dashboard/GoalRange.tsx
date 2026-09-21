@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollPane } from '../ScrollPane';
 
 import {
@@ -6,6 +6,7 @@ import {
 } from '../../utils/rangeSilhouettes';
 import { heightForMagnitude } from '../../utils/mountainGeometry';
 import { formatMoney } from '../../styles/money';
+import { peakElevation, peakKindLabel, peakPayoffLine } from '../../utils/peakCopy';
 import type { Goal } from '../../types/goal';
 
 /**
@@ -55,6 +56,24 @@ interface RangePeak {
 }
 
 export interface GoalRangeProps {
+  /**
+   * The shared climb, drawn as the CENTRAL peak of the range.
+   *
+   * *** OWNER DECISION 2026-09-17, AND IT IS THE THIRD PLACEMENT. *** First a
+   * compact figure, then its own card below the range, now inside the range
+   * itself: *"this way no matter what mt everest will be present for all users
+   * even those with no goals"*. That reason is the strongest of the three — it
+   * is exactly the hole Everest exists to fill (a user with no goals had no
+   * mountain at all, which is base camp's own audience, D-205).
+   *
+   * *** THE UNITS DO NOT SHARE A SCALE, AND THE LABELS CARRY THAT. *** A goal's
+   * height comes from a money magnitude; Everest's from metres climbed. They
+   * cannot be compared numerically, so nothing tries to: Everest is drawn as
+   * the tallest because it IS (8,849 m against Ben Nevis's 1,345), its label
+   * is in metres, and the goals' labels stay in money. The rock palette keeps
+   * it from being read as a goal.
+   */
+  everest?: { altitude_m: number; summit_m: number; at_summit: boolean } | null;
   goals: Goal[];
   currency: string;
 }
@@ -96,7 +115,157 @@ const intoRangeOrder = <T,>(sortedDescending: T[]): T[] => {
   return [...left, ...right];
 };
 
-export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
+/**
+ * A halo, so a caption stays readable where it lands on a NEIGHBOUR'S peak.
+ *
+ * *** THE MOUNTAINS OVERLAP ON PURPOSE, SO THE LABELS OVERLAP THEM TOO. *** A
+ * range is peaks sharing one ground line rather than four icons in a row, which
+ * means a short goal beside a tall one has its caption drawn across the tall
+ * one's flank — 11px grey on a dark red body. It was already marginal at two
+ * lines, and FINPAL-26's kind word is what made it unreadable, on a screenshot
+ * of the very fixture this page is captured from.
+ *
+ * `paint-order: stroke` puts the outline UNDER the glyphs, so it thickens
+ * nothing: over the sky the halo IS the sky, and only over a silhouette does it
+ * show at all. Widening the slots instead would flatten the range back into the
+ * row of clip-art this component exists to not be.
+ */
+const HALO = {
+  /* *** `paintOrder` IS AN ATTRIBUTE HERE, NOT A STYLE KEY, AND THE DIFFERENCE
+     IS THE WHOLE FIX. *** In a `style` object React emits `stroke-width` but
+     drops `paint-order` — so the first version painted a 3px outline OVER every
+     glyph and turned all four captions into white blobs. Seen on the capture,
+     not reasoned about. */
+  paintOrder: 'stroke' as const,
+  stroke: 'var(--bg-card)',
+  strokeWidth: 3,
+  strokeLinejoin: 'round' as const,
+};
+
+/**
+ * Break a sentence into lines an SVG can draw.
+ *
+ * *** SVG `<text>` DOES NOT WRAP. *** There is no width to wrap against, so a
+ * long string runs straight out of the viewBox and off the card. Everything
+ * else in this file is a short fixed phrase; Everest's explanation is the first
+ * real prose the picture carries, so it gets measured out here instead of being
+ * hand-split into string literals that nobody will re-balance after an edit.
+ */
+const wrapLines = (text: string, maxChars: number): string[] => {
+  const out: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    if (line && (line + ' ' + word).length > maxChars) { out.push(line); line = word; }
+    else line = line ? `${line} ${word}` : word;
+  }
+  if (line) out.push(line);
+  return out;
+};
+
+/** Roughly how wide a string is at 11px, in viewBox units. */
+const textWidth = (chars: number) => chars * 5.55;
+
+/**
+ * The detail a peak shows on hover, focus or tap.
+ *
+ * *** DRAWN IN THE viewBox, NOT AS AN HTML POPOVER. *** The range lives inside
+ * a horizontally scrolling pane and is scaled by `preserveAspectRatio`, so an
+ * absolutely-positioned HTML tooltip would need the viewBox-to-pixel scale and
+ * the pane's scroll offset to place itself, and would be wrong at every width
+ * the responsive walk checks. Drawn inside the SVG it is simply in the same
+ * coordinate system as the peak it belongs to.
+ *
+ * *** IT HANGS BELOW THE LABEL, WHICH IS THE ONLY PLACE THERE IS ROOM. *** The
+ * label block is already clamped to the top of the box (`blockBottom >= 46`),
+ * so there is nothing above it. Below means it lands on a mountain, which is
+ * why it paints its own background rather than relying on the sky.
+ */
+const PeakDetail: React.FC<{
+  cx: number; top: number; width: number; lines: string[];
+}> = ({ cx, top, width, lines }) => {
+  const longest = lines.reduce((n, l) => Math.max(n, l.length), 0);
+  const w = Math.min(Math.max(textWidth(longest) + 20, 120), 300);
+  const h = lines.length * 14 + 14;
+  // Clamped into the box: a peak at either edge would otherwise hang its
+  // detail off the side of the card, which is where the leftmost goal sits.
+  const x = Math.min(Math.max(cx - w / 2, 6), Math.max(6, width - w - 6));
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      <rect
+        x={x} y={top} width={w} height={h} rx="7"
+        fill="var(--bg-card)" stroke="var(--border-medium)" strokeWidth="1"
+      />
+      {lines.map((line, i) => (
+        <text
+          key={line + i} x={x + 10} y={top + 18 + i * 14}
+          style={{ fontSize: '10.5px', fill: 'var(--text-secondary)' }}
+        >
+          {line}
+        </text>
+      ))}
+    </g>
+  );
+};
+
+export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }) => {
+  /**
+   * Which peak is showing its detail: a goal id, `'everest'`, or nothing.
+   *
+   * *** ONE OPEN AT A TIME, AND HOVER, FOCUS AND TAP ALL SET IT. *** Owner,
+   * 2026-09-19: *"i feel like if a user have multiple goal it will get
+   * overpowering"* — and the geometry agrees. `SLOT` is a fixed 124 units while
+   * `Mount Rainier · 4,392 m · saving` is ~170, so every caption was already
+   * wider than the space it owns and neighbours collided at four goals.
+   *
+   * *** HOVER IS NOT THE TRIGGER, IT IS ONE OF THREE. *** A hover-only detail
+   * does not exist on a phone, and this card renders down to 390px; it also
+   * does not exist for a keyboard. So the peak is a focusable button and a tap
+   * toggles it — which is what lets the WORD debt/saving stay printed and only
+   * the figures move behind the interaction (D-269 is the reason that word
+   * cannot be the thing that hides).
+   */
+  const [openPeak, setOpenPeak] = useState<string | null>(null);
+
+  /* Dismissible without moving the pointer — WCAG 2.1 1.4.13. */
+  useEffect(() => {
+    if (openPeak === null) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenPeak(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openPeak]);
+
+  /**
+   * The open peak's detail, drawn LAST.
+   *
+   * *** SVG HAS NO `z-index` — IT PAINTS IN DOCUMENT ORDER. *** The popover
+   * started life inside its own peak's `<g>`, which put Everest's (drawn
+   * first, so the goals stand in front of it) underneath every goal label on
+   * the card: "Emergency fund" and "Pay off the Visa Credit Card" were
+   * painted straight through the panel. The LOCAL capture missed it because
+   * the peak it focused happened to be the last one drawn; the demo showed it
+   * immediately. Collected during the label passes and rendered after them,
+   * so whichever peak is open is on top of all of them.
+   */
+  let openDetail: { cx: number; top: number; lines: string[] } | null = null;
+
+  /** The handlers every peak shares, so one cannot drift from the others. */
+  const peakHandlers = (id: string) => ({
+    tabIndex: 0,
+    role: 'button',
+    'aria-expanded': openPeak === id,
+    /* *** NO `outline: none`. *** The first version had it, which strips the
+       only thing telling a keyboard user where they are (WCAG 2.4.7) — and it
+       strips it on the very control this change made keyboard-reachable in the
+       first place. The browser's own ring round the label's bbox is correct
+       here; the detail appearing is a second indicator, not a substitute. */
+    style: { cursor: 'pointer' } as React.CSSProperties,
+    onMouseEnter: () => setOpenPeak(id),
+    onMouseLeave: () => setOpenPeak((cur) => (cur === id ? null : cur)),
+    onFocus: () => setOpenPeak(id),
+    onBlur: () => setOpenPeak((cur) => (cur === id ? null : cur)),
+    onClick: () => setOpenPeak((cur) => (cur === id ? null : id)),
+  });
+
   /*
    * A goal with no `peak` is skipped. That field is undefined on any backend
    * predating mountains, and drawing a shape for it would be inventing a fact
@@ -117,12 +286,41 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
     })
     .sort((a, b) => b.height - a.height);
 
-  if (peaks.length === 0) return null;
+  /**
+   * *** EVEREST IS PRESENT FOR EVERY USER, SO THE RANGE NO LONGER RETURNS NULL
+   * ON ZERO GOALS. *** That is the whole point of the owner's placement: a user
+   * with no goals used to see no mountain at all, and they are precisely the
+   * population base camp is designed for (D-205).
+   */
+  /*
+   * *** RENDERED AT 0 m TOO, AND THAT CORRECTION CAME FROM VERIFYING IT. ***
+   * The first version gated this on `altitude_m > 0`, reasoning that a new user
+   * should not be told they have climbed nothing. Checking the owner's actual
+   * requirement — "no matter what mt everest will be present for all users even
+   * those with no goals" — showed that gate excluded exactly the user it is
+   * for: somebody brand new has no goals AND no coins, so they would have seen
+   * no mountain at all.
+   *
+   * Decision 7 settles it: *the empty state is base camp*. Everest at zero IS
+   * base camp, so it draws, and the label says "base camp" rather than "0 m" —
+   * which is the difference between an invitation and a report card.
+   */
+  const climb = everest ?? null;
+  if (peaks.length === 0 && !climb) return null;
 
-  const tallest = Math.max(...peaks.map((p) => p.height));
-  const zoom = tallest > 0 ? 1 / tallest : 0;   // tallest peak -> full band
+  const tallest = peaks.length ? Math.max(...peaks.map((p) => p.height)) : 0;
+  /*
+   * With Everest in the range it takes the full band and the goals top out
+   * below it, because Everest really is the taller mountain. Without it the
+   * tallest goal fills the band as before.
+   */
+  const goalCeiling = climb ? 0.72 : 1;
+  const zoom = tallest > 0 ? goalCeiling / tallest : 0;
 
   const ordered = intoRangeOrder(peaks);
+  /** Where Everest stands: the middle slot, with the goals either side. */
+  const everestSlot = climb ? Math.floor(ordered.length / 2) : -1;
+  const slotCount = ordered.length + (climb ? 1 : 0);
 
   const usable = BOX_HEIGHT - LABEL_BAND - (BOX_HEIGHT - GROUND_Y);
 
@@ -135,7 +333,7 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
    * the near peaks overlap the shoulders of their neighbours.
    */
   const SLOT = Math.round(usable * 0.68);
-  const contentWidth = SLOT * ordered.length + usable * 0.5;
+  const contentWidth = SLOT * slotCount + usable * 0.5;
 
   /*
    * *** THE GROUND LINE HAS TO REACH BOTH EDGES OF THE CARD. ***
@@ -163,10 +361,22 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
           and the wrapper above scrolls horizontally when the viewport is
           narrower. `height="auto"` lets the box follow its own aspect ratio
           rather than reserving space the drawing does not use. */}
+      {/* *** `role="group"`, NOT `role="img"`, AND THAT CHANGED WHEN THE PEAKS
+          BECAME FOCUSABLE. *** `img` declares the whole subtree to be one
+          picture, so assistive technology is told to ignore what is inside it —
+          which made the peak buttons added this session unreachable in
+          principle and a `nested-interactive` violation in fact. axe called it
+          on `/dashboard` in both themes, serious, and `standards.spec.ts`
+          called it too.
+
+          The label stays, because the group still needs naming; what changes
+          is the promise. `img` says "there is nothing in here to operate";
+          `group` says "here are some controls, and this is what they are
+          about", which is now the truth. */}
       <svg
         viewBox={`0 0 ${width} ${BOX_HEIGHT}`}
         preserveAspectRatio="xMidYMax meet"
-        role="img"
+        role="group"
         aria-label={`Your goals as a mountain range: ${ordered.map((p) => p.goal.name).join(', ')}`}
         style={{ display: 'block', width: '100%', minWidth: 680, height: 'auto' }}
       >
@@ -199,10 +409,56 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
           opacity="var(--peak-backdrop-opacity)"
         />
 
+        {/* *** EVEREST: THE CENTRAL PEAK, DRAWN BEFORE THE GOALS SO THEY STAND
+            IN FRONT OF IT. *** It is the tallest and furthest back, which is
+            what a real range looks like and what stops it hiding a goal.
+
+            *** THE ROCK PALETTE IS THE THING THAT KEEPS IT HONEST. *** Goals
+            are clay (cost) or green (build); this is `--text-muted`, so a
+            reader can see at a glance that it is not one of their goals. The
+            concern I raised twice — that one picture blurs money and effort —
+            is answered by the colour and by the labels carrying different
+            units, not by hiding it. */}
+        {climb && (() => {
+          const height = usable;                    // Everest fills the band
+          const sc = height / 100;
+          const w = 100 * sc;
+          const x = offset + everestSlot * SLOT + (SLOT - w) / 2;
+          const y = GROUND_Y - height;
+          const shape = RANGE_SILHOUETTES[RANGE_SILHOUETTES.length - 1];
+          const f = Math.min(1, climb.altitude_m / climb.summit_m);
+          // The climber's y on the peak, measured from the ground up: the same
+          // honest thing the standalone card did, without inventing a route
+          // over a shape whose ridge this code does not know.
+          // A floor of 6px, so a climber at base camp sits ON the ground line
+          // rather than being clipped by it.
+          const climberY = GROUND_Y - Math.max(height * f, 6);
+          return (
+            <g>
+              <g transform={`translate(${x} ${y}) scale(${sc})`} color="var(--peak-unmeasured)">
+                <path d={shape.body} fill="currentColor" />
+                {shape.shade && <path d={shape.shade} fill="url(#range-shade)" />}
+                {shape.snow && (
+                  <path d={shape.snow} fill="var(--bg-card)"
+                        opacity={shape.snowOpacity ?? 0.9} />
+                )}
+              </g>
+              {/* How far up you are. A marker, not a bar: no track behind it,
+                  because a track is a denominator and the only one this product
+                  prints is the shop price. The summit figure is in the label. */}
+              <circle
+                cx={offset + everestSlot * SLOT + SLOT / 2}
+                cy={climberY} r="5" fill="var(--status-warn)"
+              />
+            </g>
+          );
+        })()}
+
         {/* Tallest first, so shorter peaks are drawn in FRONT of it and the
             range has depth rather than a single flat row. */}
         {[...ordered]
-          .map((peak, slot) => ({ peak, slot }))
+          /* Goals step over Everest's slot, so the centre stays free for it. */
+          .map((peak, i) => ({ peak, slot: i < everestSlot || everestSlot < 0 ? i : i + 1 }))
           .sort((a, b) => b.peak.height - a.peak.height)
           .map(({ peak, slot }) => {
             const shape = peak.unmeasured
@@ -249,35 +505,118 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
             had to guess which was which. Each block now hangs just over its own
             summit with a short leader, clamped so it never leaves the box. Every
             figure the picture carries is written here, which is why the whole
-            `<svg>` can carry one `role="img"` label and lose nothing. */}
-        {ordered.map((peak, slot) => {
+            `<svg>` can carry one group label and lose nothing. (It was
+            `role="img"` until the peaks became focusable — see the note on the
+            `<svg>` above.) */}
+        {/* Everest's own label, in METRES — the goals' are in money, and that
+            difference is deliberate: the two are not on one scale and nothing
+            here pretends they are. */}
+        {climb && (() => {
+          const cx = offset + everestSlot * SLOT + SLOT / 2;
+          const top = GROUND_Y - usable;
+          const blockBottom = Math.max(top - 10, 46);
+          const line1 = blockBottom - 28;
+          const standing = climb.altitude_m > 0
+            ? `you are at ${climb.altitude_m.toLocaleString()} m`
+            : 'you are at base camp';
+          /* *** THE ONE PLACE THAT SAYS WHAT EVEREST IS DOING HERE. *** It has
+             always been drawn in rock grey so nobody reads it as their own
+             goal, but nothing ever said what it WAS — a reader was left to
+             infer it from a colour. Owner, 2026-09-19: *"we can also add
+             content to everest. its the ultimate goal financial litracy"*.
+             The summit height moves in here too: it is the least useful thing
+             to print, because it is the same 8,849 m for everybody. */
+          const detail = [
+            `${climb.summit_m.toLocaleString()} m — the shared summit`,
+            ...wrapLines(
+              'Not one of your goals. Everyone on finPal climbs this one, and the '
+              + 'summit is financial literacy: every act available to you, done. '
+              + 'You gain altitude by telling finPal the truth about your own money.',
+              44),
+          ];
+          return (
+            <g
+              {...peakHandlers('everest')}
+              aria-label={`Everest, the shared climb. ${standing}. ${detail.join(' ')}`}
+            >
+              <line x1={cx} y1={blockBottom - 6} x2={cx} y2={top - 3}
+                    stroke="var(--border-light)" strokeWidth="1" />
+              <text x={cx} y={line1 + 13} textAnchor="middle"
+                    style={{ fontSize: '12.5px', fontWeight: 600, fill: 'var(--text-primary)' }}>
+                Everest{climb.at_summit ? ' ✓' : ''}
+              </text>
+              <text x={cx} y={line1 + 26} textAnchor="middle"
+                    style={{ fontSize: '11px', fill: 'var(--status-warn)', fontWeight: 600 }}>
+                {standing}
+              </text>
+              {openPeak === 'everest'
+                && ((openDetail = { cx, top: blockBottom + 4, lines: detail }), null)}
+            </g>
+          );
+        })()}
+
+        {ordered.map((peak, i) => {
+          const slot = i < everestSlot || everestSlot < 0 ? i : i + 1;
           const cx = offset + slot * SLOT + SLOT / 2;
           const drawn = Math.max(peak.height * zoom, MIN_RANGE_HEIGHT);
           const top = GROUND_Y - drawn * usable;
-          // Three lines of ~13px, plus a leader. Clamped to the top of the box.
+          // Two lines of ~13px, plus a leader. Clamped to the top of the box.
           const blockBottom = Math.max(top - 10, 46);
           const line1 = blockBottom - 28;
+          const gp = peak.goal.peak;
+          /* Never null: the scale comes from the goal's DIRECTION, so an
+             unmeasured peak — the grey one, where no account states a rate —
+             is still definitely debt. */
+          const kind = gp ? peakKindLabel(gp) : '';
+          /* What used to be printed under every peak. `filter(Boolean)` rather
+             than a template: an unmeasured peak has no mountain and no
+             elevation, and a row reading `· · ` is the shape this file already
+             fixed once. */
+          const detail = [
+            [gp?.mountain?.name,
+             gp?.mountain?.elevation_m ? peakElevation(gp.mountain.elevation_m) : null,
+            ].filter(Boolean).join(' · '),
+            remainingLabel(peak.goal, currency),
+            gp?.apr != null ? `${gp.apr}% APR` : '',
+            /* *** HOW LONG IT TAKES, WHICH IS WHAT A PAYOFF GOAL IS ASKING.
+               *** The figure already existed inside the coins engine as a
+               sentence nobody could reuse; it is one shared arithmetic now.
+               It lives in the DETAIL rather than on the caption because it is
+               the longest line either produces, and the caption is what the
+               hover exists to keep short. */
+            gp ? peakPayoffLine(gp, (n) => formatMoney(n, { currency })) ?? '' : '',
+          ].filter(Boolean);
           return (
-            <g key={`label-${peak.goal.id}`}>
+            <g
+              key={`label-${peak.goal.id}`}
+              {...HALO}
+              {...peakHandlers(String(peak.goal.id))}
+              aria-label={`${peak.goal.name}${peak.finished ? ', finished' : ''}, `
+                + `${kind}. ${detail.join('. ')}`}
+            >
               <line
                 x1={cx} y1={blockBottom - 6} x2={cx} y2={top - 3}
                 stroke="var(--border-light)" strokeWidth="1"
               />
-              <text x={cx} y={line1} textAnchor="middle"
+              <text x={cx} y={line1 + 13} textAnchor="middle"
                     style={{ fontSize: '12.5px', fontWeight: 600, fill: 'var(--text-primary)' }}>
                 {peak.goal.name}{peak.finished ? ' ✓' : ''}
               </text>
-              <text x={cx} y={line1 + 13} textAnchor="middle"
-                    style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>
-                {peak.goal.peak?.mountain?.name}
-                {peak.goal.peak?.mountain?.elevation_m
-                  ? ` · ${peak.goal.peak.mountain.elevation_m.toLocaleString()} m`
-                  : ''}
-              </text>
+              {/* *** THE KIND IS A WORD, NOT ONLY A COLOUR, AND IT IS THE ONE
+                  THING THAT MAY NOT MOVE BEHIND THE HOVER (FINPAL-26 / D-269).
+                  *** The peaks are painted from `peakColorVar`, which says
+                  cost or build in red and green and says it to nobody who
+                  cannot tell those two apart — and the reporter, who can,
+                  still asked "which of these is debt?". Putting that word in
+                  the popover would answer the question only for a reader with
+                  a mouse. The mountain, its height and the money went in
+                  there; the word stays printed. */}
               <text x={cx} y={line1 + 26} textAnchor="middle"
                     style={{ fontSize: '11px', fill: 'var(--text-secondary)' }}>
-                {remainingLabel(peak.goal, currency)}
+                {kind}
               </text>
+              {openPeak === String(peak.goal.id)
+                && ((openDetail = { cx, top: blockBottom + 4, lines: detail }), null)}
             </g>
           );
         })}
@@ -331,6 +670,18 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency }) => {
             </g>
           );
         })()}
+
+        {/* *** LAST CHILD, AND THAT IS THE WHOLE POINT. *** SVG paints in
+            document order with no `z-index`, so a popover drawn inside its own
+            peak's group sits under every label drawn after it. Everest is
+            drawn FIRST (the goals stand in front of it), so its detail was
+            under all four goal captions on the demo. */}
+        {openDetail && (
+          <PeakDetail
+            cx={openDetail.cx} top={openDetail.top}
+            width={width} lines={openDetail.lines}
+          />
+        )}
       </svg>
     </ScrollPane>
   );

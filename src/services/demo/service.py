@@ -88,15 +88,47 @@ def _learnpal_reset(user_id):
 def _coins_reset(user_id):
     """Delete a demo user's coin ledger. Core, so no optional-import dance.
 
-    *** AWARDS AND PURCHASES BOTH GO. *** Leaving the awards behind would let a
-    reset user keep coins earned against data that no longer exists, and leaving
-    the purchases behind would leave them owning gear they can no longer afford.
-    The pair is one state.
+    *** ALL FOUR TABLES GO, AND MISSING ONE IS NOT COSMETIC. *** Leaving the
+    awards behind would let a reset user keep coins earned against data that no
+    longer exists, and leaving the purchases behind would leave them owning
+    gear they can no longer afford.
+
+    *** THE ACKS ARE THE ONE THAT BREAKS THE DEMO SILENTLY. *** `coin_award_acks`
+    records what the user has been SHOWN. Delete the awards, re-earn them, and
+    leave the acks: every re-earned award reads as *already seen*, the wallet's
+    `unseen` list comes back EMPTY, and the award moment stops demoing itself
+    with nothing on the page to say so -- D-77's shape, and D-184's lesson that
+    a reset which misses a table is the reset being wrong, not the table.
+
+    `act_events` goes too: its rows name budget and expense ids that the reseed
+    replaces, so surviving rows are orphans pointing at data that is gone.
     """
-    from src.models.coins import CoinAward, CoinPurchase
+    from src.models.act_event import (ActEvent, BadgeEarned, EverestWatermark,
+                                      TeachingSeen)
+    from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase
     removed = CoinAward.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
     removed += CoinPurchase.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    removed += CoinAwardAck.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    removed += ActEvent.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    # A reset user who keeps `teaching_seen` is re-taught NOTHING, so the four
+    # explanations become unreachable on the demo after the first reset.
+    removed += TeachingSeen.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    # *** THE WATERMARK MUST GO TOO, AND IT IS THE LEAST OBVIOUS OF THE FIVE.
+    # *** It is deliberately ratchet-only, so a reset user who keeps it stays
+    # at the altitude their DELETED data earned — Everest would then show a
+    # height nothing on the stack justifies, which is the one thing
+    # `_coins_award` refuses for coins.
+    removed += EverestWatermark.query.filter_by(user_id=user_id).delete(
+        synchronize_session=False)
+    # Badges are append-only for a real user, deliberately — but a demo RESET
+    # wipes the data they were earned against, so keeping them would show a
+    # badge nothing on the stack justifies.
+    removed += BadgeEarned.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
     return removed
 
@@ -115,6 +147,8 @@ def _coins_award(user_id):
     an empty wallet for ever and every coins surface would demo itself empty --
     D-77's shape, which has hidden three defects here already.
     """
+    _act_events_seed(user_id)
+
     from src.services.literacy.acts import award_for_user
     try:
         awarded = len(award_for_user(user_id))
@@ -122,7 +156,72 @@ def _coins_award(user_id):
         logger.exception('demo: coin award failed for %s', user_id)
         return 0
     _coins_demo_kit(user_id)
+
+    # *** BADGES ARE EARNED HERE TOO, NOT FABRICATED. *** Same rule as the
+    # coins above: running the real predicates means the demo's badges are
+    # exactly what that user's data justifies. demo1 has a finished goal, so
+    # `goal-reached` fires honestly. Without this the badges surface would demo
+    # itself empty — D-77's shape, which has hidden three defects here.
+    try:
+        from src.services.literacy.badges import award_badges
+        award_badges(user_id)
+    except Exception:
+        logger.exception('demo: badge award failed for %s', user_id)
+
     return awarded
+
+
+def _act_events_seed(user_id):
+    """Record the demo persona's EVENT acts, through the real repository.
+
+    *** TWO ACTS CANNOT BE EARNED FROM SEEDED ROWS ALONE (§14.3.1). ***
+    `budget_adjusted` and `splits_confirmed` are events, not coverages: nothing
+    in a budget or an expense records *the user came back and decided this*, so
+    seeding the data does not seed the act. Without this the two would demo
+    themselves empty -- D-77's shape, which has hidden three defects here.
+
+    Written through `ActEventRepository.record`, not inserted directly, so the
+    demo obeys the same idempotence a user does -- the same reason
+    `_coins_demo_kit` goes through `CoinRepository.purchase`.
+
+    *** A FIRST DRAFT OF THIS DOCSTRING CLAIMED THE DEMO GROUPS HOLD NO
+    EXPENSES. THAT WAS STALE AND MEASURED FALSE. *** D-175 seeded them: there
+    are **9** group expenses, every one carrying `split_with`, and demo1 is
+    named in all of them. So `splits_confirmed` is LIVE for the demo personas,
+    not dormant, and it is seeded below.
+
+    *** PARTIAL ON PURPOSE. *** Confirming SOME of the shared bills leaves the
+    act mid-coverage, which is the instructive state: it shows coins already
+    earned AND something still worth doing. Confirming all of them would demo a
+    finished act, which teaches nobody what the act is for.
+
+    *** `settlement_recorded` IS LEFT AT ZERO, DELIBERATELY. *** There are 0
+    settlements and `test_the_demo_covers_every_feature` already records that as
+    a known GAP -- *"nobody has ever settled up, so the settle-up flow shows no
+    history"*. That is a pre-existing demo-seed decision, not this function's to
+    take. The act is correctly LIVE-AND-UNDONE rather than dormant, because
+    shared expenses exist, so the demo shows an act genuinely available to do.
+    """
+    from src.models.budget import Budget
+    from src.models.transaction import Expense
+    from src.repositories.act_events import ActEventRepository
+
+    repo = ActEventRepository()
+
+    budget = Budget.query.filter_by(user_id=user_id).first()
+    if budget is not None:
+        repo.record(user_id, 'budget_adjusted', str(budget.id))
+
+    # Confirm the first two shared bills this user is actually split into --
+    # membership tested the same way `Group.balances` does it, on the
+    # comma-separated string, never with a `LIKE`.
+    shared = Expense.query.filter(
+        Expense.group_id.isnot(None), Expense.split_with.isnot(None)).all()
+    mine = [e for e in shared
+            if user_id in [i.strip() for i in (e.split_with or '').split(',')]
+            or e.paid_by == user_id]
+    for e in mine[:2]:
+        repo.record(user_id, 'splits_confirmed', str(e.id))
 
 
 # What a demo climber has already bought. *** THREE PIECES, SO THE KIT SHOWS ALL
@@ -402,6 +501,37 @@ class DemoService:
                 # because it is the owner's own example: *"emergency fund but
                 # multiple accounts for it"*.
                 {'name': 'High-Yield Savings', 'type': 'savings', 'balance': 3000.00, 'currency': 'USD'},
+                # *** TWO MORE DEBTS, BECAUSE ONE CARD CANNOT DEMONSTRATE AN
+                # ORDERING. *** The debt plan asks "which one first", which is
+                # meaningless about a single card — so the deployed demo showed
+                # the method picker to nobody, on the very screen it was built
+                # for. Same argument the B12 note above makes and the same
+                # defect class (D-77, D-177): a feature the demo cannot show is
+                # one nobody can evaluate.
+                #
+                # *** AND THE THREE ARE CHOSEN SO THE TWO METHODS DISAGREE. ***
+                # A student loan alone would not have done it: at 4.5% on
+                # $14,500 it is both the cheapest AND the biggest, so avalanche
+                # and snowball put it last either way and the demo would show a
+                # choice that changes nothing. That is the fixture hole
+                # `DebtPlanPanel.test.tsx` is written against, in the seed.
+                #
+                #   avalanche (rate):    Visa 19.99 · Loan 4.5 · Store 0
+                #   snowball (balance):  Store 350 · Visa 800 · Loan 14,500
+                #
+                # The 0% store card is also the missing-rate-sorts-last case
+                # made visible, and a promotional 0% card is an ordinary thing
+                # to be carrying. The loan is the owner's own ask: mortgages and
+                # education loans, which `order_debts` already counts.
+                #
+                # *** THE TWO ROWS THEMSELVES LIVE IN `_backfill_budgeter_debts`
+                # AND DELIBERATELY NOT HERE. *** They need an APR each, and a
+                # card created here with no limit gets stamped 19.99% by
+                # `_seed_demo_credit_terms` — which would give the store card
+                # the Visa's rate and collapse the two orderings back into one.
+                # The backfill runs on every boot INCLUDING the one that creates
+                # these users, so one definition serves both paths and there is
+                # no second copy to drift (D-101).
             ]
         elif persona == 'International user':
             accounts_config = [
@@ -1128,6 +1258,22 @@ class DemoService:
                 logger.info('Backfilling demo recurring expenses for %s (C1c)',
                             user.id)
                 DemoService._seed_demo_recurring(user, account_data)
+        # *** BACKFILLED, OR IT NEVER REACHES A DEMO THAT ALREADY EXISTS. ***
+        # D-178's rule: a seed change is not shipped until a condition-keyed
+        # correction exists for the rows the old seeder made. Every live demo
+        # stack already has its four users.
+        # *** THE STUDENT LOAN, BACKFILLED — D-178 FOR THE FOURTH TIME. *** Every
+        # live demo already has its four users, so adding a row to
+        # `accounts_config` above reaches a fresh install and nothing else.
+        # Keyed to the gap ("this budgeter has no loan account"), never to a
+        # version marker, so it is idempotent across boots and self-correcting
+        # if somebody deletes the account by hand.
+        DemoService._backfill_budgeter_debts()
+
+        for account_data in DEMO_ACCOUNTS:
+            demo_user = User.query.filter_by(id=account_data['email']).first()
+            if demo_user is not None:
+                DemoService._seed_debt_plan(demo_user)
         DemoService._backfill_non_tour_household_goals()
         DemoService._backfill_multi_account_demo_goal()
         DemoService._seed_demo_co_owners()
@@ -1140,6 +1286,48 @@ class DemoService:
                 continue
             logger.info('Backfilling expenses for demo group %r (D-77)', group.name)
             DemoService._seed_group_expenses(group, members)
+
+    @staticmethod
+    def _backfill_budgeter_debts():
+        """The loan and the 0% card, on a demo seeded before they existed.
+
+        *** D-178 FOR THE FOURTH TIME: A SEED CHANGE IS NOT SHIPPED UNTIL A
+        CONDITION-KEYED CORRECTION EXISTS. *** Every live demo already holds its
+        four users, so adding rows to `accounts_config` reaches a fresh install
+        and nothing else — which is how the recurring expenses, the portfolio
+        and the credit terms each shipped to nobody first.
+
+        Keyed to the gap (this budgeter has no account by that NAME), never to a
+        version marker, so it is idempotent across boots and self-correcting if
+        somebody deletes one by hand.
+
+        *** THE RATES ARE SET HERE, NOT LEFT TO `_seed_demo_credit_terms`. ***
+        That helper stamps 19.99% on every card whose limit is unset and ignores
+        loans entirely, so leaving either to it would give the store card the
+        same rate as the Visa — and then avalanche and snowball agree again,
+        which is the whole thing these two rows exist to prevent.
+        """
+        wanted = [
+            # name, type, balance, apr, credit_limit, min_payment
+            ('Student Loan', 'loan', Decimal('-14500.00'), Decimal('4.50'), None, None),
+            ('Store Card', 'credit', Decimal('-350.00'), Decimal('0.00'),
+             Decimal('1000'), Decimal('25.00')),
+        ]
+        for account_data in DEMO_ACCOUNTS:
+            if account_data.get('persona') != 'Personal budgeter':
+                continue
+            user = User.query.filter_by(id=account_data['email']).first()
+            if user is None:
+                continue
+            for name, kind, balance, apr, limit, minimum in wanted:
+                if Account.query.filter_by(user_id=user.id, name=name).first():
+                    continue
+                logger.info('Backfilling demo debt %r for %s', name, user.id)
+                db.session.add(Account(
+                    user_id=user.id, name=name, type=kind, balance=balance,
+                    currency_code='USD', apr=apr, credit_limit=limit,
+                    min_payment=minimum))
+            db.session.flush()
 
     @staticmethod
     def _backfill_non_tour_household_goals():
@@ -1466,6 +1654,37 @@ class DemoService:
                     added_at=base + timedelta(seconds=offset)))
             svc.sync_links(goal)
             db.session.add(goal)
+        db.session.flush()
+
+    @staticmethod
+    def _seed_debt_plan(user):
+        """A chosen paydown method, so the feature is evaluable at all.
+
+        *** A FEATURE THE DEMO CANNOT SHOW IS A FEATURE NOBODY CAN EVALUATE
+        (D-77, D-175, D-177). *** An empty plan panel is indistinguishable
+        from a broken one, and `test_the_demo_covers_every_feature` refuses a
+        table with no demo rows for exactly that reason.
+
+        *** ONLY FOR A USER WHO ACTUALLY OWES SOMETHING. *** A plan for
+        clearing debts belongs to somebody with debts; seeding one on a
+        debt-free persona would demo a screen that cannot honestly exist, and
+        `order_debts` would return an empty ordering under it.
+
+        Avalanche rather than snowball is an arbitrary demo choice, not a
+        recommendation -- the product states what each does and picks neither.
+        """
+        from src.models.account import Account
+        from src.models.debt_plan import AVALANCHE, DebtPlan
+
+        if DebtPlan.query.filter_by(user_id=user.id).first():
+            return
+        owes = Account.query.filter(
+            Account.user_id == user.id,
+            Account.balance < 0).first()
+        if owes is None:
+            return
+        db.session.add(DebtPlan(user_id=user.id, method=AVALANCHE,
+                                monthly_amount=Decimal('250.00')))
         db.session.flush()
 
     @staticmethod

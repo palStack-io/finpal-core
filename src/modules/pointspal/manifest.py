@@ -25,6 +25,37 @@ class PointsPalModule(ModuleBase):
             (pointspal_ns,  '/pointspal'),
         ]
 
+
+
+    def get_badges(self) -> dict:
+        """pointsPal's contributor badges (owner decision 2026-09-17).
+
+        A BADGE, not coins: §5.1's warning is about paying, where every extra
+        submission is worth something again. A badge is once-only and buys
+        nothing, so the worst a farmer gets is one spurious submission.
+
+        Earned on SHARING, and the titles say so — finPal cannot know whether a
+        contribution was accepted, because nothing links a merge to a user.
+        """
+        from src.modules.pointspal.badges import get_badges as _badges
+        return _badges()
+
+    def get_acts(self) -> dict:
+        """pointsPal's own earnable acts (spec §5.1).
+
+        *** THE HOOK THIS USES HAD NO CALLER UNTIL 2026-09-17 — D-187. ***
+        `ModuleBase.get_acts()` was defined and `acts.py`'s docstring promised
+        it, and nothing invoked it. `registry.py` now registers these beside
+        the checks.
+
+        *** `contribution_accepted` IS NOT HERE, AND THE SPEC'S REASON FOR
+        EXPECTING IT IS FALSE. *** See `acts.py` in this package: there is no
+        identifier linking an accepted contribution to a finPal user, so the
+        act could never fire. Owner decision pending.
+        """
+        from src.modules.pointspal.acts import get_acts as _acts
+        return _acts()
+
     def register_tasks(self, scheduler, app):
         @scheduler.task('cron', id='pointspal_sync', hour=3, minute=0)
         def nightly_sync():

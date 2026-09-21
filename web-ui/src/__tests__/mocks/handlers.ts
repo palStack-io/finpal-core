@@ -352,6 +352,18 @@ export const pointspalHandlers = [
    * rather than three zeroes — a fixture that cannot produce the live case is
    * D-165.
    */
+  /* *** ADDED WHEN THE GOALS PAGE GREW A CALCULATOR AND SUGGESTIONS. ***
+     Both render nothing when they have nothing to say, so the DEFAULT here is
+     deliberately "nothing to say": a shared handler that returned suggestions
+     would put an advice panel into every Goals test that never asked for one.
+     The tests that care override these. */
+  http.get(`${BASE}/api/v1/goals/buffer-picture`, () =>
+    HttpResponse.json({ success: true, buffer: null })),
+  http.get(`${BASE}/api/v1/goals/suggestions`, () =>
+    HttpResponse.json({ success: true, suggestions: [] })),
+  http.get(`${BASE}/api/v1/goals/debt-plan`, () =>
+    HttpResponse.json({ success: true, plan: null })),
+
   http.get(`${BASE}/api/v1/analytics/categories/top`, () => HttpResponse.json({
     success: true,
     categories: [

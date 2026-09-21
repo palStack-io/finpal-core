@@ -7,8 +7,10 @@ import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { formatMoney, tabular } from '../styles/money';
-import { incomeFlow, type FlowCategory } from '../utils/incomeFlow';
+import { incomeFlow, type FlowCategory, type FlowNode } from '../utils/incomeFlow';
 import IncomeFlowChart from '../components/analytics/IncomeFlowChart';
+import { SliceBreakdown } from '../components/analytics/SliceBreakdown';
+import { ComparePicker } from '../components/analytics/ComparePicker';
 import PeriodCompareChart from '../components/analytics/PeriodCompareChart';
 import { comparePeriods } from '../utils/periodComparison';
 import { MemberFilter } from '../components/MemberFilter';
@@ -213,6 +215,10 @@ export const Analytics: React.FC = () => {
      up, with no visual symptom. The comment beside `expenseTotal` says exactly
      this about using the slice for a total. `utils/incomeFlow.ts` bundles the
      tail into a node that says how many categories it stands for. */
+  /* Which spending slice of the flow diagram is open, if any. Cleared when
+     the range changes: the node was built from the old window and its ids
+     may not even appear in the new one. */
+  const [openSlice, setOpenSlice] = useState<FlowNode | null>(null);
   const [flowIncome, setFlowIncome] = useState<FlowCategory[]>([]);
   const [flowExpenses, setFlowExpenses] = useState<FlowCategory[]>([]);
   /* The PRIOR window's lists, kept whole for the same reason as the current
@@ -221,6 +227,21 @@ export const Analytics: React.FC = () => {
      savings-rate deltas need them. */
   const [priorIncomeRows, setPriorIncomeRows] = useState<FlowCategory[]>([]);
   const [priorExpenseRows, setPriorExpenseRows] = useState<FlowCategory[]>([]);
+
+  /**
+   * Two windows the user picked, for Compare.
+   *
+   * *** THE PRESETS ARE ROLLING AND THESE ARE NOT, WHICH IS THE POINT. ***
+   * `windowsFor` answers "the last 30 days against the 30 before"; it cannot
+   * answer "March against September", which is the question the owner asked
+   * for. `null` means the tab is on its preset pair and every existing figure
+   * is untouched.
+   */
+  const [customCompare, setCustomCompare] =
+    useState<{ a: { start: string; end: string }; b: { start: string; end: string } } | null>(null);
+  const [customRows, setCustomRows] =
+    useState<{ a: FlowCategory[]; b: FlowCategory[] } | null>(null);
+  const [customBusy, setCustomBusy] = useState(false);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [memberId, setMemberId] = useState<string | null>(null);
   const selectedMember = members.find((m) => m.id === memberId) || null;
@@ -232,6 +253,30 @@ export const Analytics: React.FC = () => {
   useEffect(() => {
     loadAnalytics();
   }, [timeRange, memberId]);
+
+  /* *** THE OPEN SLICE BELONGS TO THE WINDOW IT WAS OPENED IN. ***
+     Its ids came from the old range's top categories; leaving it open
+     across a change would show one window's payees under another
+     window's band. */
+  useEffect(() => { setOpenSlice(null); }, [timeRange, memberId]);
+
+  /* *** BOTH WINDOWS OR NEITHER. *** A half-applied comparison would draw one
+     real period against a stale one and label it as the pair the user chose. */
+  useEffect(() => {
+    if (!customCompare) { setCustomRows(null); return undefined; }
+    let live = true;
+    setCustomBusy(true);
+    Promise.all([
+      analyticsService.getTopSpendingCategories(
+        50, customCompare.a.start, customCompare.a.end, 'expense', memberId),
+      analyticsService.getTopSpendingCategories(
+        50, customCompare.b.start, customCompare.b.end, 'expense', memberId),
+    ])
+      .then(([a, b]) => { if (live) setCustomRows({ a, b }); })
+      .catch(() => { if (live) setCustomRows(null); })
+      .finally(() => { if (live) setCustomBusy(false); });
+    return () => { live = false; };
+  }, [customCompare, memberId]);
 
   const toISO = (d: Date) => d.toISOString().split('T')[0];
 
@@ -959,7 +1004,24 @@ export const Analytics: React.FC = () => {
                     <IncomeFlowChart
                       flow={flow}
                       format={(amount) => formatMoney(amount, { currency })}
+                      /* *** THE SAME WINDOW THE CHART WAS DRAWN FROM. *** The
+                         panel asks the server again, so if it asked over a
+                         different range its rows would not sum to the band
+                         that was clicked — which is the one promise a
+                         drill-down makes. */
+                      onOpenSlice={(node) => setOpenSlice(
+                        (cur) => (cur?.id === node.id ? null : node))}
+                      openSliceId={openSlice?.id ?? null}
                     />
+                    {openSlice && (
+                      <SliceBreakdown
+                        node={openSlice}
+                        start={windowsFor(timeRange).current.start}
+                        end={windowsFor(timeRange).current.end}
+                        format={(amount) => formatMoney(amount, { currency })}
+                        onClose={() => setOpenSlice(null)}
+                      />
+                    )}
                     {/* *** THE SENTENCE UNDERNEATH IS DERIVED FROM THE SAME
                         NUMBERS THE CHART WAS DRAWN FROM, WHICH IS THE WHOLE
                         POINT. *** D-102 is this project's row for a caption
@@ -1024,10 +1086,26 @@ export const Analytics: React.FC = () => {
           <div style={flexColGap20}>
             <ChartCard
               title="Spending, this period against the last"
-              subtitle={`${rangeLabel} vs ${priorLabel}`}
+              /* *** THE SUBTITLE NAMES THE WINDOWS ACTUALLY DRAWN. *** Leaving
+                 the rolling labels up while custom dates are applied would put
+                 "Last 30 days vs the 30 days before" over March against
+                 September — a caption describing a different chart. */
+              subtitle={customCompare && customRows
+                ? `${customCompare.a.start} → ${customCompare.a.end}`
+                  + ` vs ${customCompare.b.start} → ${customCompare.b.end}`
+                : `${rangeLabel} vs ${priorLabel}`}
             >
+              <ComparePicker
+                busy={customBusy}
+                active={customCompare !== null}
+                onApply={(a, b) => setCustomCompare({ a, b })}
+                onReset={() => setCustomCompare(null)}
+              />
               {(() => {
-                const cmp = comparePeriods(flowExpenses, priorExpenseRows);
+                /* Period A is the one on the left, as it is in the form. */
+                const cmp = customCompare && customRows
+                  ? comparePeriods(customRows.a, customRows.b)
+                  : comparePeriods(flowExpenses, priorExpenseRows);
                 if (!cmp) {
                   return (
                     <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>

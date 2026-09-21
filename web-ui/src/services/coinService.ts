@@ -64,6 +64,22 @@ export interface CoinAct {
    * is what keeps that fix visible.
    */
   revealed: string | null;
+  /**
+   * Is there still something to do for this act?
+   *
+   * *** A BIT, NOT A FRACTION, AND THE CLIENT COULD NOT DERIVE IT. *** No
+   * ceiling goes on the wire (decision 5), so `coins: 600` is
+   * indistinguishable from finished. The server answers with one boolean,
+   * which is what the cairn is drawn from and which cannot be used to
+   * reconstruct "n of m".
+   *
+   * *** IT FAILS OPEN. *** An earned act whose predicate crashes comes back
+   * `true`: a spurious cairn costs a wasted visit, where a missing one costs
+   * the act, because the user never returns to the page.
+   */
+  open: boolean;
+  /** The page identities this act can be worked on. Names, never counts. */
+  surfaces: string[];
 }
 
 /** One piece of gear in the shop. */
@@ -80,12 +96,116 @@ export interface CoinWallet {
   balance: number;
   acts: CoinAct[];
   gear: CoinGear[];
+  /**
+   * Awards the user has earned and NOT yet been shown.
+   *
+   * *** THIS IS HOW AN OVERNIGHT AWARD GETS ITS MOMENT. *** The nightly pass
+   * runs at 04:30 while the user is asleep; without this the award simply
+   * never happened as far as they could tell.
+   */
+  unseen: CoinAwardItem[];
+  /**
+   * The shared climb: metres up Everest, and the public summit.
+   *
+   * *** METRES, NOT A PERCENTAGE OF THE USER. *** 8,849 m is a shared public
+   * fact identical for everyone and derived from nobody's money, which is why
+   * it is the one ceiling this product sends. Decision 5 forbids a denominator
+   * finPal chose about the user's FINANCES; this one is about effort.
+   */
+  everest: { altitude_m: number; summit_m: number; at_summit: boolean };
+  /**
+   * Badges the user HOLDS. *** EARNED ONES ONLY — AN UNEARNED BADGE IS ABSENT,
+   * NEVER PRESENT-AND-FALSE *** , so no client can render a locked grid
+   * telling somebody they have not paid their debt.
+   *
+   * Optional because a backend older than `earned_badges` omits the key, and
+   * `wallet.badges.length` on a missing key is what throws.
+   */
+  badges?: CoinBadge[];
 }
+
+/** One earned badge, as the wallet sends it. */
+export interface CoinBadge {
+  slug: string;
+  title: string;
+  earned_at: string | null;
+}
+
+/** One award, as `/coins/refresh` and the wallet's `unseen` both send it. */
+export interface CoinAwardItem {
+  slug: string;
+  title: string;
+  coins: number;
+  /**
+   * The sentence the act revealed, or `null`.
+   *
+   * *** NULL IS A REAL ANSWER AND MUST NOT BE PAPERED OVER. *** The server
+   * returns it when it cannot compute the consequence, and `CoinAward`
+   * renders nothing at all in that case. Four payoffs were caught on
+   * 2026-09-14 claiming an act was done beside `coins: 0`; a fallback string
+   * here would put that straight back.
+   */
+  revealed: string | null;
+  /**
+   * The one-time explanation of what this reward IS, or `null`.
+   *
+   * *** ONCE PER REWARD TYPE, AND THE SERVER DECIDES. *** Not "the first N
+   * awards": a count spends itself badly, since three awards in one evening
+   * can all be coins. The client never tracks this — it renders what arrives.
+   */
+  teach: CoinTeachPanel | null;
+}
+
+export interface CoinTeachPanel {
+  topic: string;
+  title: string;
+  body: string;
+}
+
+export interface CoinRefreshResult {
+  awarded: CoinAwardItem[];
+  earned: number;
+  balance: number;
+}
+
+/**
+ * The surfaces the server recognises.
+ *
+ * *** THE SERVER OWNS THE SURFACE-TO-ACTS MAP; THIS IS ONLY THE NAME. *** A
+ * client that decided WHICH acts a page can move would be a second list to
+ * keep in step with `src/services/literacy/acts.py`, and drift is this
+ * project's recurring failure. An unknown surface awards nothing and does not
+ * error, so a client one release ahead is harmless.
+ */
+export type CoinSurface =
+  | 'accounts' | 'transactions' | 'categories' | 'budgets' | 'recurring'
+  | 'rules' | 'goals' | 'review' | 'investments' | 'groups' | 'settings'
+  | 'pointspal';
 
 export const coinService = {
   async getWallet(): Promise<CoinWallet> {
     const { data } = await api.get<CoinWallet>('/api/v1/coins');
     return data;
+  },
+
+  /**
+   * Award anything the user just made true on this surface.
+   *
+   * *** SAFE TO CALL TWICE. *** `upsert_award` is a ratchet, so a repeat
+   * awards nothing and returns an empty `awarded`. That is what makes the
+   * client's job non-critical: forgetting to call this loses the MOMENT,
+   * never the COINS — the 04:30 pass collects them.
+   */
+  async refresh(surface: CoinSurface): Promise<CoinRefreshResult> {
+    const { data } = await api.post<CoinRefreshResult>(
+      '/api/v1/coins/refresh', { surface }
+    );
+    return data;
+  },
+
+  /** Mark one award as shown. Ratchet-only; it can never un-show. */
+  async ack(actSlug: string): Promise<void> {
+    await api.post('/api/v1/coins/ack', { act_slug: actSlug });
   },
 
   /**

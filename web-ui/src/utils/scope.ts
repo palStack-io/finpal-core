@@ -69,3 +69,33 @@ export const SCOPE_TITLE: Record<Scope, string> = {
  * dashboard's answer is asserted now — on the request and the rendered figures,
  * not on a lookup table that could go on being true about nothing.
  */
+
+/**
+ * The page-level scope statement: whose money every figure on this page is.
+ *
+ * *** A THIRD WAY TO BE HONEST, BECAUSE THE PAGES THAT STOPPED TAGGING HAD NO
+ * WAY LEFT. *** `ScopeTag` answers per figure and a `MemberFilter` answers by
+ * control. Accounts, Transactions and Budgets do neither now: their figures
+ * are one set of people, so they say it ONCE in the page head rather than
+ * stamping an identical chip on three or four totals — which is one fact
+ * printed three times, the duplication D-101 is about in chrome rather than
+ * arithmetic.
+ *
+ * *** IT IS A FUNCTION, NOT A STRING LITERAL AT EACH CALL SITE, SO THE GATE
+ * CAN SEE IT. *** `uiHonesty.test.ts` was green on Accounts only because the
+ * words `scope="household"` survived in a COMMENT describing the tag that had
+ * been deleted — the guard was keyed to a spelling, and the spelling outlived
+ * the behaviour. A named import is a thing that is CALLED or is not.
+ *
+ * Returns `undefined` for a solo household: with one member the household and
+ * the caller are the same set, and naming a distinction that does not exist is
+ * the noise the tags were criticised for in the first place.
+ */
+export function householdScopeNote(
+  memberCount: number,
+  selectedMemberName?: string | null,
+): string | undefined {
+  if (selectedMemberName) return `${selectedMemberName}'s money only`;
+  if (memberCount <= 1) return undefined;
+  return "Every figure here is the whole household's";
+}

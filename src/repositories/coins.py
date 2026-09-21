@@ -15,7 +15,7 @@ from decimal import Decimal
 from sqlalchemy import func
 
 from src.extensions import db
-from src.models.coins import CoinAward, CoinPurchase
+from src.models.coins import CoinAward, CoinAwardAck, CoinPurchase
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,34 @@ class CoinRepository:
     def awards(self, user_id) -> list:
         return CoinAward.query.filter_by(user_id=user_id).all()
 
+    def unseen(self, user_id) -> list:
+        """`[(act_slug, coins_not_yet_shown)]`.
+
+        *** A LEFT JOIN, NOT AN INNER ONE. *** An act earned for the first time
+        has no ack row at all, and an inner join would drop it -- swallowing the
+        first award every user ever gets, which is the only one that is certain
+        to matter.
+        """
+        rows = db.session.query(
+            CoinAward.act_slug, CoinAward.coins,
+            func.coalesce(CoinAwardAck.coins_seen, 0),
+        ).outerjoin(
+            CoinAwardAck,
+            (CoinAwardAck.user_id == CoinAward.user_id)
+            & (CoinAwardAck.act_slug == CoinAward.act_slug),
+        ).filter(CoinAward.user_id == user_id).order_by(
+            # *** DETERMINISTIC, AND NOT MERELY FOR TIDINESS. *** Without an
+            # ORDER BY the database may return these in any order, so WHICH
+            # award a user sees first — and therefore which one carries the
+            # one-time explanation — was arbitrary and could differ between
+            # two reads of the same data. Biggest first also puts the most
+            # consequential sentence in front of them.
+            CoinAward.coins.desc(), CoinAward.act_slug.asc(),
+        ).all()
+
+        return [(slug, int(coins) - int(seen))
+                for slug, coins, seen in rows if int(coins) > int(seen)]
+
     # ------------------------------------------------------------------
     # Writes
     # ------------------------------------------------------------------
@@ -89,14 +117,28 @@ class CoinRepository:
                 coverage=coverage, coins=int(coins)))
             return int(coins)
 
-        if coverage <= row.coverage:
+        # *** A FALLING COVERAGE IS REFUSED; A RISING CEILING IS NOT. ***
+        # The original guard was `if coverage <= row.coverage: return 0`, which
+        # also refused the case where coverage is UNCHANGED and the act's
+        # CEILING went up. Measured 2026-09-17: a user at coverage 1.0 who had
+        # earned 600 was paid 0 when the ceiling was raised to 1,500 — so
+        # retuning the economy upward would have locked every existing user out
+        # of a kit they could previously afford, silently, while every test
+        # stayed green.
+        #
+        # The rule decision 1 actually needs is that coins NEVER FALL. So the
+        # refusal is on coverage falling, and a raise is paid whenever the
+        # computed coins exceed what is stored — whichever of the two inputs
+        # moved.
+        if coverage < row.coverage:
             return 0
 
         delta = int(coins) - int(row.coins)
         if delta <= 0:
-            # Coverage rose but the ceiling was retuned downward. Keep the
-            # coverage watermark honest and the coins where they are.
-            row.coverage = coverage
+            # Either nothing moved, or the ceiling was retuned DOWNWARD. Keep
+            # the coverage watermark honest and the coins exactly where they
+            # are: re-tuning an act must never take coins back.
+            row.coverage = max(coverage, Decimal(str(row.coverage)))
             return 0
         row.coverage = coverage
         row.coins = int(coins)
@@ -118,3 +160,23 @@ class CoinRepository:
         db.session.add(CoinPurchase(
             user_id=user_id, gear_slug=gear_slug, price=price))
         return True
+
+    def ack(self, user_id, act_slug) -> None:
+        """Raise the seen-watermark to the award's current coins. No commit.
+
+        *** RATCHET-ONLY, LIKE `upsert_award`. *** If an act's ceiling is
+        retuned downward later, lowering the ack would show a user an award
+        they have already been shown -- the mirror of the reason the coins
+        themselves never fall.
+        """
+        award = self.award_row(user_id, act_slug)
+        if award is None:
+            return
+        row = CoinAwardAck.query.filter_by(
+            user_id=user_id, act_slug=act_slug).first()
+        if row is None:
+            db.session.add(CoinAwardAck(
+                user_id=user_id, act_slug=act_slug,
+                coins_seen=int(award.coins)))
+            return
+        row.coins_seen = max(int(row.coins_seen), int(award.coins))

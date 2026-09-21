@@ -40,6 +40,27 @@ export interface SpendingGroup {
   /** Negative when overspent. NEVER clamped: a 0 the user acts on is a lie. */
   remaining: number;
   budgets: BudgetRow[];
+  /**
+   * Spend in this group's categories that no budget covers.
+   *
+   * *** SEPARATE FROM `actual`, AND `remaining` IGNORES IT. *** "Remaining"
+   * means *left of what you planned*; money you never planned cannot eat a
+   * plan it was never in. Folding it in made Fixed read `-1,800 remaining`
+   * against a plan of zero, which the server's own test pins.
+   */
+  unbudgeted_actual: number;
+  /** Biggest first. Every one has spending — a category with none is not a hole. */
+  unbudgeted_categories: Array<{ id: number; name: string; actual: number }>;
+}
+
+export interface BudgetTotals {
+  planned: number;
+  /** *** ALL SPENDING. *** It used to be spend in budgeted categories only. */
+  actual: number;
+  budgeted_actual: number;
+  unbudgeted_actual: number;
+  /** Over the BUDGETED half only, which is what the word means. */
+  remaining: number;
 }
 
 export interface UnsortedSection {
@@ -80,7 +101,7 @@ export interface BudgetOverview {
   /** Always three, always in order, present even when empty. */
   groups: SpendingGroup[];
   unsorted: UnsortedSection;
-  totals: { planned: number; actual: number; remaining: number };
+  totals: BudgetTotals;
   /** null means "nothing recorded this month" -- it is NOT zero. */
   income: number | null;
   /** null whenever `income` is null. Negative when over-committed. */

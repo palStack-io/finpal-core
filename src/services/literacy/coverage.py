@@ -36,6 +36,8 @@ from src.models.account import Account
 from src.models.budget import Budget
 from src.models.category import Category
 from src.models.goal import Goal
+from src.models.group import Settlement
+from src.models.investment import Investment, Portfolio
 from src.models.recurring import RecurringExpense
 from src.models.transaction import Expense
 from src.models.transaction_rule import TransactionRule
@@ -70,6 +72,23 @@ def _binary(done):
     Never dormant -- every user can name a goal, record their income or teach a
     rule, whatever their circumstances.
     """
+    return ONE if done else ZERO
+
+
+def _binary_conditional(possible, done):
+    """A binary act that a user's circumstances may not raise at all.
+
+    *** `_binary` IS WRONG FOR AN EVENT ACT AND ITS OWN DOCSTRING SAYS WHY: ***
+    *"never dormant"*. That is true of naming a goal and false of revising a
+    budget -- you cannot revise one you have not set, and scoring that user
+    `ZERO` tells them they are failing at something they cannot yet do, which
+    is the report-card voice decision 5 exists to forbid (§4.2.1).
+
+    So: `None` when the act is not yet possible, `ONE` once done, `ZERO` only
+    in the genuine middle -- it IS possible and you have not done it.
+    """
+    if not possible:
+        return None
     return ONE if done else ZERO
 
 
@@ -327,3 +346,123 @@ def transfers_confirmed(user_id):
     covered = sum(abs(Decimal(str(r.amount or 0)))
                   for r in rows if r.type_source == 'user')
     return _share(covered, total)
+
+
+def holdings_priced(user_id):
+    """Share of your holdings that record what you actually paid.
+
+    *** THIS ACT EXISTS BECAUSE THE MISSING FIGURE DOES NOT READ AS MISSING —
+    D-257. *** `Investment.purchase_price` is `nullable=False, default=0`, and
+    `gain_loss` is `current_value - shares * purchase_price`. So a holding you
+    never priced does not say *unknown*: it reports its ENTIRE market value as
+    profit, beside a confident `0.00%`. Recording the price is the truth test's
+    first limb exactly -- it makes a figure finPal already shows truer.
+
+    *** PER-USER, NOT HOUSEHOLD-SCOPED, AND THAT IS DELIBERATE. *** The
+    Investments PAGE shows a housemate's holdings (portfolios are
+    household-scoped in `api/v1/investments.py`), so this denominator is
+    smaller than the page's list. That is correct twice over: coins measure
+    coverage of the user's OWN picture (decision 5), and writes to someone
+    else's holding are not theirs to make -- paying them for a figure they
+    cannot fix would be a score they can never clear. Every other coverage
+    function in this file is per-user for the same reason.
+    """
+    rows = Investment.query.join(
+        Portfolio, Portfolio.id == Investment.portfolio_id).filter(
+            Portfolio.user_id == user_id).all()
+    if not rows:
+        return None
+    return _share(sum(1 for h in rows if h.purchase_price and h.purchase_price > 0),
+                  len(rows))
+
+
+def _shared_expenses_for(user_id):
+    """Group expenses this user is actually split into.
+
+    *** `split_with` IS A COMMA-SEPARATED STRING, NOT A RELATION *** -- the
+    same shape `Group.balances` reads (`group.py:15`). So the membership test
+    happens in Python after the query rather than in SQL, and a substring
+    `LIKE` would be wrong: `'bob@x.com'` is a substring of `'rob@x.com'` is
+    not, but `'a@x.com'` IS a substring of `'ba@x.com'`.
+    """
+    rows = Expense.query.filter(
+        Expense.group_id.isnot(None),
+        Expense.split_with.isnot(None)).all()
+    mine = []
+    for e in rows:
+        ids = [i.strip() for i in (e.split_with or '').split(',') if i.strip()]
+        if user_id in ids or e.paid_by == user_id or e.user_id == user_id:
+            mine.append(e)
+    return mine
+
+
+def splits_confirmed(user_id):
+    """Share of your shared expenses whose split you have confirmed.
+
+    *** DORMANT UNLESS THE USER IS SPLIT INTO SOMETHING. *** A user in no
+    group, or in a group with no shared expense, has nothing to confirm.
+
+    Counted from `ActEvent` because **there is no split-confirmation field
+    anywhere** -- `split_method`, `split_with`, `split_details` and
+    `has_category_splits` all describe the split, none records that a human
+    agreed with it (§14.3.1).
+    """
+    from src.repositories.act_events import ActEventRepository
+
+    mine = _shared_expenses_for(user_id)
+    if not mine:
+        return None
+    confirmed = ActEventRepository().subject_ids(user_id, 'splits_confirmed')
+    return _share(sum(1 for e in mine if str(e.id) in confirmed), len(mine))
+
+
+def settlement_recorded(user_id):
+    """Have you recorded settling up with anyone?
+
+    *** KEYED ON THE RECORDING, NEVER ON A BALANCE REACHING ZERO (§14.2). *** A
+    user who cannot pay yet is not failing, and a reward keyed to the zero
+    would say they were -- voice rule 11. So an outstanding balance does not
+    reduce this, and clearing one does not raise it; only the record does.
+
+    *** THE SETTLEMENT CHECK COMES FIRST, BEFORE THE DORMANCY TEST. *** A user
+    who has settled everything would otherwise fall into the dormant branch and
+    read as absent having actually done the thing.
+
+    *** AND DORMANCY IS "NO SHARED EXPENSE", NOT "NEVER HAD A BALANCE". *** A
+    balance is derived from expenses plus settlements, so the schema only knows
+    the CURRENT one -- *ever had a balance* is not computable from what is
+    stored. This test is, and it fails in the right direction.
+    """
+    has_settled = db.session.query(Settlement.query.filter(
+        db.or_(Settlement.payer_id == user_id,
+               Settlement.receiver_id == user_id)).exists()).scalar()
+    if has_settled:
+        return ONE
+    if not _shared_expenses_for(user_id):
+        return None
+    return ZERO
+
+
+def budget_adjusted(user_id):
+    """Have you come back and changed a budget you had set?
+
+    *** THE CLEAREST THING THE AMENDED TRUTH TEST UNLOCKS. *** Under the
+    original §1 this paid nothing: revising a budget makes no figure truer, it
+    is a deliberate act of taking control. §14.1 added that limb.
+
+    *** DORMANT UNTIL THERE IS A BUDGET TO REVISE. *** You cannot revise what
+    you have not set.
+
+    *** IT READS `ActEvent`, NOT `Budget.updated_at` — D-197. ***
+    `src/services/budget/rollover_service.py:76` writes `budget.rollover_amount`
+    from a SCHEDULED TASK, which fires `onupdate`. Keyed on the timestamp,
+    every budget on every stack would eventually read as *the user revised
+    this* because a cron touched it. A column with a non-user writer cannot
+    testify to a user's act.
+    """
+    from src.repositories.act_events import ActEventRepository
+
+    has_budget = db.session.query(
+        Budget.query.filter_by(user_id=user_id).exists()).scalar()
+    return _binary_conditional(
+        has_budget, ActEventRepository().exists(user_id, 'budget_adjusted'))

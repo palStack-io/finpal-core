@@ -37,6 +37,23 @@ export interface SpendingSummaryParams {
   start_date: string;
   end_date: string;
   group_by?: SpendingGrouping;
+  /**
+   * Narrow to one category and its children — what the flow diagram's
+   * drill-down asks.
+   *
+   * *** `0` MEANS UNCATEGORISED, AND IT IS NOT A FALSY ID. *** That node is a
+   * real slice of the diagram and would otherwise be the one a reader cannot
+   * open, which is the slice they most want explained. Anything here that
+   * treats 0 as "no filter" silently returns the whole range instead.
+   */
+  /**
+   * *** A COMMA-SEPARATED STRING, NOT AN ARRAY. *** Axios serialises an array
+   * as `category_id[]=1&category_id[]=2`, and Flask's `request.args.getlist`
+   * matches neither of those keys — so the filter would silently vanish and
+   * the panel would show the whole range while claiming to show one slice.
+   * The endpoint splits on commas for exactly this reason.
+   */
+  category_id?: string;
 }
 
 export const spendingSummaryApi = {

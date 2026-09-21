@@ -25,6 +25,9 @@ import { useAuthStore } from '../../store/authStore';
 import { moduleRegistry } from '../../modules';
 import { useReviewStore } from '../../store/reviewStore';
 import type { ModuleManifest } from '../../modules/registry';
+import { useBadges, useCoinBalance, useOpenSurfaces } from '../../contexts/CoinAwardContext';
+import { BadgeIcon } from '../BadgeIcon';
+import { Cairn } from '../Cairn';
 
 /**
  * The nav is grouped by WHAT YOU ARE DOING, and the headings are shared with
@@ -301,6 +304,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
 
   type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }> };
 
+  const coinBalance = useCoinBalance();
+  /* Newest first, already sorted by the provider. TWO, because a third would
+     wrap the line and the rail has no vertical room to give. */
+  const badges = useBadges();
+  const recentBadges = badges.slice(0, 2);
+  const openSurfaces = useOpenSurfaces();
+
+  /**
+   * Which surface each nav destination is.
+   *
+   * *** THE SERVER CANNOT OWN THIS ONE, AND THAT IS NOT A DRIFT RISK. *** It
+   * maps THIS CLIENT'S ROUTES onto surface names; mobile's routes differ and
+   * the server knows neither. The surface NAMES are the shared vocabulary and
+   * `everySurfaceHasACaller.test.ts` pins that no unknown name is used here.
+   */
+  const SURFACE_BY_PATH: Record<string, string> = {
+    '/transactions': 'transactions',
+    '/accounts': 'accounts',
+    '/categories': 'categories',
+    '/budgets': 'budgets',
+    '/recurring': 'recurring',
+    '/rules': 'rules',
+    '/goals': 'goals',
+    '/review': 'review',
+    '/investments': 'investments',
+    '/groups': 'groups',
+  };
+
+
   const renderNavItems = (items: readonly NavItem[]) =>
     items.map((item) => {
       const Icon = item.icon;
@@ -312,11 +344,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         >
           <Icon className="nav-icon" size={20} strokeWidth={2} />
           <span>{item.name}</span>
+          {/* *** THE CAIRN, AND IT IS A MARKER NOT A SCORE. *** Present when
+              an act on that page is still open to you, gone when there is
+              nothing left to do there. No stones accumulate — a marker that
+              grew with progress would be decision 5's denominator in a hat.
+              It inherits `currentColor` from the row, so it cannot go
+              invisible in one theme (D-60's class) and it needs no token of
+              its own. */}
+          {openSurfaces.has(SURFACE_BY_PATH[item.path] ?? '') && (
+            <span
+              style={{
+                marginLeft: 'auto', display: 'inline-flex',
+                alignItems: 'center', opacity: 0.55,
+              }}
+            >
+              <Cairn size={11} title={`${item.name} has something to finish`} />
+            </span>
+          )}
           {/* *** A COUNT, NEVER A FRACTION, AND ABSENT AT ZERO. *** "3" is
               momentum; "3 of 47" is a report card, and a permanent "0" badge
               would nag about a job already done. `null` means "not asked yet"
               and must not render as 0 — claiming an all-clear the app has not
               earned. */}
+          {/* *** THE PURSE, AND IT IS TEXT RATHER THAN A PILL ON PURPOSE. ***
+              The Review badge beside it is a pill because it is an ALERT —
+              something is waiting for you. A balance is ambient information,
+              so it takes no background and invents no colour.
+              `var(--status-warn)` is the amber ROLE token and is MEASURED in
+              both themes: #8A6A2F at 5.02:1 on the light card, #E8B872 at
+              8.9:1 on #16241A. (`--kt-seg-4` used raw in LIGHT is the 3.06:1
+              trap the kit file warns about; this is not that.)
+              Absent when null, and absent at zero — same rule as the badge:
+              null is "not asked yet" and a confident 0 is a claim the app has
+              not earned. */}
+          {item.path === '/kit' && coinBalance !== null && coinBalance > 0 && (
+            <span
+              aria-label={`${coinBalance} coins to spend`}
+              style={{
+                marginLeft: 'auto', fontSize: 12, fontWeight: 700,
+                color: 'var(--status-warn)', letterSpacing: '0.01em',
+              }}
+            >
+              {coinBalance.toLocaleString()}
+            </span>
+          )}
           {item.path === '/review' && reviewTotal !== null && reviewTotal > 0 && (
             <span
               aria-label={`${reviewTotal} to review`}
@@ -356,11 +427,54 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       {/* User Profile Header */}
       <div className="sidebar-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="user-profile-header" onClick={() => navigate('/settings')} style={{ flex: 1 }}>
+          {/* *** THIS WENT TO /settings UNTIL 2026-09-20, BECAUSE THERE WAS
+              NO PROFILE PAGE. *** The link had been pointing at the
+              preferences screen since the rail was built. */}
+          <div className="user-profile-header" onClick={() => navigate('/profile')} style={{ flex: 1 }}>
             <div className="user-avatar">{user?.profile_emoji || '👤'}</div>
             <div className="user-info">
               <div className="user-name">{user?.name || 'User'}</div>
+              {/* *** THE TWO MOST RECENT BADGES, OR THE OLD LINE. *** Owner
+                  chose discs over a named badge: two fit where one name does,
+                  and the rail is the one place in the app with no room for
+                  words. `useBadges` reads the wallet this provider has
+                  already loaded — a second fetch here would be one request
+                  per page view for two small discs.
+
+                  *** EACH DISC IS LABELLED, NOT TOOLTIPPED. *** `GoalStrip`
+                  next door carries its meaning in a `title` attribute, which
+                  does not exist on touch — so on every phone that row is
+                  permanently unexplained. Not repeating it here: `title` is
+                  the hover affordance and `aria-label` is the real one. */}
+              {/* *** THE LABEL STAYS EVEN WHEN BADGES SHOW, BECAUSE
+                  REPLACING IT COST THE ONLY CLUE THE HEADER IS CLICKABLE.
+                  *** The first version swapped "View profile" out for the
+                  discs, and the owner then went looking for the shelf under
+                  Settings — which is what a name plus an unlabelled disc
+                  invites. The discs are an ornament ON the link, not a
+                  replacement for it. */}
               <div className="user-email">View profile</div>
+              {recentBadges.length > 0 ? (
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}
+                  data-testid="rail-badges"
+                >
+                  {/* *** 32, NOT 20 — `gearIsLegible` REFUSED THE SMALLER
+                      ONE AND WAS RIGHT. *** The disc insets its glyph to
+                      58%, so 20 draws an 11.6px device: the same illegible
+                      smudge the goal strip was shipping. The approved mockup
+                      drew these at 18px, which the floor also forbids, so
+                      the mockup was showing something that cannot ship. */}
+                  {recentBadges.map((b) => (
+                    <BadgeIcon key={b.slug} slug={b.slug} size={32} title={b.title} />
+                  ))}
+                  {badges.length > recentBadges.length && (
+                    <span className="user-email" style={{ fontSize: 11.5 }}>
+                      +{badges.length - recentBadges.length}
+                    </span>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
           <button

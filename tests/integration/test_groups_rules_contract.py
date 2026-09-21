@@ -613,6 +613,13 @@ CAPTURED_SURFACE = {
     ('/api/v1/groups/<int>', 'DELETE'),
     ('/api/v1/groups/<int>/balances', 'GET'),
     ('/api/v1/groups/<int>/members', 'POST'),
+    # Added 2026-09-17 by the coins amendment (spec §14.3). The ONLY write path
+    # for `splits_confirmed`, because no split-confirmation field exists
+    # anywhere and a column on `expenses` is what D-121 forbids. Its contract —
+    # 200, a repeat as a no-op rather than a duplicate, and **403 kept distinct
+    # from 404** for a member who can see the expense but is not split into it
+    # — is asserted in `test_coin_coverage_new_acts.py`.
+    ('/api/v1/groups/<int>/expenses/<int>/confirm-split', 'POST'),
     ('/api/v1/transaction-rules', 'GET'),
     ('/api/v1/transaction-rules', 'POST'),
     ('/api/v1/transaction-rules/<int>', 'GET'),
@@ -729,4 +736,4 @@ def test_the_captured_surface_is_still_the_whole_surface(app):
     assert live == CAPTURED_SURFACE, (
         f'added since capture: {sorted(live - CAPTURED_SURFACE)}; '
         f'gone since capture: {sorted(CAPTURED_SURFACE - live)}')
-    assert len(CAPTURED_SURFACE) == 15
+    assert len(CAPTURED_SURFACE) == 16

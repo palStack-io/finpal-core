@@ -10,6 +10,7 @@ import { formatMoney } from '../styles/money';
 import { PageHead } from './PageHead';
 import { monthlyEquivalent, isConvertible, monthlyLabel } from '../utils/recurringMonthly';
 import { groundHeight } from '../utils/mountainGeometry';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 const metaTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '13px' };
 
@@ -215,6 +216,10 @@ const AddRecurringModal: React.FC<{
 };
 
 export const RecurringTransactions: React.FC = () => {
+  // The page names its own surface and nothing more; the server owns
+  // which acts a `recurring` mutation can move. Fires on mount as well as
+  // on demand, so an unwired mutation handler still gets its moment.
+  useSurfaceCoins('recurring');
   const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
   const [patterns, setPatterns] = useState<RecurringPattern[]>([]);
   const [loading, setLoading] = useState(true);

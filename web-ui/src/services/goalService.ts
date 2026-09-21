@@ -13,7 +13,146 @@ import type {
   UpdateGoalData,
 } from '../types/goal';
 
+
+/**
+ * What an emergency fund would need to be, in the caller's own figures.
+ *
+ * *** `null` IS A REAL ANSWER. *** A caller with no spending recorded has no
+ * essential monthly cost, and "you need $0.00" is a sentence finPal cannot
+ * justify — the same fail-closed rule the coin payoffs follow.
+ */
+export interface BufferPicture {
+  /** What arrives whatever you do, per month. The divisor, stated. */
+  essential_monthly: number;
+  /** Cash reachable this week: checking + savings, positive balances only. */
+  held: number;
+  months_covered: number;
+  /** Three and six, offered as options. finPal recommends neither. */
+  targets: Array<{
+    months: number;
+    target: number;
+    /** Negative means already past it. NOT clamped — that is worth knowing. */
+    short_by: number;
+  }>;
+}
+
+/**
+ * What the bills that are not monthly cost, and a twelfth of that.
+ *
+ * *** THIS ONE NAMES A FIGURE AND `BufferPicture` DELIBERATELY DOES NOT. ***
+ * An emergency fund's size is a judgement about job security and dependants,
+ * so that endpoint offers three months and six. A sinking fund has no such
+ * judgement in it: the total is observed and the divisor is twelve.
+ */
+export interface SinkingPicture {
+  /** Observed spending in `non_monthly` categories, last 12 complete months. */
+  annual: number;
+  /** The twelfth. ROUNDED UP — a plan that quietly misses is worse. */
+  monthly: number;
+  months_counted: number;
+  /** D-278: a money figure travels with the code it is in. */
+  currency_code: string;
+}
+
+/** A goal the caller's own figures argue for. Never paid for; see `acts.py`. */
+export interface GoalSuggestion {
+  kind: 'savings' | 'payoff';
+  headline: string;
+  /** The condition finPal observed, so the premise can be disagreed with. */
+  because: string;
+  lesson_slug: string;
+  check: string;
+}
+
+/**
+ * How the current month is going against the plan.
+ *
+ * *** `paid` IS WHAT finPal COULD SEE, NOT WHAT THEY PAID. *** It counts
+ * transfers recorded against a debt account, so somebody paying their card
+ * from a bank finPal does not hold scores zero and reads as `behind`. The
+ * panel prints that basis beside the figure; see `plan_status.py`.
+ */
+export interface DebtPlanStatus {
+  method: 'avalanche' | 'snowball';
+  planned: number;
+  paid: number;
+  /** Positive is ahead, negative behind. NOT clamped and NOT a verdict. */
+  difference: number;
+  state: 'ahead' | 'on' | 'behind';
+}
+
+export interface DebtPlan {
+  method: 'avalanche' | 'snowball';
+  /** `null` is allowed: the ordering is useful before an amount is known. */
+  monthly_amount: number | null;
+  /**
+   * The code EVERY figure in this payload is in — `order` balances and the
+   * `planned`/`paid` inside `status`.
+   *
+   * *** IT IS ONE CODE BECAUSE THE SERVER CONVERTS THEM ALL INTO IT. D-278. ***
+   * Before this, the balances were sent straight off the row and a euro
+   * household's dollar card rendered as `€600.00`: the panel had no per-figure
+   * currency and reached for the first account's. Optional so an older server
+   * still parses; the caller falls back to the page's own currency.
+   */
+  currency_code?: string;
+  /** What the chosen method implies, stated back. Absent on a write. */
+  order?: Array<{ id: number; name: string; balance: number; apr: number | null }>;
+  /**
+   * *** ABSENT ON A WRITE, `null` WHEN THERE IS NOTHING TO MEASURE. *** The
+   * PUT returns method and amount only, so a caller that stores the write's
+   * answer over the read's would blank the order and the status at the exact
+   * moment the reader expects to see them. `setDebtPlan` therefore re-reads.
+   */
+  status?: DebtPlanStatus | null;
+}
+
 export const goalService = {
+
+  /** `null` when finPal cannot say — never a zero target. */
+  async getBufferPicture(): Promise<BufferPicture | null> {
+    const response = await api.get<{ success: boolean; buffer: BufferPicture | null }>(
+      '/api/v1/goals/buffer-picture');
+    return response.data.buffer;
+  },
+
+  /** `null` when nothing is classified `non_monthly` — never a zero target. */
+  async getSinkingPicture(): Promise<SinkingPicture | null> {
+    const response = await api.get<{ success: boolean; sinking: SinkingPicture | null }>(
+      '/api/v1/goals/sinking-picture');
+    return response.data.sinking;
+  },
+
+  /** `[]` is a fine answer: a page that always has advice has none. */
+  async getSuggestions(): Promise<GoalSuggestion[]> {
+    const response = await api.get<{ success: boolean; suggestions: GoalSuggestion[] }>(
+      '/api/v1/goals/suggestions');
+    return response.data.suggestions;
+  },
+
+  async getDebtPlan(): Promise<DebtPlan | null> {
+    const response = await api.get<{ success: boolean; plan: DebtPlan | null }>(
+      '/api/v1/goals/debt-plan');
+    return response.data.plan;
+  },
+
+  /**
+   * *** OMIT `monthly_amount` TO LEAVE IT UNCHANGED. *** Sending `null` is not
+   * the same as omitting it: somebody switching ordering should not silently
+   * lose the figure they recorded.
+   */
+  async setDebtPlan(method: 'avalanche' | 'snowball', monthlyAmount?: number): Promise<DebtPlan> {
+    const body: Record<string, unknown> = { method };
+    if (monthlyAmount !== undefined) body.monthly_amount = monthlyAmount;
+    await api.put<{ success: boolean; plan: DebtPlan }>(
+      '/api/v1/goals/debt-plan', body);
+    /* *** THE WRITE'S ANSWER IS NOT THE WHOLE PLAN. *** `PUT` returns method
+       and amount only; `order` and `status` come from the read. Returning the
+       write's payload would blank both the instant somebody picks a method,
+       which is when they most expect the ordering to appear. */
+    const plan = await goalService.getDebtPlan();
+    return plan as DebtPlan;
+  },
   async getGoals(): Promise<Goal[]> {
     const response = await api.get<{ success: boolean; goals: Goal[] }>('/api/v1/goals');
     return response.data.goals;

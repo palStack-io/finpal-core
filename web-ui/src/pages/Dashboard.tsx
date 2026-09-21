@@ -31,11 +31,54 @@ import { teamService } from '../services/teamService';
 import { TeamMember } from '../types/team';
 import { ImportReviewBanner } from '../components/dashboard/ImportReviewBanner';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
+import { useEverest } from '../contexts/CoinAwardContext';
+import { RANGE_BLURB, RANGE_BLURB_EMPTY } from '../utils/peakCopy';
 
 const tableCellMuted: React.CSSProperties = { padding: '8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' };
 const tableCellSecondary: React.CSSProperties = { padding: '8px', color: 'var(--text-secondary)', fontSize: '12px' };
 const tooltipBoxStyle: React.CSSProperties = { background: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: '8px', padding: '12px' };
 const emptyStateStyle: React.CSSProperties = { textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' };
+
+/**
+ * The same shell as `ViewAllBtn`, but the destination is on THIS page.
+ *
+ * *** AN ANCHOR, NOT A BUTTON WITH `scrollIntoView`. *** Owner, 2026-09-19:
+ * *"instead of doing view all and then going to transaction page, we litrally
+ * have the Monthly Expense Breakdown on the same page"*. A real `href="#id"`
+ * is focusable, announces itself as a link to the right place, survives
+ * middle-click and works before React has hydrated — a click handler that
+ * scrolls does none of that. The handler is additive: it only opens the month.
+ *
+ * *** AND IT DOES NOT ANIMATE. *** `scroll-behavior: smooth` on a jump this
+ * long is motion a reader did not ask for, and the theme already honours
+ * `prefers-reduced-motion`. The browser's instant jump also lands focus on the
+ * target, which a scripted scroll leaves behind.
+ */
+const JumpBtn = ({ to, label, onJump }: { to: string; label: string; onJump?: () => void }) => (
+  <a
+    href={`#${to}`}
+    onClick={onJump}
+    style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      padding: '6px 12px',
+      background: 'transparent',
+      border: '1px solid var(--border-light)',
+      borderRadius: '6px',
+      color: 'var(--text-secondary)',
+      fontSize: '13px',
+      textDecoration: 'none',
+      cursor: 'pointer',
+      flexShrink: 0,
+    }}
+  >
+    {label} <span aria-hidden="true">↓</span>
+  </a>
+);
+
+/** The breakdown's anchor. One constant, so the link and the target cannot
+    drift into two different strings — a `#` that matches nothing scrolls
+    nowhere and reports no error. */
+const BREAKDOWN_ID = 'monthly-expense-breakdown';
 
 const ViewAllBtn = ({ href }: { href: string }) => (
   <button
@@ -62,6 +105,9 @@ const ViewAllBtn = ({ href }: { href: string }) => (
 export const Dashboard = () => {
   const { showToast } = useToast();
   const { user } = useAuthStore();
+  /* Everest is drawn INSIDE the range now, so the page reads it and hands it
+     down rather than a separate card fetching it. Safe without a provider. */
+  const everest = useEverest();
   const branding = getBranding(user?.default_currency_code || 'USD');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -347,6 +393,19 @@ export const Dashboard = () => {
     return null;
   };
 
+  /** Today's month in the breakdown's own key format. */
+  const currentMonthKey = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  /* *** OPEN, NOT TOGGLE. *** The row is open by default, so a toggle on the
+     jump link would CLOSE the very thing the link exists to show for every
+     reader who had not touched it. */
+  const openMonth = (monthKey: string) => {
+    setExpandedMonths((prev) => (prev.has(monthKey) ? prev : new Set(prev).add(monthKey)));
+  };
+
   const toggleMonth = (monthKey: string) => {
     setExpandedMonths(prev => {
       const next = new Set(prev);
@@ -468,6 +527,13 @@ export const Dashboard = () => {
             The h1 moves with the title, so the page still has exactly one and
             `every-page.spec.ts` still measures it — the heading expectation for
             `/dashboard` moved with it. */}
+        {/* *** ONE LINE, UNDER THE RANGE, NOT BESIDE IT AND NOT DRAWN. ***
+            Spec §14.10. Two mountain pictures on one page read as one
+            confusing picture: the range below is the user's OWN peaks from
+            their money, and Everest measures effort. Kit is the only surface
+            that draws it. It renders nothing at 0 m, so a brand-new user is
+            not told they have climbed nothing on the page they came to for
+            reassurance. */}
         <PageHead
           /* *** "Your range" EITHER WAY NOW. *** The title switched to
              "Where you stand" for a user with no goals because there was no
@@ -488,9 +554,7 @@ export const Dashboard = () => {
              open to read. Both sentences, always. */
           subtitle={<>
             <span>
-              {goals.length > 0
-                ? 'What you are climbing, and the ground you stand on while you climb.'
-                : 'What you are climbing, once you pick something to climb.'}
+              {goals.length > 0 ? RANGE_BLURB : RANGE_BLURB_EMPTY}
               {' · '}
             </span>
             {/* Its own element, not a bare string beside another one. A
@@ -529,8 +593,18 @@ export const Dashboard = () => {
               for a fact, and the "you have nothing yet" case belongs to base
               camp — which is why the title above changes rather than this
               rendering an empty range. */}
-          {goals.length > 0 ? (
-            <GoalRange goals={goals} currency={user?.default_currency_code || 'USD'} />
+          {/* *** EVEREST IS IN THE RANGE, SO A USER WITH NO GOALS GETS A RANGE
+              TOO — owner, 2026-09-17: "no matter what mt everest will be
+              present for all users even those with no goals". That is the hole
+              Everest exists to fill: base camp's own audience had no mountain
+              at all (D-205). `EmptyRange` still carries the invitation when
+              there is neither a goal nor any altitude yet. */}
+          {(goals.length > 0 || everest) ? (
+            <GoalRange
+              goals={goals}
+              currency={user?.default_currency_code || 'USD'}
+              everest={everest}
+            />
           ) : (
             /* *** A NEW USER NOW SEES THE SHAPE OF THE THING AND WHAT TO DO
                ABOUT IT. *** Owner, 2026-09-16. This panel used to render
@@ -542,6 +616,7 @@ export const Dashboard = () => {
                full argument. */
             <EmptyRange />
           )}
+
           {/* *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
               GROUND". *** The ground is a monthly recurring total, and the only
               place it is computed today is learnPal's range endpoint — reading
@@ -554,6 +629,8 @@ export const Dashboard = () => {
 
         {/* Flags an auto-import whose columns were guessed */}
         <ImportReviewBanner onReverted={loadDashboardData} />
+
+
 
         {/* *** THE RANGE EARNS THE TOP OF THE PAGE — spec variant B. *** The
             user's own goals, drawn at their real named elevations, above the
@@ -596,7 +673,18 @@ export const Dashboard = () => {
             <SectionCard
               title={`Where ${new Date().toLocaleDateString('en-US', { month: 'long' })} went`}
               subtitle={`${formatCurrency(monthlyExpenses)} out · day ${new Date().getDate()} of the month`}
-              action={<ViewAllBtn href="/transactions" />}
+              /* *** THE LEDGER IS NOT WHAT THIS CARD IS ASKING ABOUT. ***
+                 It answers "where did the month go", and the answer in full is
+                 the Monthly Expense Breakdown 400px below — same page, same
+                 month, already open on it. Sending the reader to
+                 /transactions made them leave the page to reach a table that
+                 was under their thumb. The month is re-opened on the way in
+                 case they had collapsed it. */
+              action={<JumpBtn
+                to={BREAKDOWN_ID}
+                label="See the breakdown"
+                onJump={() => openMonth(currentMonthKey())}
+              />}
             >
               <ShareBar
                 memberCount={members.length}
@@ -780,6 +868,7 @@ export const Dashboard = () => {
             two places. The strip's own "View all" went to /transactions, which
             is where somebody who wants the ledger should be. */}
         {/* Monthly Expense Breakdown */}
+        <div id={BREAKDOWN_ID} style={{ scrollMarginTop: 16 }}>
         <SectionCard title="Monthly Expense Breakdown" subtitle="View expenses grouped by month, category, and account">
           {monthlyAggregation.length > 0 ? (
             <ScrollPane label="Monthly expense breakdown table" axis="x">
@@ -976,6 +1065,7 @@ export const Dashboard = () => {
             <div style={emptyStateStyle}>No expense data found</div>
           )}
         </SectionCard>
+        </div>
 
       </div>
 

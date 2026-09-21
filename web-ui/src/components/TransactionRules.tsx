@@ -10,6 +10,7 @@ import { apiErrorMessage } from '../utils/apiError';
 import { StatCard } from './StatCard';
 import { PageHead } from './PageHead';
 import { formatMoney } from '../styles/money';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 const accentTextStyle: React.CSSProperties = { fontSize: '14px', color: 'var(--text-secondary)', margin: 0 };
 const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 };
@@ -18,6 +19,10 @@ const clickableRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'c
 const iconBtnStyle: React.CSSProperties = { width: '18px', height: '18px', cursor: 'pointer' };
 
 export const TransactionRules: React.FC = () => {
+  // The page names its own surface and nothing more; the server owns
+  // which acts a `rules` mutation can move. Fires on mount as well as
+  // on demand, so an unwired mutation handler still gets its moment.
+  useSurfaceCoins('rules');
   const [rules, setRules] = useState<TransactionRule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { GearIcon } from '../../components/GearIcon';
+import { BadgeIcon } from '../../components/BadgeIcon';
 import type { RangeStrip } from '../../types/learnpal';
 
 /**
@@ -41,7 +41,19 @@ export const GoalStrip: React.FC<{ strip: RangeStrip; goalId: number }> = ({ str
                that grew an icon at a time would never show the shape of it. */
             style={{ opacity: g.earned ? 1 : 0.3, lineHeight: 0 }}
           >
-            <GearIcon slug={g.slug ?? g.milestone_slug} size={24} />
+            {/* *** 32 CLEARED THE GATE AND WAS STILL UNREADABLE. ***
+                `gearIsLegible` floors `BadgeIcon` at 32, which the 58% disc
+                inset turns into a **19px** glyph — and these are thin line
+                drawings. Rendered at 4x on the demo they are plainly a rope, a
+                bottle, a thermometer and a helmet; at 1x the owner read the
+                whole row as *"circle empty things"*. The floor was derived
+                from a glyph minimum, never measured against this artwork, so
+                the gate agreeing is not evidence.
+
+                40 gives a 23px glyph. The row is four discs on one line and
+                had spare width at every breakpoint the responsive walk
+                measures. */}
+            <BadgeIcon slug={g.slug ?? g.milestone_slug} size={40} />
           </span>
         ))}
       </span>

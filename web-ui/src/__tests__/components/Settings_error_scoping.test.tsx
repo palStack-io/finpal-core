@@ -11,7 +11,8 @@ import { api } from '../../services/api';
  *
  * *** THE REPORTER NAMED TWO TABS AND THE CODE EXPLAINS EXACTLY THOSE TWO. ***
  * They changed their password, got "Failed to change password", and the error kept
- * showing on "Profile" and on "Data & Privacy". `Settings.tsx` holds ONE `saveError`
+ * showing on "Account" (renamed from "Profile" on 2026-09-20, when /profile
+ * became a page of its own) and on "Data & Privacy". `Settings.tsx` holds ONE `saveError`
  * state and renders it in three separate tab bodies — the profile tab (line 401),
  * the security tab (604) and the data tab (974) — and `setActiveTab` never cleared
  * it. There is no auto-dismiss either; the only `useEffect` on `saveError` restores
@@ -102,12 +103,12 @@ describe('Settings — an error belongs to the form that produced it (#145)', ()
     });
   });
 
-  it('does NOT carry that error onto the Profile tab', async () => {
+  it('does NOT carry that error onto the Account tab', async () => {
     signIn();
     renderSettings();
     await triggerAPasswordError();
 
-    openTab('Profile');
+    openTab('Account');
 
     expect(screen.queryByText(/passwords do not match/i)).toBeNull();
   });
@@ -127,7 +128,7 @@ describe('Settings — an error belongs to the form that produced it (#145)', ()
     renderSettings();
     await triggerAPasswordError();
 
-    openTab('Profile');
+    openTab('Account');
     openTab('Security');
 
     // A stale error waiting on the tab you came back to is the same defect one

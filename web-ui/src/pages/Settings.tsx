@@ -22,6 +22,7 @@ import { FINPAL_PRIVACY, FINPAL_TERMS } from '../constants/links';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { apiErrorMessage } from '../utils/apiError';
 import { useToast } from '../contexts/ToastContext';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 // ---------------------------------------------------------------------------
 // ModuleCard — per-module hide/show toggle card for Settings > Modules tab
@@ -127,6 +128,12 @@ const redTextStyle: React.CSSProperties = { color: 'var(--accent-red)', fontSize
 const successBannerStyle: React.CSSProperties = { marginTop: '16px', padding: '12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '8px', color: 'var(--brand-green-glow)', fontSize: '14px' };
 
 export const Settings: React.FC = () => {
+  // *** SETTINGS EARNS NOTHING AND STILL NEEDS THIS, WHICH IS NOT A
+  // CONTRADICTION. *** Spec §5.2 says no act is ADVERTISED here — no act
+  // line, no cairn. But a surface is where a mutation can MOVE an act, and
+  // a user connects their bank from `SimpleFinSettings.tsx`, so
+  // `bank_connected`'s 2,400 coins have to land where they did it.
+  useSurfaceCoins('settings');
   const navigate = useNavigate();
   const { user, features } = useAuthStore();
   const { theme } = useTheme();
@@ -288,7 +295,15 @@ export const Settings: React.FC = () => {
   };
 
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: <User size={18} /> },
+    /* *** "Account", NOT "Profile" — THERE ARE TWO OF THOSE AND THE OWNER
+       HIT IT. *** `/profile` is the page about what you have done: the shelf
+       of gear you own and the badges you have kept up. This tab is where you
+       EDIT who you are. Owner, 2026-09-20, after looking for the shelf under
+       Settings > Profile and finding a name field: the tab is renamed rather
+       than the two being merged, because a Save-changes form does not belong
+       on a page about achievements. The `id` stays `profile` so existing
+       `?tab=profile` links keep working. */
+    { id: 'profile', label: 'Account', icon: <User size={18} /> },
     { id: 'security', label: 'Security', icon: <Lock size={18} /> },
     ...(user?.is_admin ? [{ id: 'household', label: 'Household', icon: <Home size={18} /> }] : []),
     { id: 'integrations', label: 'Integrations', icon: <Link size={18} /> },
@@ -588,7 +603,7 @@ export const Settings: React.FC = () => {
           <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '32px' }}>
               {activeTab === 'profile' && (
                 <div>
-                  <h2 style={sectionTitleStyle}>Profile Information</h2>
+                  <h2 style={sectionTitleStyle}>Account</h2>
 
                   {/* Error Message */}
                   {saveError && (
@@ -694,79 +709,6 @@ export const Settings: React.FC = () => {
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '24px' }}>
-                    {/* *** A <label> THAT NAMES NOTHING IS DECORATIVE TEXT. ***
-                        These three read correctly on screen and were invisible to
-                        the accessibility tree: no `htmlFor`, no `id`, and the
-                        control not nested inside the label, so axe reported
-                        `select-name` and a screen reader announced an unnamed
-                        combo box. Associating them costs one attribute each and
-                        changes nothing visually. */}
-                    <label style={fieldLabelStyle} htmlFor="settings-currency">
-                      Default Currency
-                    </label>
-                    <select
-                      id="settings-currency"
-                      value={profileData.currency}
-                      onChange={(e) => setProfileData({...profileData, currency: e.target.value as Currency})}
-                      className="fp-input"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {currencies.map((curr) => (
-                        <option key={curr} value={curr} style={{ background: 'var(--bg-secondary)' }}>{curr}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={{ marginBottom: '32px' }}>
-                    <label style={fieldLabelStyle} htmlFor="settings-timezone">
-                      Timezone
-                    </label>
-                    <select
-                      id="settings-timezone"
-                      value={profileData.timezone}
-                      onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
-                      className="fp-input"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {timezones.map((tz) => (
-                        <option key={tz} value={tz} style={{ background: 'var(--bg-secondary)' }}>{tz}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Number format — #132. Reachable from settings and not only from
-                      onboarding, because the person who asked for it is already
-                      onboarded and would otherwise have no way to use it. */}
-                  <div style={{ marginBottom: '32px' }}>
-                    <label style={fieldLabelStyle} htmlFor="settings-number-format">
-                      Number format
-                    </label>
-                    <select
-                      id="settings-number-format"
-                      value={profileData.numberLocale ?? ''}
-                      onChange={(e) => setProfileData({
-                        ...profileData,
-                        numberLocale: e.target.value === '' ? null : e.target.value,
-                      })}
-                      className="fp-input"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {NUMBER_FORMATS.map((format) => (
-                        <option
-                          key={format.value ?? 'default'}
-                          value={format.value ?? ''}
-                          style={{ background: 'var(--bg-secondary)' }}
-                        >
-                          {format.label} — {format.hint}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="fp-hint">
-                      How amounts are shown throughout finPal. Typing an amount accepts
-                      either a comma or a dot whichever you choose.
-                    </p>
-                  </div>
 
                   <button
                     onClick={handleProfileSave}
@@ -1172,8 +1114,127 @@ export const Settings: React.FC = () => {
                 </div>
               )}
 
+              {/* *** THIS TAB RENDERED A HEADING AND NOTHING ELSE. *** Eleven
+                  lines: "App Preferences / Customize your app experience." and
+                  then it closed. A nav item that leads to an empty page is the
+                  affordance-that-does-nothing shape, and the owner found it by
+                  clicking on it.
+
+                  *** THE THREE FIELDS BELOW MOVED HERE FROM THE ACCOUNT TAB,
+                  WHERE THEY NEVER BELONGED. *** Currency, timezone and number
+                  format are how the app BEHAVES for you; name, email and emoji
+                  are who you are. One tab was carrying both and the other was
+                  carrying nothing.
+
+                  *** THEY SHARE THE ACCOUNT TAB'S STATE AND SAVE, AND THAT IS
+                  WHY THEY ARE INLINE RATHER THAN IN `PreferencesTab`. ***
+                  `profileData` and `handleProfileSave` live in this component
+                  and submit one payload; splitting the fields into a child
+                  would mean either lifting state for no gain or a second
+                  endpoint for one form. */}
               {activeTab === 'preferences' && (
-                <PreferencesTab />
+                <div>
+                  <h2 style={sectionTitleStyle}>Preferences</h2>
+                  <p className="fp-hint" style={{ marginBottom: 28 }}>
+                    How finPal behaves for you. These change what you see, never
+                    what is stored.
+                  </p>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    {/* *** A <label> THAT NAMES NOTHING IS DECORATIVE TEXT. ***
+                        These three read correctly on screen and were invisible to
+                        the accessibility tree: no `htmlFor`, no `id`, and the
+                        control not nested inside the label, so axe reported
+                        `select-name` and a screen reader announced an unnamed
+                        combo box. Associating them costs one attribute each and
+                        changes nothing visually. */}
+                    <label style={fieldLabelStyle} htmlFor="settings-currency">
+                      Default Currency
+                    </label>
+                    <select
+                      id="settings-currency"
+                      value={profileData.currency}
+                      onChange={(e) => setProfileData({...profileData, currency: e.target.value as Currency})}
+                      className="fp-input"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {currencies.map((curr) => (
+                        <option key={curr} value={curr} style={{ background: 'var(--bg-secondary)' }}>{curr}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '32px' }}>
+                    <label style={fieldLabelStyle} htmlFor="settings-timezone">
+                      Timezone
+                    </label>
+                    <select
+                      id="settings-timezone"
+                      value={profileData.timezone}
+                      onChange={(e) => setProfileData({...profileData, timezone: e.target.value})}
+                      className="fp-input"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {timezones.map((tz) => (
+                        <option key={tz} value={tz} style={{ background: 'var(--bg-secondary)' }}>{tz}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Number format — #132. Reachable from settings and not only from
+                      onboarding, because the person who asked for it is already
+                      onboarded and would otherwise have no way to use it. */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <label style={fieldLabelStyle} htmlFor="settings-number-format">
+                      Number format
+                    </label>
+                    <select
+                      id="settings-number-format"
+                      value={profileData.numberLocale ?? ''}
+                      onChange={(e) => setProfileData({
+                        ...profileData,
+                        numberLocale: e.target.value === '' ? null : e.target.value,
+                      })}
+                      className="fp-input"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {NUMBER_FORMATS.map((format) => (
+                        <option
+                          key={format.value ?? 'default'}
+                          value={format.value ?? ''}
+                          style={{ background: 'var(--bg-secondary)' }}
+                        >
+                          {format.label} — {format.hint}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="fp-hint">
+                      How amounts are shown throughout finPal. Typing an amount accepts
+                      either a comma or a dot whichever you choose.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleProfileSave}
+                    disabled={isSaving}
+                    style={{
+                      padding: '12px 24px',
+                      background: isSaving ? 'var(--brand-dark-green)' : 'var(--brand-main-green)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: isSaving ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Save size={16} />
+                    {isSaving ? 'Saving…' : 'Save changes'}
+                  </button>
+                </div>
               )}
 
               {activeTab === 'data' && (
@@ -1566,15 +1627,4 @@ export const Settings: React.FC = () => {
 
 // ── Preferences Tab ────────────────────────────────────────────────────────
 
-const PreferencesTab: React.FC = () => {
-  return (
-    <div>
-      <h2 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
-        App Preferences
-      </h2>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '28px' }}>
-        Customize your app experience.
-      </p>
-    </div>
-  );
-};
+

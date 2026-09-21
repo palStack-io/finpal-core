@@ -15,6 +15,7 @@ import { GoalAccountsControl } from '../components/goals/GoalAccountsControl';
 import { SlidePanel } from '../components/SlidePanel';
 import { pageContainerStyle } from '../styles/layoutStyles';
 import { learnpalService } from '../modules/learnpal/service';
+import { useNavigate } from 'react-router-dom';
 import { RangeBanner } from '../modules/learnpal/RangeBanner';
 import { GoalStrip } from '../modules/learnpal/GoalStrip';
 import { RangeHiddenNote, rangeIsHiddenByChoice } from '../modules/learnpal/RangeHiddenNote';
@@ -24,6 +25,15 @@ import { accountService, type Account } from '../services/accountService';
 import type { Goal, GoalContribution } from '../types/goal';
 import { useToast } from '../contexts/ToastContext';
 import { apiErrorMessage } from '../utils/apiError';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
+import { GoalSuggestions } from '../components/goals/GoalSuggestions';
+import { BufferCalculator } from '../components/goals/BufferCalculator';
+import { SinkingCalculator } from '../components/goals/SinkingCalculator';
+import { DebtMethodStep } from '../components/goals/DebtMethodStep';
+import { DebtPlanStatus } from '../components/goals/DebtPlanStatus';
+import {
+  GOAL_KIND_OPTIONS, storedKind, type GoalKindChoice,
+} from '../utils/goalKinds';
 
 /**
  * Goals.
@@ -424,6 +434,20 @@ const GoalRow: React.FC<GoalRowProps> = ({
 
       {strip && <GoalStrip strip={strip} goalId={goal.id} />}
 
+      {/* *** THE PLAN STATUS LIVES BESIDE THE THING IT DESCRIBES. *** When the
+          method picker moved into the create panel (2026-09-20) the status had
+          to stay somewhere readable, or the plan would have become write-once
+          — and `plan_status` exists precisely so that "every week we tell them
+          how they are doing" has a home. `direction`, not `kind`: the arrow of
+          a goal is DERIVED from its amounts, and every goal made before the
+          kind field existed was stored as `savings` whatever it actually was. */}
+      {goal.direction === 'paydown' && goal.status !== 'archived' && (
+        <DebtPlanStatus
+          currency={goal.currency_code}
+          onChangePlan={() => onEdit(goal)}
+        />
+      )}
+
       {goal.account_id !== null && (
         <div style={{ marginTop: 12 }}>
           {/* *** THE ACCOUNTS CONTROL MOVED INTO THE EDIT PANEL. *** The owner
@@ -479,6 +503,9 @@ const GoalRow: React.FC<GoalRowProps> = ({
 };
 
 export const Goals: React.FC = () => {
+  // Goals is where `has_a_goal` is earned. The page names its surface and
+  // nothing more; the server owns which acts a goals mutation can move.
+  useSurfaceCoins('goals');
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -494,6 +521,7 @@ export const Goals: React.FC = () => {
    * strips -- instead of a red error on a page that works.
    */
   const [range, setRange] = useState<LearnRange | null>(null);
+  const navigate = useNavigate();
   // Two-step delete: this holds the id awaiting confirmation, never a boolean,
   // so a confirm left armed on one goal cannot apply to the next one opened.
   const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
@@ -504,6 +532,13 @@ export const Goals: React.FC = () => {
   const [accountIds, setAccountIds] = useState<number[]>([]);
   const [targetAmount, setTargetAmount] = useState('');
   const [scope, setScope] = useState<'personal' | 'household'>('personal');
+  /* *** THE FORM NEVER ASKED WHAT KIND OF GOAL THIS WAS. *** It defaulted to
+     `savings` on the server, so every goal made through this UI — including
+     the ones paying a card off — was recorded as savings. The arithmetic
+     survived because `direction` is derived from the amounts, which is
+     precisely why it went unnoticed. It is the FIRST field now, because it
+     decides what the rest of the form shows. */
+  const [kind, setKind] = useState<GoalKindChoice>('buffer');
   const [targetDate, setTargetDate] = useState('');
 
   const currency = user?.default_currency_code || 'USD';
@@ -544,10 +579,20 @@ export const Goals: React.FC = () => {
    * *** NULL MEANS CREATE; A NUMBER MEANS EDIT. *** One panel, two modes, so the
    * two forms cannot drift apart the way a duplicated one would.
    */
-  const openCreate = () => {
+  /**
+   * *** CALL IT AS `() => openCreate()`, NEVER AS `onClick={openCreate}`. ***
+   * A default parameter applies only when the argument is ABSENT, and a React
+   * click handler always supplies one — so the bare reference would pass the
+   * MouseEvent in as the kind and the panel would open on no valid choice.
+   */
+  const openCreate = (choice: GoalKindChoice = 'buffer') => {
     setEditingId(null);
     setName(''); setAccountIds([]); setTargetAmount(''); setTargetDate('');
     setScope('personal'); setFormError(null);
+    /* A suggestion opens the panel with its own kind already chosen — that is
+       what makes the one-line suggestion part of this flow rather than a
+       competing card. */
+    setKind(choice);
     setShowForm(true);
   };
 
@@ -646,6 +691,9 @@ export const Goals: React.FC = () => {
          * says what it means with one key.
          */
         account_ids: accountIds,
+        /* Four choices, three stored values — see `utils/goalKinds.ts` for
+           why the collapse is deliberate. */
+        kind: storedKind(kind),
         target_amount: Number(targetAmount),
         target_date: targetDate === '' ? null : targetDate,
       });
@@ -719,11 +767,24 @@ export const Goals: React.FC = () => {
         title="Goals"
         subtitle="Link a goal to an account and finPal works the progress out from the balance, so the number is never one you typed."
         right={
-          <button type="button" style={primaryButtonStyle} onClick={openCreate}>
+          <button type="button" style={primaryButtonStyle} onClick={() => openCreate()}>
             <Plus size={16} /> New goal
           </button>
         }
       />
+
+      {/* *** THE CALCULATORS LEFT THIS PAGE ON 2026-09-20 AND ONLY THIS ROW
+          STAYED. *** Owner: the advice panels *"need to show only when a user
+          is trying to create a goal... currently it just takin alot of real
+          estate"*. Three always-on cards were roughly half the first screen,
+          spent on advice most visits do not need. They now live inside the
+          create panel, where the target field they exist to fill is directly
+          below them.
+
+          A suggestion cannot move with them, because a suggestion is what
+          makes somebody OPEN the panel. It shrank to one line instead, and it
+          preselects its own kind. */}
+      <GoalSuggestions onStart={openCreate} />
 
       {/* *** THE FORM COMES IN FROM THE SIDE, LIKE EVERY OTHER PAGE'S. ***
           `SlidePanel` is already used by Accounts, Transactions, Budgets, Groups
@@ -738,6 +799,75 @@ export const Goals: React.FC = () => {
       >
         <form onSubmit={editingId === null ? handleCreate : handleUpdate}>
           <div style={{ display: 'grid', gap: 16 }}>
+            {/* *** THE KIND COMES FIRST, BECAUSE IT DECIDES WHAT THE REST OF
+                THE FORM SHOWS. *** Owner, 2026-09-20. It is create-only for
+                the same reason the accounts control is: `PUT /goals/<id>`
+                does not take a kind, so offering it on an edit would be a
+                field that looks saved and is not — D-05's class. */}
+            {editingId === null && (
+            <div>
+              <label htmlFor="goal-kind" style={fieldLabelStyle}>
+                What kind of goal is this
+              </label>
+              <select
+                id="goal-kind" className="fp-input" value={kind}
+                onChange={(e) => setKind(e.target.value as GoalKindChoice)}
+              >
+                {GOAL_KIND_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <p className="fp-hint">
+                {GOAL_KIND_OPTIONS.find((o) => o.value === kind)?.hint}
+              </p>
+            </div>
+            )}
+
+            {/* *** THE HELPER FOR THE CHOSEN KIND, AND EACH ONE STILL DRAWS
+                NOTHING WHEN IT HAS NOTHING TO SAY. *** Moving them in here did
+                not make them louder: a user with no classified spending sees
+                no calculator, exactly as before. What changed is that the
+                target field is now directly below, so a figure these state is
+                a figure you can take. */}
+            {/* *** SHOWN ON EDIT TOO, AND IT IS THE ONE HELPER THAT MAY BE.
+                *** The other two set the TARGET, which `PUT /goals/<id>` owns
+                and which must not be quietly rewritten under somebody who has
+                already been shown a percentage. The debt plan is different:
+                it is USER-level, it writes through its own
+                `/goals/debt-plan` route, and the card's "Change plan →" opens
+                this panel — so without it here that link would lead to a
+                panel with no plan in it, which is the affordance-that-does-
+                nothing shape (D-05). */}
+            {(kind === 'payoff' || editingGoal?.direction === 'paydown') && (
+              <DebtMethodStep
+                accounts={accounts}
+                currency={currency}
+                /* *** THE LESSON LINK APPEARS ONLY WHEN learnPal IS ACTUALLY
+                   ON. *** `range` is non-null exactly when the module
+                   answered — the same condition `RangeBanner` is gated on
+                   below. A deployment that does not run learnPal would
+                   otherwise get a link to a 404, which is the
+                   affordance-that-does-nothing shape this file keeps
+                   refusing. There is no per-lesson deep link (the reader is a
+                   SlidePanel on the lessons page), so it goes to the list. */
+                onOpenLesson={range ? () => navigate('/learnpal/lessons') : undefined}
+              />
+            )}
+            {editingId === null && kind === 'buffer' && (
+              <BufferCalculator
+                currency={currency}
+                onPickTarget={(target) => setTargetAmount(String(target))}
+                /* Same gate as the debt step's: only when learnPal answered. */
+                onOpenLesson={range ? () => navigate('/learnpal/lessons') : undefined}
+              />
+            )}
+            {editingId === null && kind === 'sinking' && (
+              <SinkingCalculator
+                currency={currency}
+                onPickTarget={(target) => setTargetAmount(String(target))}
+              />
+            )}
+
             <div>
               <label htmlFor="goal-name" style={fieldLabelStyle}>Name</label>
               <input

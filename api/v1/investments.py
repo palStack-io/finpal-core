@@ -334,6 +334,51 @@ class InvestmentList(Resource):
         if not portfolio:
             return {'success': False, 'error': 'Portfolio not found'}, 404
 
+        # *** D-257: OMITTING THIS SILENTLY BECAME A ZERO AND THEN REPORTED THE
+        # WHOLE MARKET VALUE AS PROFIT. *** `purchase_price` is
+        # `nullable=False, default=0`, so `data.get(...)` returning None let
+        # SQLAlchemy's Python-side default write 0 -- measured: ten VTI at no
+        # recorded price came back `cost_basis 0.0`, `gain_loss 3712.60` and a
+        # confident `gain_loss_percentage 0`. A $0 basis is indistinguishable
+        # from "I do not know what I paid", so the page cannot even say it is
+        # unsure.
+        #
+        # `required=True` in `investment_model` documents this and enforces
+        # NOTHING: nothing in this app sets `RESTX_VALIDATE` or passes
+        # `validate=True`, so every `required=True` across v1 is documentation
+        # only. That is D-99's shape -- web's AddHoldingModal always sends a
+        # price, so no web user can reach this, but a script, a token, an
+        # importer or a mobile build can. Deleting an affordance is not
+        # removing a capability.
+        #
+        # *** ONLY THE ABSENCE IS REFUSED. *** An explicit 0 is a statement and
+        # stays legal; the defect is the silent default, not the value.
+        if data.get('purchase_price') is None:
+            return {
+                'success': False,
+                'error': 'purchase_price is required. Send 0 if the holding '
+                         'genuinely cost nothing.',
+            }, 400
+
+        # *** `shares` IS `purchase_price`'S EXACT TWIN, FOUND BY ENUMERATING
+        # THE CLASS RATHER THAN BY LUCK. *** `Investment.shares` is
+        # `nullable=False, default=0`, so omitting it stored a holding of ZERO
+        # shares and answered 201 — a position that exists, is worth nothing,
+        # and drags every portfolio total it is part of. Proven: POST without
+        # `shares` returned 201 with `shares = 0E-8`.
+        #
+        # An explicit 0 is refused here, unlike `purchase_price`: a holding of
+        # no shares is not a statement, it is a row that should not exist.
+        try:
+            shares = float(data.get('shares'))
+        except (TypeError, ValueError):
+            shares = None
+        if not shares or shares <= 0:
+            return {
+                'success': False,
+                'error': 'shares is required and must be greater than zero.',
+            }, 400
+
         # D-85: PARSE THE DATE BEFORE THE INSERT. Both clients send `purchase_date` as a
         # `YYYY-MM-DD` string (mobile's HoldingForm always includes it; web's
         # AddHoldingModal.tsx does too) and `Investment.purchase_date` is a `DateTime`, so

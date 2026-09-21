@@ -35,6 +35,24 @@ from typing import Callable, Optional
 logger = logging.getLogger(__name__)
 
 
+# *** THE LEGAL SURFACES, SO A TYPO IS A REFUSAL RATHER THAN AN ACT THAT NEVER
+# FIRES. *** These are page IDENTITIES shared by both clients, not URLs: mobile's
+# routes differ from web's and neither client may own this list.
+#
+# *** `settings` IS HERE EVEN THOUGH SPEC §5.2 SAYS SETTINGS EARNS NOTHING, AND
+# THE TWO DO NOT CONFLICT. *** A surface is WHERE A MUTATION CAN MOVE AN ACT, not
+# where an act is advertised. A user connects their bank from
+# `SimpleFinSettings.tsx`, so `bank_connected`'s 2,400 coins have to land where
+# they did it. Settings still shows no act line and no cairn.
+SURFACES = frozenset({
+    'accounts', 'transactions', 'categories', 'budgets', 'recurring',
+    'rules', 'goals', 'review', 'investments', 'groups', 'settings',
+    # pointsPal's own pages. A MODULE surface: the acts that use it live in
+    # the module and reach the registry through `get_acts()`.
+    'pointspal',
+})
+
+
 @dataclass(frozen=True)
 class Act:
     """One earnable act.
@@ -57,6 +75,12 @@ class Act:
     ceiling: int
     coverage: Callable[[str], Optional[Decimal]]
     payoff: Callable[[str], Optional[str]]
+    # *** REQUIRED, AND DELIBERATELY WITHOUT A DEFAULT. *** A default of `()`
+    # would let an act register with nowhere to fire and look perfectly fine.
+    # The boundary is the TYPE, not a rule somebody remembers -- the same move
+    # as `register_act` refusing a duplicate slug, and as `upsert_award` being
+    # ratchet-only.
+    surfaces: tuple
     universal: bool = False
 
 
@@ -66,24 +90,67 @@ ACTS: dict = {}
 
 
 def register_act(act: Act) -> None:
-    """Add an act. *** REFUSES A SLUG ALREADY REGISTERED, RATHER THAN REPLACING
-    IT. *** A module quietly changing what an existing act pays would be
-    invisible from core -- the same surprise `register_check` refuses.
+    """Add an act. Refuses a duplicate slug, an act declaring no surface, and an
+    act naming a surface that does not exist.
+
+    *** REFUSES A SLUG ALREADY REGISTERED, RATHER THAN REPLACING IT. *** A
+    module quietly changing what an existing act pays would be invisible from
+    core -- the same surprise `register_check` refuses.
+
+    *** AND REFUSES AN ACT WITH NOWHERE TO FIRE, BECAUSE THAT FAILURE IS
+    SILENT. *** An act absent from every surface never triggers a refresh: the
+    award component renders nothing, no error is raised, and the nightly pass
+    still pays the coins -- so it looks like it works. That is D-187's shape
+    (a reader with no writer) inside the mechanism built to fix D-187.
+
+    *** REFUSES RATHER THAN RAISING, SO ONE BAD MODULE CANNOT STOP BOOT *** --
+    the same failure isolation `run_check` and `award_for_user` use.
     """
     if act.slug in ACTS:
         logger.warning(
             'literacy: refusing to re-register act %r — it is already defined',
             act.slug)
         return
+    if not act.surfaces:
+        logger.warning(
+            'literacy: refusing act %r — it declares no surface, so no refresh '
+            'would ever fire for it', act.slug)
+        return
+    unknown = [s for s in act.surfaces if s not in SURFACES]
+    if unknown:
+        logger.warning(
+            'literacy: refusing act %r — unknown surface(s) %r',
+            act.slug, unknown)
+        return
     ACTS[act.slug] = act
+
+
+def surface_acts(surface: str) -> list:
+    """Every act a mutation on `surface` could move.
+
+    *** DERIVED, NEVER STORED. *** A second map keyed the other way round is a
+    second thing to keep in step with this one, and drift is this project's
+    recurring failure mode.
+    """
+    return [a for a in ACTS.values() if surface in a.surfaces]
 
 
 # ══════════════════════════════════════════════════════════════════════
 # The core acts.
 #
 # *** THE CEILINGS AND THE GEAR PRICES ARE ONE SYSTEM. *** The eight universal
-# acts below total 9,800 against a 9,200-coin kit, so a user with no debt, no
-# pointsPal and no contributions can still finish it with headroom. Change a
+# acts below total 24,600 against a 23,550-coin kit, so a user with no debt, no
+# pointsPal and no contributions can still finish it with headroom.
+#
+# *** RAISED ~2.5x ON OWNER INSTRUCTION, 2026-09-17: "lets make it reasonable
+# height". *** Both sides moved together, because the kit cannot exceed the
+# universal total (§7.2) — raising prices alone had only 150 coins of room.
+#
+# *** AND RAISING THEM AT ALL REQUIRED FIXING `upsert_award` FIRST. *** Its
+# guard refused a raise when coverage was unchanged, so a user already at
+# coverage 1.0 was paid NOTHING when a ceiling went up: the kit would have got
+# dearer while their earning ceiling did not, silently, for every existing
+# user. See `test_coin_ledger.py`. Change a
 # ceiling here or a price in `gear.py` and
 # `test_acts_registry.py::test_the_universal_acts_alone_can_afford_the_whole_kit`
 # is what tells you.
@@ -98,33 +165,61 @@ def _register_core_acts():
 
     core = [
         # ---- universal: anyone with any data at all can finish these ----
-        Act('bank_connected', 'Connect your bank', 2400,
-            coverage.bank_connected, payoff.bank_connected, universal=True),
-        Act('transactions_categorised', 'Categorise your spending', 2000,
+        Act('bank_connected', 'Connect your bank', 6000,
+            coverage.bank_connected, payoff.bank_connected,
+            surfaces=('accounts', 'settings'), universal=True),
+        Act('transactions_categorised', 'Categorise your spending', 5000,
             coverage.transactions_categorised, payoff.transactions_categorised,
-            universal=True),
-        Act('categories_classified', 'Sort your categories', 1500,
+            surfaces=('transactions', 'review'), universal=True),
+        Act('categories_classified', 'Sort your categories', 3800,
             coverage.categories_classified, payoff.categories_classified,
-            universal=True),
-        Act('has_a_budget', 'Set a budget', 1000,
-            coverage.has_a_budget, payoff.has_a_budget, universal=True),
-        Act('accounts_confirmed', 'Confirm what finPal guessed', 800,
-            coverage.accounts_confirmed, payoff.accounts_confirmed, universal=True),
-        Act('income_recorded', 'Record what arrives', 800,
-            coverage.income_recorded, payoff.income_recorded, universal=True),
-        Act('taught_a_rule', 'Teach finPal a rule', 700,
-            coverage.taught_a_rule, payoff.taught_a_rule, universal=True),
-        Act('has_a_goal', 'Name what you are working toward', 600,
-            coverage.has_a_goal, payoff.has_a_goal, universal=True),
+            surfaces=('categories', 'review'), universal=True),
+        Act('has_a_budget', 'Set a budget', 2500,
+            coverage.has_a_budget, payoff.has_a_budget,
+            surfaces=('budgets',), universal=True),
+        Act('accounts_confirmed', 'Confirm what finPal guessed', 2000,
+            coverage.accounts_confirmed, payoff.accounts_confirmed,
+            surfaces=('accounts', 'review'), universal=True),
+        Act('income_recorded', 'Record what arrives', 2000,
+            coverage.income_recorded, payoff.income_recorded,
+            surfaces=('recurring',), universal=True),
+        Act('taught_a_rule', 'Teach finPal a rule', 1800,
+            coverage.taught_a_rule, payoff.taught_a_rule,
+            surfaces=('rules',), universal=True),
+        Act('has_a_goal', 'Name what you are working toward', 1500,
+            coverage.has_a_goal, payoff.has_a_goal,
+            surfaces=('goals',), universal=True),
         # ---- conditional: dormant unless the user's circumstances raise them ----
-        Act('debt_rates', 'Know what your debt costs', 1200,
-            coverage.debt_rates, payoff.debt_rates),
-        Act('transfers_confirmed', 'Confirm your transfers', 800,
-            coverage.transfers_confirmed, payoff.transfers_confirmed),
-        Act('debt_limits', 'Know your limits', 600,
-            coverage.debt_limits, payoff.debt_limits),
-        Act('debt_minimums', 'Know your minimums', 400,
-            coverage.debt_minimums, payoff.debt_minimums),
+        Act('debt_rates', 'Know what your debt costs', 3000,
+            coverage.debt_rates, payoff.debt_rates,
+            surfaces=('accounts',)),
+        Act('transfers_confirmed', 'Confirm your transfers', 2000,
+            coverage.transfers_confirmed, payoff.transfers_confirmed,
+            surfaces=('transactions', 'review')),
+        Act('debt_limits', 'Know your limits', 1500,
+            coverage.debt_limits, payoff.debt_limits,
+            surfaces=('accounts',)),
+        Act('debt_minimums', 'Know your minimums', 1000,
+            coverage.debt_minimums, payoff.debt_minimums,
+            surfaces=('accounts',)),
+        # ---- added by the 2026-09-17 amendment (spec §14.3) ----
+        # *** ALL FOUR ARE CONDITIONAL, AND THAT IS AN INVARIANT NOT A
+        # PREFERENCE. *** A user with no investments and no groups must still
+        # afford the whole kit, which §7.2 prices against the UNIVERSAL acts
+        # alone. Flipping one of these to `universal=True` would quietly make
+        # the kit unreachable for them.
+        Act('holdings_priced', 'Record what you paid', 2300,
+            coverage.holdings_priced, payoff.holdings_priced,
+            surfaces=('investments',)),
+        Act('splits_confirmed', 'Confirm a split is real', 1500,
+            coverage.splits_confirmed, payoff.splits_confirmed,
+            surfaces=('groups',)),
+        Act('settlement_recorded', 'Record settling up', 1000,
+            coverage.settlement_recorded, payoff.settlement_recorded,
+            surfaces=('groups',)),
+        Act('budget_adjusted', 'Revise a budget that was not working', 1300,
+            coverage.budget_adjusted, payoff.budget_adjusted,
+            surfaces=('budgets',)),
     ]
     for act in core:
         register_act(act)
@@ -133,8 +228,13 @@ def _register_core_acts():
 _register_core_acts()
 
 
-def award_for_user(user_id) -> list:
-    """Award every act this user has newly covered. Returns `[(slug, coins)]`.
+def _award_acts(user_id, acts) -> list:
+    """Award each act in `acts` this user has newly covered. `[(slug, coins)]`.
+
+    *** THE SHARED BODY, EXTRACTED RATHER THAN COPIED. *** `award_for_user` and
+    `award_for_surface` differ only in which acts they are handed. Two copies of
+    this loop would eventually drift on the dormant skip or on the per-act
+    isolation, and both of those are load-bearing.
 
     *** DOES NOT COMMIT. *** The caller owns the transaction, so a night's awards
     land together or not at all -- the same convention `raise_watermark` follows.
@@ -152,22 +252,49 @@ def award_for_user(user_id) -> list:
 
     repo = CoinRepository()
     earned = []
-    for slug, act in ACTS.items():
+    for act in acts:
         try:
             covered = act.coverage(user_id)
         except Exception:
-            # *** ONE BROKEN ACT MUST NOT COST A USER THE OTHER TWELVE. ***
+            # *** ONE BROKEN ACT MUST NOT COST A USER THE OTHERS. ***
             # Same failure isolation as `run_check`, and the same reason: a
             # predicate that raises is a bug, not a verdict.
-            logger.exception('literacy: coverage for %r raised — skipped', slug)
+            logger.exception('literacy: coverage for %r raised — skipped',
+                             act.slug)
             continue
         if covered is None:
             continue
         coins = int(Decimal(str(act.ceiling)) * Decimal(str(covered)))
-        delta = repo.upsert_award(user_id, slug, covered, coins)
+        delta = repo.upsert_award(user_id, act.slug, covered, coins)
         if delta:
-            earned.append((slug, delta))
+            earned.append((act.slug, delta))
     return earned
+
+
+def award_for_user(user_id) -> list:
+    """Award every act this user has newly covered. Returns `[(slug, coins)]`.
+
+    The nightly pass and the demo seeder use this. Does not commit.
+    """
+    return _award_acts(user_id, list(ACTS.values()))
+
+
+def award_for_surface(user_id, surface) -> list:
+    """The same, restricted to the acts a mutation on `surface` could move.
+
+    *** THIS IS WHAT GIVES A COIN ITS MOMENT. *** Before it, `award_for_user`
+    had one production caller -- a cron at 04:30 -- so coins for work done at
+    breakfast appeared overnight on a page nobody was looking at.
+
+    *** IDEMPOTENT, BECAUSE `upsert_award` IS A RATCHET. *** Calling it twice
+    awards nothing twice, which is what keeps correctness independent of the
+    client: one that forgets to call it loses the MOMENT, never the COINS.
+
+    *** AN UNKNOWN SURFACE AWARDS NOTHING AND DOES NOT RAISE. *** A client
+    naming a surface this build does not know is a client one release ahead,
+    not an error worth a 500 -- and the nightly pass collects the coins anyway.
+    """
+    return _award_acts(user_id, surface_acts(surface))
 
 
 def award_all_users(app) -> int:

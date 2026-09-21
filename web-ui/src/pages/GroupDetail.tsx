@@ -18,6 +18,7 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 // typecheck gate compiled zero files (D-45).
 import { formActionsStyle } from '../styles/formStyles';
 import { apiErrorMessage } from '../utils/apiError';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 interface Member {
   id: string;
@@ -116,6 +117,10 @@ const youTagStyle: React.CSSProperties = {
 };
 
 export const GroupDetail: React.FC = () => {
+  // The page names its own surface and nothing more; the server owns
+  // which acts a `groups` mutation can move. Fires on mount as well as
+  // on demand, so an unwired mutation handler still gets its moment.
+  useSurfaceCoins('groups');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();

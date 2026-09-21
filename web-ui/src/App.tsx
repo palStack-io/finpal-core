@@ -9,6 +9,8 @@ import { Menu } from 'lucide-react';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastContainer } from './components/common/Toast';
+import { CoinAwardProvider } from './contexts/CoinAwardContext';
+import { CoinAwardContainer } from './components/coins/CoinAwardContainer';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Sidebar } from './components/layout/Sidebar';
 import { useAuthStore } from './store/authStore';
@@ -32,6 +34,7 @@ import { Accounts } from './pages/Accounts';
 import { Goals } from './pages/Goals';
 import Review from './pages/Review';
 import { Kit } from './pages/Kit';
+import { Profile } from './pages/Profile';
 import BudgetsMinimal from './pages/BudgetsMinimal';
 // The canonical categories UI is the component Settings used to host, NOT the
 // 441-line `pages/Categories.tsx` that used to answer this route — that page was
@@ -145,10 +148,24 @@ function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
+        <CoinAwardProvider>
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
+            {/* *** LOGIN IS THE INDEX — OWNER DECISION 2026-09-17: *** "we
+                also need the landing page be the login page make it as index".
+                A visitor arrives at sign-in rather than at a marketing pitch,
+                which also matches where the real marketing lives:
+                `palstack.io/finpal`, outside this app.
+
+                *** `Landing` IS NOT DELETED, IT MOVES TO `/welcome`. *** It is
+                475 lines of copy and deleting it is a bigger decision than
+                changing a route; `AuthShell`'s back-link points at it so it
+                does not become orphaned. `every-page.spec.ts` walks routes
+                derived from this file, so the move is covered rather than
+                hidden. */}
+            <Route path="/" element={<Login />} />
+            <Route path="/welcome" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -219,6 +236,20 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AppLayout><Kit /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* *** "View profile" IN THE RAIL WENT TO /settings UNTIL NOW,
+                BECAUSE THERE WAS NO PROFILE PAGE AT ALL. *** Kit is the SHOP
+                — the 21-piece grid, the prices, the acts that pay for them.
+                This is the mantelpiece: what you own and what you have kept
+                up. Two pages, two jobs; the badges moved here rather than
+                being duplicated. */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <AppLayout><Profile /></AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -343,7 +374,12 @@ function App() {
 
           {/* Toast Notifications */}
           <ToastContainer />
+
+          {/* The award moment. One container, app-wide: an earning page's only
+              job is to name its surface, so no page can earn invisibly. */}
+          <CoinAwardContainer />
         </BrowserRouter>
+        </CoinAwardProvider>
       </ToastProvider>
     </ThemeProvider>
   );

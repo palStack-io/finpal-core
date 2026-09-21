@@ -22,6 +22,21 @@
  * 4 and 5 still carry the twin summit. A reader who has seen a goal card should
  * recognise the same mountain here.
  *
+ *
+ * *** THIS FILE EXISTS TWICE, BYTE-IDENTICALLY, AND NEITHER COPY SAID SO UNTIL
+ * D-258. *** `finpal_core/web-ui/src/utils/rangeSilhouettes.ts` and
+ * `mobile/src/utils/rangeSilhouettes.ts` are separate git repos with nothing to
+ * import between them — the convention `mountainGeometry.ts` established and
+ * states in its own header. **Change one, change both, in the same turn, and
+ * `diff` them.** Byte-identity is the whole guarantee: a peak drawn one way on
+ * web and another on the phone is two answers to one question.
+ *
+ * *** AND THE OMISSION ITSELF WAS THE DEFECT. *** Mobile had only the goal-CARD
+ * table (`mountainSilhouettes.ts`, authored `0 0 100 boxHeight` with `boxHeight`
+ * 30..100), so scaling a band-0 shape to a pixel HEIGHT made it 3.3x as WIDE as
+ * tall — over 300 units in a 320-unit viewBox. The dashboard range drew one
+ * mountain where web drew five, through four attempts. That is why the note
+ * above is not housekeeping.
  * Every path is on a `0 0 100 100` box: x is the full base width, y=100 is the
  * ground and y=0 is the summit. The caller scales uniformly.
  */

@@ -561,10 +561,24 @@ class AnalyticsService:
 
         category_totals = {}
 
-        def add(name, amount, color, icon):
+        def add(name, amount, color, icon, category_id=None):
+            """Accumulate into the bucket for `name`.
+
+            *** THE BUCKET REMEMBERS WHICH CATEGORY IDS IT MERGED. ***
+            Buckets are keyed by NAME on purpose — two housemates each with a
+            "Groceries" category are one slice of one household's spending,
+            and splitting them by id would be the wrong picture. But that
+            leaves a slice a caller cannot ask a follow-up question about: it
+            has a label and no handle. The flow diagram's drill-down needs
+            exactly the set that was merged, or it shows the wrong rows --
+            one id misses the housemate's, and a parent-and-children rollup
+            (which this function does NOT do) would exceed the slice.
+            """
             bucket = category_totals.setdefault(
-                name, {'amount': 0, 'color': color, 'icon': icon})
+                name, {'amount': 0, 'color': color, 'icon': icon, 'ids': []})
             bucket['amount'] += amount
+            if category_id is not None and category_id not in bucket['ids']:
+                bucket['ids'].append(category_id)
 
         for expense in expenses:
             if getattr(expense, 'transaction_type', 'expense') != transaction_type:
@@ -586,7 +600,8 @@ class AnalyticsService:
                     split_amount = rates.convert(split.amount, row_code, display_code)
                     if split.category:
                         add(split.category.name, split_amount,
-                            split.category.color, split.category.icon)
+                            split.category.color, split.category.icon,
+                            split.category.id)
                     else:
                         # A split with no category still spent money. Dropping it
                         # made the pie's slices sum to less than the reported
@@ -594,7 +609,8 @@ class AnalyticsService:
                         add(self.UNCATEGORISED_LABEL, split_amount, None, None)
             elif expense.category:
                 add(expense.category.name, row_amount,
-                    expense.category.color, expense.category.icon)
+                    expense.category.color, expense.category.icon,
+                    expense.category.id)
             else:
                 add(self.UNCATEGORISED_LABEL, row_amount, None, None)
 
@@ -604,7 +620,11 @@ class AnalyticsService:
                     'name': name,
                     'amount': round(data['amount'], 2),
                     'color': data['color'],
-                    'icon': data['icon']
+                    'icon': data['icon'],
+                    # The handle the drill-down asks with. A slice with an
+                    # empty list is Uncategorised — a real slice, and the one
+                    # a reader most wants explained.
+                    'ids': data['ids'],
                 }
                 for name, data in category_totals.items()
             ],
@@ -899,6 +919,90 @@ class AnalyticsService:
 
         return result
 
+    def _liquid_assets(self, user_id, scope_ids=None):
+        """Cash a user could actually reach this week.
+
+        *** CHECKING AND SAVINGS ONLY, AND POSITIVE BALANCES ONLY. *** An
+        investment is not an emergency fund — selling it takes days and may
+        crystallise a loss — and a credit card's negative balance is a debt,
+        not a negative buffer. Both exclusions are the point: a figure that
+        counts a brokerage account as "three months of expenses" tells
+        somebody they are safe when they are not.
+        """
+        from src.models.account import Account
+        from src.utils.household import read_scope
+
+        # `read_scope` is what every other figure on this page is scoped by —
+        # the same helper `get_dashboard_data` uses — so the buffer covers the
+        # same people as the expenses it is divided by. Scoping the two
+        # differently is how a ratio comes to describe two households.
+        household_ids = scope_ids or read_scope(user_id)
+        accounts = Account.query.filter(Account.user_id.in_(household_ids)).all()
+        total = Decimal('0')
+        for account in accounts:
+            if account.type in ('checking', 'savings'):
+                balance = Decimal(str(account.balance or 0))
+                if balance > 0:
+                    total += balance
+        return total
+
+    def _essential_monthly_spend(self, user_id, scope_ids=None):
+        """What a month of essentials costs — the divisor an emergency fund needs.
+
+        *** THE OLD DIVISOR WAS `total_expenses / 12` AND IT WAS NOT A MONTH OF
+        ANYTHING. *** Measured on the demo: that produced 591.85 for a
+        household spending 2,892.52 a month, because the numerator is not a
+        full year's expenses. Paired with the 30% asset guess the two errors
+        partly cancelled and the headline looked plausible; fixing only the
+        guess took it from 4.1 months to 13.5, which is the dangerous
+        direction — telling somebody they are safe when they are not.
+
+        *** ESSENTIALS, NOT EVERYTHING. *** An emergency fund covers what
+        arrives whatever you do. finPal knows which categories those are:
+        `spending_type == 'fixed'`, the same field the Budgets page groups by.
+        Flexible spending is what you would cut in an emergency, so counting
+        it makes the buffer look shorter than it is.
+
+        Falls back to the observed monthly average when nothing is sorted yet,
+        and returns `None` when there is nothing to measure — never a zero,
+        which would divide into an infinite runway.
+        """
+        from src.models.category import Category
+        from src.models.transaction import Expense
+        from src.utils.household import read_scope
+
+        household_ids = scope_ids or read_scope(user_id)
+        first_of_this = datetime.utcnow().replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_month_end = first_of_this - timedelta(seconds=1)
+        last_month_start = last_month_end.replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        rows = (Expense.query
+                .filter(Expense.user_id.in_(household_ids),
+                        Expense.date >= last_month_start,
+                        Expense.date <= last_month_end,
+                        Expense.transaction_type == 'expense')
+                .all())
+        if not rows:
+            return None
+
+        types = {c.id: c.spending_type for c in Category.query.filter(
+            Category.user_id.in_(household_ids)).all()}
+        fixed = Decimal('0')
+        total = Decimal('0')
+        for row in rows:
+            amount = Decimal(str(row.amount or 0))
+            total += amount
+            if types.get(row.category_id) == 'fixed':
+                fixed += amount
+
+        if fixed > 0:
+            return fixed
+        # Nothing sorted yet: the whole month is the honest stand-in, and it
+        # errs SHORT (a bigger divisor, fewer months) rather than long.
+        return total or None
+
     def get_financial_health(self, user_id, scope_ids=None):
         """Calculate financial health metrics"""
         from datetime import datetime
@@ -928,12 +1032,24 @@ class AnalyticsService:
             debt_to_income = round(monthly_debt_payment / (total_income / 12), 2) if total_income > 0 else 0
 
         # Calculate emergency fund months
+        #
+        # *** LIQUID ASSETS ARE SUMMED, NOT GUESSED AT 30%. *** This read
+        # `total_assets * Decimal('0.3')` with the comment "Assume liquid
+        # assets are 30% of total assets". Measured on the demo: demo1 holds
+        # 5,000.00 in checking and 3,000.00 in savings, so the knowable figure
+        # is 8,000.00 and the guess produced 2,400.00 — the headline was
+        # understating their buffer by 3.3x. Which accounts are liquid is not
+        # something finPal has to estimate; `Account.type` says so.
+        #
+        # The other rule-of-thumb ratios in this method are heuristics over
+        # figures nobody can know (what share of a debt is paid monthly). This
+        # one was a heuristic over a figure sitting in the database, which is
+        # the fabricated-figures shape rather than an honest approximation.
         emergency_fund_months = 0
-        if total_expenses > 0:
-            monthly_expenses = total_expenses / 12
-            # Assume liquid assets are 30% of total assets for this calculation
-            liquid_assets = total_assets * Decimal('0.3')
-            emergency_fund_months = round(liquid_assets / monthly_expenses, 1) if monthly_expenses > 0 else 0
+        monthly_need = self._essential_monthly_spend(user_id, scope_ids)
+        if monthly_need and monthly_need > 0:
+            liquid_assets = self._liquid_assets(user_id, scope_ids)
+            emergency_fund_months = round(liquid_assets / monthly_need, 1)
 
         # Calculate liquidity ratio (current assets / current liabilities)
         liquidity_ratio = 0

@@ -165,6 +165,27 @@ describe('the Dashboard states its scope with a filter, not with four tags', () 
     );
   });
 
+  it('*** SENDS "WHERE THE MONTH WENT" DOWN THE PAGE, NOT OFF IT ***', async () => {
+    /* Owner, 2026-09-19: *"we litrally have the Monthly Expense Breakdown on
+       the same page"*. The card's action used to be `/transactions`, so the
+       answer to "where did the month go" was a different page — while the
+       full answer, opened on the same month, sat 400px below.
+
+       *** THE TARGET IS ASSERTED, NOT JUST THE LINK. *** An `href="#x"` with
+       no element of that id scrolls nowhere, throws nothing and logs nothing;
+       the link and the anchor are two strings that can drift apart, which is
+       exactly the failure a test has to catch because a human never will by
+       looking at the markup. */
+    mockDashboard();
+    const { container } = renderPage();
+
+    await waitFor(() => expect(screen.getByText('Net Worth')).toBeInTheDocument());
+    const jump = await screen.findByRole('link', { name: /See the breakdown/ });
+    const href = jump.getAttribute('href') ?? '';
+    expect(href.startsWith('#')).toBe(true);
+    expect(container.querySelector(`#${CSS.escape(href.slice(1))}`)).toBeTruthy();
+  });
+
   it('carries no per-figure scope tags any more', async () => {
     mockDashboard();
     renderPage();

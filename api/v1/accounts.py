@@ -587,10 +587,31 @@ class SimpleFinStatus(Resource):
     @ns.doc('get_simplefin_status', security='Bearer')
     @jwt_required()
     def get(self):
-        """Get SimpleFin connection status"""
-        err = _simplefin_required()
-        if err:
-            return err
+        """Get SimpleFin connection status.
+
+        *** THIS ONE DOES NOT 503 WHEN THE INTEGRATION IS OFF, AND THE OTHER
+        FOUR STILL DO. *** D-275. `_simplefin_required` is right for connect,
+        sync and disconnect: those are ACTIONS, and refusing an action the
+        server cannot perform is what 503 is for. This is a QUESTION — "is
+        SimpleFin connected?" — and when the integration is disabled the
+        answer is a knowable, correct `no`, not "the service is unavailable".
+
+        It mattered because the Accounts page asks on every visit: the
+        deployed demo logged **six 503s per walkthrough**, on one page, for
+        months, and a page that always has an error in its console is a page
+        whose console nobody reads. It was the only console error left in the
+        finPal sweep after the badge 404s went, and it took a request-level
+        probe to find — the walkthrough's manifest records the status and not
+        the URL.
+
+        `enabled` is sent beside `connected` so a client can still tell
+        "switched off on this server" from "switched on and not linked". The
+        two are different sentences to show a user and the old shape could
+        express neither.
+        """
+        if not current_app.config.get('SIMPLEFIN_ENABLED', False):
+            return {'connected': False, 'enabled': False}, 200
+
         from src.services.account.service import SimpleFinService
         from src.models.account import SimpleFin
 
@@ -610,12 +631,20 @@ class SimpleFinStatus(Resource):
                 'connected': True,
                 'lastSync': settings.last_sync.isoformat() if settings.last_sync else None,
                 'accountCount': account_count,
+                # *** `settings.enabled` IS THE USER'S SYNC TOGGLE, NOT THE
+                # SERVER'S. *** Same key, two meanings, and that is deliberate
+                # only because the branch above cannot be reached with the
+                # server switch off: `enabled: False` from here means "you
+                # paused syncing", from there it means "this server does not
+                # offer it". Both render as "not syncing", which is the honest
+                # summary in each case.
                 'syncFrequency': settings.sync_frequency,
                 'enabled': settings.enabled
             }, 200
         else:
             return {
-                'connected': False
+                'connected': False,
+                'enabled': True
             }, 200
 
 

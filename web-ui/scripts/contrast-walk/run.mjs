@@ -8,7 +8,7 @@
  * Run the capture first:
  *   npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
  */
-import { execFileSync } from 'child_process';
+import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdtempSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { tmpdir } from 'os';
@@ -89,6 +89,26 @@ const TEXT_FLOORS = {
   'forgot-password': 7,
   // Two fields, a rule line and a button.
   'reset-password': 11,
+  /* *** THE CAPTURES USED TO COUNT EMOJI, AND STOPPED ON 2026-09-20. ***
+     `GearIcon` fetched its SVG and fell back to an emoji when the fetch
+     failed — which it ALWAYS did in the capture environment, where there is
+     no server. So every gear glyph on every captured page was a text-bearing
+     emoji span, and the contrast walk was measuring stand-ins it would never
+     see in a browser. Converting the icon to a CSS mask removed the text:
+     goals fell 87 -> 65, learnpal-lessons 65 -> 46, learnpal-home 34 -> 31
+     and this page 23 -> 19, each drop exactly the number of glyphs it draws.
+
+     Only this one crossed the shared floor. 19 is the page COMPLETE — the
+     drop is four emoji that were never really there — so it gets a floor
+     rather than the walk getting a lower default, which is what the header
+     above means by "an exemption list, and an empty one is the goal".
+
+     *** AND THE HONEST NOTE: THE WALK NEVER MEASURED THE REAL ARTWORK AND
+     STILL DOES NOT. *** It measured emoji; now it measures nothing, because
+     a mask paints through CSS with a URL the capture cannot load. That is
+     the better of the two: an icon is not text, and a contrast figure for a
+     stand-in glyph was noise dressed as a measurement. */
+  'learnpal-range': 16,
 };
 
 const DEFAULT_TEXT_FLOOR = 20;
@@ -127,6 +147,70 @@ const themes = process.argv.includes('--theme')
 
 
 
+/**
+ * Dump a page's DOM, and *** DO NOT WAIT FOR CHROME TO EXIT. ***
+ *
+ * This walk reported `chrome did not return: ETIMEDOUT` on its FIRST page for
+ * several sessions, and the roadmap recorded the gate as unrunnable on this
+ * machine. That diagnosis was wrong in the way that matters: Chrome writes the
+ * whole DOM — marker, complete payload, `::END` — and then **never exits**.
+ * `execFileSync` waits for exit, so it hit its own 60s ceiling and threw away
+ * output that had been finished for 59 of those seconds. Measured: the dump is
+ * 20,165 bytes with a valid 3-entry payload, and the process was still alive at
+ * 25s with the data already on stdout.
+ *
+ * *** SO THE WALK NOW WAITS FOR ITS DATA, NOT FOR A PROCESS. *** `::END` is
+ * exactly the signal that the page is done — the walk script writes it last —
+ * and it is already what the parse below looks for. Once it arrives the DOM is
+ * complete by definition, so Chrome is killed and the scope moves on. Chrome's
+ * exit behaviour stops being something this gate depends on.
+ *
+ * *** THE RESPONSIVE WALK NEVER HAD THIS PROBLEM AND THAT IS THE CLUE THAT WAS
+ * SITTING THERE. *** It drives the same Chrome on the same machine over CDP and
+ * passes in the same preflight run, so "headless Chrome does not return here"
+ * could not have been the whole story. One flag differs that matters:
+ * `--dump-dom`, whose contract is "print and quit", and which here does the
+ * first and not the second.
+ *
+ * The ceiling stays, because a page that never produces `::END` must still fail
+ * with a name attached rather than stall the run.
+ */
+const DUMP_CEILING_MS = 60_000;
+
+function dumpDom(file, key) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(chrome(), [
+      '--headless=new', '--disable-gpu', '--allow-file-access-from-files',
+      '--virtual-time-budget=6000', '--hide-scrollbars',
+      `--user-data-dir=${CHROME_PROFILE}`, '--no-first-run', '--no-default-browser-check',
+      '--window-size=1400,3000', '--dump-dom', `file://${file}`,
+    ], { stdio: ['ignore', 'pipe', 'ignore'] });
+
+    let out = '';
+    let settled = false;
+    const finish = (fn, arg) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { child.kill('SIGKILL'); } catch { /* already gone */ }
+      fn(arg);
+    };
+    const timer = setTimeout(
+      () => finish(reject, new Error(`[${key}] no ::END within ${DUMP_CEILING_MS / 1000}s`)),
+      DUMP_CEILING_MS);
+
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      out += chunk;
+      // The walk writes the marker last, so its arrival IS completion.
+      if (out.includes('::END')) finish(resolve, out);
+    });
+    child.on('error', (err) => finish(reject, err));
+    // A Chrome that DOES exit cleanly is fine too — resolve on whatever it wrote.
+    child.on('close', () => finish(resolve, out));
+  });
+}
+
 let failed = 0;
 const seenPairs = {};
 
@@ -155,40 +239,32 @@ for (const CAPTURED of CAPTURES) {
     : page);
 
   /*
-   * *** THIS WALK USED TO HANG, NOT FAIL, AND BOTH CAUSES WERE IN THIS CALL. ***
-   * Measured 2026-09-15: it stalled mid-run four times, at four DIFFERENT
-   * scopes (4 of 36, then 19, then 12), with headless Chrome sitting at 0.7%
-   * CPU and the process never returning. Once it was killed by hand the step
-   * reported `✗`, which read as a contrast failure and was not one.
+   * *** THE PROFILE FLAG IS STILL LOAD-BEARING, AND THE REST OF THIS BLOCK USED
+   * TO EXPLAIN CODE THAT NO LONGER EXISTS. *** It said "both causes were in this
+   * call" and named `--user-data-dir` and a 60s `execFileSync` timeout. The
+   * first is true and lives on in `dumpDom`. The second described an
+   * `execFileSync` that is gone, and "both causes" was wrong anyway — the cause
+   * that actually kept this gate dark for several sessions was a third thing,
+   * documented at `dumpDom` above: `--dump-dom` prints everything and never
+   * exits. *A stale comment in the file whose defect was a stale note is the
+   * joke writing itself, so it is rewritten rather than left.*
    *
-   * **1. `--user-data-dir`.** Without it every one of these 36 launches uses
+   * **Why `--user-data-dir` matters, preserved:** without it every launch uses
    * Chrome's DEFAULT profile and serialises on its lock. That directory really
    * does hold a `SingletonLock` on this machine, left behind whether or not a
    * browser is running, so a launch can block on a lock nothing will release.
-   * It also means the walk was reading the owner's real profile — extensions
-   * and all — when the whole point is a clean, reproducible render. A fresh
-   * temp profile per run removes the contention AND the shared state. This is
-   * also why "kill every Chrome and re-run" appeared to be the cure and then
-   * was not: killing a browser clears the live lock, not the stale file.
-   *
-   * **2. `timeout`.** `execFileSync` with no timeout waits forever, so the only
-   * thing that ever ended a stall was `preflight.sh`'s own 900s step limit —
-   * fifteen minutes to learn nothing. 60s is many times the ~1.5s a scope
-   * actually takes, so it cannot fire on a slow machine, and a hung scope now
-   * THROWS with a name attached instead of silently costing the whole run.
+   * It also meant the walk was reading the owner's real profile — extensions and
+   * all — when the whole point is a clean, reproducible render. A fresh temp
+   * profile per run removes the contention AND the shared state. It is also why
+   * "kill every Chrome and re-run" appeared to be the cure and then was not:
+   * killing a browser clears the live lock, not the stale file.
    */
   let dom;
   try {
-    dom = execFileSync(chrome(), [
-      '--headless=new', '--disable-gpu', '--allow-file-access-from-files',
-      '--virtual-time-budget=6000', '--hide-scrollbars',
-      `--user-data-dir=${CHROME_PROFILE}`, '--no-first-run', '--no-default-browser-check',
-      '--window-size=1400,3000', '--dump-dom', `file://${file}`,
-    ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'], timeout: 60_000 });
+    dom = await dumpDom(file, key);
   } catch (err) {
-    // ETIMEDOUT is the hang; anything else is Chrome refusing to start. Both
-    // are reported against the scope that caused them, which is the thing the
-    // silent version never told anybody.
+    // Reported against the scope that caused it, which is the thing the silent
+    // version never told anybody.
     console.error(`[${key}] chrome did not return: ${err.code ?? err.message}`);
     process.exit(2);
   }

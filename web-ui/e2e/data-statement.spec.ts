@@ -61,9 +61,16 @@ test.describe('where your data lives', () => {
      * FRESH context with no storage state, because this is the page a visitor
      * with no account sees.
      */
+    /* *** THE PITCH MOVED TO `/welcome` AND THIS TEST KEPT READING `/`. ***
+       Owner decision 2026-09-17 made login the index, so `/` is now the sign-in
+       form and this assertion was running against a page that has never made
+       the claim. It failed loudly rather than passing vacuously only because it
+       also asserts the honest sentence is PRESENT — a test that had checked
+       only for the false claim's absence would have gone green on the wrong
+       page and stayed green forever. */
     const context = await browser.newContext({ storageState: undefined });
     const fresh = await context.newPage();
-    await fresh.goto('/');
+    await fresh.goto('/welcome');
     const body = (await fresh.locator('body').innerText()).toLowerCase();
     expect(body).not.toContain('no third-party access');
     expect(body).toContain('no analytics, no tracking, no ai');

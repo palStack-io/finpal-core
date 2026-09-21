@@ -21,27 +21,41 @@ what tells you.
 # slug -> price in coins. Ordered roughly by when a climber would want the piece,
 # which is also the order the shop lists them in.
 GEAR_PRICES = {
-    'map': 100,
-    'boots': 150,
-    'rope': 200,
-    'gloves': 200,
-    'compass': 250,
-    'headlamp': 300,
-    'water-bottle': 300,
-    'trekking-poles': 350,
-    'guidebook': 350,
-    'signpost': 400,
-    'ice-axe': 450,
-    'carabiner': 450,
-    'helmet': 500,
-    'slope-gauge': 500,
-    'pack-scale': 550,
-    'thermometer': 550,
-    'alpine-start': 600,
-    'bivvy': 650,
-    'cache': 700,
-    'tent': 750,
-    'oxygen': 900,
+    # *** RAISED ~2.4x ON OWNER INSTRUCTION, 2026-09-17: "lets make it
+    # reasonable height". *** 9,650 -> 23,550, alongside a ~2.5x raise of the
+    # act ceilings (24,600 universal). Both had to move together: §7.2 caps the
+    # kit at the universal total, so prices alone had 150 coins of room.
+    #
+    # *** RAISING THE CEILINGS REQUIRED FIXING `upsert_award` FIRST, AND THAT
+    # IS THE PART WORTH READING. *** Its guard refused a raise when coverage
+    # was unchanged, so an existing user at coverage 1.0 was paid NOTHING when
+    # a ceiling went up — the kit would have got dearer while their earning
+    # ceiling stayed put, for every user who already had one, silently.
+    #
+    # Cheapest 400, dearest 2,400. Headroom 1,050, which
+    # `test_the_universal_acts_alone_can_afford_the_whole_kit` is what keeps
+    # honest — change one side without the other and it tells you.
+    'map': 400,
+    'boots': 500,
+    'rope': 600,
+    'gloves': 600,
+    'compass': 750,
+    'headlamp': 850,
+    'water-bottle': 850,
+    'trekking-poles': 1000,
+    'guidebook': 1000,
+    'signpost': 1100,
+    'ice-axe': 1100,
+    'carabiner': 1100,
+    'helmet': 1200,
+    'slope-gauge': 1200,
+    'pack-scale': 1350,
+    'thermometer': 1350,
+    'alpine-start': 1450,
+    'bivvy': 1450,
+    'cache': 1600,
+    'tent': 1700,
+    'oxygen': 2400,
 }
 
 # *** THE FINISH SET IS FINITE AND ENUMERABLE — NOT SEASONAL, NOT GENERATED. ***

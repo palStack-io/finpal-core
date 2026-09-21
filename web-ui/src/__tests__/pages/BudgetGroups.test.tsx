@@ -11,6 +11,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
@@ -507,5 +508,131 @@ describe("the sinking-fund group header says which span it is", () => {
     const flexible = (await heading('Flexible')).closest('section') as HTMLElement;
     expect(within(flexible).queryByText(/These figures are this month's/)).toBeNull();
     expect(screen.queryByText(/These figures are this month's/)).toBeNull();
+  });
+});
+
+describe('spending nobody budgeted is shown inside its own group', () => {
+  /* *** THE PAGE REPORTED 474.28 OF 2,359.72 AND DREW A FULL GREEN BAR. ***
+     `_unsorted_section` promises in its own docstring that unbudgeted spending
+     is shown and not hidden, then skips every category that HAS a spending
+     type — so on the demo, Housing (fixed, 1,800) and four flexible categories
+     appeared in neither the groups nor the unsorted section, and Fixed said
+     "Nothing here yet" while holding the rent. */
+  const withUnbudgeted = overview({
+    groups: [
+      {
+        spending_type: 'fixed', label: 'Fixed',
+        planned: 0, actual: 0, remaining: 0, budgets: [],
+        unbudgeted_actual: 1800,
+        unbudgeted_categories: [{ id: 91, name: 'Housing', actual: 1800 }],
+      },
+      {
+        spending_type: 'flexible', label: 'Flexible',
+        planned: 600, actual: 238, remaining: 362,
+        budgets: [budgetRow(2, 'Food & Dining', 600, 238)],
+        unbudgeted_actual: 290.38,
+        unbudgeted_categories: [
+          { id: 1, name: 'Groceries', actual: 216.93 },
+          { id: 2, name: 'Health & Fitness', actual: 49.99 },
+          { id: 3, name: 'Pharmacy', actual: 23.45 },
+        ],
+      },
+      {
+        spending_type: 'non_monthly', label: 'Non-Monthly',
+        planned: 0, actual: 0, remaining: 0, budgets: [],
+        unbudgeted_actual: 0, unbudgeted_categories: [],
+      },
+    ],
+  });
+
+  it('*** A GROUP WITH NO BUDGETS STILL REPORTS WHAT IT COST ***', async () => {
+    mount(withUnbudgeted);
+
+    // Fixed has zero budgets and 1,800 of rent. The old empty state claimed
+    // there was nothing here while this was true.
+    await screen.findByRole('heading', { name: 'Fixed' });
+    expect(await screen.findByTestId('unbudgeted-91')).toHaveTextContent('Housing');
+    expect(screen.queryByText(/Nothing here yet/)).not.toBeInTheDocument();
+  });
+
+  it('offers to bring an unbudgeted category INTO the budget', async () => {
+    mount(withUnbudgeted);
+
+    const row = await screen.findByTestId('unbudgeted-1');       // Groceries
+    expect(row).toHaveTextContent('Groceries');
+    expect(within(row).getByRole('button', { name: 'Budget this' })).toBeInTheDocument();
+  });
+
+  it('*** DRAWS NO PROGRESS BAR, BECAUSE THERE IS NO LIMIT TO BE A FRACTION OF ***',
+    async () => {
+      /* Decision 5, one surface over: the only denominator this product draws
+         is a target somebody chose. An empty bar beside 1,800 of rent reads as
+         "0% used" when the truth is "nothing is capping this". */
+      mount(withUnbudgeted);
+
+      const row = await screen.findByTestId('unbudgeted-91');
+      expect(row.querySelector('progress')).toBeNull();
+      expect(row).not.toHaveTextContent(/of\s/);
+      expect(row).not.toHaveTextContent('%');
+    });
+
+  it('*** THE HEADLINE IS ALL SPENDING, NOT THE BUDGETED SLICE OF IT ***', async () => {
+    /* D-271's actual headline. `totalSpent` was `budgets.reduce(...)`, so the
+       biggest figure on the page could only ever be spending in categories
+       the user happened to budget — 474.28 printed under the words "Total
+       Spent" while 2,359.72 left the account. It reads the server's figure
+       now, which is also D-101's rule: one arithmetic, server-side. */
+    mount(overview({
+      totals: {
+        planned: 1400, actual: 2359.72, remaining: 925.72,
+        budgeted_actual: 474.28, unbudgeted_actual: 1885.44,
+      },
+    }));
+
+    const row = await screen.findByTestId('page-totals');
+    expect(row.textContent).toContain('2,359.72');
+    expect(row.textContent).toContain('1,885.44 of it not budgeted');
+
+    /* *** AND THE BAR STAYS ADHERENCE. *** 474.28 of a 1,720 plan is 28%.
+       Dividing ALL spending by the plan would read 137% for somebody who is
+       not over a single budget — the opposite of what this bar is for. */
+    expect(row.textContent).toContain('28% used');
+    expect(row.textContent).not.toContain('137%');
+  });
+
+  it('*** A COLLAPSED GROUP STILL REPORTS WHAT IT COST ***', async () => {
+    /* The rows live in the group BODY, and a group collapses. Rendering the
+       figure only in the body meant collapsing Fixed hid 1,800 of rent again
+       — D-271 one interaction later, on a page that had just been fixed for
+       exactly that. Found by looking at the deployed demo: the header read
+       "Actual $0.00" directly above "NOT BUDGETED $1,800.00". */
+    mount(withUnbudgeted);
+    const heading = await screen.findByRole('heading', { name: 'Fixed' });
+    const header = heading.closest('button')!;
+
+    expect(header).toHaveTextContent('Not budgeted');
+    expect(header).toHaveTextContent('1,800');
+
+    // Collapse it: the figure is on the header, so it survives.
+    await userEvent.click(header);
+    expect(header).toHaveAttribute('aria-expanded', 'false');
+    expect(header).toHaveTextContent('1,800');
+    expect(screen.queryByTestId('unbudgeted-91')).not.toBeInTheDocument();
+  });
+
+  it('shows no Not budgeted figure for a group that has none', async () => {
+    // Non-Monthly has nothing unbudgeted; a 0.00 beside three other figures is
+    // noise, and this page already refuses to pad.
+    mount(withUnbudgeted);
+    const heading = await screen.findByRole('heading', { name: 'Non-Monthly' });
+    expect(heading.closest('button')!).not.toHaveTextContent('Not budgeted');
+  });
+
+  it('renders against a server that predates the field, rather than blanking', async () => {
+    /* A self-hoster on an older image must get the page they always had. The
+       first version read `.length` off undefined and took the whole Budgets
+       page down — every test in the file above went red at once. */
+    mount(overview());
+    expect(await screen.findByRole('heading', { name: 'Flexible' })).toBeInTheDocument();
   });
 });

@@ -37,6 +37,7 @@ from sqlalchemy import func
 from src.extensions import db
 from src.models.account import Account
 from src.models.category import Category
+from src.models.investment import Investment, Portfolio
 from src.models.transaction import Expense
 
 
@@ -183,7 +184,55 @@ def taught_a_rule(user_id):
 
 
 def has_a_goal(user_id):
-    return None      # the goal's own peak is the payoff; a sentence would repeat it
+    """What naming a goal made computable: its size, and what is left.
+
+    *** THIS RETURNED `None` DELIBERATELY AND THE REASONING WENT STALE. *** The
+    old comment read *"the goal's own peak is the payoff; a sentence would
+    repeat it"*, which is true on the Goals PAGE, where the peak is on screen
+    beside the words. It stopped being true when the award moment shipped: the
+    award is shown wherever the user happens to be, and `CoinAward` renders
+    NOTHING when `revealed` is null — by design, because a sentence finPal
+    cannot justify is worse than silence. So `has_a_goal` paid 600 coins and
+    produced no feedback at all, on any surface.
+
+    *** IT DOES NOT REPEAT THE PEAK; IT NAMES WHAT BECAME COMPUTABLE. *** Before
+    a goal exists there is no target, no remaining figure and no peak to draw.
+    That is the truth test's second limb — a figure finPal could not compute
+    before.
+
+    Fail-closed like the rest: no goal, or no usable target, no sentence.
+    """
+    from src.models.goal import Goal
+
+    goals = Goal.query.filter_by(user_id=user_id).order_by(
+        Goal.created_at.desc()).all()
+    if not goals:
+        return None
+
+    currency = _currency_for(user_id)
+    named = goals[0]
+    try:
+        target = Decimal(str(named.target_amount or 0))
+        start = Decimal(str(named.start_amount or 0))
+    except Exception:
+        return None
+    if target <= 0:
+        return None
+
+    remaining = max(Decimal(0), target - start)
+    n = len(goals)
+
+    if remaining <= 0:
+        return (f'“{named.name}” is drawn on your range at '
+                f'{_money(target, currency)}, and it is already covered.')
+
+    if n == 1:
+        return (f'“{named.name}” is now drawn at the size of what it asks: '
+                f'{_money(remaining, currency)} still to find. finPal could '
+                f'not put a figure on that before you named it.')
+    return (f'“{named.name}” joins {n - 1} other '
+            f'{"goal" if n == 2 else "goals"} on your range, at '
+            f'{_money(remaining, currency)} still to find.')
 
 
 def debt_rates(user_id):
@@ -278,26 +327,21 @@ def debt_minimums(user_id):
     if payment_s is None:
         return None
 
-    if payment <= interest:
-        return (f'At {payment_s} a month this card never clears — the interest '
-                f'alone is {_money(interest, currency)}. That is the product, '
-                'not you.')
+    # *** THE ARITHMETIC MOVED TO `goal/projection.py` AND BOTH CALLERS USE IT.
+    # *** The goal page needed the same figure, and writing months-to-clear a
+    # second time is D-101 — two computations of one number. The sentence is
+    # still this file's job; the maths is not.
+    from src.services.goal.projection import months_to_clear, span_words
 
-    # Standard amortisation. `rate == 0` would divide by zero, and a 0% card is
-    # a real thing, so it is handled as plain division.
-    if rate == 0:
-        months = int(math.ceil(float(owed / payment)))
-    else:
-        months = int(math.ceil(
-            -math.log(1 - float(owed * rate / payment)) / math.log(1 + float(rate))))
-    years, rem = divmod(months, 12)
-    if years and rem:
-        span = f'{years} year{"s" if years > 1 else ""} and {rem} month{"s" if rem > 1 else ""}'
-    elif years:
-        span = f'{years} year{"s" if years > 1 else ""}'
-    else:
-        span = f'{months} month{"s" if months > 1 else ""}'
-    return (f'Paying {payment_s} a month, this card takes {span} to clear — '
+    projected = months_to_clear(owed, card.apr, payment)
+    if projected is None:
+        return None
+    if projected.never:
+        return (f'At {payment_s} a month this card never clears — the interest '
+                f'alone is {_money(projected.monthly_interest, currency)}. '
+                'That is the product, not you.')
+    return (f'Paying {payment_s} a month, this card takes '
+            f'{span_words(projected.months)} to clear — '
             'which is usually longer than it feels.')
 
 
@@ -314,3 +358,94 @@ def transfers_confirmed(user_id):
     return (f'{_money(total, _currency_for(user_id))} that looked like income '
             'is money you moved between your own accounts. Your income figure '
             'is the real one now.')
+
+
+def holdings_priced(user_id):
+    """What recording the price revealed: the real gain, not the market value.
+
+    *** FAIL-CLOSED. *** No priced holding, or no current price to compare
+    against, and there is no sentence -- the same rule `check_reason` follows.
+    """
+    rows = Investment.query.join(
+        Portfolio, Portfolio.id == Investment.portfolio_id).filter(
+            Portfolio.user_id == user_id).all()
+    priced = [h for h in rows
+              if h.purchase_price and h.purchase_price > 0 and h.current_price]
+    if not priced:
+        return None
+
+    cost = sum(Decimal(str(h.shares)) * Decimal(str(h.purchase_price))
+               for h in priced)
+    value = sum(Decimal(str(h.shares)) * Decimal(str(h.current_price))
+                for h in priced)
+    if cost <= 0:
+        return None
+
+    currency = _currency_for(user_id)
+    gain = value - cost
+    verb = 'up' if gain >= 0 else 'down'
+    return (f'You paid {_money(cost, currency)} for those holdings and they '
+            f'are worth {_money(value, currency)} — {verb} '
+            f'{_money(abs(gain), currency)}. Before you recorded the price, '
+            f'finPal counted the whole {_money(value, currency)} as gain.')
+
+
+def splits_confirmed(user_id):
+    """What confirming the splits fixed: your own share of the bill.
+
+    *** FAIL-CLOSED. *** Nothing confirmed, nothing to say.
+    """
+    from src.services.literacy.coverage import _shared_expenses_for
+    from src.repositories.act_events import ActEventRepository
+
+    mine = _shared_expenses_for(user_id)
+    if not mine:
+        return None
+    confirmed = ActEventRepository().subject_ids(user_id, 'splits_confirmed')
+    done = [e for e in mine if str(e.id) in confirmed]
+    if not done:
+        return None
+
+    currency = _currency_for(user_id)
+    total = sum(Decimal(str(abs(e.amount or 0))) for e in done)
+    n = len(done)
+    bill = 'bill' if n == 1 else 'bills'
+    return (f'{n} shared {bill} worth {_money(total, currency)} now splits the '
+            f'way it actually happened. Your spending figures count your share '
+            f'of it, not an even guess.')
+
+
+def settlement_recorded(user_id):
+    """What recording a settlement fixed: money owed is money accounted for."""
+    from src.models.group import Settlement
+
+    rows = Settlement.query.filter(
+        db.or_(Settlement.payer_id == user_id,
+               Settlement.receiver_id == user_id)).all()
+    if not rows:
+        return None
+
+    currency = _currency_for(user_id)
+    total = sum(Decimal(str(s.amount or 0)) for s in rows)
+    n = len(rows)
+    word = 'settlement' if n == 1 else 'settlements'
+    return (f'{n} {word} recorded, {_money(total, currency)} in all. Money '
+            f'that changed hands is now in your figures instead of sitting '
+            f'outside them.')
+
+
+def budget_adjusted(user_id):
+    """What revising a budget did: the plan now matches what you decided.
+
+    *** NO FIGURE IS CLAIMED HERE, AND THAT IS THE POINT. *** This act earns on
+    the truth test's EFFORT limb (§14.1), not because it made a number truer,
+    so a sentence inventing a consequence would be the bluff the fail-closed
+    rule exists to prevent. It names what the user did and stops.
+    """
+    from src.models.budget import Budget
+
+    n = Budget.query.filter_by(user_id=user_id).count()
+    if not n:
+        return None
+    return ('You came back and changed a budget rather than leaving one that '
+            'was not working. A plan you revise is a plan you are using.')

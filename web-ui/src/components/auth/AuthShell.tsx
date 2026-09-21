@@ -346,7 +346,11 @@ export default function AuthShell({
           and ForgotPassword, ResetPassword and the OIDC failure had none — so
           three of the five screens were a dead end unless you knew the logo was
           not a link. One copy, on all five. */}
-      <Link to="/" className="auth-entry-back" style={{ color: SOFT }}
+      {/* *** POINTS AT `/welcome`, NOT `/`, SINCE LOGIN BECAME THE INDEX. ***
+          Left at `/` it would have linked the login page to ITSELF — which is
+          the dead end this one shared link was created to remove, reintroduced
+          by a routing change. The marketing page is what "home" means here. */}
+      <Link to="/welcome" className="auth-entry-back" style={{ color: SOFT }}
         onMouseEnter={(e) => { e.currentTarget.style.color = INK; }}
         onMouseLeave={(e) => { e.currentTarget.style.color = SOFT; }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"

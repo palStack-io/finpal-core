@@ -377,6 +377,75 @@ class GroupBalances(Resource):
             return {'error': 'An internal error occurred'}, 500
 
 
+@ns.route('/<int:group_id>/expenses/<int:expense_id>/confirm-split')
+@ns.param('group_id', 'Group ID')
+@ns.param('expense_id', 'Expense ID')
+class GroupExpenseConfirmSplit(Resource):
+    @ns.doc('confirm_group_expense_split', security='Bearer')
+    @ns.response(200, 'The split is confirmed; repeating it is a no-op')
+    @ns.response(403, 'The caller is not split into this expense')
+    @ns.response(404, 'No such group or expense, or the caller is not a member')
+    @jwt_required()
+    def post(self, group_id, expense_id):
+        """Confirm that a shared expense splits the way it actually happened.
+
+        *** THIS IS THE ONLY WRITE PATH FOR `splits_confirmed`, BECAUSE THERE
+        IS NO SPLIT-CONFIRMATION FIELD ANYWHERE (§14.3.1). *** `split_method`,
+        `split_with`, `split_details` and `has_category_splits` all describe the
+        split; none of them records that a human agreed with it. A column on
+        `expenses` is what D-121 forbids, so the record is an `ActEvent`.
+
+        *** 403 AND 404 ARE DIFFERENT ANSWERS AND MUST NOT BE COLLAPSED. *** A
+        housemate who can SEE a group expense but is not split into it is
+        correctly shown it and correctly refused here -- the same distinction
+        the Review page draws between a refusal and a no-op (D-47).
+
+        *** REPEATING IT IS A NO-OP, NOT A DUPLICATE. *** `record()` is
+        idempotent, so a double-submitted form cannot turn one confirmation
+        into two and inflate the coverage numerator.
+        """
+        from src.models.transaction import Expense
+        from src.repositories.act_events import ActEventRepository
+        from src.services.literacy.acts import award_for_surface
+
+        try:
+            identity = get_jwt_identity()
+
+            success, message, group = group_service.get_group(group_id, identity)
+            if not success:
+                return {'error': message}, 404
+
+            expense = Expense.query.filter_by(
+                id=expense_id, group_id=group_id).first()
+            if expense is None:
+                return {'error': 'No such expense in this group.'}, 404
+
+            split_ids = [i.strip() for i in (expense.split_with or '').split(',')
+                         if i.strip()]
+            if identity not in split_ids and expense.paid_by != identity \
+                    and expense.user_id != identity:
+                return {'error': 'You are not split into this expense.'}, 403
+
+            was_new = ActEventRepository().record(
+                identity, 'splits_confirmed', str(expense.id))
+
+            # The award moment, on the surface the user is actually on.
+            awarded = award_for_surface(identity, 'groups')
+            db.session.commit()
+
+            return {
+                'confirmed': True,
+                'already_confirmed': not was_new,
+                'coins_awarded': sum(c for _, c in awarded),
+            }, 200
+
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception('Unhandled error')
+            return {'error': 'An internal error occurred'}, 500
+
+
 @ns.route('/<int:id>/members')
 @ns.param('id', 'Group ID')
 class GroupMembers(Resource):

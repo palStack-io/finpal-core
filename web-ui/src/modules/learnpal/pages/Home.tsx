@@ -3,7 +3,7 @@ import { PageHead } from '../../../components/PageHead';
 import { Link } from 'react-router-dom';
 import { Loader2, Lock } from 'lucide-react';
 import { MountainSilhouette } from '../../../components/MountainSilhouette';
-import { GearIcon } from '../../../components/GearIcon';
+import { BadgeIcon } from '../../../components/BadgeIcon';
 import { useLessonReader, type LessonReaderApi } from '../LessonReader';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
 import { learnpalService } from '../service';
@@ -185,7 +185,7 @@ const RecentRow: React.FC<{
   const body = (
     <>
     <span style={{ lineHeight: 0, marginTop: 2 }}>
-      <GearIcon slug={row.gear_slug ?? row.slug} size={20} />
+      <BadgeIcon slug={row.gear_slug ?? row.slug} size={34} />
     </span>
     <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -250,7 +250,7 @@ const NextRow: React.FC<{ row: StatsNext }> = ({ row }) => (
     borderTop: '1px solid var(--border-light)',
   }}>
     <span style={{ lineHeight: 0, marginTop: 2, opacity: 0.3 }}>
-      <GearIcon slug={row.gear_slug ?? row.slug} size={20} />
+      <BadgeIcon slug={row.gear_slug ?? row.slug} size={34} />
     </span>
     <div style={{ minWidth: 0, flex: 1 }}>
       <div style={{

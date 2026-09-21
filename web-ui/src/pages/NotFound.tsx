@@ -123,7 +123,10 @@ export const NotFound: React.FC = () => {
         {user ? (
           <Link to="/dashboard" style={primary}>Go to dashboard</Link>
         ) : (
-          <Link to="/" style={primary}>Go to the finPal home page</Link>
+          /* `/` is the LOGIN page now (owner, 2026-09-17), so the label says
+             what the link actually does. "Home page" would have been a promise
+             the route stopped keeping. */
+          <Link to="/" style={primary}>Go to sign in</Link>
         )}
         {hasSomewhereBack && (
           <button type="button" style={secondary} onClick={() => navigate(-1)}>

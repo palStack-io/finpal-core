@@ -8,10 +8,12 @@ import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from './budgets/SpendingTypeControl';
 import { PageHead } from './PageHead';
 import { TotalsRow } from './dashboard/TotalsRow';
+import { SliceBreakdown } from './analytics/SliceBreakdown';
 import { formatMoney } from '../styles/money';
 import { analyticsService } from '../services/analyticsService';
 import { lastFullMonth } from '../utils/monthKeys';
 import { spendingTypeByName, splitSpendByGroup, SpendSplit } from '../utils/spendingGroups';
+import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 /**
  * Where the "Hide these" choice for the suggested-categories panel lives (#125). A per-user
@@ -343,6 +345,12 @@ const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold'
 const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)' };
 
 export const CategoryManagement: React.FC = () => {
+  // *** THE ONLY THING THIS PAGE DECIDES IS ITS OWN NAME. *** The
+  // server owns which acts a `categories` mutation can move; a client-side
+  // map would be a second list to keep in step with `acts.py`. The hook
+  // fires on mount too, so a mutation handler nobody remembered to wire
+  // still gets its moment on the next paint (D-106's shape).
+  useSurfaceCoins('categories');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -366,6 +374,25 @@ export const CategoryManagement: React.FC = () => {
    * not render.
    */
   const [split, setSplit] = useState<(SpendSplit & { label: string }) | null>(null);
+  /**
+   * What each category actually cost, last full month.
+   *
+   * *** THE PAGE ALREADY FETCHED THIS AND THREW IT AWAY. *** The same request
+   * fed only the Fixed/Flexible totals in the head, so the header talked about
+   * money and the list below it showed none — which is exactly why the page
+   * read as promising something it did not deliver (owner, 2026-09-19: "the
+   * header makes it loook like its for seeing where money goes where as the
+   * categories page just has categories").
+   *
+   * Keyed by NAME because that is how the server buckets it: two housemates'
+   * "Groceries" are one slice of one household's spending. The ids ride along
+   * so a row can ask the follow-up question.
+   */
+  const [spendByName, setSpendByName] =
+    useState<Map<string, { amount: number; ids: number[] }>>(new Map());
+  /** Which category's payee breakdown is open. */
+  const [openCategory, setOpenCategory] = useState<{ name: string; ids: number[] } | null>(null);
+  const [showUnused, setShowUnused] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -387,11 +414,15 @@ export const CategoryManagement: React.FC = () => {
           spending_type: (c.spending_type ?? null) as never,
         })));
         setSplit({ ...splitSpendByGroup(rows, byName), label: month.label });
+        setSpendByName(new Map(rows.map((r: { name?: string | null; amount?: number | null; ids?: number[] }) => [
+          (r.name || '').trim() || 'Uncategorised',
+          { amount: Number(r.amount) || 0, ids: Array.isArray(r.ids) ? r.ids : [] },
+        ])));
       } catch {
         // Silent on purpose: the split is an extra, and an error banner over a
         // working category list would be the page shouting about the wrong
         // thing. `uiHonesty` forbids showing a zero here instead.
-        if (!cancelled) setSplit(null);
+        if (!cancelled) { setSplit(null); setSpendByName(new Map()); }
       }
     })();
     return () => { cancelled = true; };
@@ -467,6 +498,50 @@ export const CategoryManagement: React.FC = () => {
     filteredCategories.filter((cat) => cat.parent_id === parentId);
 
   /**
+   * What a card cost: the category's own spending PLUS its children's.
+   *
+   * *** A PARENT WOULD OTHERWISE READ ZERO WITH ITS MONEY INSIDE IT. *** The
+   * server buckets each expense under its OWN category, so Food is 0 while
+   * Coffee, drawn inside Food's card, is 40 — a card that says nothing while
+   * displaying the thing it is nothing about. One level, matching every other
+   * rollup in this product.
+   */
+  const spendFor = (category: Category) => {
+    const own = spendByName.get((category.name || '').trim());
+    const kids = categories
+      .filter((c) => c.parent_id === category.id)
+      .map((c) => spendByName.get((c.name || '').trim()))
+      .filter(Boolean) as Array<{ amount: number; ids: number[] }>;
+    const rows = own ? [own, ...kids] : kids;
+    return {
+      amount: rows.reduce((sum, r) => sum + r.amount, 0),
+      ids: rows.flatMap((r) => r.ids),
+    };
+  };
+
+  /* Biggest first — the question the page now answers is "where did it go",
+     and alphabetical answers a different one. */
+  const spenders = parentCategories
+    .map((cat) => ({ cat, spend: spendFor(cat) }))
+    .filter((r) => r.spend.amount > 0)
+    .sort((a, b) => b.spend.amount - a.spend.amount);
+  /* *** KEPT, NOT HIDDEN. *** Pruning a category nobody uses is this page's
+     other job, and it is the only place you can do it. Folded so the answer
+     to "where did it go" is not buried under a list of noughts. */
+  const unused = parentCategories.filter((cat) => spendFor(cat).amount <= 0);
+  const spendTotal = spenders.reduce((sum, r) => sum + r.spend.amount, 0);
+  /**
+   * *** WITH NOTHING SPENT, EVERY CATEGORY IS "UNUSED" AND THE PAGE FOLDS
+   * ITSELF AWAY. *** A new instance, or one whose spend request failed, would
+   * show an empty list behind "Show 12 unused" — hiding the only controls the
+   * page has on the very account that has nothing else to look at. Two
+   * existing tests went red on exactly this, which is them doing their job:
+   * the fold separates spenders from the rest, and with no spenders there is
+   * nothing to separate.
+   */
+  const nothingSpent = spenders.length === 0;
+
+  /**
    * Suggested categories the user has not created yet — #125.
    *
    * Derived from `categories`, NOT from `filteredCategories`: the latter is narrowed by the
@@ -522,9 +597,15 @@ export const CategoryManagement: React.FC = () => {
       <PageHead
         band="categories"
         title="Categories"
+        /* *** THE HEAD PROMISED WHERE THE MONEY WENT AND THE LIST DID NOT
+           DELIVER IT. *** Owner, 2026-09-19: "the header makes it loook like
+           its for seeing where money goes where as the categories page just
+           has categories". It delivers it now, so the sentence can say so —
+           and it keeps the second half, because sorting a category is what
+           the Budgets page depends on and this is the only place to do it. */
         subtitle={split
-          ? `${split.label}, your last full month. Fixed is what arrives whatever you do; flexible is what is actually yours to move.`
-          : 'Fixed is what arrives whatever you do; flexible is what is actually yours to move.'}
+          ? `Where your money went in ${split.label.split(' ')[0]} — your last full month. Sorting a category into Fixed or Flexible is what makes the Budgets page honest.`
+          : 'Where your money goes, and the sorting that makes the Budgets page honest.'}
         right={<button
           onClick={handleAddCategory}
           style={{
@@ -558,7 +639,62 @@ export const CategoryManagement: React.FC = () => {
           <Plus size={20} />
           Add Category
         </button>}
-      />
+      >
+        {/* *** INSIDE THE HEAD, SO THE RIDGE IS DRAWN BENEATH THE FIGURES.
+            *** `PageHead` renders its children and THEN the band, which is
+            why Accounts reads as one object and this read as a head with a
+            panel stuck under it. Owner, 2026-09-19: *"the accounts is good
+            because the metrics are inside the header design with mountains
+            under it? where as the rest are under the header"*. The bordered
+            card goes with it: the band is the surface, and a box inside a box
+            is the stacked-panels problem `TotalsRow` exists to remove. */}
+        {split && (
+            <TotalsRow
+              cells={[
+                {
+                  label: 'Fixed',
+                  value: formatMoney(split.fixed),
+                  note: split.fixed === 0
+                    ? `nothing landed in ${split.label.split(' ')[0]}`
+                    : 'arrives whatever you do',
+                },
+                {
+                  label: 'Flexible',
+                  value: formatMoney(split.flexible),
+                  valueColor: 'var(--g-ink)',
+                  note: split.flexible === 0
+                    ? `nothing landed in ${split.label.split(' ')[0]}`
+                    : 'yours to move',
+                },
+                {
+                  label: 'Non-monthly',
+                  // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
+                  // FILLS. `--kt-seg-4` is #B8884D, which measures 3.06:1 on the
+                  // card in light — the contrast walk failed this exact pair, and
+                  // `coins/_kit.css` carries the same warning with the same
+                  // number: it "survives as --seg-4, which is a FILL and never
+                  // carries a label".
+                  value: formatMoney(split.non_monthly),
+                  valueColor: 'var(--au-ink)',
+                  note: split.non_monthly === 0
+                    ? `nothing landed in ${split.label.split(' ')[0]}`
+                    : 'lands some months and not others',
+                },
+                // Only when there is some: a zero here would invite sorting work
+                // that is already done, and "Not sorted yet — $0.00" reads as a
+                // problem rather than as finished.
+                ...(split.unsorted > 0 ? [{
+                  label: 'Not sorted yet',
+                  value: formatMoney(split.unsorted),
+                  valueColor: 'var(--text-secondary)',
+                  // NOT folded into flexible. Unsorted means finPal does not
+                  // know; calling it movable would claim the user said so.
+                  note: 'finPal cannot say which of the three this is',
+                }] : []),
+              ]}
+            />
+        )}
+      </PageHead>
 
       {/* *** THE PAYOFF FOR SORTING THEM, WHICH THIS PAGE NEVER SHOWED. ***
           Three figures, from the last full month, in the same three groups the
@@ -587,60 +723,6 @@ export const CategoryManagement: React.FC = () => {
           `splitSpendByGroup` refuses an ambiguous name rather than guessing,
           and anything it could not attribute is named below rather than
           quietly missing from a total. */}
-      {split && (
-        <div style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-light)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          marginBottom: '24px',
-        }}>
-          <TotalsRow
-            cells={[
-              {
-                label: 'Fixed',
-                value: formatMoney(split.fixed),
-                note: split.fixed === 0
-                  ? `nothing landed in ${split.label.split(' ')[0]}`
-                  : 'arrives whatever you do',
-              },
-              {
-                label: 'Flexible',
-                value: formatMoney(split.flexible),
-                valueColor: 'var(--g-ink)',
-                note: split.flexible === 0
-                  ? `nothing landed in ${split.label.split(' ')[0]}`
-                  : 'yours to move',
-              },
-              {
-                label: 'Non-monthly',
-                // *** `--au-ink`, NOT `--kt-seg-4`. *** The segment tokens are
-                // FILLS. `--kt-seg-4` is #B8884D, which measures 3.06:1 on the
-                // card in light — the contrast walk failed this exact pair, and
-                // `coins/_kit.css` carries the same warning with the same
-                // number: it "survives as --seg-4, which is a FILL and never
-                // carries a label".
-                value: formatMoney(split.non_monthly),
-                valueColor: 'var(--au-ink)',
-                note: split.non_monthly === 0
-                  ? `nothing landed in ${split.label.split(' ')[0]}`
-                  : 'lands some months and not others',
-              },
-              // Only when there is some: a zero here would invite sorting work
-              // that is already done, and "Not sorted yet — $0.00" reads as a
-              // problem rather than as finished.
-              ...(split.unsorted > 0 ? [{
-                label: 'Not sorted yet',
-                value: formatMoney(split.unsorted),
-                valueColor: 'var(--text-secondary)',
-                // NOT folded into flexible. Unsorted means finPal does not
-                // know; calling it movable would claim the user said so.
-                note: 'finPal cannot say which of the three this is',
-              }] : []),
-            ]}
-          />
-        </div>
-      )}
       {split && split.unattributable.length > 0 && (
         <p className="fp-hint" style={{ marginTop: '-12px', marginBottom: '24px' }}>
           Left out of the figures above, because more than one category shares
@@ -788,8 +870,13 @@ export const CategoryManagement: React.FC = () => {
             </button>
           </div>
         ) : (
-          parentCategories.map((category) => {
+          (nothingSpent || showUnused
+            ? [...spenders.map((r) => r.cat), ...unused]
+            : spenders.map((r) => r.cat))
+            .map((category) => {
             const subcategories = getSubcategories(category.id);
+            const spend = spendFor(category);
+            const share = spendTotal > 0 ? (spend.amount / spendTotal) * 100 : 0;
 
             return (
               <div
@@ -830,9 +917,48 @@ export const CategoryManagement: React.FC = () => {
                       <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px', overflowWrap: 'anywhere' }}>
                         {category.name}
                       </h2>
-                      <p style={bodyTextStyle}>
-                        {subcategories.length} subcategor{subcategories.length === 1 ? 'y' : 'ies'}
-                      </p>
+                      {/* *** WHAT IT COST, WHICH IS WHAT THE HEAD HAS ALWAYS
+                          PROMISED. *** The page fetched this and used it only
+                          for the split above; the list showed no money at all.
+                          The share is of the spend this page is ABOUT, not of
+                          anyone's income — a percentage of a figure the reader
+                          can see beside it. */}
+                      {spend.amount > 0 ? (
+                        <p style={bodyTextStyle}>
+                          <strong style={{ color: 'var(--text-primary)' }}>
+                            {formatMoney(spend.amount)}
+                          </strong>
+                          {` · ${share.toFixed(0)}% of the month`}
+                          {subcategories.length > 0
+                            && ` · ${subcategories.length} subcategor${subcategories.length === 1 ? 'y' : 'ies'}`}
+                        </p>
+                      ) : (
+                        <p style={bodyTextStyle}>
+                          {split
+                            ? `Nothing spent in ${split.label.split(' ')[0]}`
+                            : `${subcategories.length} subcategor${subcategories.length === 1 ? 'y' : 'ies'}`}
+                        </p>
+                      )}
+                      {spend.amount > 0 && spend.ids.length > 0 && (
+                        <button
+                          type="button"
+                          data-testid={`where-${category.id}`}
+                          onClick={() => setOpenCategory((cur) => (
+                            cur?.name === category.name
+                              ? null
+                              : { name: category.name, ids: spend.ids }))}
+                          aria-expanded={openCategory?.name === category.name}
+                          style={{
+                            marginTop: 4, padding: 0, border: 0, background: 'none',
+                            color: 'var(--g-ink)', fontSize: 13, fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {openCategory?.name === category.name
+                            ? 'Hide where it went'
+                            : 'Where it went →'}
+                        </button>
+                      )}
                       {/* *** SPEC §1 DECISION 3: BOTH SCREENS, ONE VALUE. ***
                           The budget page lists only categories that HAVE a
                           budget, and its Unsorted section only ones money left
@@ -890,6 +1016,25 @@ export const CategoryManagement: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* *** THE FOLLOW-UP QUESTION, IN THE SAME PANEL THE FLOW
+                    DIAGRAM USES. *** One component answers "who was paid
+                    inside this slice" wherever the slice is clicked, so the
+                    two surfaces cannot drift into two answers — and it is
+                    asked with the ids this card actually summed, parent and
+                    children, so its rows add up to the figure above them. */}
+                {openCategory?.name === category.name && (
+                  <SliceBreakdown
+                    node={{
+                      id: `cat-${category.id}`, label: category.name,
+                      value: spend.amount, side: 'out', categoryIds: spend.ids,
+                    }}
+                    start={lastFullMonth().start}
+                    end={lastFullMonth().end}
+                    format={(amount) => formatMoney(amount)}
+                    onClose={() => setOpenCategory(null)}
+                  />
+                )}
 
                 {/* Subcategories */}
                 {subcategories.length > 0 && (
@@ -1017,6 +1162,29 @@ export const CategoryManagement: React.FC = () => {
               </div>
             );
           })
+        )}
+
+        {/* *** PRUNING IS THIS PAGE'S OTHER JOB AND THE ONLY PLACE TO DO IT.
+            *** A category nobody spent in is not an answer to "where did it
+            go", but it IS the thing you came here to delete — so it folds
+            rather than disappearing, and the count is on the control so the
+            page never silently omits part of the list. */}
+        {unused.length > 0 && !nothingSpent && (
+          <button
+            type="button"
+            data-testid="unused-categories"
+            onClick={() => setShowUnused((v) => !v)}
+            aria-expanded={showUnused}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+              background: 'none', border: '1px dashed var(--border-medium)',
+              borderRadius: 12, padding: '14px 18px', cursor: 'pointer',
+              color: 'var(--text-secondary)', fontSize: 14, textAlign: 'left',
+            }}
+          >
+            {showUnused ? 'Hide' : 'Show'} {unused.length} unused
+            {split ? ` in ${split.label.split(' ')[0]}` : ''}
+          </button>
         )}
       </div>
 

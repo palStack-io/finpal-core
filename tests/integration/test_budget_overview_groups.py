@@ -359,3 +359,74 @@ def test_the_two_disagree_ONLY_by_returning_None_instead_of_zero(db):
     service = AnalyticsService()
     assert service.current_month_income(user.id) is None
     assert float(service.get_dashboard_data(user.id)['current_month_income']) == 0.0
+
+
+def test_a_classified_category_with_no_budget_is_reported_in_its_group(
+        client, auth_headers, db):
+    """*** THE PAGE SAID "4 ON TRACK, 0 OVER" OVER 1,885.44 IT NEVER MENTIONED. ***
+
+    `_unsorted_section`'s own docstring promises that unbudgeted spending is
+    shown and not hidden -- and then skips every category that HAS a spending
+    type. Measured on the demo 2026-09-19: Housing (fixed, 1,800.00) plus four
+    flexible categories were reported by neither the groups nor the unsorted
+    section, so "Total Spent" read 474.28 against 2,359.72 of real spending and
+    Fixed rendered "Nothing here yet" while holding the rent.
+
+    Asserted on the PAYLOAD's arithmetic, never on a status code: this defect
+    returned 200 and rendered a full green health bar.
+    """
+    user = UserFactory()
+    rent = category(db, user, 'Housing', 'fixed')
+    food = category(db, user, 'Food', 'flexible')
+    pharmacy = category(db, user, 'Pharmacy', 'flexible')
+
+    budget(db, user, food, 500)
+    spend(db, user, food, 238)
+    spend(db, user, rent, 1800)        # classified, never budgeted
+    spend(db, user, pharmacy, 23.45)   # classified, never budgeted
+
+    body = overview(client, user, auth_headers)
+    groups = {g['spending_type']: g for g in body['groups']}
+
+    # The rent lands in Fixed, which has no budgets at all.
+    assert groups['fixed']['unbudgeted_actual'] == 1800.00
+    assert [c['name'] for c in groups['fixed']['unbudgeted_categories']] == ['Housing']
+
+    # Flexible reports the budgeted row AND the one nobody budgeted.
+    assert groups['flexible']['actual'] == 238.00
+    assert groups['flexible']['unbudgeted_actual'] == 23.45
+
+    # *** `remaining` DOES NOT MOVE. *** Money never planned cannot eat a plan
+    # it was never in; folding it in would make Fixed read -1,800 against a
+    # plan of zero.
+    assert groups['fixed']['remaining'] == 0.00
+    assert groups['flexible']['remaining'] == 262.00
+
+    # And the headline is now the whole truth.
+    assert body['totals']['actual'] == 2061.45
+    assert body['totals']['budgeted_actual'] == 238.00
+    assert body['totals']['unbudgeted_actual'] == 1823.45
+    assert body['totals']['remaining'] == 262.00
+
+
+def test_a_child_of_a_budgeted_parent_is_not_called_unbudgeted(
+        client, auth_headers, db):
+    """*** COVERAGE IS THE BUDGET'S QUESTION, NOT AN ID MATCH. ***
+
+    `Budget.matches_expense` rolls a parent budget up over its children, so a
+    child category is already counted in its parent's `actual`. Reporting it as
+    unbudgeted as well would state the same money twice on one page -- and the
+    naive `category_id in budgeted_ids` check does exactly that.
+    """
+    user = UserFactory()
+    parent = category(db, user, 'Food', 'flexible')
+    child = category(db, user, 'Coffee', 'flexible', parent=parent)
+
+    budget(db, user, parent, 500)
+    spend(db, user, child, 40)
+
+    groups = {g['spending_type']: g
+              for g in overview(client, user, auth_headers)['groups']}
+    assert groups['flexible']['actual'] == 40.00          # counted by the rollup
+    assert groups['flexible']['unbudgeted_actual'] == 0.00
+    assert groups['flexible']['unbudgeted_categories'] == []

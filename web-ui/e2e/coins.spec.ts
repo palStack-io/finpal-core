@@ -110,10 +110,22 @@ test('the gear is drawn at a size a person can identify', async ({ page }) => {
   await page.goto('/kit');
   await pageIsLoaded(page, 'Your kit');
 
+  /* *** `boundingBox()` DOES NOT AUTO-WAIT, AND A ONE-SHOT READ OF IT WENT RED
+     ON A PAGE THAT RENDERS CORRECTLY. *** Two things make the icon's box
+     unstable for a moment after `pageIsLoaded` returns: `GearIcon` fetches
+     `/gear/<slug>.svg` in an effect and renders an EMPTY box until it lands,
+     and the award moment now pops on `/kit`, which re-renders underneath it.
+     The failure screenshot showed all 21 pieces drawn at full size — so the
+     assertion was right about the product and wrong about when to read it.
+
+     `expect.poll` is the fix and it does NOT weaken anything: the threshold is
+     the same 36px, and a genuinely small icon still fails after the timeout.
+     A bare `toBeVisible()` is not enough — the box can go null again on the
+     next re-render, between the two calls. */
   const firstIcon = page.getByTestId('kit-grid').locator('svg, img').first();
-  const box = await firstIcon.boundingBox();
-  expect(box, 'no gear rendered at all').not.toBeNull();
-  expect(box!.width, 'gear is being drawn too small to identify')
+  await expect
+    .poll(async () => (await firstIcon.boundingBox())?.width ?? 0,
+          { message: 'gear is missing, or drawn too small to identify' })
     .toBeGreaterThanOrEqual(36);
 });
 

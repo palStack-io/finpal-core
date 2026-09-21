@@ -114,3 +114,75 @@ def test_nothing_outside_learnpal_imports_learnpals_checks():
     assert offenders == [], (
         f'these import learnPal\'s checks: {offenders}. Twelve of the thirteen '
         'predicates are core\'s and live in src/services/literacy/checks.py.')
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Added 2026-09-17: the boundary covers the whole literacy package, not
+# just `checks.py`.
+# ══════════════════════════════════════════════════════════════════════
+
+CORE_LITERACY = pathlib.Path('src/services/literacy')
+
+# *** ONE FILE MAY IMPORT A MODULE, AND IT IS AN OWNER DECISION, NOT AN
+# OVERSIGHT. *** `everest.py` reads learnPal's completions because the owner
+# chose that altitude is coins PLUS lessons (§14.10, taken against my
+# recommendation). It is guarded: the import sits inside a `try` and a missing
+# or empty learnPal returns a lesson fraction of 0, so Everest works with the
+# module switched off. Declared here so the exception is visible and the rest
+# of the package stays closed.
+MAY_IMPORT_A_MODULE = {
+    'everest.py': 'owner decision §14.10 — lessons lift altitude; guarded by '
+                  'try/except so a missing learnPal returns 0',
+}
+
+
+def test_the_WHOLE_literacy_package_imports_nothing_from_a_module():
+    """*** THE ORIGINAL GUARD ONLY COVERED `checks.py`. ***
+
+    It was written when `checks.py` was the only core literacy file. The
+    package now holds `acts.py`, `coverage.py`, `payoff.py`, `gear.py`,
+    `teaching.py`, `badges.py` and `everest.py`, and the same rule applies to
+    all of them: a predicate that needs a module's tables belongs in that
+    module and registers through a hook.
+
+    `badges.py` is why this was widened — pointsPal's contributor badges read
+    its card tables, and putting them in core would have been the easy wrong
+    move.
+    """
+    offenders = {}
+    for path in sorted(CORE_LITERACY.glob('*.py')):
+        if path.name in MAY_IMPORT_A_MODULE:
+            continue
+        bad = {m for m in _imported_modules(path)
+               if m.startswith('src.modules.')}
+        if bad:
+            offenders[path.name] = sorted(bad)
+
+    assert offenders == {}, (
+        f'core literacy files import from an optional module: {offenders}. '
+        'A predicate that needs a module\'s tables belongs in that module and '
+        'registers through get_checks(), get_acts() or get_badges().')
+
+
+def test_NO_STALE_EXEMPTION_IN_THE_BOUNDARY():
+    """A file declared as importing a module that no longer does. A stale
+    exemption is how a guard quietly stops covering things."""
+    stale = []
+    for name in MAY_IMPORT_A_MODULE:
+        path = CORE_LITERACY / name
+        if not path.exists():
+            stale.append(f'{name} (file gone)')
+            continue
+        if not {m for m in _imported_modules(path)
+                if m.startswith('src.modules.')}:
+            stale.append(f'{name} (no longer imports a module)')
+    assert stale == [], f'stale boundary exemptions: {stale} — delete them'
+
+
+def test_pointspals_badges_live_in_pointspal():
+    """The positive half: the badges exist, in the module, not in core."""
+    assert pathlib.Path('src/modules/pointspal/badges.py').exists()
+    core_badges = (CORE_LITERACY / 'badges.py').read_text()
+    for slug in ("'first-light'", "'cairn-builder'", "'map-maker'"):
+        assert slug not in core_badges, (
+            f'{slug} is hardcoded in core badges.py; it needs pointsPal tables')

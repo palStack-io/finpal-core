@@ -47,6 +47,29 @@ from src.services.demo.service import DemoService
 # Tables a demo instance structurally cannot fill. Each needs a REASON, not just
 # a name: the reason is what a future reader checks against reality.
 NO_DEMO_ROWS_BY_DESIGN = {
+    # *** EMPTY IS WHAT MAKES THE FEATURE VISIBLE, WHICH IS WHY THIS IS NOT A GAP.
+    # *** `coin_award_acks` records what a user has already been SHOWN. The demo
+    # seed runs the real award pass, so demo1 arrives holding coins nobody has
+    # shown them yet -- and `GET /api/v1/coins` reports exactly those as
+    # `unseen`, which is the award moment demonstrating itself. SEEDING acks
+    # here would mark every one as already seen and the demo would show an
+    # empty award queue: D-77's shape, a feature demoing its own absence.
+    # Same reasoning as `coin_award_acks` below, one reward-type further along:
+    # a demo user who has been TAUGHT nothing is the user who gets the four
+    # explanations, which is the state worth demonstrating. Seeding rows here
+    # would silence the teaching on the demo.
+    # Written the first time a user's wallet is read, so a freshly seeded demo
+    # that nobody has opened has none. It is a WATERMARK, not a figure to seed:
+    # inventing one would claim an altitude no act produced, which is what
+    # `_coins_award`'s own docstring refuses for coins.
+    'everest_watermarks': 'written on the first wallet read; a freshly seeded '
+                          'demo has not been looked at yet',
+    'teaching_seen': 'records which explanations the user has been shown; a '
+                     'freshly seeded demo has been shown none, which is what '
+                     'makes the teaching panels appear',
+    'coin_award_acks': 'records what the user has been shown; a freshly seeded '
+                       'demo has been shown nothing, and that is what makes its '
+                       'unseen awards visible',
     'revoked_tokens': 'written on logout; a freshly seeded demo has never logged out',
     'login_events': 'written on login; seeding does not log anybody in',
     'personal_access_tokens': 'a PAT is a credential a user mints by hand, and '
