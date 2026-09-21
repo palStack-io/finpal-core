@@ -123,9 +123,11 @@ export function formatRowDate(iso: string | null): string {
 }
 
 const selectStyle: React.CSSProperties = {
-  padding: '7px 10px', borderRadius: 8,
+  // `paddingRight` clears the chevron; `backgroundColor` rather than the
+  // `background` shorthand, which would reset the chevron away. FINPAL-28.
+  padding: '7px 10px', paddingRight: 30, borderRadius: 8,
   border: '1px solid var(--border-medium)',
-  background: 'var(--input-bg)', color: 'var(--text-primary)',
+  backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)',
   fontSize: 14,
 };
 
