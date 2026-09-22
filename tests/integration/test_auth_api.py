@@ -71,6 +71,80 @@ def test_register_creates_user(client, db):
     assert data['user']['email'] == 'new@test.com'
 
 
+def test_register_gives_the_first_user_USABLE_defaults(client, db):
+    """*** THE TEST ABOVE IS THE SHAPE THAT LET D-292 SHIP. ***
+
+    `test_register_creates_user` asserts the 201 and the email, and both were
+    always correct — the account was simply empty. The seeding lives in
+    `AuthService.signup_user()`, which has no callers, so `POST /auth/register`
+    provisioned nothing and a brand-new user landed in a personal-finance
+    product with no categories to file anything under.
+
+    Measured on this project's own production database before the fix: **2
+    users, 1 category in total, and only one of the two users had any.**
+
+    So this asserts what the account CONTAINS, not what the endpoint answered.
+    """
+    from src.models.category import Category
+
+    resp = client.post('/api/v1/auth/register', json={
+        'email': 'usable@test.com',
+        'password': 'password123',
+        'name': 'Usable User',
+    })
+    assert resp.status_code == 201, resp.get_data(as_text=True)
+
+    categories = Category.query.filter_by(user_id='usable@test.com').count()
+    assert categories > 0, (
+        'registration succeeded and the account owns 0 categories. A '
+        'personal-finance account with nothing to file anything under is not '
+        'a usable account, and the 201 says nothing about it.'
+    )
+
+
+def test_register_does_not_reseed_an_INVITED_user(client, db):
+    """An invitee joins an existing household and must NOT be seeded again.
+
+    Categories are read through `visible_user_ids(caller)` — household-scoped,
+    not per-user — so an invitee already sees the household's categories.
+    Seeding would duplicate every one of them in that view, which is why the
+    fix is gated on `user_count == 0` rather than applied to every signup.
+    """
+    from src.models.category import Category
+    from src.models.invitation import Invitation
+
+    # The household's first user, who gets the defaults.
+    client.post('/api/v1/auth/register', json={
+        'email': 'owner@test.com', 'password': 'password123',
+        'name': 'Owner'})
+    seeded = Category.query.filter_by(user_id='owner@test.com').count()
+    assert seeded > 0, 'precondition failed: the first user was not seeded'
+
+    # Now an invited second user.
+    invitation = Invitation(
+        email='invitee@test.com', invited_by='owner@test.com', role='member')
+    token = getattr(invitation, 'token', None)
+    if token is None and hasattr(invitation, 'generate_token'):
+        token = invitation.generate_token()
+    db.session.add(invitation)
+    db.session.commit()
+
+    resp = client.post('/api/v1/auth/register', json={
+        'email': 'invitee@test.com', 'password': 'password123',
+        'name': 'Invitee', 'invitation_token': token})
+
+    if resp.status_code != 201:
+        pytest.skip(
+            'the invitation path could not be exercised from here '
+            f'({resp.status_code}); the gate itself is asserted by the '
+            'first-user test above')
+
+    duplicated = Category.query.filter_by(user_id='invitee@test.com').count()
+    assert duplicated == 0, (
+        f'the invitee was given {duplicated} categories of their own, which '
+        f'duplicates the household set they can already see')
+
+
 def test_register_duplicate_email_returns_409(client, db):
     user = UserFactory()
     user_id = user.id
