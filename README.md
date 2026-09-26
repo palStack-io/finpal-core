@@ -64,9 +64,24 @@ feel like finishing something.
 
 ### Badges
 
-Given, not bought — for reading a short lesson. Lessons unlock from your own figures rather
-than from a schedule: what your debt actually costs, where your money goes, what a month of
-yours looks like.
+Given, not bought, and **never taken back** — a hard month cannot remove one you have
+already earned. Some come from reading a lesson, which unlocks from your own figures rather
+than from a schedule. Others come from what actually happened: clearing a card, six months
+inside your budget, a year keeping to a paydown plan.
+
+That second kind is allowed *only* because a badge pays nothing. Coins can never be earned
+for an outcome — a careful person on a low wage may never manage one — but a badge costs
+nothing to give and is absent rather than false when you have not earned it, so no screen
+can ever tell you that you failed at something.
+
+### Everest
+
+One mountain everybody climbs, and **the only ceiling in the product**. Your altitude comes
+from the acts you have done and the lessons you have read, never from your money — 8,849 m
+is a shared public fact, identical for everyone. It ratchets: it cannot fall, so opening a
+credit card can never cost you height.
+
+Lessons carry you up it but cannot summit you. The last stretch is acts only.
 
 ### Four promises, and they are structural
 
@@ -75,10 +90,16 @@ These are not policies we intend to keep. They are properties of how the thing i
 - **Nothing is ever taken away.** No streak to break, no score to decay.
 - **No score you did not ask for.** The only progress bar is one whose target you chose.
 - **Studying cannot flatter your finances.** Only your actual money moves a mountain.
-- **You are never rewarded for your circumstances, only for what you did.**
+- **You are never *paid* for your circumstances, only for what you did.**
 
 That last one matters more than it sounds. It is easy to write a money game that quietly
-pays people for having a mortgage, or for being able to save. This one does not.
+pays people for having a mortgage, or for being able to save. This one does not — no coin
+and no metre of altitude can ever come from an outcome.
+
+A badge can, and the difference is the whole reason badges are safe: **a badge buys
+nothing.** It cannot be spent, it does not move your altitude, and an unearned one is
+absent rather than shown greyed out. So "six months on budget" can be marked when it
+happens without anyone being ranked by whether it did.
 
 ---
 
@@ -107,7 +128,14 @@ this one.
 - **Sinking funds** — give a Non-Monthly budget a yearly period and finPal shows what to set
   aside each month, instead of calling a £600 car tax an overspend every March
 - **Goals** for savings and debt payoff, tracked against real balances; one goal can watch
-  several accounts
+  several accounts. Say what kind you are setting and finPal brings the right help:
+  - **Debt paydown** — choose highest-rate-first or smallest-balance-first, say what you
+    mean to pay each month, and it tells you where the month stands. It states *behind* and
+    offers nothing, because somebody behind is usually behind because they could not pay
+  - **Emergency fund** — what three or six months of your own essentials would cost, or
+    type your income and fixed costs yourself if nothing is sorted yet
+  - **Bills that are not monthly** — last year's total, divided by twelve
+- **A profile page** — the kit you own on a shelf, and the badges you have kept up
 - **Shared costs** with your household, and who owes whom
 - **Investments** across portfolios, with automatic price updates
 - **Bank sync** via [SimpleFin](docs/simplefin.md), or drop statements in a
