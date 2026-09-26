@@ -430,7 +430,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           {/* *** THIS WENT TO /settings UNTIL 2026-09-20, BECAUSE THERE WAS
               NO PROFILE PAGE. *** The link had been pointing at the
               preferences screen since the rail was built. */}
-          <div className="user-profile-header" onClick={() => navigate('/profile')} style={{ flex: 1 }}>
+          <div className="user-profile-header" onClick={() => navigate('/basecamp')} style={{ flex: 1 }}>
             <div className="user-avatar">{user?.profile_emoji || '👤'}</div>
             <div className="user-info">
               <div className="user-name">{user?.name || 'User'}</div>
@@ -453,7 +453,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                   Settings — which is what a name plus an unlabelled disc
                   invites. The discs are an ornament ON the link, not a
                   replacement for it. */}
-              <div className="user-email">View profile</div>
+              <div className="user-email">View basecamp</div>
               {recentBadges.length > 0 ? (
                 <div
                   style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}

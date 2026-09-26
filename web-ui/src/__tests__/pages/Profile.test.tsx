@@ -112,9 +112,11 @@ describe('the rail', () => {
   const rail = () => readFileSync(
     join(process.cwd(), 'src/components/layout/Sidebar.tsx'), 'utf8');
 
-  it('sends "View profile" to /profile, not /settings', () => {
+  it('sends "View basecamp" to /basecamp, not /settings — renamed from Profile (owner, 2026-09-26)', () => {
     const src = rail();
-    expect(src).toContain("navigate('/profile')");
+    expect(src).toContain("navigate('/basecamp')");
+    expect(src).toContain('View basecamp');
+    expect(src).not.toContain('View profile</div>');
     /* The header specifically — Settings is still reachable from the nav. */
     const header = src.slice(src.indexOf('user-profile-header'),
                              src.indexOf('user-profile-header') + 200);
@@ -133,5 +135,29 @@ describe('the rail', () => {
        as well, which is the real affordance; this asserts the rail passes
        it rather than rendering bare discs. */
     expect(rail()).toMatch(/<BadgeIcon[^>]*title=\{b\.title\}/s);
+  });
+});
+
+describe('Basecamp, not Profile — and it links to where you edit yourself', () => {
+  it('the head links to Settings > Account for name and emoji', () => {
+    setup();
+    expect(screen.getByTestId('edit-name-emoji')).toHaveAttribute('href', '/settings?tab=profile');
+  });
+
+  it('Everest stands beside the shelf with a marker, and prints no figure of its own', () => {
+    setup();
+    const peak = screen.getByTestId('everest-peak');
+    expect(peak).toHaveAttribute('aria-hidden', 'true');
+    expect(peak.textContent).toBe('');
+    // 7020 of 8849 -> ~79% up the 0..100 box, i.e. y ~21
+    const y = parseFloat(screen.getByTestId('everest-peak-marker').getAttribute('cy')!);
+    expect(y).toBeGreaterThan(18);
+    expect(y).toBeLessThan(24);
+  });
+
+  it('/profile redirects to /basecamp so old links still land', () => {
+    const app = readFileSync(join(process.cwd(), 'src/App.tsx'), 'utf8');
+    expect(app).toMatch(/path="\/basecamp"/);
+    expect(app).toMatch(/<Route path="\/profile" element=\{<Navigate to="\/basecamp" replace \/>\} \/>/);
   });
 });

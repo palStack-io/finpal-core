@@ -1866,3 +1866,12 @@ select.fp-select-compact:not([multiple]):not([size]) {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+
+/* Basecamp (was Profile): the shelf with Everest beside it. */
+.basecamp-row { display: flex; gap: 18px; align-items: flex-end; margin-bottom: 16px; }
+.basecamp-row__everest { flex: none; }
+.everest-peak { max-width: 100%; }
+@media (max-width: 767px) {
+  .basecamp-row { flex-direction: column; align-items: stretch; }
+  .basecamp-row__everest { display: flex; justify-content: center; }
+}
