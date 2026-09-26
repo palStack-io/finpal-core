@@ -60,7 +60,8 @@ export const CoinAward: React.FC<{
   return (
     <div
       data-testid="coin-award"
-      role="status"
+      /* No role="status": the container's persistent live region announces
+         it (a region mounted with its text is often missed). */
       style={{
         display: 'flex', gap: 16, alignItems: 'flex-start',
         background: 'var(--bg-card)', border: '1px solid var(--border-light)',
