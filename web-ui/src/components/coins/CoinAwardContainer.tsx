@@ -17,7 +17,7 @@ import { CoinAward } from './CoinAward';
  * this the award never happened as far as they could tell.
  */
 export const CoinAwardContainer: React.FC = () => {
-  const { current, remaining, dismiss, loadUnseen } = useCoinAwards();
+  const { current, remaining, dismiss, dismissAll, loadUnseen } = useCoinAwards();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
@@ -47,11 +47,45 @@ export const CoinAwardContainer: React.FC = () => {
   // provider now clears its queue when the user changes, and this refuses to
   // paint one even if something ever repopulates it: a coins figure on a page
   // where nobody is signed in is somebody else's money on screen.
-  if (!user || !current) return null;
+  /* *** ESCAPE DISMISSES — BUT NEVER OUT FROM UNDER A DIALOG OR A FIELD. ***
+     The award sits at the END of the DOM, dozens of Tabs from the top of the
+     page, so a keyboard user had no practical way to close it. */
+  useEffect(() => {
+    if (!current) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      dismiss();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [current, dismiss]);
+
+  if (!user) return null;
+
+  /* *** ONE LIVE REGION, MOUNTED FOR THE WHOLE SESSION. *** The card used to
+     carry its own role="status", created in the same render as its text, and
+     screen readers commonly miss a region that appears already full. */
+  const spoken = current
+    ? `${current.coins.toLocaleString()} coins. ${current.revealed ?? ''}`
+      + (remaining > 0 ? ` ${remaining} more waiting. Press Escape to dismiss.` : '')
+    : '';
+  const liveRegion = (
+    <div role="status" aria-live="polite" className="sr-only" data-testid="award-live">
+      {spoken}
+    </div>
+  );
+  if (!current) return liveRegion;
 
   return (
+    <>
+    {liveRegion}
     <div
       data-testid="coin-award-container"
+      role="region"
+      aria-label="Coins earned"
       style={{
         position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
         maxWidth: 380,
@@ -65,6 +99,15 @@ export const CoinAwardContainer: React.FC = () => {
         onOpenKit={openKit}
         onDismiss={dismiss}
       />
+      {remaining > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+          <button type="button" className="award-dismiss-all" data-testid="award-dismiss-all"
+            onClick={dismissAll}>
+            Dismiss all {remaining + 1}
+          </button>
+        </div>
+      )}
     </div>
+    </>
   );
 };
