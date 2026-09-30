@@ -127,7 +127,10 @@ services:
       - finpal-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      # 127.0.0.1, not localhost — see nginx/Dockerfile (D-285). localhost
+      # resolves to ::1 first and this nginx binds IPv4 only, so the probe
+      # is refused by a server answering every real request.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 3s
       retries: 3

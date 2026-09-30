@@ -32,6 +32,25 @@ export default defineConfig({
     //
     // Stated explicitly rather than left to the default so the number is visible
     // when a gate starts hanging, which is the moment anybody looks here.
+    // *** THE SUITE RUNS IN A FIXED NON-UTC ZONE, AND THAT IS A GATE. ***
+    // `serverDateStatesItsZone.test.ts` protects D-206 — the dashboard
+    // naming every month one month early west of UTC, caused by parsing a
+    // bare date as a UTC instant. **That bug is INVISIBLE under TZ=UTC**,
+    // because local midnight and UTC midnight are then the same instant.
+    //
+    // Proven by sabotage: reintroducing the `Z` in `serverDate.ts` was
+    // caught in MDT and in Asia/Tokyo and passed ALL 8 TESTS under UTC.
+    // CI runs UTC, so the one test protecting that defect could never have
+    // caught its regression there — the test's own comment records it
+    // being rewritten to survive UTC, which fixed the false failure and
+    // left the gate unable to detect the real bug.
+    //
+    // America/Denver: west of UTC, where D-206 actually showed, and
+    // DST-observing, so a date built in one half of the year is not
+    // silently assumed to share an offset with the other.
+    env: {
+      TZ: 'America/Denver',
+    },
     testTimeout: 15_000,
     hookTimeout: 20_000,
     teardownTimeout: 10_000,

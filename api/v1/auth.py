@@ -536,6 +536,32 @@ class Register(Resource):
 
             db.session.add(user)
 
+            # *** THIS ENDPOINT SEEDED NOTHING, SO EVERY REGISTERING USER GOT
+            # AN ACCOUNT WITH NO CATEGORIES AND NO BUDGETS (D-292). *** The
+            # seeding lives in `AuthService.signup_user()`, which has no
+            # callers — so a new user landed in a personal-finance product
+            # with nothing to file anything under, and nothing failed:
+            # registration answered 201 and the account was simply empty.
+            # Measured on this project's own production database: 2 users, 1
+            # category in total, and only one of the two users had any.
+            #
+            # *** ONLY FOR THE HOUSEHOLD'S FIRST USER, THOUGH. *** Categories
+            # are read through `visible_user_ids(caller)` — household-scoped
+            # rather than per-user — so an invitee already sees the
+            # household's categories and seeding would duplicate every one of
+            # them in that view. Registration is invitation-only once
+            # `user_count > 0`, so "first user" and "not an invitee" are the
+            # same condition; it is written as the count for clarity.
+            #
+            # `flush()` first, mirroring `signup_user()`: the categories carry
+            # a `user_id` foreign key and the user row must exist for it.
+            if user_count == 0:
+                db.session.flush()
+                from src.services.auth.service import AuthService
+                seeder = AuthService()
+                seeder.create_default_categories(user.id)
+                seeder.create_default_budgets(user.id)
+
             if invitation:
                 invitation.status = 'accepted'
 
