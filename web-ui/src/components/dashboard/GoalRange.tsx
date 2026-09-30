@@ -386,7 +386,9 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
               down each summit is what made them look like folded paper. */}
           <linearGradient id="range-shade" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stopColor="#000000" stopOpacity="0.02" />
-            <stop offset="1" stopColor="#000000" stopOpacity="0.20" />
+            {/* Theme-set: 20% black over half a peak on the DARK card pushed its
+                right edge into the background. */}
+            <stop offset="1" stopColor="#000000" style={{ stopOpacity: 'var(--range-shade-max)' }} />
           </linearGradient>
         </defs>
 
@@ -406,7 +408,9 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
             return `L${x + width / 16},${GROUND_Y - dip} L${x + width / 8},${GROUND_Y - 4}`;
           }).join(' ')} L${width},${GROUND_Y} Z`}
           fill="var(--peak-build)"
-          opacity="var(--peak-backdrop-opacity)"
+          /* A style, not the `opacity` attribute: a presentation attribute is
+             not guaranteed to resolve a CSS variable. */
+          style={{ opacity: 'var(--range-ridge-opacity)' }}
         />
 
         {/* *** EVEREST: THE CENTRAL PEAK, DRAWN BEFORE THE GOALS SO THEY STAND
@@ -439,7 +443,7 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
                 <path d={shape.body} fill="currentColor" />
                 {shape.shade && <path d={shape.shade} fill="url(#range-shade)" />}
                 {shape.snow && (
-                  <path d={shape.snow} fill="var(--bg-card)"
+                  <path d={shape.snow} fill="var(--peak-snow)"
                         opacity={shape.snowOpacity ?? 0.9} />
                 )}
               </g>

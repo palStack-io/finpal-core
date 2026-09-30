@@ -630,7 +630,7 @@ export const Onboarding: React.FC = () => {
                       Pick Your Emoji
                     </h2>
                     <p style={{ fontSize: '0.875rem', color: ONBOARDING_MUTED, margin: 0 }}>
-                      Choose an emoji as your profile picture
+                      Choose an emoji as your picture
                     </p>
                   </div>
                 </div>
@@ -651,7 +651,7 @@ export const Onboarding: React.FC = () => {
                   }}>
                     {formData.profile_emoji}
                   </div>
-                  <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>This will appear as your profile picture</p>
+                  <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>This will appear as your picture</p>
                 </div>
 
                 <div style={{

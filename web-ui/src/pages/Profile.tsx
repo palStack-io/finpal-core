@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { GearIcon } from '../components/GearIcon';
 import { BadgeIcon } from '../components/BadgeIcon';
 import { PageHead } from '../components/PageHead';
+import { EverestPeak } from '../components/EverestPeak';
 import { useAuthStore } from '../store/authStore';
 import { useBadges, useCoinAwards, useEverest } from '../contexts/CoinAwardContext';
 import { pageContainerStyle } from '../styles/layoutStyles';
@@ -50,13 +51,26 @@ export const Profile: React.FC = () => {
               ? `${everest.altitude_m.toLocaleString()} m of ${everest.summit_m.toLocaleString()} on the shared climb`
               : 'Everything you have earned, in one place.'
           }
+          /* *** "BASECAMP", AND EDITING WHO YOU ARE LIVES IN SETTINGS. ***
+             Owner, 2026-09-26: users would confuse this page with Settings >
+             Account. It was "Profile" and is now Basecamp; the two link to
+             each other so neither is a dead end. */
+          right={
+            <Link to="/settings?tab=profile" data-testid="edit-name-emoji"
+              style={{ color: 'var(--g-ink)', fontWeight: 600, fontSize: 14 }}>
+              Edit name &amp; emoji →
+            </Link>
+          }
         />
 
+        {/* *** EVEREST BESIDE THE SHELF (owner, 2026-09-26). *** The card's
+            right side was empty. Decoration: the altitude is in the subtitle. */}
+        <div className="basecamp-row">
         <section
           data-testid="profile-shelf"
-          style={{
+          style={{ flex: 1, minWidth: 0,
             background: 'var(--bg-card)', border: '1px solid var(--border-light)',
-            borderRadius: 14, padding: '18px 20px', marginBottom: 16,
+            borderRadius: 14, padding: '18px 20px',
           }}
         >
           <div style={{
@@ -120,6 +134,12 @@ export const Profile: React.FC = () => {
             </>
           )}
         </section>
+        {everest && (
+          <div className="basecamp-row__everest">
+            <EverestPeak altitude_m={everest.altitude_m} summit_m={everest.summit_m} height={180} />
+          </div>
+        )}
+        </div>
 
         {/* *** ABSENT WHEN THERE ARE NONE, NEVER A LOCKED GRID. *** An
             unearned badge is absent rather than present-and-false, which is

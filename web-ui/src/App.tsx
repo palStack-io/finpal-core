@@ -245,14 +245,18 @@ function App() {
                 This is the mantelpiece: what you own and what you have kept
                 up. Two pages, two jobs; the badges moved here rather than
                 being duplicated. */}
+            {/* *** RENAMED TO /basecamp (owner, 2026-09-26) — "Profile" was
+                confused with Settings > Account. `/profile` redirects, so a
+                bookmark or an old email link still lands. */}
             <Route
-              path="/profile"
+              path="/basecamp"
               element={
                 <ProtectedRoute>
                   <AppLayout><Profile /></AppLayout>
                 </ProtectedRoute>
               }
             />
+            <Route path="/profile" element={<Navigate to="/basecamp" replace />} />
             <Route
               path="/categories"
               element={

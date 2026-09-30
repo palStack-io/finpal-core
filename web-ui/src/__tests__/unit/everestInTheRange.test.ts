@@ -104,4 +104,16 @@ describe('Everest in the range', () => {
     // to pass instead of tightened to be true.
     expect(everestDrawing()).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
+
+  it("Everest's snow is its own token, never the card colour — a hole on the dark card", () => {
+    /* Owner screenshot 2026-09-26: in dark mode the cap was `--bg-card`, so the
+       summit vanished into the background. */
+    expect(range()).not.toMatch(/shape\.snow\}\s*fill="var\(--bg-card\)"/);
+    expect(range()).toMatch(/shape\.snow\}\s*fill="var\(--peak-snow\)"/);
+    const css = readFileSync('src/styles/finpal-theme.css', 'utf8');
+    const dark = css.slice(css.indexOf('[data-theme="dark"]'));
+    const snow = dark.match(/--peak-snow:\s*([^;]+);/);
+    expect(snow, 'the dark theme sets --peak-snow').not.toBeNull();
+    expect(snow![1]).not.toMatch(/bg-card/);
+  });
 });

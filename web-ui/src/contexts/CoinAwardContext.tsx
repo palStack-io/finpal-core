@@ -42,6 +42,15 @@ interface CoinAwardContextType {
   refresh: (surface: CoinSurface) => Promise<void>;
   /** Dismiss the current award and acknowledge it server-side. */
   dismiss: () => void;
+  /**
+   * Dismiss the current award AND everything queued behind it.
+   *
+   * *** USER-INITIATED ONLY, AND STILL NOT A TIMER. *** The reasoning against
+   * auto-advance stands — the payoff sentence is the reward. But a returning
+   * user with a dozen waiting had no way out except a dozen clicks, which is
+   * its own reason to stop reading. Offered only when something is queued.
+   */
+  dismissAll: () => void;
   /** Spendable balance, for the nav purse. `null` until first loaded. */
   balance: number | null;
   /** Pull `unseen` from the wallet — the overnight awards. */
@@ -187,11 +196,20 @@ export const CoinAwardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, []);
 
+  const dismissAll = useCallback(() => {
+    setQueue((prev) => {
+      prev.forEach((item) => {
+        void coinService.ack(item.slug).catch(() => { /* best effort */ });
+      });
+      return [];
+    });
+  }, []);
+
   return (
     <CoinAwardContext.Provider
       value={{
         current: queue[0] ?? null, remaining: Math.max(0, queue.length - 1),
-        refresh, dismiss, balance, loadUnseen,
+        refresh, dismiss, dismissAll, balance, loadUnseen,
         openSurfaces, everest, ownedGear, badges,
       }}
     >

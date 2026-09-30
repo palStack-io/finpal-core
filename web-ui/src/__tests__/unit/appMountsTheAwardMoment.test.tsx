@@ -88,7 +88,9 @@ describe('no award is ever shown to a signed-out visitor', () => {
   });
 
   it('refuses to paint an award with no user, as well', () => {
-    expect(container).toMatch(/if \(!user \|\| !current\) return null/);
+    // The award is painted only past this line; the live region above it is
+    // empty text. The behaviour is pinned in AwardQueueAccess.test.tsx.
+    expect(container).toMatch(/if \(!user\) return null/);
   });
 });
 

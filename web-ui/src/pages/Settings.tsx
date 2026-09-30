@@ -406,7 +406,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setSaveError(apiErrorMessage(error, 'Failed to save profile changes'));
+      setSaveError(apiErrorMessage(error, 'Failed to save your account changes'));
     } finally {
       setIsSaving(false);
     }
@@ -661,10 +661,10 @@ export const Settings: React.FC = () => {
 
                   <div style={{ marginBottom: '24px' }}>
                     <label style={fieldLabelStyle}>
-                      Profile Emoji
+                      Your emoji
                     </label>
                     <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '12px' }}>
-                      Pick an emoji to use as your profile picture
+                      Pick an emoji to use as your picture
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
                       <div style={{
@@ -740,6 +740,19 @@ export const Settings: React.FC = () => {
                       ✓ Settings saved successfully!
                     </div>
                   )}
+
+                  {/* The other half of the Basecamp rename: this tab is WHO YOU
+                      ARE; what you have earned is one link away. */}
+                  <p className="fp-hint" style={{
+                    margin: '20px 0 0', paddingTop: 16, borderTop: '1px solid var(--border-light)',
+                  }}>
+                    Your badges and gear live on your basecamp.{' '}
+                    <a href="/basecamp" data-testid="settings-to-basecamp"
+                      onClick={(e) => { e.preventDefault(); navigate('/basecamp'); }}
+                      style={{ color: 'var(--g-ink)', fontWeight: 600 }}>
+                      See your basecamp →
+                    </a>
+                  </p>
                 </div>
               )}
 
