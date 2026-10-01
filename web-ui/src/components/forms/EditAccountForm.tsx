@@ -267,12 +267,12 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       {/* Description — #129. Absent entirely until now, which is why a description
           could be typed at creation and never seen or changed again. */}
       <div>
-        <label style={labelStyle}>Description</label>
+        <label style={labelStyle}>Notes</label>
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
-          placeholder="What is this account for?"
+          placeholder="Add notes about this account..."
           rows={3}
           maxLength={2000}
           disabled={isSubmitting}

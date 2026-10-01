@@ -46,6 +46,10 @@ it.each(COUNTS)('captures the Accounts page with %i accounts', async (n) => {
     balance: 1000 + i * 137.5,
     currency_code: 'GBP',
     institution: 'Bank',
+    // Long on purpose (D-165): the note must truncate beside the balance at 390px.
+    description: i % 2 === 0
+      ? 'Joint account for the rent, the council tax, the bills and the shared food shop'
+      : null,
     is_active: true,
     color: '#15803d',
     owner: { id: 'alice@test.com', name: 'Alice' },

@@ -10,6 +10,7 @@ import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { SectionCard } from '../components/SectionCard';
 import { MemberFilter } from '../components/MemberFilter';
 import { PageHead } from '../components/PageHead';
+import { RowNote } from '../components/RowNote';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { teamService } from '../services/teamService';
 import { accountService, Account } from '../services/accountService';
@@ -502,6 +503,7 @@ export const Transactions: React.FC = () => {
                                       size="sm"
                                     />
                                   </div>
+                                  <RowNote note={transaction.notes} />
                                 </div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
