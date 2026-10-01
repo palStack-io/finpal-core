@@ -31,7 +31,11 @@ from tests.factories import (UserFactory, AccountFactory, CategoryFactory,
 # window to "this calendar month up to now", so a date later in the month than today
 # is silently outside it and the breakdown comes back empty — which is a fixture bug
 # that reads exactly like a conversion bug.
-WHEN = datetime(datetime.now().year, datetime.now().month, 1, 12, 0)
+#
+# *** MIDNIGHT, NOT MIDDAY. *** Midday was the same bug one level down: on the 1st
+# before noon, midday is still in the future, so the rows fell outside "up to now"
+# and this failed on clean main every 1st-of-the-month morning (found 2026-10-01).
+WHEN = datetime(datetime.now().year, datetime.now().month, 1, 0, 0)
 
 
 @pytest.fixture

@@ -235,8 +235,14 @@ class TransactionList(Resource):
         if transaction_type:
             query = query.filter(Expense.transaction_type == transaction_type)
 
+        # The note too, not just the description (owner, 2026-10-01): a note is only
+        # useful if you can find the transaction by what you wrote in it. A NULL note
+        # makes its ILIKE NULL, which OR treats as false, so un-noted rows still match
+        # on their description.
         if search:
-            query = query.filter(Expense.description.ilike(f'%{search}%'))
+            pattern = f'%{search}%'
+            query = query.filter(or_(Expense.description.ilike(pattern),
+                                     Expense.notes.ilike(pattern)))
 
         # `group_id` was accepted by no one. GroupDetail.tsx has always called
         # `/api/v1/transactions/?group_id=<id>`, and because this handler never

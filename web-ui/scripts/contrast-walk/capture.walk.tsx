@@ -51,6 +51,11 @@ function seed() {
     date: `2026-03-${String((i % 12) + 1).padStart(2, '0')}T00:00:00`,
     currency_code: 'GBP',
     transaction_type: kinds[i % kinds.length],
+    // A note on every third row, LONG on purpose (D-165): the note line must
+    // truncate inside the row at 390px rather than push the amount off-screen.
+    notes: i % 3 === 0
+      ? 'Split with Sam — the second half is coming back by bank transfer at the end of the month'
+      : null,
     category: { id: 1, name: ['Groceries', 'Eating out', 'Income', 'Bills', 'Transfer', 'Shopping'][i % 6] },
     account: {
       id: (i % 2) + 1,

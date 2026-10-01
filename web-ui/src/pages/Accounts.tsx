@@ -8,6 +8,7 @@ import { getBranding } from '../config/branding';
 import { getDefaultColorForType, ACCOUNT_SWATCH_TINT_ALPHA } from '../constants/accountColors';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddAccountForm } from '../components/forms/AddAccountForm';
+import { RowNote } from '../components/RowNote';
 import { EditAccountForm } from '../components/forms/EditAccountForm';
 import { CSVImportModal } from '../components/import/CSVImportModal';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
@@ -121,6 +122,9 @@ export const Accounts = () => {
         importSource: acc.import_source || null,
         // Whether `type` was a decision or a default. See `Account.type_source`.
         typeSource: acc.type_source || null,
+        // D-307: <EditAccountForm> pre-fills from this and sends it on every save,
+        // so leaving it out of the mapping made every edit erase the account's note.
+        description: acc.description || '',
         // No `trend` here any more. It was `{ value: 2.3, direction: 'up' }` for
         // every account on every load, rendered as a green upward 2.3% beside
         // each balance. There is no balance history to derive one from.
@@ -437,7 +441,7 @@ export const Accounts = () => {
                         {getAccountIcon(account.type)}
                       </div>
 
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                           {/* h2, not h3. Each account row is a section of this
                               page and its name is that section's heading, but
@@ -517,6 +521,7 @@ export const Accounts = () => {
                             </p>
                           )}
                         </div>
+                        <RowNote note={account.description} />
                       </div>
                     </div>
 

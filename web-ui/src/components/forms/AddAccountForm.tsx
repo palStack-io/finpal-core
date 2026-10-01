@@ -456,11 +456,12 @@ return (
         </div>
       </div>
 
-      {/* Description */}
+      {/* Notes. Stored as `Account.description` (#129); labelled "Notes" to match the
+          transaction form, since it is the same kind of field on both. */}
       <div>
         <label style={labelStyle}>
           <FileText size={16} style={iconInlineStyle} />
-          Description
+          Notes
         </label>
         <textarea
           placeholder="Add notes about this account..."
