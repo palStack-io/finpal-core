@@ -423,7 +423,8 @@ def _client_shared_file_paths(name):
     return web, (mob if os.path.exists(mob) else None)
 
 
-SHARED_CLIENT_FILES = ('mountainSilhouettes.ts', 'peakCopy.ts')
+# `peakCopy.ts` LEFT THIS LIST ON 2026-10-01 (D-308) — see the wording test below.
+SHARED_CLIENT_FILES = ('mountainSilhouettes.ts',)
 
 
 @pytest.mark.parametrize('filename', SHARED_CLIENT_FILES)
@@ -447,6 +448,54 @@ def test_THE_SHARED_CLIENT_FILES_ARE_BYTE_IDENTICAL(db, filename):
         f'web-ui/src/utils/{filename} and mobile/src/utils/{filename} have '
         'diverged. They are copied by hand between two git repos and this test '
         'is the only thing that keeps them the same -- diff them.')
+
+
+#: Plural forms are built in code on web (`year${years > 1 ? 's' : ''}`) and by
+#: i18next's `_one`/`_other` on mobile, so their wording cannot be compared as text.
+_PEAK_COPY_PLURAL_KEYS = ('countYear_one', 'countYear_other', 'countMonth_one', 'countMonth_other')
+
+
+def _normalise_placeholders(text):
+    import re
+    text = re.sub(r'\$\{[^}]*\}', '{}', text)      # web: ${money(x)}
+    return re.sub(r'\{\{[^}]*\}\}', '{}', text)  # mobile catalog: {{money}}
+
+
+def test_PEAK_COPY_SAYS_THE_SAME_THING_ON_BOTH_CLIENTS(db):
+    """*** `peakCopy.ts` CAN NO LONGER BE BYTE-IDENTICAL, SO THE PIN IS ON WORDING. ***
+
+    Mobile's i18n pass (outer `57de2e1`/`0e2870f`) moved every string into
+    `t('goals:peakCopy.*')`; core's web-ui has no i18n at all. The byte test then
+    failed on every local run (CI cannot see it — no sibling `mobile/`), which is
+    D-308. What the pin was FOR is that both clients describe a peak in the same
+    words, so that is what this checks: every English string in mobile's catalog
+    appears verbatim in web's file, placeholders aside. A wording edit on either
+    side without the other fails here.
+
+    Blind spot, stated: a string added to only ONE side is not caught.
+    """
+    import json
+    web, mob = _client_shared_file_paths('peakCopy.ts')
+    assert os.path.exists(web), web
+    if mob is None:
+        pytest.skip('mobile/ is not in this checkout (CI clones finpal_core alone)')
+    catalog_path = os.path.join(os.path.dirname(os.path.dirname(mob)),
+                                'i18n', 'locales', 'en', 'goals.json')
+    with open(catalog_path, encoding='utf-8') as fh:
+        catalog = json.load(fh)['peakCopy']
+    with open(web, encoding='utf-8') as fh:
+        source = fh.read()
+    import re
+    # Join literals split across lines with `+`, so a long sentence compares whole.
+    source = re.sub(r"['\"`]\s*\+\s*['\"`]", '', source)
+    source = _normalise_placeholders(source)
+
+    missing = {key: text for key, text in catalog.items()
+               if key not in _PEAK_COPY_PLURAL_KEYS
+               and _normalise_placeholders(text) not in source}
+    assert not missing, (
+        'mobile says these and web-ui/src/utils/peakCopy.ts does not (wording drift): '
+        + json.dumps(missing, ensure_ascii=False, indent=1))
 
 
 def test_THE_SILHOUETTE_TABLE_IS_BYTE_IDENTICAL_ON_BOTH_CLIENTS(db):

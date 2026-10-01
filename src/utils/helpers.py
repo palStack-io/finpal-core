@@ -317,7 +317,10 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
     # Add investment total to assets - only those not linked to accounts
     direct_total_assets += investment_total
 
-    # Process each account for historical trends
+    # Process each account for historical trends: collect each one's monthly
+    # activity first, because the month window depends on ALL of them.
+    per_account = []
+    earliest_month = None
     for account in accounts:
         # Get account's currency code, default to user's preferred currency
         # *** A NULL `currency_code` MEANS THE BASE CURRENCY, NOT THE READER'S. ***
@@ -376,20 +379,42 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
             by_month.setdefault(transaction.date.strftime('%Y-%m'), 0)
             by_month[transaction.date.strftime('%Y-%m')] += effect
 
+        per_account.append((account, account_currency_code, is_asset, is_debt, by_month))
+        if by_month:
+            first = min(by_month)
+            earliest_month = first if earliest_month is None else min(earliest_month, first)
+
+    # *** EVERY ACCOUNT GETS A CLOSING BALANCE FOR EVERY CALENDAR MONTH (D-308). ***
+    # This used to record a balance only in the months an account had a transaction
+    # (plus today's). Summed across accounts, a month then counted ONLY the accounts
+    # active in it — measured: checking 1000 + savings 5000, with expenses in
+    # different months, drew June 1100 / July 5000 / August 1000 / October 6000 for a
+    # household worth ~6000 throughout — and a month with no activity anywhere was
+    # dropped from the series, so the chart drew August beside October.
+    #
+    # The window runs from the earliest month any account was active to today, with
+    # no gaps. Walking it newest-to-oldest, a quiet month closes at the running
+    # balance (nothing to undo), and a month before an account's first transaction
+    # closes at its opening balance — the best figure finPal has for it.
+    today_key = today.strftime('%Y-%m')
+    window = []
+    if earliest_month is not None:
+        year, month = int(earliest_month[:4]), int(earliest_month[5:])
+        while f'{year}-{month:02d}' <= today_key:
+            window.append(f'{year}-{month:02d}')
+            year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    else:
+        window = [today_key]
+
+    for account, account_currency_code, is_asset, is_debt, by_month in per_account:
         balance_history = {}
         running = account.balance or 0
-
-        # No activity since the newest transaction, so the current month closes at
-        # today's balance. Set explicitly for the case where the newest transaction
-        # predates this month.
-        balance_history[today.strftime('%Y-%m')] = running
-
-        for month_key in sorted(by_month, reverse=True):
+        for month_key in reversed(window):
             # `running` is this month's closing balance before we undo its activity.
             balance_history[month_key] = running
             # Having removed this month's transactions, `running` is now the closing
             # balance of the month before it.
-            running -= by_month[month_key]
+            running -= by_month.get(month_key, 0)
 
         # Convert balance history to user currency if needed
         if account_currency_code != user_currency_code:
