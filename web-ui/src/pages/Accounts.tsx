@@ -398,7 +398,12 @@ export const Accounts = () => {
           <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>All Accounts</h2>
 
           {accounts.length > 0 ? (
-            <div style={{ display: 'grid', gap: '16px' }}>
+            /* D-309: `minmax(0, 1fr)`, not the implicit `auto` column. An auto track
+               cannot shrink below its widest card's min-content, so at 390px every
+               card was 474px inside a 340px list and the balances were clipped —
+               invisible to the responsive walk, because the overflow is clipped
+               inside this box and never reaches the document. */
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px' }}>
               {accounts.map((account) => (
                 <div
                   key={account.id}
@@ -442,7 +447,9 @@ export const Accounts = () => {
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                        {/* D-309: wraps, so a long name or a joint-owner pill drops to
+                            the next line instead of pushing past the card on a phone. */}
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: '12px', rowGap: '6px', marginBottom: '4px' }}>
                           {/* h2, not h3. Each account row is a section of this
                               page and its name is that section's heading, but
                               the nearest heading above is the page's own <h1> —
@@ -525,7 +532,9 @@ export const Accounts = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    {/* D-309: wraps for the same reason — credit summary, balance and
+                        actions in one unbreakable row were 325–336px on a 292px card. */}
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: '24px', rowGap: '12px' }}>
                       {/* *** "Available Credit $2,400.00" IS THE LEAST USEFUL
                           TRUE THING THIS ROW COULD SAY. *** It is headroom to
                           borrow more, presented in green, on the one account

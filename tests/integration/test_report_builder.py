@@ -365,11 +365,22 @@ def test_the_monthly_trend_carries_net_worth_per_month(db):
 
     report = build_report(user.id, MONTH, 'monthly')
 
+    # *** THE TAIL IS COMPUTED, NOT WRITTEN OUT (D-308). *** This listed the months
+    # through 2026-09 by hand — true the week it was written, and red on clean main
+    # from 2026-10-01, because "runs to the present month" is the very claim above.
+    # Every month after the last expense holds the current balance.
+    today = date.today()
+    tail = []
+    year, month = 2026, 9
+    while (year, month) <= (today.year, today.month):
+        tail.append({'month': f'{year}-{month:02d}', 'net_worth': Decimal('2500.00')})
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+
     assert report['trend'] == [
         {'month': '2026-06', 'net_worth': Decimal('2700.00')},
         {'month': '2026-07', 'net_worth': Decimal('2600.00')},
         {'month': '2026-08', 'net_worth': Decimal('2500.00')},
-        {'month': '2026-09', 'net_worth': Decimal('2500.00')},
+        *tail,
     ]
 
 
