@@ -67,6 +67,8 @@ export const OwnerBadge: React.FC<OwnerBadgeProps> = ({
           fontSize: small ? '11px' : '12px',
           fontWeight: 600,
           whiteSpace: 'nowrap',
+          // D-309: never wider than its row; `title` carries the full text.
+          maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
           // The PRIMARY owner's colour, not a new one. The colour is how the same
           // person reads the same on every screen without reading the text, and a
           // joint account still has one attribution.
@@ -89,6 +91,8 @@ export const OwnerBadge: React.FC<OwnerBadgeProps> = ({
         fontSize: small ? '11px' : '12px',
         fontWeight: 600,
         whiteSpace: 'nowrap',
+          // D-309: never wider than its row; `title` carries the full text.
+          maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
         color: owner.color || 'var(--text-secondary)',
         background: 'var(--surface-hover)',
         border: '1px solid var(--border-light)',
