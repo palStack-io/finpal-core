@@ -491,7 +491,9 @@ beforeEach(() => {
           last_sync: new Date(Date.now() - 23 * 86400000).toISOString() },
         { id: 11, name: 'Marcus Online Savings Account', account_type: 'savings',
           balance: 8200, currency_code: 'USD', user_id: 'demo@finpal.app',
-          import_source: 'simplefin', type_source: 'default', last_sync: null },
+          import_source: 'simplefin', type_source: 'default', last_sync: null,
+          // A long note on the longest name (D-165): it must truncate at 390px.
+          description: 'Emergency fund — six months of rent and bills, do not touch for holidays' },
         // Goal 4's card. Long on purpose, same reason as Barclaycard above.
         { id: 12, name: 'John Lewis Partnership Card', account_type: 'credit',
           balance: -612.25, currency_code: 'USD', user_id: 'demo@finpal.app',
