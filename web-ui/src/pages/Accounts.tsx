@@ -13,6 +13,7 @@ import { EditAccountForm } from '../components/forms/EditAccountForm';
 import { CSVImportModal } from '../components/import/CSVImportModal';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { BankSyncCallout } from '../components/accounts/BankSyncCallout';
+import { FirstVisitCard } from '../components/onboarding/FirstVisitCard';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { CoOwnerControl } from '../components/accounts/CoOwnerControl';
 import { PageHead } from '../components/PageHead';
@@ -391,6 +392,10 @@ export const Accounts = () => {
           found the feature. It hides itself when the server has SimpleFin off or the
           user is already connected.
         */}
+        {/* What happens once a bank IS connected: the window, and that depth
+            varies by bank. Above the callout, which is how to connect. Shown
+            once per user; dismissal is stored on the server. */}
+        <FirstVisitCard page="accounts" />
         <BankSyncCallout />
 
         {/* Accounts List */}

@@ -161,7 +161,7 @@ def test_no_served_sentence_uses_a_dash_for_its_punctuation(client):
     first, and on a phone the two are indistinguishable.
     """
     payload = client.get('/api/v1/modules/catalog').get_json()
-    for block in ('data', 'orientation', 'modules', 'first_acts'):
+    for block in ('data', 'orientation', 'modules', 'first_acts', 'first_visit'):
         prose = str(payload[block])
         for dash, name in (('\u2014', 'em dash'), ('\u2013', 'en dash')):
             assert dash not in prose, f'{block} carries an {name}: {prose}'

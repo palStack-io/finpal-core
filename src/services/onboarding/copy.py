@@ -195,3 +195,73 @@ ORIENTATION = {
         ],
     },
 }
+
+
+# *** THE FIRST-VISIT CARDS (owner, 2026-10-01): shown once on Accounts and on
+# Investments, dismissed for good, remembered on the server so a dismissal on
+# the web holds on the phone. ***
+#
+# *** THE ONE PLACE IN THIS FILE THAT CARRIES A FIGURE, AND IT IS NOT INVENTED. ***
+# The day count is `MAX_DAYS_PER_REQUEST`, the number the sync itself asks for,
+# so the card cannot promise a window the code does not fetch. Everything else
+# above stays figure-free because a first-run screen has no data; these cards
+# describe the product, not the user.
+#
+# What is true and was checked against the code, 2026-10-01:
+#   * the first sync asks for MAX_DAYS_PER_REQUEST days (`sync_account`);
+#   * SimpleFIN documents that how far back a bank answers varies by bank;
+#   * a nightly job at 23:00 syncs every connected account (`simplefin_sync`);
+#   * Accounts has a "Sync All" button (`/accounts/simplefin/sync-all`);
+#   * prices come from yfinance with no key, and FMP is only a fallback that an
+#     operator enables with `FMP_API_KEY` (`get_stock_data_with_fallback`).
+FIRST_VISIT_PAGES = ('accounts', 'investments')
+
+
+def first_visit_copy(simplefin_enabled):
+    """The cards this deployment shows, keyed by page.
+
+    A deployment with SimpleFIN switched off gets no Accounts card: a card about
+    how bank sync behaves, on a server that cannot sync, describes a feature the
+    user cannot reach (the same reason `BankSyncCallout` removes itself).
+    """
+    from integrations.simplefin.client import MAX_DAYS_PER_REQUEST
+
+    cards = {}
+    if simplefin_enabled:
+        cards['accounts'] = {
+            'heading': 'How your bank gets here',
+            'lines': [
+                'Bank sync goes through SimpleFIN Bridge, a small service you '
+                'sign up for yourself. finPal never sees your bank password, '
+                'only a read-only connection you can cancel at SimpleFIN at any '
+                'time.',
+                f'The first sync asks for the last {MAX_DAYS_PER_REQUEST} days. '
+                'How far back each bank actually answers varies, so some '
+                'accounts arrive with less history than others. That is the '
+                'bank, not something you set up wrong.',
+                'After that finPal checks every connected account once a night, '
+                'and you can sync yourself from this page whenever you like.',
+            ],
+        }
+    cards['investments'] = {
+        'heading': 'Share prices are free',
+        'lines': [
+            'Prices are looked up by ticker from Yahoo Finance, with no account '
+            'and no key. The only thing sent is the symbol, never what you hold '
+            'or how much.',
+            'Whoever runs this server can add a Financial Modeling Prep key as a '
+            'backup source. You do not need one.',
+        ],
+    }
+    return cards
+
+
+def first_visit_topic(page):
+    """The `TeachingSeen.topic` a dismissal is stored under.
+
+    *** THE SAME TABLE AS THE FOUR REWARD EXPLANATIONS, DELIBERATELY. *** A row
+    there already means "this person is done with this explanation", the demo
+    reset already clears it, and premium already carries the table, so the port
+    needs no migration. The prefix keeps the two families from colliding.
+    """
+    return f'first_visit:{page}'

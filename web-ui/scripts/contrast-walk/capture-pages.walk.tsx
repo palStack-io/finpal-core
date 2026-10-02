@@ -1154,6 +1154,34 @@ beforeEach(() => {
         network: 'Visa', annual_fee: 95, effective_annual_fee: '$95', base_cpp: 1.0,
         tpg_cpp: 2.05, data_as_of: '2026-08-01', is_stale: false },
     ])),
+    /**
+     * The first-visit cards on Accounts and Investments (2026-10-01). Undismissed,
+     * so BOTH captures render one: a page being in the walk is not the walk seeing
+     * the card (D-165). `first_visit` is copied from a real
+     * `GET /api/v1/modules/catalog` on 2026-10-01; the other catalogue keys are
+     * left out because nothing on these two pages reads them, not invented.
+     */
+    http.get('*/api/v1/modules/first-visit', () => HttpResponse.json({ dismissed: [] })),
+    http.get('*/api/v1/modules/catalog', () => HttpResponse.json({
+      success: true,
+      first_visit: {
+        "accounts": {
+          "heading": "How your bank gets here",
+          "lines": [
+            "Bank sync goes through SimpleFIN Bridge, a small service you sign up for yourself. finPal never sees your bank password, only a read-only connection you can cancel at SimpleFIN at any time.",
+            "The first sync asks for the last 90 days. How far back each bank actually answers varies, so some accounts arrive with less history than others. That is the bank, not something you set up wrong.",
+            "After that finPal checks every connected account once a night, and you can sync yourself from this page whenever you like."
+          ]
+        },
+        "investments": {
+          "heading": "Share prices are free",
+          "lines": [
+            "Prices are looked up by ticker from Yahoo Finance, with no account and no key. The only thing sent is the symbol, never what you hold or how much.",
+            "Whoever runs this server can add a Financial Modeling Prep key as a backup source. You do not need one."
+          ]
+        }
+      },
+    })),
     http.get('*/api/v1/investments/portfolios', () => HttpResponse.json({
       success: true,
       portfolios: [{ id: 1, name: 'Main', total_value: 48210.55, total_cost: 39000,

@@ -8,6 +8,13 @@ from datetime import datetime, timedelta
 from flask import session, url_for, redirect, flash
 from urllib.parse import urlencode
 
+# The most history SimpleFIN answers in one request (its developer guide,
+# read 2026-10-01: "90 days max per request"). A new account's first sync asks
+# for all of it, and a catch-up after a long gap is capped at it. The first-visit
+# card on Accounts reads this same constant, so the number a user is told and the
+# number the sync asks for cannot drift apart.
+MAX_DAYS_PER_REQUEST = 90
+
 class SimpleFin:
     """
     A client for interacting with the SimpleFin API
