@@ -1,6 +1,10 @@
 /**
  * Branding Configuration
- * Handles currency-based branding (DollarPal vs EuroPal)
+ * Currency table: symbol, code and locale per currency.
+ *
+ * *** THERE IS NO PER-CURRENCY PRODUCT NAME. *** The product is finPal in every currency (owner,
+ * 2026-10-02); this file used to brand the app "DollarPal", "EuroPal" and so on, which no user
+ * ever asked for. `noCurrencyBrandNames.test.ts` keeps those names from coming back as text.
  */
 
 /**
@@ -13,7 +17,6 @@ export type { Currency } from '../types/user';
 import type { Currency } from '../types/user';
 
 export interface BrandingConfig {
-  appName: string;
   internalName: string;
   parentBrand: string;
   currencySymbol: string;
@@ -23,7 +26,6 @@ export interface BrandingConfig {
 
 const brandingMap: Record<Currency, BrandingConfig> = {
   USD: {
-    appName: 'DollarPal',
     internalName: 'finPal',
     parentBrand: 'palStack',
     currencySymbol: '$',
@@ -31,7 +33,6 @@ const brandingMap: Record<Currency, BrandingConfig> = {
     locale: 'en-US',
   },
   EUR: {
-    appName: 'EuroPal',
     internalName: 'finPal',
     parentBrand: 'palStack',
     currencySymbol: '€',
@@ -39,7 +40,6 @@ const brandingMap: Record<Currency, BrandingConfig> = {
     locale: 'en-GB',
   },
   GBP: {
-    appName: 'PoundPal',
     internalName: 'finPal',
     parentBrand: 'palStack',
     currencySymbol: '£',
@@ -47,7 +47,6 @@ const brandingMap: Record<Currency, BrandingConfig> = {
     locale: 'en-GB',
   },
   INR: {
-    appName: 'RupeePal',
     internalName: 'finPal',
     parentBrand: 'palStack',
     currencySymbol: '₹',
@@ -55,7 +54,6 @@ const brandingMap: Record<Currency, BrandingConfig> = {
     locale: 'en-IN',
   },
   JPY: {
-    appName: 'YenPal',
     internalName: 'finPal',
     parentBrand: 'palStack',
     currencySymbol: '¥',
@@ -63,7 +61,6 @@ const brandingMap: Record<Currency, BrandingConfig> = {
     locale: 'ja-JP',
   },
   CAD: {
-    appName: 'DollarPal',
     internalName: 'finPal',
     parentBrand: 'palStack',
     currencySymbol: 'C$',
@@ -71,7 +68,6 @@ const brandingMap: Record<Currency, BrandingConfig> = {
     locale: 'en-CA',
   },
   AUD: {
-    appName: 'DollarPal',
     internalName: 'finPal',
     parentBrand: 'palStack',
     currencySymbol: 'A$',

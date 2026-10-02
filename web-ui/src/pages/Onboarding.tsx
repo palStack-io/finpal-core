@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
-import { getBranding, type Currency } from '../config/branding';
+import { type Currency } from '../config/branding';
 import { useCurrencies } from '../hooks/useCurrencies';
 import type { OnboardingData } from '../types/user';
 import { DollarSign, Globe, Bell, Smile, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -12,6 +12,7 @@ import { NUMBER_FORMATS } from '../constants/numberFormats';
 import { tabular } from '../styles/money';
 import { Orientation } from '../components/onboarding/Orientation';
 import { BaseCamp } from '../components/onboarding/BaseCamp';
+import { RidgeScene } from '../components/onboarding/OnboardingArt';
 
 /**
  * *** THIS PAGE'S SHELL IS A FIXED DARK GRADIENT IN BOTH THEMES, SO ITS TEXT
@@ -36,6 +37,8 @@ import { BaseCamp } from '../components/onboarding/BaseCamp';
  * has always been unmeasured. `onboardingContrast.test.ts` now computes them
  * from the values in the file.
  */
+/** The dusk sky behind every screen: night green into alpenglow. Same family as `RidgeScene`. */
+const DUSK_SKY = 'linear-gradient(180deg, #0b1f16 0%, #12382a 55%, #5b4d25 100%)';
 const ONBOARDING_MUTED = '#94a3b8';   // 5.99:1 on this page's card. Measured.
 /**
  * The boundary of an UNSELECTED option in the currency / timezone / emoji
@@ -105,7 +108,6 @@ export const Onboarding: React.FC = () => {
     profile_emoji: '😊',
   });
 
-  const branding = getBranding(formData.default_currency_code);
 
   const handleCurrencySelect = (currency: Currency) => {
     setFormData((prev) => ({ ...prev, default_currency_code: currency }));
@@ -147,7 +149,7 @@ export const Onboarding: React.FC = () => {
         hasCompletedOnboarding: true,
       });
 
-      showToast('Welcome to ' + branding.appName + '!', 'success');
+      showToast('Welcome to finPal!', 'success');
       // *** NOT `navigate` — BASE CAMP IS THE LAST SCREEN OF THIS FLOW. ***
       // The preferences are saved and `has_completed_onboarding` is true, so a
       // refresh here lands in the app; the user still gets told where they are
@@ -167,71 +169,29 @@ export const Onboarding: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      background: DUSK_SKY,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1rem',
+      padding: '1rem 1rem 9rem',
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Money Grid Background */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(8, 1fr)',
-        gap: '2rem',
-        padding: '2rem',
-        opacity: 0.05,
-        pointerEvents: 'none',
-        fontSize: '3rem',
-        color: '#fbbf24'
-      }}>
-        {Array.from({ length: 64 }).map((_, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: `pulse 3s ease-in-out infinite`,
-            animationDelay: `${i * 0.1}s`
-          }}>
-            {branding.currencySymbol}
-          </div>
-        ))}
-      </div>
+      <RidgeScene />
 
       <div style={{ width: '100%', maxWidth: '48rem', position: 'relative', zIndex: 10 }}>
         <div style={{
-          background: 'rgba(30, 41, 59, 0.8)',
+          background: 'rgba(8, 26, 18, 0.93)',
           backdropFilter: 'blur(12px)',
           borderRadius: '1rem',
           padding: '2.5rem',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-          border: '1px solid rgba(148, 163, 184, 0.1)'
+          border: '1px solid rgba(244, 201, 93, 0.18)'
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem', position: 'relative' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>{branding.currencySymbol}</div>
-            <h1 style={{
-              fontSize: '2rem',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #15803d 0%, #fbbf24 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '0.5rem'
-            }}>
-              Welcome to {branding.appName}
-            </h1>
-            <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>
-              Let's get you set up in just a few steps
-            </p>
-
-            {/* Skip Button */}
+            {/* Skip Button — in the flow, not absolute: at phone width an absolute one sat on the eyebrow line. */}
+            <div style={{ textAlign: 'right', marginBottom: '0.75rem' }}>
             <button
               onClick={async () => {
                 if (confirm('Skip onboarding? You can always configure these settings later in Settings.')) {
@@ -259,9 +219,6 @@ export const Onboarding: React.FC = () => {
                 }
               }}
               style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
                 padding: '0.5rem 1rem',
                 background: 'transparent',
                 border: '1px solid rgba(148, 163, 184, 0.3)',
@@ -284,6 +241,22 @@ export const Onboarding: React.FC = () => {
             >
               Skip for now
             </button>
+            </div>
+            <div style={{ fontSize: '0.7rem', letterSpacing: '0.16em', fontWeight: 600, color: '#f4c95d', marginBottom: '0.5rem' }}>
+              YOUR CLIMB STARTS HERE
+            </div>
+            <h1 style={{
+              fontSize: '2rem',
+              fontWeight: '700',
+              color: '#ffffff',
+              marginBottom: '0.5rem'
+            }}>
+              Welcome to finPal
+            </h1>
+            <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>
+              Let's get you set up in just a few steps
+            </p>
+
           </div>
 
           {/* *** ORIENTATION AND BASE CAMP REPLACE THE WHOLE STEP MACHINERY,
@@ -371,7 +344,6 @@ export const Onboarding: React.FC = () => {
                       falling back to it would have drawn a Turkish Lira as a
                       dollar sign. */}
                   {currencies.map(({ code: currency, symbol, name }) => {
-                    const currencyBranding = getBranding(currency);
                     const isSelected = formData.default_currency_code === currency;
                     return (
                       <button
@@ -401,12 +373,9 @@ export const Onboarding: React.FC = () => {
                       >
                         <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{symbol}</div>
                         <div style={{ color: '#ffffff', fontWeight: '600', marginBottom: '0.25rem' }}>{currency}</div>
-                        {/* The branded name for the seven this client brands,
-                            and the server's own name for the rest — never
-                            `brandingMap.USD`'s fallback, which would label every
-                            unbranded currency "DollarPal". */}
+                        {/* The server's own name for the currency (D-217). finPal is finPal in every currency. */}
                         <div style={{ color: ONBOARDING_MUTED, fontSize: '0.75rem' }}>
-                          {currencyBranding.currencyCode === currency ? currencyBranding.appName : name}
+                          {name}
                         </div>
                       </button>
                     );
