@@ -797,12 +797,16 @@ class SimpleFinService:
         if not settings or not settings.access_url:
             return False, 'SimpleFin not connected', 0
 
-        # How far back to fetch — buffer of 2 days beyond last sync
+        # How far back to fetch: 2 days beyond the last sync, and never more than
+        # SimpleFIN answers in one request. A first sync takes the whole window
+        # (owner, 2026-10-01: it was 30 days, a third of what SimpleFIN allows).
+        # How far back a bank actually answers varies, so this is a ceiling.
+        from integrations.simplefin.client import MAX_DAYS_PER_REQUEST
         if account.last_sync:
             days_since = (datetime.utcnow() - account.last_sync).days
-            days_back = max(days_since + 2, 3)
+            days_back = min(max(days_since + 2, 3), MAX_DAYS_PER_REQUEST)
         else:
-            days_back = 30
+            days_back = MAX_DAYS_PER_REQUEST
 
         try:
             sf_client = SimpleFinClient(current_app)
