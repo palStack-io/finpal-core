@@ -181,7 +181,7 @@ export const Onboarding: React.FC = () => {
 
       <div style={{ width: '100%', maxWidth: '48rem', position: 'relative', zIndex: 10 }}>
         <div style={{
-          background: 'rgba(8, 26, 18, 0.86)',
+          background: 'rgba(8, 26, 18, 0.93)',
           backdropFilter: 'blur(12px)',
           borderRadius: '1rem',
           padding: '2.5rem',
@@ -205,7 +205,8 @@ export const Onboarding: React.FC = () => {
               Let's get you set up in just a few steps
             </p>
 
-            {/* Skip Button */}
+            {/* Skip Button — in the flow, not absolute: at phone width an absolute one sat on the eyebrow line. */}
+            <div style={{ textAlign: 'right', marginBottom: '0.75rem' }}>
             <button
               onClick={async () => {
                 if (confirm('Skip onboarding? You can always configure these settings later in Settings.')) {
@@ -233,9 +234,6 @@ export const Onboarding: React.FC = () => {
                 }
               }}
               style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
                 padding: '0.5rem 1rem',
                 background: 'transparent',
                 border: '1px solid rgba(148, 163, 184, 0.3)',
@@ -258,6 +256,7 @@ export const Onboarding: React.FC = () => {
             >
               Skip for now
             </button>
+            </div>
           </div>
 
           {/* *** ORIENTATION AND BASE CAMP REPLACE THE WHOLE STEP MACHINERY,
