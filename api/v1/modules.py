@@ -28,11 +28,14 @@ Returns `{'error': ...}` explicitly, like every other handler here: web-ui reads
 """
 import logging
 
+from flask import current_app
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource
 
 from src.services.onboarding.copy import (
-    DATA_STATEMENT, MODULE_COPY, ORIENTATION,
+    DATA_STATEMENT, MODULE_COPY, ORIENTATION, first_visit_copy,
 )
+from src.services.onboarding.first_visit import dismiss, dismissed_pages
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +95,38 @@ class ModuleCatalog(Resource):
             # a client holding it could only be corrected by shipping.
             'orientation': ORIENTATION,
             'first_acts': _first_acts(),
+            # The cards on a user's first visit to Accounts and Investments.
+            # Whether THIS user has dismissed one is per-user and authed, so it
+            # lives on `/first-visit`, not here: this payload is the same bytes
+            # for every caller.
+            'first_visit': first_visit_copy(
+                current_app.config.get('SIMPLEFIN_ENABLED', True)),
         }
+
+
+@ns.route('/first-visit')
+class FirstVisit(Resource):
+    @jwt_required()
+    def get(self):
+        """Which first-visit cards this user has already dismissed."""
+        return {'dismissed': dismissed_pages(get_jwt_identity())}, 200
+
+
+@ns.route('/first-visit/<string:page>')
+class FirstVisitDismiss(Resource):
+    @jwt_required()
+    def post(self, page):
+        """Dismiss one card, for good and on every device.
+
+        *** ANSWERS WITH THE WHOLE LIST, NOT `{'success': true}` *** -- the same
+        reason the review page does: the server owns the state, and a client
+        that edits its own copy is a second place to disagree. Dismissing twice
+        is not an error; it answers the same list.
+        """
+        try:
+            return {'dismissed': dismiss(get_jwt_identity(), page)}, 200
+        except ValueError:
+            return {'error': f'No first-visit card for {page!r}'}, 404
 
 
 def _first_acts():

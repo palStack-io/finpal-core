@@ -445,8 +445,19 @@ const reviewHandlers = [
   ),
 ];
 
+// ── First-visit cards ─────────────────────────────────────────────────────────
+// Accounts and Investments both ask on mount. The default is "both dismissed", so
+// every page test renders the page exactly as it did before the cards existed and
+// never fetches the catalogue; `FirstVisitCard.test.tsx` covers the card itself.
+export const firstVisitHandlers = [
+  http.get(`${BASE}/api/v1/modules/first-visit`, () =>
+    HttpResponse.json({ dismissed: ['accounts', 'investments'] })
+  ),
+];
+
 // ── Combined ──────────────────────────────────────────────────────────────────
 export const handlers = [
+  ...firstVisitHandlers,
   ...authHandlers,
   ...transactionHandlers,
   ...accountHandlers,
