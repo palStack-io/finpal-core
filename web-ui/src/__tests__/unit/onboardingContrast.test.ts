@@ -22,11 +22,11 @@ import { join } from 'path';
 
 const SRC = join(__dirname, '..', '..');
 
-/** The composited card: `rgba(30,41,59,0.8)` over the `#0f172a → #1e293b`
- *  gradient. Taken at the darker end, which is the harder case. */
-const CARD = '#1b2537';
+/** The composited card: `rgba(8,26,18,0.86)` over the dusk sky, taken at its lightest end
+ *  (`#5b4d25`, the alpenglow at the bottom), which is the harder case. */
+const CARD = '#142115';
 /** The inner translucent card the orientation screens use for panels. */
-const INNER = '#242e40';
+const INNER = '#1e2b22';
 
 function luminance(hex: string): number {
   const channel = (v: number) => {
@@ -85,7 +85,7 @@ describe('the onboarding shell', () => {
      * a new entry needs a reason on the line beside it.
      */
     const SURFACES = new Set([
-      '#0f172a', '#1e293b', '#1b2537', '#242e40', '#15803d', '#166534', '#fbbf24',
+      '#0b1f16', '#12382a', '#5b4d25', '#142115', '#1e2b22', '#15803d', '#166534', '#fbbf24',
     ]);
 
     for (const hex of found) {
