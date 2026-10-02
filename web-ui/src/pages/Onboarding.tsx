@@ -190,21 +190,6 @@ export const Onboarding: React.FC = () => {
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem', position: 'relative' }}>
-            <div style={{ fontSize: '0.7rem', letterSpacing: '0.16em', fontWeight: 600, color: '#f4c95d', marginBottom: '0.5rem' }}>
-              YOUR CLIMB STARTS HERE
-            </div>
-            <h1 style={{
-              fontSize: '2rem',
-              fontWeight: '700',
-              color: '#ffffff',
-              marginBottom: '0.5rem'
-            }}>
-              Welcome to finPal
-            </h1>
-            <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>
-              Let's get you set up in just a few steps
-            </p>
-
             {/* Skip Button — in the flow, not absolute: at phone width an absolute one sat on the eyebrow line. */}
             <div style={{ textAlign: 'right', marginBottom: '0.75rem' }}>
             <button
@@ -257,6 +242,21 @@ export const Onboarding: React.FC = () => {
               Skip for now
             </button>
             </div>
+            <div style={{ fontSize: '0.7rem', letterSpacing: '0.16em', fontWeight: 600, color: '#f4c95d', marginBottom: '0.5rem' }}>
+              YOUR CLIMB STARTS HERE
+            </div>
+            <h1 style={{
+              fontSize: '2rem',
+              fontWeight: '700',
+              color: '#ffffff',
+              marginBottom: '0.5rem'
+            }}>
+              Welcome to finPal
+            </h1>
+            <p style={{ color: ONBOARDING_MUTED, fontSize: '0.875rem' }}>
+              Let's get you set up in just a few steps
+            </p>
+
           </div>
 
           {/* *** ORIENTATION AND BASE CAMP REPLACE THE WHOLE STEP MACHINERY,
