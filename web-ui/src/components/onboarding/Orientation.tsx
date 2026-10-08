@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Backpack, Coins, Medal, Mountain } from 'lucide-react';
+import { BadgeGlyph, CoinDisc, CompassGlyph, MountainGlyph, PeakExamples } from './OnboardingArt';
 
 import { DataStatement } from '../privacy/DataStatement';
 import { useDataStatement } from '../../hooks/useDataStatement';
@@ -31,11 +31,11 @@ import type { OrientationPanel } from '../../services/onboardingService';
  * ask for"* must not carry one. The dots say where you are without printing a
  * fraction.
  */
-const GLYPHS: Record<string, React.FC<{ size?: number; color?: string }>> = {
-  Mountains: Mountain,
-  Coins,
-  Gear: Backpack,
-  Badges: Medal,
+const GLYPHS: Record<string, React.FC<{ size?: number }>> = {
+  Mountains: MountainGlyph,
+  Coins: CoinDisc,
+  Gear: CompassGlyph,
+  Badges: BadgeGlyph,
 };
 
 const SCREENS = 4;
@@ -108,6 +108,7 @@ export const Orientation: React.FC<{ onDone: () => void }> = ({ onDone }) => {
             {copy.mountains.lines.map((line) => (
               <p key={line} style={body}>{line}</p>
             ))}
+            <PeakExamples />
             {/* Marked as examples on the server, and rendered with that label
                 visible: a new user has no goals, and an unlabelled illustration
                 reads as something finPal already knows about them. */}
@@ -128,7 +129,7 @@ export const Orientation: React.FC<{ onDone: () => void }> = ({ onDone }) => {
                 const Glyph = GLYPHS[panel.title];
                 return (
                   <div key={panel.title} style={panelCard}>
-                    {Glyph && <Glyph size={22} color={ACCENT} />}
+                    {Glyph && <Glyph size={26} />}
                     <h3 style={panelTitle}>{panel.title}</h3>
                     <p style={panelQuestion}>{panel.question}</p>
                     <p style={{ ...body, margin: 0, fontSize: '0.875rem' }}>

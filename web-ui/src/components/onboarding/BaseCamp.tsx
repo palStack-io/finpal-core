@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useDataStatement } from '../../hooks/useDataStatement';
+import { CoinDisc } from './OnboardingArt';
 
 /**
  * The closing screen: where onboarding ends and the app begins.
@@ -41,13 +42,14 @@ export const BaseCamp: React.FC<{ onStart: () => void; starting?: boolean }> = (
       {/* Absent rather than empty: if the catalogue did not load, a heading and
           a button are still a coherent screen, and three blank rows are not. */}
       {acts.length > 0 && (
-        <ol style={{ margin: '1.25rem 0 0', paddingLeft: '1.2rem' }}>
+        <ul style={{ margin: '1.25rem 0 0', padding: 0, listStyle: 'none' }}>
           {acts.map((act) => (
-            <li key={act.slug} style={{ ...body, marginBottom: '0.5rem' }}>
-              {act.title}
+            <li key={act.slug} style={actRow}>
+              <CoinDisc size={20} />
+              <span style={{ ...body, margin: 0 }}>{act.title}</span>
             </li>
           ))}
-        </ol>
+        </ul>
       )}
 
       <button onClick={onStart} disabled={starting} style={primary}>
@@ -86,6 +88,12 @@ const heading: React.CSSProperties = {
 const body: React.CSSProperties = {
   fontSize: '0.95rem', lineHeight: 1.6, color: BODY,
   margin: '0 0 0.75rem',
+};
+const actRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: '0.75rem',
+  border: '1px solid rgba(148, 163, 184, 0.22)', borderRadius: '0.75rem',
+  padding: '0.75rem 1rem', marginBottom: '0.5rem',
+  background: 'rgba(148, 163, 184, 0.08)',
 };
 const primary: React.CSSProperties = {
   marginTop: '1.5rem', padding: '0.8rem 1.6rem', borderRadius: '0.6rem',
