@@ -66,6 +66,21 @@ export interface ModuleCatalog {
   /** The three acts base camp offers — slug and title only. NO ceiling: it is a
    *  denominator finPal chose and stays on the server (decision 5). */
   first_acts: Array<{ slug: string; title: string }>;
+  /** The cards shown on a user's first visit to a page. A page can be ABSENT:
+   *  a server with SimpleFIN switched off sends no `accounts` card. */
+  first_visit: Partial<Record<FirstVisitPage, FirstVisitCopy>>;
+}
+
+export type FirstVisitPage = 'accounts' | 'investments';
+
+export interface FirstVisitCopy {
+  heading: string;
+  lines: string[];
+}
+
+/** `GET`/`POST /api/v1/modules/first-visit`: both answer the whole list. */
+export interface FirstVisitState {
+  dismissed: FirstVisitPage[];
 }
 
 export const onboardingService = {
@@ -73,6 +88,18 @@ export const onboardingService = {
    *  before a session has settled. */
   getCatalog: async (): Promise<ModuleCatalog> => {
     const response = await api.get<ModuleCatalog>('/api/v1/modules/catalog');
+    return response.data;
+  },
+
+  /** Which first-visit cards this user has dismissed. Server-side, so a card
+   *  dismissed here stays dismissed on the phone. */
+  getFirstVisit: async (): Promise<FirstVisitState> => {
+    const response = await api.get<FirstVisitState>('/api/v1/modules/first-visit');
+    return response.data;
+  },
+
+  dismissFirstVisit: async (page: FirstVisitPage): Promise<FirstVisitState> => {
+    const response = await api.post<FirstVisitState>(`/api/v1/modules/first-visit/${page}`);
     return response.data;
   },
 };
