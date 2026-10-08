@@ -49,6 +49,9 @@ def test_registry_pages_are_exactly_PAGES():
     (None, 'es-ES,es;q=0.9,en;q=0.8', 'es'),
     (None, 'fr-FR,fr;q=0.9', 'en'),
     ('en', 'es-ES', 'en'),
+    (None, 'es;q=0, en', 'en'),                  # q=0 means "not acceptable"
+    (None, 'en;q=0.4, es;q=0.9', 'es'),           # the browser's own ranking, not list order
+    (None, 'fr, es;q=0.1', 'es'),
 ])
 def test_resolve_lang(user_locale, accept, expected):
     assert resolve_lang(user_locale, accept) == expected

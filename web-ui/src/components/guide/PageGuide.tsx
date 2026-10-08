@@ -50,7 +50,12 @@ export const PageGuide: React.FC<{ page: GuidePage }> = ({ page }) => {
             <div className="fp-guide-card-actions">
               <button
                 type="button"
-                onClick={() => (wasDismissed ? closeReopened() : void dismiss(page))}
+                onClick={async () => {
+                  if (wasDismissed) closeReopened(); else await dismiss(page);
+                  // The card is about to unmount with focus inside it; hand focus to the help button
+                  // (it appears as the card goes) instead of letting it fall to <body>.
+                  setTimeout(() => document.getElementById(`guide-button-${page}`)?.focus(), 0);
+                }}
                 style={{ padding: '8px 16px', background: 'var(--border-light)', border: 'none', borderRadius: '8px',
                          color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}
               >

@@ -43,6 +43,7 @@ import LearnPalLessons from '../../src/modules/learnpal/pages/Lessons';
 import { Transactions } from '../../src/pages/Transactions';
 import { Investments } from '../../src/pages/Investments';
 import { Goals } from '../../src/pages/Goals';
+import BudgetsMinimal from '../../src/pages/BudgetsMinimal';
 import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
@@ -88,6 +89,10 @@ const LESSON_BODY = [
  * races the page's own `load()`).
  */
 const TOUR_COPY = {
+  budgets: { heading: 'Budgets: a plan for the month, then the truth', pose: 'pack',
+    lines: ['Give a category a limit for the month and watch how much of it is spent so far.', 'Limits are grouped as fixed, flexible and non-monthly.'],
+    tour: [{ target: 'budget-month', title: 'Pick the month', body: 'Move between months here. Each month keeps its own limits and its own spending.' },
+           { target: 'budget-totals', title: 'Planned against spent', body: 'The totals compare what you planned with what has actually gone out so far.' }] },
   goals: { heading: 'Goals: every goal is a mountain', pose: 'summit',
     lines: ['A goal is something you are saving toward, or a debt you are paying off.', 'The size comes from the amount, and the climb is how far along you are.'],
     tour: [{ target: 'goal-new', title: 'Start a goal', body: 'Name it, give it an amount, and choose whether you are saving up or paying down.' },
@@ -107,7 +112,7 @@ const stubPhone = () => {
   });
 };
 
-const withTour = (Page: React.FC, page: 'goals', phone = false): React.FC => () => {
+const withTour = (Page: React.FC, page: 'budgets' | 'goals', phone = false): React.FC => () => {
   useEffect(() => () => { delete (window as any).matchMedia; }, []);
   useState(() => {
     if (phone) stubPhone();
@@ -153,8 +158,36 @@ beforeEach(() => {
  * clean (D-107). These key names are taken from that file, which verified them
  * against the deployed endpoint with a token.
  */
+/*
+ * The Budgets page's data, for the Budgets TOUR capture only. The shape is the one
+ * `BudgetGroups.test.tsx` renders the real page with (a grouped row carries `category_name`),
+ * because a Budgets page that fails to load answers an error and has no tour target on it, which is
+ * how the first attempt at this capture rendered a blank page and found no "Show me around".
+ */
+const budgetsOverview = () => {
+  const row = (id: number, name: string, amount: number, spent: number) => ({
+    id, name, amount, spent, remaining: amount - spent,
+    percentage: amount > 0 ? (spent / amount) * 100 : 0,
+    category_id: id + 100, category_name: name, category_icon: '🏷️', category_color: '#6c757d',
+    period: 'monthly', is_active: true, user_id: 'alice@test.com',
+  });
+  const rent = row(1, 'Rent, service charge and ground rent for the flat', 1000, 1000);
+  const food = row(2, 'Groceries, household supplies and the corner shop', 600, 723);
+  return {
+    success: true, total_budget: 1600, total_spent: 1723, total_remaining: -123,
+    percentage_used: 107.7, budget_count: 2, budgets: [rent, food],
+    groups: [
+      { spending_type: 'fixed', label: 'Fixed', planned: 1000, actual: 1000, remaining: 0, budgets: [rent] },
+      { spending_type: 'flexible', label: 'Flexible', planned: 600, actual: 723, remaining: -123, budgets: [food] },
+    ],
+    unsorted: { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] },
+    totals: { planned: 1600, actual: 1723, remaining: -123 }, income: 4000, left_to_budget: 2400,
+  };
+};
+
 beforeEach(() => {
   server.use(
+    http.get('*/api/v1/budgets/overview', () => HttpResponse.json(budgetsOverview())),
     http.post('*/api/v1/csv-import/import', () =>
       HttpResponse.json({ success: true, imported: 42, skipped: 3 })),
     /*
@@ -757,6 +790,12 @@ const cases: Case[] = [
       await userEvent.click(edit);
       return (await screen.findByRole('dialog')) as HTMLElement;
     },
+  },
+  {
+    name: 'guide-tour-budgets',
+    Page: withTour(BudgetsMinimal as React.FC, 'budgets'),
+    open: async () => openTour('Pick the month'),
+    floor: 6,
   },
   {
     name: 'guide-tour-goals',

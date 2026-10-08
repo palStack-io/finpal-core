@@ -524,20 +524,11 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
+    <div className="fp-settings-shell">
 
-      {/* Settings sidebar — mirrors main nav style */}
-      <aside style={{
-        width: '240px',
-        flexShrink: 0,
-        background: 'var(--bg-secondary)',
-        borderRight: '1px solid var(--border-light)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-      }}>
+      {/* Settings sidebar — mirrors main nav style. Layout lives in finpal-theme.css (D-313): a fixed
+          240px pane left the content a ~100px strip at 390px, so under 768px it stacks above it. */}
+      <aside className="fp-settings-aside">
         {/* Header */}
         <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border-light)' }}>
           <button
@@ -569,16 +560,15 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+        <nav className="fp-settings-nav">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => changeTab(tab.id)}
               className={`nav-item${activeTab === tab.id ? ' active' : ''}`}
               style={{
-                width: '100%', border: 'none', cursor: 'pointer',
+                border: 'none', cursor: 'pointer',
                 background: 'transparent', textAlign: 'left',
-                marginBottom: '2px',
               }}
             >
               {tab.icon}
@@ -594,7 +584,7 @@ export const Settings: React.FC = () => {
         </nav>
 
         {/* Footer branding */}
-        <div style={{ padding: '16px', borderTop: '1px solid var(--border-light)' }}>
+        <div className="fp-settings-aside-footer">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <img src="/finPal.png" alt="finPal" style={{ height: '22px', width: 'auto' }} />
             <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>finPal</span>
@@ -603,7 +593,7 @@ export const Settings: React.FC = () => {
       </aside>
 
       {/* Content area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '48px 56px' }}>
+      <div className="fp-settings-content">
         <div style={{ maxWidth: '860px' }}>
           {/* Settings has no PageHead (a two-pane layout), so it mounts its guide directly. */}
           <PageGuide page="settings" />

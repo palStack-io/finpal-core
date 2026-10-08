@@ -70,6 +70,7 @@ describe('GuideTour', () => {
     render(<div><GuideTour page="goals" steps={STEPS} /></div>);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(useGuideStore.getState().touring).toBeNull();
+    expect(service.completeTour).not.toHaveBeenCalled();     // nothing was shown, so nothing is recorded
   });
 
   it('returns focus to what had it before the tour opened', async () => {
@@ -114,5 +115,18 @@ describe('GuideTour', () => {
     await vi.waitFor(() => expect(dialog().style.top).toBe('352px'));
     spy.mockRestore();
   });
-});
 
+  it('sits INSIDE a tall target instead of covering what is below it (the Dashboard range)', () => {
+    const rect = (top: number, height: number) => ({ top, bottom: top + height, left: 20, right: 920, width: 900, height, x: 20, y: top, toJSON: () => ({}) });
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return (this.getAttribute('data-guide') ? rect(50, 400) : rect(0, 0)) as DOMRect;
+    });
+    render(<Page />);
+    const dialog = screen.getByRole('dialog') as HTMLElement;
+    // 400px tall is more than a third of the 768px viewport: anchored to the target's bottom-right
+    // corner, inside it. Below it (top 462px) the popover would sit on the cards underneath.
+    expect(parseInt(dialog.style.top, 10)).toBeLessThan(450);
+    expect(parseInt(dialog.style.left, 10)).toBeGreaterThan(400);
+    spy.mockRestore();
+  });
+});

@@ -15,7 +15,7 @@ export const GuideButton: React.FC<{ page: GuidePage }> = ({ page }) => {
   const { status, pages, dismissed, reopen } = useGuideStore();
   if (status !== 'ready' || !pages[page] || !dismissed.includes(page)) return null;
   return (
-    <button type="button" className="fp-guide-btn" aria-label="About this page"
+    <button type="button" id={`guide-button-${page}`} className="fp-guide-btn" aria-label="About this page"
             onClick={() => reopen(page)}>
       <HelpCircle size={20} aria-hidden="true" style={{ color: 'var(--brand-main-green)' }} />
     </button>

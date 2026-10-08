@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useGuideStore } from '../../store/guideStore';
+import { useGuideStore, isGuideOpen } from '../../store/guideStore';
 import { useAuthStore } from '../../store/authStore';
 
 const service = vi.hoisted(() => ({
@@ -103,5 +103,14 @@ describe('guideStore', () => {
       expect(Array.isArray(s.dismissed) && Array.isArray(s.toured)).toBe(true);
     }
   });
-});
 
+  it('isGuideOpen: open on first visit or when reopened, never while loading or after a dismissal', () => {
+    const st = (over: object) => ({ ...useGuideStore.getState(), ...over }) as never;
+    const base = { status: 'ready', pages: { goals: COPY }, dismissed: [], reopened: null };
+    expect(isGuideOpen(st(base), 'goals')).toBe(true);
+    expect(isGuideOpen(st({ ...base, status: 'loading' }), 'goals')).toBe(false);
+    expect(isGuideOpen(st({ ...base, pages: {} }), 'goals')).toBe(false);
+    expect(isGuideOpen(st({ ...base, dismissed: ['goals'] }), 'goals')).toBe(false);
+    expect(isGuideOpen(st({ ...base, dismissed: ['goals'], reopened: 'goals' }), 'goals')).toBe(true);
+  });
+});

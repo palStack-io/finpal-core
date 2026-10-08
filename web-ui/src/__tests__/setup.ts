@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom';
 import { beforeAll, afterEach, afterAll } from 'vitest';
+import { configure } from '@testing-library/react';
 import { server } from './mocks/server';
+
+// The default 1000ms async ceiling is too tight for a loaded machine (the Goals 'creating one' tests
+// failed at ~1.1s under load and in CI). It only delays a test that was going to fail anyway.
+configure({ asyncUtilTimeout: 4000 });
 
 // *** 'error', NOT 'warn'. THE SUITE WAS NOT HERMETIC. ***
 //

@@ -37,6 +37,14 @@ const INITIAL = {
   reopened: null as GuidePage | null, touring: null as GuidePage | null,
 };
 
+/**
+ * Is this page's card on screen right now? One definition for the card itself and for anything
+ * that must not stack with it: open on a first visit or when reopened, never while loading,
+ * never for a page with no guide, never after a dismissal.
+ */
+export const isGuideOpen = (s: Pick<GuideStore, 'status' | 'pages' | 'dismissed' | 'reopened'>, page: GuidePage): boolean =>
+  s.status === 'ready' && !!s.pages[page] && (!s.dismissed.includes(page) || s.reopened === page);
+
 let inflight: Promise<void> | null = null;
 
 export const useGuideStore = create<GuideStore>((set, get) => ({

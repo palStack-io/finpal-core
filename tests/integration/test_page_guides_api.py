@@ -114,3 +114,34 @@ def test_a_module_that_is_off_has_no_guides_in_the_payload(client, ann_h, monkey
 def test_both_modules_are_served_when_both_are_enabled(client, ann_h):
     pages = _get(client, ann_h).get_json()['pages']
     assert {'pointspal', 'learnpal', 'learnpal-range'} <= set(pages)
+
+
+# --- the write routes need a login too (review finding 11) -----------------------------
+
+@pytest.mark.parametrize('tail', ['dismiss', 'tour'])
+def test_the_write_routes_require_a_login_and_write_nothing(client, db, tail):
+    resp = client.post(f'/api/v1/modules/guides/goals/{tail}')
+    assert resp.status_code in (401, 422)
+    assert TeachingSeen.query.filter(TeachingSeen.topic.like('guide:%')).count() == 0
+    assert TeachingSeen.query.filter(TeachingSeen.topic.like('tour:%')).count() == 0
+
+
+def test_two_tabs_racing_the_same_dismissal_is_not_an_error(db, ann, monkeypatch):
+    """The second insert hits the unique constraint: the outcome asked for already holds."""
+    from src.services.onboarding import guide_state
+
+    guide_state.dismiss_guide(ann.id, 'goals')          # the other tab won
+
+    real = TeachingSeen.query
+
+    class _Q:                                           # this tab's existence check ran BEFORE that insert
+        def filter_by(self, **kw):
+            import types
+            return types.SimpleNamespace(first=lambda: None)
+
+        def filter(self, *a, **k):
+            return real.filter(*a, **k)
+
+    monkeypatch.setattr(TeachingSeen, 'query', _Q())
+    state = guide_state.dismiss_guide(ann.id, 'goals')
+    assert state['dismissed'] == ['goals']

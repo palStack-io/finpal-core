@@ -58,9 +58,17 @@ export const GuideTour: React.FC<{ page: GuidePage; steps: GuideTourStep[] }> = 
       const r = el.getBoundingClientRect();
       const height = dialogRef.current?.offsetHeight || 180;
       const width = 320;
+      const maxLeft = window.innerWidth - width - 8;
+      // *** A TALL TARGET GETS THE POPOVER INSIDE ITS BOTTOM-RIGHT CORNER. *** Below it, the
+      // popover would sit on whatever follows (on the Dashboard, the range's popover covered the
+      // totals row). "Tall" is more than a third of the viewport.
+      if (r.height > window.innerHeight / 3) {
+        setPos({ top: Math.max(8, r.bottom - height - 12), left: Math.min(Math.max(8, r.right - width - 12), maxLeft) });
+        return;
+      }
       const below = r.bottom + 12;
       const top = below + height > window.innerHeight ? Math.max(8, r.top - 12 - height) : below;
-      setPos({ top, left: Math.min(Math.max(8, r.left), window.innerWidth - width - 8) });
+      setPos({ top, left: Math.min(Math.max(8, r.left), maxLeft) });
     };
     place();
     window.addEventListener('resize', place);

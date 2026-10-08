@@ -176,6 +176,7 @@ import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { RecurringTransactions } from '../../src/components/RecurringTransactions';
 import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
+import { Settings } from '../../src/pages/Settings';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
 import { useGuideStore } from '../../src/store/guideStore';
 
@@ -228,6 +229,9 @@ const GUIDE_COPY = {
     'Give a category a limit for the month and watch how much of it is spent so far.',
     'Limits are grouped as fixed, flexible and non-monthly, so a big yearly bill does not look like overspending in the month it lands.',
     'Nothing here changes your money. It only measures it against what you said you would do.'] },
+  settings: { heading: 'Settings: how finPal works for you', pose: 'camp', lines: [
+    'Your profile, language and number format, notifications, connected banks, and the access tokens other tools use to reach your data.',
+    'Bank connections through SimpleFIN are set up here.'] },
   goals: { heading: 'Goals: every goal is a mountain', pose: 'summit', lines: [
     'A goal is something you are saving toward, or a debt you are paying off. Each one becomes a peak on your range.',
     'The size comes from the amount, and the climb is how far along you are.',
@@ -1615,6 +1619,10 @@ const cases: Case[] = [
   // and the sweep dutifully walked three stale copies of the same page. The
   // capture now clears the directory, and the page is here as itself.
   ['accounts', Accounts as React.FC],
+  // Settings (D-313): a two-pane page that was never captured, which is how a ~100px content strip at 390px went unseen.
+  ['settings', Settings as React.FC],
+  ['settings-guide', withGuide(Settings as React.FC, 'settings', false), async () => findGuideCard(/Settings: how finPal works/)],
+  ['settings-guide-button', withGuide(Settings as React.FC, 'settings', true), async () => findGuideButton()],
   // Page guides: the first-open card, then the help button once it is dismissed.
   ['accounts-guide', withGuide(Accounts as React.FC, 'accounts', false), async () => findGuideCard(/Accounts: where/)],
   ['accounts-guide-button', withGuide(Accounts as React.FC, 'accounts', true), async () => findGuideButton()],

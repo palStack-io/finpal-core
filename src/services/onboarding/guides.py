@@ -40,18 +40,18 @@ PAGE_GUIDES = {
                     'Connect a bank through SimpleFIN (Settings, then Integrations) to keep balances current, '
                     'or add an account by hand for anything a bank link cannot see.',
                     'Net worth at the top is simply what you have minus what you owe. It moves '
-                    'when a balance does, and for no other reason.',
+                    'when a balance does, or when you add or remove an account.',
                 ],
             },
             'es': {
                 'heading': 'Cuentas: dónde está realmente tu dinero',
                 'lines': [
-                    'Todas tus cuentas, ya sean un banco, una tarjeta, un préstamo o efectivo, '
+                    'Todas tus cuentas, ya sea una cuenta bancaria, una tarjeta, un préstamo o efectivo, '
                     'en una sola lista, con lo que tienen o deben ahora mismo.',
                     'Conecta un banco mediante SimpleFIN (Ajustes, luego Integraciones) para mantener los '
-                    'saldos al día, o agrega una cuenta a mano para lo que un enlace bancario no puede ver.',
+                    'saldos al día, o agrega una cuenta a mano para lo que una conexión bancaria no puede ver.',
                     'El patrimonio neto de arriba es simplemente lo que tienes menos lo que '
-                    'debes. Cambia cuando cambia un saldo, y por ninguna otra razón.',
+                    'debes. Cambia cuando cambia un saldo, o cuando agregas o quitas una cuenta.',
                 ],
             },
         },
@@ -63,8 +63,8 @@ PAGE_GUIDES = {
                 'heading': 'Budgets: a plan for the month, then the truth',
                 'lines': [
                     'Give a category a limit for the month and watch how much of it is spent so far.',
-                    'Limits are grouped as fixed, flexible and non-monthly, so a big yearly bill '
-                    'does not look like overspending in the month it lands.',
+                    'Limits are grouped as fixed, flexible and non-monthly. Put a big yearly bill '
+                    'under non-monthly and it does not look like overspending in the month it lands.',
                     'Nothing here changes your money. It only measures it against what you '
                     'said you would do.',
                 ],
@@ -73,9 +73,9 @@ PAGE_GUIDES = {
                 'heading': 'Presupuestos: un plan para el mes, y luego la verdad',
                 'lines': [
                     'Ponle un límite a una categoría para el mes y mira cuánto llevas gastado.',
-                    'Los límites se agrupan en fijos, flexibles y no mensuales, para que una '
-                    'factura anual grande no parezca un exceso en el mes en que llega.',
-                    'Nada de aquí cambia tu dinero. Solo lo mide contra lo que dijiste que harías.',
+                    'Los límites se agrupan en fijos, flexibles y no mensuales. Pon una factura '
+                    'anual grande en no mensuales y no parecerá un exceso en el mes en que llega.',
+                    'Nada de aquí cambia tu dinero. Solo lo compara con lo que dijiste que harías.',
                 ],
             },
         },
@@ -99,7 +99,7 @@ PAGE_GUIDES = {
                 'heading': 'Goals: every goal is a mountain',
                 'lines': [
                     'A goal is something you are saving toward, or a debt you are paying off. '
-                    'Each one becomes a peak on your range.',
+                    'Each one becomes a peak on your range, which you can see on the Dashboard.',
                     'The size comes from the amount, and the climb is how far along you are.',
                     'Link an account and finPal tracks the progress for you.',
                 ],
@@ -108,8 +108,8 @@ PAGE_GUIDES = {
                 'heading': 'Metas: cada meta es una montaña',
                 'lines': [
                     'Una meta es algo para lo que ahorras, o una deuda que estás pagando. '
-                    'Cada una se convierte en una cumbre de tu cordillera.',
-                    'El tamaño viene del monto, y el ascenso es cuánto has avanzado.',
+                    'Cada una se convierte en una cumbre de tu cordillera, que puedes ver en el Panel.',
+                    'El tamaño depende del monto, y el ascenso es cuánto has avanzado.',
                     'Vincula una cuenta y finPal registra el progreso por ti.',
                 ],
             },
@@ -119,7 +119,7 @@ PAGE_GUIDES = {
              'en': {'title': 'Start a goal',
                     'body': 'Name it, give it an amount, and choose whether you are saving up or paying down.'},
              'es': {'title': 'Empieza una meta',
-                    'body': 'Ponle nombre, un monto, y elige si estás ahorrando o pagando una deuda.'}},
+                    'body': 'Ponle un nombre y un monto, y elige si estás ahorrando o pagando una deuda.'}},
             {'target': 'goal-list',
              'en': {'title': 'Your goals',
                     'body': 'Each goal shows how far along it is and what is left to go.'},
@@ -529,6 +529,29 @@ def _primary(tag):
     return match.group(0).lower() if match else None
 
 
+def _browser_languages(header):
+    """Language tags from an `Accept-Language` header, best first, `q=0` dropped.
+
+    The browser's own ranking decides, not list order: `en;q=0.4, es;q=0.9` prefers Spanish, and
+    `es;q=0` says Spanish is NOT acceptable.
+    """
+    ranked = []
+    for index, part in enumerate(header.split(',')):
+        tag, _, params = part.partition(';')
+        q = 1.0
+        for param in params.split(';'):
+            name, _, value = param.partition('=')
+            if name.strip().lower() == 'q':
+                try:
+                    q = float(value)
+                except ValueError:
+                    q = 0.0
+        lang = _primary(tag)
+        if lang and q > 0:
+            ranked.append((-q, index, lang))
+    return [lang for _, _, lang in sorted(ranked)]
+
+
 def resolve_lang(user_locale, accept_language):
     """The user's own setting wins; then the browser's order; then English.
 
@@ -539,8 +562,7 @@ def resolve_lang(user_locale, accept_language):
     if own in SUPPORTED:
         return own
     if own is None and isinstance(accept_language, str):
-        for part in accept_language.split(','):
-            lang = _primary(part.split(';')[0])
+        for lang in _browser_languages(accept_language):
             if lang in SUPPORTED:
                 return lang
     return 'en'

@@ -71,6 +71,17 @@ describe('PageGuide', () => {
   });
 });
 
+describe('focus after "Got it" (review finding 9)', () => {
+  it('moves to Nova\'s header button instead of dropping to <body>', async () => {
+    ready();
+    service.dismissGuide.mockResolvedValue({ dismissed: ['goals'], toured: [] });
+    render(<><GuideButton page="goals" /><PageGuide page="goals" /></>);
+    await userEvent.click(screen.getByRole('button', { name: /got it/i }));
+    const nova = await screen.findByRole('button', { name: /about this page/i });
+    await vi.waitFor(() => expect(nova).toHaveFocus());
+  });
+});
+
 describe('a tour does not outlive its page (review finding 8)', () => {
   it('leaving the page mid-tour ends the tour, so it cannot restart unprompted on return', () => {
     ready();

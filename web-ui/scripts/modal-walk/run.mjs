@@ -238,6 +238,7 @@ for (const file0 of MODALS) {
       // lower floors — still several times what a backdrop plus a close button carries (2-3
       // elements, under 20 characters) — and nothing else does.
       const SMALL_BY_DESIGN = {
+        'guide-tour-budgets': { total: 6, chars: 80 },
         'guide-tour-goals': { total: 6, chars: 80 },
         'guide-tour-goals-phone': { total: 6, chars: 80 },
       };
