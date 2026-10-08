@@ -28,4 +28,10 @@ describe('Settings shell (D-313)', () => {
     expect(media).toMatch(/\.fp-settings-nav\s*\{[^}]*flex-direction:\s*row/);
     expect(media).toMatch(/\.fp-settings-nav\s*\{[^}]*overflow-x:\s*auto/);
   });
+
+  it('the emoji picker fits a phone: auto-fill columns, not a fixed eight (408px of buttons)', () => {
+    const src = readFileSync(join(__dirname, '../../pages/Settings.tsx'), 'utf8');
+    expect(src).not.toMatch(/repeat\(8, 1fr\)/);
+    expect(src).toMatch(/repeat\(auto-fill, minmax\(44px, 1fr\)\)/);
+  });
 });

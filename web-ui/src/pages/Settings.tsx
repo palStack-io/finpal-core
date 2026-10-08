@@ -680,7 +680,8 @@ export const Settings: React.FC = () => {
                       </div>
                       <span style={bodyTextStyle}>Current emoji</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px' }}>
+                    {/* auto-fill, not a fixed 8 columns: 8 x 44px + gaps is 408px, wider than a 390px phone's content area (the overflow walk found it the first time it measured Settings). */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', gap: '8px' }}>
                       {profileEmojis.map((emoji) => (
                         <button
                           key={emoji}
