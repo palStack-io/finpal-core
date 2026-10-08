@@ -89,7 +89,6 @@ const FIXED_BY_DESIGN: Record<string, string> = {
   // a visible change to a layout the spec calls "unchanged" at desktop. Neither
   // the overflow gate nor the suite can see it, because nothing overflows either
   // way: the gate measures overflow, and a reflow that fits is not overflow.
-  'pages/Settings.tsx|repeat(8, 1fr)': '24 emoji swatches; fr tracks cannot overflow, and 8-across is ~44px at 390',
   'components/forms/EditAccountForm.tsx|repeat(4, 1fr)': '8 colour swatches; fr tracks cannot overflow, and 4-across is ~90px at 390',
   'components/forms/AddAccountForm.tsx|repeat(4, 1fr)': '8 colour swatches; fr tracks cannot overflow, and 4-across is ~90px at 390',
 
