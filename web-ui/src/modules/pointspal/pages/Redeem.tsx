@@ -68,7 +68,7 @@ const Redeem: React.FC = () => {
           been worked around.
 
           See `CapTracker.tsx` for why the head is the app's now. */}
-      <PageHead
+      <PageHead guide="pointspal-redeem"
         band="pointspal"
         title="Redemption Optimizer"
         subtitle="Maximize what your points are worth — ranked by cents per point."
@@ -103,7 +103,7 @@ const Redeem: React.FC = () => {
   return (
     <div style={{ padding: '24px 28px', background: 'var(--bg)', minHeight: '100%' }}>
       {/* The same head as the branch above; see its note. */}
-      <PageHead
+      <PageHead guide="pointspal-redeem"
         band="pointspal"
         title="Redemption Optimizer"
         subtitle="Maximize what your points are worth — ranked by cents per point."

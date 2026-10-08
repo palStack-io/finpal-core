@@ -1875,3 +1875,44 @@ select.fp-select-compact:not([multiple]):not([size]) {
   .basecamp-row { flex-direction: column; align-items: stretch; }
   .basecamp-row__everest { display: flex; justify-content: center; }
 }
+
+/* ── Page guides ───────────────────────────────────────────────────────────────
+   Role classes, not inline, because the card needs a media query: art beside the
+   text on a wide screen, stacked on a phone. */
+.fp-guide-card { display: flex; gap: 16px; align-items: flex-start; padding: 20px;
+  margin: 16px 0 8px; background: var(--surface-hover); border: 1px solid var(--border-light);
+  border-radius: 12px; }
+.fp-guide-card-body { flex: 1; min-width: 0; }
+.fp-guide-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+@media (max-width: 767px) {
+  .fp-guide-card { flex-direction: column; gap: 12px; padding: 16px; }
+}
+.fp-guide-btn { display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--border-light); background: var(--bg-card); }
+.fp-guide-btn:focus-visible { outline: 2px solid var(--brand-main-green); outline-offset: 2px; }
+.fp-guide-target { outline: 3px solid var(--brand-main-green); outline-offset: 4px;
+  border-radius: 8px; }
+
+/* ── Settings shell (D-313) ────────────────────────────────────────────────────
+   A fixed 240px left pane beside a content column with 56px of side padding left the content
+   ~100px wide at 390px, on EVERY tab. Under 768px the pane stacks above the content and its
+   tabs become one horizontally scrolling row; the content loses most of its padding. */
+.fp-settings-shell { display: flex; height: 100vh; background: var(--bg-primary); }
+.fp-settings-aside { width: 240px; flex-shrink: 0; background: var(--bg-secondary);
+  border-right: 1px solid var(--border-light); display: flex; flex-direction: column;
+  height: 100vh; position: sticky; top: 0; }
+.fp-settings-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.fp-settings-nav .nav-item { width: 100%; margin-bottom: 2px; }
+.fp-settings-aside-footer { padding: 16px; border-top: 1px solid var(--border-light); }
+.fp-settings-content { flex: 1; min-width: 0; overflow-y: auto; padding: 48px 56px; }
+@media (max-width: 767px) {
+  .fp-settings-shell { flex-direction: column; height: auto; min-height: 100vh; }
+  .fp-settings-aside { width: 100%; height: auto; position: static; border-right: none;
+    border-bottom: 1px solid var(--border-light); }
+  .fp-settings-nav { display: flex; flex-direction: row; gap: 4px; padding: 8px 12px;
+    overflow-x: auto; overflow-y: hidden; flex: none; }
+  .fp-settings-nav .nav-item { width: auto; flex-shrink: 0; white-space: nowrap; margin-bottom: 0; }
+  .fp-settings-aside-footer { display: none; }
+  .fp-settings-content { overflow-y: visible; padding: 20px 16px; }
+}

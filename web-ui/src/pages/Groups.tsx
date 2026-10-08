@@ -584,7 +584,7 @@ export const Groups: React.FC = () => {
     <>
       <div style={pageContainerStyle}>
         <div className="page-container">
-          <PageHead
+          <PageHead guide="groups"
             band="groups"
             title="Groups"
             subtitle="Shared costs, and who owes what."

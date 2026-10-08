@@ -168,7 +168,7 @@ export const Range: React.FC = () => {
         {/* The module being absent is not an error, and it still gets a
             real head: a bare sentence on an empty page reads as a
             failure rather than as an answer. */}
-        <PageHead
+        <PageHead guide="learnpal-range"
           band="learnpal"
           title="Your range"
           subtitle="learnPal is not enabled on this instance."
@@ -199,7 +199,7 @@ export const Range: React.FC = () => {
           page; this module is about lessons that unlock from your own figures,
           so the ridge steps up in even increments and reads as progress instead
           of scenery. */}
-      <PageHead
+      <PageHead guide="learnpal-range"
         band="learnpal"
         title="Your range"
         /* *** THE EMPTY RANGE GETS THE EMPTY SENTENCE. *** "Here's where you

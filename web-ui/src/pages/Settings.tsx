@@ -23,6 +23,8 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../utils/apiError';
 import { useToast } from '../contexts/ToastContext';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
+import { PageGuide } from '../components/guide/PageGuide';
+import { GuideButton } from '../components/guide/GuideButton';
 
 // ---------------------------------------------------------------------------
 // ModuleCard — per-module hide/show toggle card for Settings > Modules tab
@@ -522,20 +524,11 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
+    <div className="fp-settings-shell">
 
-      {/* Settings sidebar — mirrors main nav style */}
-      <aside style={{
-        width: '240px',
-        flexShrink: 0,
-        background: 'var(--bg-secondary)',
-        borderRight: '1px solid var(--border-light)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-      }}>
+      {/* Settings sidebar — mirrors main nav style. Layout lives in finpal-theme.css (D-313): a fixed
+          240px pane left the content a ~100px strip at 390px, so under 768px it stacks above it. */}
+      <aside className="fp-settings-aside">
         {/* Header */}
         <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border-light)' }}>
           <button
@@ -558,22 +551,24 @@ export const Settings: React.FC = () => {
                 while its sections were <h2>s underneath nothing. A screen reader
                 reading the outline found five level-2 sections and no page.
                 Styling is unchanged. */}
-            <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Settings</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Settings</h1>
+              <GuideButton page="settings" />
+            </div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Account & preferences</div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+        <nav className="fp-settings-nav">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => changeTab(tab.id)}
               className={`nav-item${activeTab === tab.id ? ' active' : ''}`}
               style={{
-                width: '100%', border: 'none', cursor: 'pointer',
+                border: 'none', cursor: 'pointer',
                 background: 'transparent', textAlign: 'left',
-                marginBottom: '2px',
               }}
             >
               {tab.icon}
@@ -589,7 +584,7 @@ export const Settings: React.FC = () => {
         </nav>
 
         {/* Footer branding */}
-        <div style={{ padding: '16px', borderTop: '1px solid var(--border-light)' }}>
+        <div className="fp-settings-aside-footer">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <img src="/finPal.png" alt="finPal" style={{ height: '22px', width: 'auto' }} />
             <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>finPal</span>
@@ -598,8 +593,10 @@ export const Settings: React.FC = () => {
       </aside>
 
       {/* Content area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '48px 56px' }}>
+      <div className="fp-settings-content">
         <div style={{ maxWidth: '860px' }}>
+          {/* Settings has no PageHead (a two-pane layout), so it mounts its guide directly. */}
+          <PageGuide page="settings" />
           <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '32px' }}>
               {activeTab === 'profile' && (
                 <div>
@@ -683,7 +680,8 @@ export const Settings: React.FC = () => {
                       </div>
                       <span style={bodyTextStyle}>Current emoji</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px' }}>
+                    {/* auto-fill, not a fixed 8 columns: 8 x 44px + gaps is 408px, wider than a 390px phone's content area (the overflow walk found it the first time it measured Settings). */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', gap: '8px' }}>
                       {profileEmojis.map((emoji) => (
                         <button
                           key={emoji}
@@ -693,6 +691,9 @@ export const Settings: React.FC = () => {
                             height: '44px',
                             fontSize: '24px',
                             lineHeight: 1,
+                            // A <button> inherits the browser's black, not the theme's text colour: 1.43:1 on the
+                            // dark card, which the contrast walk found the first time it captured Settings.
+                            color: 'var(--text-primary)',
                             background: profileData.profileEmoji === emoji ? 'rgba(21, 128, 61, 0.2)' : 'var(--surface-hover)',
                             border: profileData.profileEmoji === emoji ? '2px solid #15803d' : '1px solid var(--border-light)',
                             borderRadius: '10px',

@@ -14,6 +14,14 @@ import { http, HttpResponse } from 'msw';
 const BASE = '*';
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Page guides ───────────────────────────────────────────────────────────────
+// Pages that mount `PageHead guide=…` ask for this on mount; an empty answer means no card.
+export const guideHandlers = [
+  http.get(`${BASE}/api/v1/modules/guides`, () =>
+    HttpResponse.json({ pages: {}, dismissed: [], toured: [], lang: 'en' }),
+  ),
+];
+
 export const authHandlers = [
   http.post(`${BASE}/api/v1/auth/login`, () =>
     HttpResponse.json({
@@ -459,6 +467,7 @@ export const firstVisitHandlers = [
 export const handlers = [
   ...firstVisitHandlers,
   ...authHandlers,
+  ...guideHandlers,
   ...transactionHandlers,
   ...accountHandlers,
   ...budgetHandlers,

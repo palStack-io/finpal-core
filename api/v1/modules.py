@@ -147,3 +147,60 @@ def _first_acts():
     universal = [a for a in ACTS.values() if a.universal]
     universal.sort(key=lambda a: -a.ceiling)
     return [{'slug': a.slug, 'title': a.title} for a in universal[:3]]
+
+
+def _enabled_module_names():
+    """The modules switched on for this deployment (a module page's guide follows it)."""
+    try:
+        from src.modules.registry import module_registry
+        return {m.name for m in module_registry.modules if m.is_enabled()}
+    except Exception:
+        # A registry that cannot answer must not take the guides down with it; no module
+        # pages is the conservative reading.
+        logger.exception('guides: module registry unavailable')
+        return set()
+
+
+@ns.route('/guides')
+class Guides(Resource):
+    @jwt_required()
+    def get(self):
+        """Every page guide in the caller's language, and what they have finished.
+
+        *** ONE LANGUAGE, NEVER BOTH. *** The client's `?lang=` first, then the browser's
+        header, then English. Core has no saved user locale, and its web UI has no language
+        layer, so it asks for `en`; Spanish is served for the day it does.
+        """
+        from flask import request
+        from src.services.onboarding.guide_state import guide_state
+        from src.services.onboarding.guides import guides_for, resolve_lang
+
+        user_id = get_jwt_identity()
+        lang = resolve_lang(request.args.get('lang'), request.headers.get('Accept-Language'))
+        return {'pages': guides_for(lang, _enabled_module_names()), 'lang': lang,
+                **guide_state(user_id)}, 200
+
+
+def _guide_write(action, page):
+    from src.services.onboarding import guide_state as state
+    try:
+        return getattr(state, action)(get_jwt_identity(), page), 200
+    except ValueError:
+        return {'error': f'No guide for {page!r}'}, 404
+
+
+@ns.route('/guides/<string:page>/dismiss')
+class GuideDismiss(Resource):
+    @jwt_required()
+    def post(self, page):
+        """Dismiss one page's card, for good and on every device. Idempotent."""
+        return _guide_write('dismiss_guide', page)
+
+
+@ns.route('/guides/<string:page>/tour')
+class GuideTour(Resource):
+    @jwt_required()
+    def post(self, page):
+        """Record that this user has finished (or skipped) the tour. Idempotent."""
+        return _guide_write('complete_tour', page)
+

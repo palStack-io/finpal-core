@@ -90,7 +90,7 @@ export const Lessons: React.FC = () => {
         {/* The module being absent is not an error, and it still gets a real
             head: a bare sentence on an empty page reads as a failure rather
             than as an answer. */}
-        <PageHead
+        <PageHead guide="learnpal-lessons"
           band="learnpal"
           title="Lessons"
           subtitle="learnPal is not enabled on this instance."
@@ -114,7 +114,7 @@ export const Lessons: React.FC = () => {
           template string would freeze "0 lessons read" into the markup. The
           other two learnPal pages pass plain strings because they say the same
           thing to everybody. */}
-      <PageHead
+      <PageHead guide="learnpal-lessons"
         band="learnpal"
         title="Lessons"
         subtitle={<>

@@ -375,7 +375,7 @@ export const RecurringTransactions: React.FC = () => {
           because this page IS the ground. `PageHead` also supplies the single
           h1 the outline needs — this page had none until the widened heading
           check found it. */}
-      <PageHead
+      <PageHead guide="recurring"
         band="recurring"
         title="Recurring"
         subtitle="What arrives every month before you decide anything. This is the ground you stand on."

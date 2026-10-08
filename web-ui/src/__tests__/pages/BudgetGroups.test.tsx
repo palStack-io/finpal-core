@@ -18,6 +18,7 @@ import { server } from '../mocks/server';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import BudgetsMinimal from '../../pages/BudgetsMinimal';
+import { useGuideStore } from '../../store/guideStore';
 
 vi.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ showToast: vi.fn() }),
@@ -634,5 +635,27 @@ describe('spending nobody budgeted is shown inside its own group', () => {
        page down — every test in the file above went red at once. */
     mount(overview());
     expect(await screen.findByRole('heading', { name: 'Flexible' })).toBeInTheDocument();
+  });
+});
+
+describe('budgets page — its guide', () => {
+  const COPY = { heading: 'Budgets: a plan for the month', lines: ['One.', 'Two.'], pose: 'map' as const, tour: [{ target: 'budget-month', title: 'T', body: 'B' }] };
+  const prime = (dismissed: string[]) => useGuideStore.setState({
+    status: 'ready', lang: 'en', pages: { budgets: COPY }, dismissed: dismissed as never, toured: [],
+  });
+
+  it('mounts the guide card itself, and tags what its tour points at', async () => {
+    prime([]);
+    mount(overview());
+    expect(await screen.findByRole('region', { name: /budgets: a plan for the month/i })).toBeInTheDocument();
+    expect(document.querySelector('[data-guide="budget-month"]')).not.toBeNull();
+    expect(document.querySelector('[data-guide="budget-totals"]')).not.toBeNull();
+  });
+
+  it('shows Nova\'s button in the header once the card is dismissed', async () => {
+    prime(['budgets']);
+    mount(overview());
+    expect(await screen.findByRole('button', { name: /about this page/i })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /budgets: a plan for the month/i })).toBeNull();
   });
 });

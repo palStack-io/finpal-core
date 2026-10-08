@@ -307,7 +307,7 @@ export const Investments: React.FC = () => {
               those were measured, and a redesign is not a reason to re-derive
               them. What changes is that the title, the sentence and the ridge
               now come from one component instead of this page's own markup. */}
-          <PageHead
+          <PageHead guide="investments"
             title="Investments"
             subtitle="What you put in, what it is worth now, and the gap between them."
             band="investments"

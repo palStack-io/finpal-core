@@ -534,7 +534,7 @@ export const Dashboard = () => {
             that draws it. It renders nothing at 0 m, so a brand-new user is
             not told they have climbed nothing on the page they came to for
             reassurance. */}
-        <PageHead
+        <PageHead guide="dashboard"
           /* *** "Your range" EITHER WAY NOW. *** The title switched to
              "Where you stand" for a user with no goals because there was no
              range to head — there is one now, so the page reads the same for
@@ -599,6 +599,7 @@ export const Dashboard = () => {
               Everest exists to fill: base camp's own audience had no mountain
               at all (D-205). `EmptyRange` still carries the invitation when
               there is neither a goal nor any altitude yet. */}
+          <div data-guide="dashboard-range">
           {(goals.length > 0 || everest) ? (
             <GoalRange
               goals={goals}
@@ -616,6 +617,7 @@ export const Dashboard = () => {
                full argument. */
             <EmptyRange />
           )}
+          </div>
 
           {/* *** THE FOURTH FIGURE IS SAVINGS RATE, NOT THE MOCKUP'S "THE
               GROUND". *** The ground is a monthly recurring total, and the only
@@ -624,7 +626,9 @@ export const Dashboard = () => {
               self-hoster can switch off, which is D-187's shape. Deriving it
               from `/recurring/` in core is the right fix and is its own
               change. */}
-          <TotalsRow cells={totalsCells} />
+          <div data-guide="dashboard-totals">
+            <TotalsRow cells={totalsCells} />
+          </div>
         </PageHead>
 
         {/* Flags an auto-import whose columns were guessed */}
@@ -669,7 +673,7 @@ export const Dashboard = () => {
             Which is also why the card is conditional: a titled card wrapping a
             component that renders null is an empty panel. */}
         {(byCategory.length > 0 || byPerson.length > 0) && (
-          <div style={{ marginBottom: '24px' }}>
+          <div data-guide="dashboard-spend" style={{ marginBottom: '24px' }}>
             <SectionCard
               title={`Where ${new Date().toLocaleDateString('en-US', { month: 'long' })} went`}
               subtitle={`${formatCurrency(monthlyExpenses)} out · day ${new Date().getDate()} of the month`}

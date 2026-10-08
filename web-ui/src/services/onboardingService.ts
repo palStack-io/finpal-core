@@ -83,11 +83,48 @@ export interface FirstVisitState {
   dismissed: FirstVisitPage[];
 }
 
+export type GuidePage =
+  | 'accounts' | 'budgets' | 'goals' | 'dashboard' | 'transactions' | 'investments' | 'recurring'
+  | 'categories' | 'rules' | 'review' | 'kit' | 'analytics' | 'groups' | 'settings'
+  | 'pointspal' | 'pointspal-caps' | 'pointspal-recommend' | 'pointspal-cards' | 'pointspal-redeem'
+  | 'learnpal' | 'learnpal-lessons' | 'learnpal-range';
+
+export interface GuideTourStep { target: string; title: string; body: string }
+
+export interface GuideCopy {
+  heading: string;
+  lines: string[];
+  /** A Nova pose, which only the hosted edition draws; core ignores it. */
+  pose: string;
+  tour?: GuideTourStep[];
+}
+
+export interface GuidesState { dismissed: GuidePage[]; toured: GuidePage[] }
+
+export interface GuidesPayload extends GuidesState {
+  pages: Partial<Record<GuidePage, GuideCopy>>;
+  lang: string;
+}
+
 export const onboardingService = {
   /** Unauthenticated on the server: it carries no user data and must render
    *  before a session has settled. */
   getCatalog: async (): Promise<ModuleCatalog> => {
     const response = await api.get<ModuleCatalog>('/api/v1/modules/catalog');
+    return response.data;
+  },
+  getGuides: async (lang?: string): Promise<GuidesPayload> => {
+    const response = await api.get<GuidesPayload>('/api/v1/modules/guides', { params: lang ? { lang } : {} });
+    return response.data;
+  },
+
+  dismissGuide: async (page: GuidePage): Promise<GuidesState> => {
+    const response = await api.post<GuidesState>(`/api/v1/modules/guides/${page}/dismiss`);
+    return response.data;
+  },
+
+  completeTour: async (page: GuidePage): Promise<GuidesState> => {
+    const response = await api.post<GuidesState>(`/api/v1/modules/guides/${page}/tour`);
     return response.data;
   },
 

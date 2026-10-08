@@ -293,7 +293,7 @@ export const Accounts = () => {
         {/* The page head, with its own ridge. Replaces the hand-rolled flex row
             that every page carried a slightly different version of; the actions
             move into the `right` slot unchanged. */}
-        <PageHead
+        <PageHead guide="accounts"
           band="accounts"
           title="Accounts"
           /* *** THE SCOPE SENTENCE IS NOW THE SHARED ONE, AND THAT IS NOT

@@ -232,7 +232,18 @@ for (const file0 of MODALS) {
        * failed to render. The 400 floor is a third of the shortest real body
        * and roughly ten times what a backdrop plus a close button carries.
        */
-      if (out.total < 25 && (out.chars ?? 0) < 400) {
+      // *** SMALL BY DESIGN, AND STILL NOT A STUB. *** A guided-tour step is a heading, two
+      // sentences, a counter and two or three buttons: 7 elements, ~120 characters. It clears
+      // neither number above, and no honest state of it could. These two scenarios get their own,
+      // lower floors — still several times what a backdrop plus a close button carries (2-3
+      // elements, under 20 characters) — and nothing else does.
+      const SMALL_BY_DESIGN = {
+        'guide-tour-budgets': { total: 6, chars: 80 },
+        'guide-tour-goals': { total: 6, chars: 80 },
+        'guide-tour-goals-phone': { total: 6, chars: 80 },
+      };
+      const need = SMALL_BY_DESIGN[name] ?? { total: 25, chars: 400 };
+      if (out.total < need.total && (out.chars ?? 0) < need.chars) {
         console.error(`[${name}/${theme}/${width}] only ${out.total} laid-out elements in the modal — walking a stub, not a dialog`);
         hardErrors += 1;
         continue;

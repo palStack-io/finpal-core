@@ -594,7 +594,7 @@ export const CategoryManagement: React.FC = () => {
        *** THIS FILE ALREADY IMPORTED `pageContainerStyle` AND NEVER USED IT. ***
        A shared barrel import makes a page look like it adopted the shell. */
     <div style={{ ...pageContainerStyle, ...pageMaxWidthStyle }}>
-      <PageHead
+      <PageHead guide="categories"
         band="categories"
         title="Categories"
         /* *** THE HEAD PROMISED WHERE THE MONEY WENT AND THE LIST DID NOT

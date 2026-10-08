@@ -27,6 +27,7 @@
  *     npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
  *   node scripts/modal-walk/run.mjs
  */
+import { useEffect, useState } from 'react';
 import { it, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -42,10 +43,12 @@ import LearnPalLessons from '../../src/modules/learnpal/pages/Lessons';
 import { Transactions } from '../../src/pages/Transactions';
 import { Investments } from '../../src/pages/Investments';
 import { Goals } from '../../src/pages/Goals';
+import BudgetsMinimal from '../../src/pages/BudgetsMinimal';
 import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
+import { useGuideStore } from '../../src/store/guideStore';
 
 /**
  * `a-starter-buffer`'s approved body, copied from `lesson_bodies.py`. Kept here
@@ -80,6 +83,54 @@ const LESSON_BODY = [
     '',
 ].join('\n');
 
+
+/**
+ * A page guide with its tour offered, primed BEFORE the page's first render (priming after it
+ * races the page's own `load()`).
+ */
+const TOUR_COPY = {
+  budgets: { heading: 'Budgets: a plan for the month, then the truth', pose: 'pack',
+    lines: ['Give a category a limit for the month and watch how much of it is spent so far.', 'Limits are grouped as fixed, flexible and non-monthly.'],
+    tour: [{ target: 'budget-month', title: 'Pick the month', body: 'Move between months here. Each month keeps its own limits and its own spending.' },
+           { target: 'budget-totals', title: 'Planned against spent', body: 'The totals compare what you planned with what has actually gone out so far.' }] },
+  goals: { heading: 'Goals: every goal is a mountain', pose: 'summit',
+    lines: ['A goal is something you are saving toward, or a debt you are paying off.', 'The size comes from the amount, and the climb is how far along you are.'],
+    tour: [{ target: 'goal-new', title: 'Start a goal', body: 'Name it, give it an amount, and choose whether you are saving up or paying down.' },
+           { target: 'goal-list', title: 'Your goals', body: 'Each goal shows how far along it is and what is left to go.' }] },
+};
+
+/**
+ * jsdom has no `matchMedia`, so without this the tour renders its DESKTOP popover pinned to the
+ * top-left at every width and the phone layout is never measured. Only the phone query reports a
+ * match; the stub is removed when the page unmounts.
+ */
+const stubPhone = () => {
+  (window as any).matchMedia = (query: string) => ({
+    matches: query.includes('max-width: 767px'), media: query, onchange: null,
+    addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {},
+    dispatchEvent: () => false,
+  });
+};
+
+const withTour = (Page: React.FC, page: 'budgets' | 'goals', phone = false): React.FC => () => {
+  useEffect(() => () => { delete (window as any).matchMedia; }, []);
+  useState(() => {
+    if (phone) stubPhone();
+    useGuideStore.getState().reset();
+    useGuideStore.setState({ status: 'ready', lang: 'en', pages: { [page]: TOUR_COPY[page] }, dismissed: [], toured: [] });
+    return null;
+  });
+  return <Page />;
+};
+
+/** Start the tour and return THE TOUR'S dialog (not merely some dialog). */
+const openTour = async (stepTitle: string) => {
+  await userEvent.click(await screen.findByRole('button', { name: /show me around/i }, { timeout: 6000 }));
+  const dialog = await screen.findByRole('dialog', { name: /page tour/i });
+  await within(dialog).findByText(stepTitle);
+  return dialog as HTMLElement;
+};
+
 const OUT = join(__dirname, 'captured');
 
 /* Stale captures are worse than none: the walk sweeps the directory, so a file
@@ -107,8 +158,36 @@ beforeEach(() => {
  * clean (D-107). These key names are taken from that file, which verified them
  * against the deployed endpoint with a token.
  */
+/*
+ * The Budgets page's data, for the Budgets TOUR capture only. The shape is the one
+ * `BudgetGroups.test.tsx` renders the real page with (a grouped row carries `category_name`),
+ * because a Budgets page that fails to load answers an error and has no tour target on it, which is
+ * how the first attempt at this capture rendered a blank page and found no "Show me around".
+ */
+const budgetsOverview = () => {
+  const row = (id: number, name: string, amount: number, spent: number) => ({
+    id, name, amount, spent, remaining: amount - spent,
+    percentage: amount > 0 ? (spent / amount) * 100 : 0,
+    category_id: id + 100, category_name: name, category_icon: '🏷️', category_color: '#6c757d',
+    period: 'monthly', is_active: true, user_id: 'alice@test.com',
+  });
+  const rent = row(1, 'Rent, service charge and ground rent for the flat', 1000, 1000);
+  const food = row(2, 'Groceries, household supplies and the corner shop', 600, 723);
+  return {
+    success: true, total_budget: 1600, total_spent: 1723, total_remaining: -123,
+    percentage_used: 107.7, budget_count: 2, budgets: [rent, food],
+    groups: [
+      { spending_type: 'fixed', label: 'Fixed', planned: 1000, actual: 1000, remaining: 0, budgets: [rent] },
+      { spending_type: 'flexible', label: 'Flexible', planned: 600, actual: 723, remaining: -123, budgets: [food] },
+    ],
+    unsorted: { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] },
+    totals: { planned: 1600, actual: 1723, remaining: -123 }, income: 4000, left_to_budget: 2400,
+  };
+};
+
 beforeEach(() => {
   server.use(
+    http.get('*/api/v1/budgets/overview', () => HttpResponse.json(budgetsOverview())),
     http.post('*/api/v1/csv-import/import', () =>
       HttpResponse.json({ success: true, imported: 42, skipped: 3 })),
     /*
@@ -531,6 +610,8 @@ type Case = {
   Page: React.FC;
   /** Drives the app to the state, and returns an element INSIDE the modal. */
   open: () => Promise<HTMLElement>;
+  /** Elements the modal must have to count as real. 15 unless it is deliberately small (the tour step is a sentence and two buttons). */
+  floor?: number;
 };
 
 const openImportModal = async () => {
@@ -711,6 +792,24 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'guide-tour-budgets',
+    Page: withTour(BudgetsMinimal as React.FC, 'budgets'),
+    open: async () => openTour('Pick the month'),
+    floor: 6,
+  },
+  {
+    name: 'guide-tour-goals',
+    Page: withTour(Goals as React.FC, 'goals'),
+    open: async () => openTour('Start a goal'),
+    floor: 6,
+  },
+  {
+    name: 'guide-tour-goals-phone',
+    Page: withTour(Goals as React.FC, 'goals', true),
+    open: async () => openTour('Start a goal'),
+    floor: 6,
+  },
+  {
     name: 'slidepanel-add-account',
     Page: Accounts as React.FC,
     open: async () => {
@@ -865,7 +964,7 @@ it.each(cases.map((c) => [c.name, c] as const))('captures %s', async (name, c) =
   /* Positive, like contrast-walk's readiness gate: waiting for a spinner to be
      absent is satisfied by a spinner that never existed. */
   await waitFor(() => {
-    expect(root.querySelectorAll('*').length).toBeGreaterThanOrEqual(15);
+    expect(root.querySelectorAll('*').length).toBeGreaterThanOrEqual(c.floor ?? 15);
   }, { timeout: 6000 });
 
   const inContainer = container.contains(root);
@@ -879,7 +978,7 @@ it.each(cases.map((c) => [c.name, c] as const))('captures %s', async (name, c) =
   }
 
   const painted = root.querySelectorAll('*').length;
-  if (painted < 15) throw new Error(`${name}: only ${painted} elements in the modal — captured a stub`);
+  if (painted < (c.floor ?? 15)) throw new Error(`${name}: only ${painted} elements in the modal — captured a stub`);
 
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, `${name}.html`), assemble(container.innerHTML, portals), 'utf8');
