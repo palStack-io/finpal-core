@@ -6,14 +6,7 @@ Part of the **PalStacks** ecosystem.
 
 ## Branding
 
-This app uses **currency-based branding**:
-- **USD** -> DollarPal
-- **EUR** -> EuroPal
-- **GBP** -> PoundPal
-- **INR** -> RupeePal
-- And more...
-
-Users select their preferred currency during onboarding, which determines the app name and branding displayed throughout.
+The product is **finPal** in every currency. A user's currency sets symbols and number formats, never the app's name.
 
 ## Tech Stack
 
@@ -131,7 +124,7 @@ docker run -p 3000:80 finpal-web
 
 On first login, users are prompted to set:
 
-1. **Default Currency** - Determines app branding (DollarPal/EuroPal/etc)
+1. **Default Currency** - Sets symbols and number formats
 2. **Timezone** - For accurate transaction timestamps
 3. **Notification Preferences** - Email, push, budget alerts, etc.
 

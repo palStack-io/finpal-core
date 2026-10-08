@@ -206,9 +206,14 @@ def test_the_first_sync_after_an_import_fetches_full_history(db):
 
         SimpleFinService().sync_account(account.id, user.id)
 
-    assert captured['days_back'] >= 30, (
-        f'the first sync looked back only {captured["days_back"]} days, so a new '
-        f'user gets almost none of their history')
+    # *** THE WHOLE WINDOW SIMPLEFIN ALLOWS (owner, 2026-10-01), NOT 30. *** And
+    # the same constant the first-visit card on Accounts prints, so a user who is
+    # told "the last 90 days" is not handed 30.
+    from integrations.simplefin.client import MAX_DAYS_PER_REQUEST
+    assert MAX_DAYS_PER_REQUEST == 90
+    assert captured['days_back'] == MAX_DAYS_PER_REQUEST, (
+        f'the first sync looked back {captured["days_back"]} days, not the '
+        f'{MAX_DAYS_PER_REQUEST} SimpleFIN answers in one request')
 
 
 def test_an_established_account_still_syncs_incrementally(db):
@@ -239,6 +244,35 @@ def test_an_established_account_still_syncs_incrementally(db):
     assert captured['days_back'] == 6, (
         f'an account synced 4 days ago should fetch 4+2 days, got {captured["days_back"]}')
 
+
+def test_a_catch_up_after_a_long_gap_is_capped_at_one_request(db):
+    """An account last synced 200 days ago asks for 90, not 202.
+
+    SimpleFIN answers at most 90 days per request, so asking for more is asking
+    for something the request cannot carry. The gap beyond 90 days is lost
+    either way; the cap keeps the request one SimpleFIN accepts.
+    """
+    from datetime import datetime, timedelta
+    from integrations.simplefin.client import MAX_DAYS_PER_REQUEST
+
+    user = UserFactory()
+    account = _connected_account(user)
+    _sync_an_expense_so_the_account_has_history(user, account)
+    account.last_sync = datetime.utcnow() - timedelta(days=200)
+    from src.extensions import db as _db
+    _db.session.commit()
+
+    captured = {}
+
+    def _capture(self, access_url, days_back=30):
+        captured['days_back'] = days_back
+        return RAW
+
+    with patch('integrations.simplefin.client.SimpleFin.get_accounts_with_transactions',
+               _capture):
+        SimpleFinService().sync_account(account.id, user.id)
+
+    assert captured['days_back'] == MAX_DAYS_PER_REQUEST
 
 def _sync_an_expense_so_the_account_has_history(user, account):
     """Give the account one already-synced transaction, as a real sync would."""

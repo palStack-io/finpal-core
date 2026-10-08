@@ -86,7 +86,7 @@ export const Landing = () => {
     {
       icon: <Wallet size={32} />,
       title: 'Dynamic Branding by Currency',
-      description: 'finPal adapts to your currency: DollarPal, PoundPal, EuroPal, RupeePal, and more!'
+      description: 'Use finPal in your own currency and number format, with the figures laid out the way you read them.'
     }
   ];
 

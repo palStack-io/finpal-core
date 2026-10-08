@@ -24,6 +24,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
 import { getBranding } from '../config/branding';
 import { PageHead } from '../components/PageHead';
+import { FirstVisitCard } from '../components/onboarding/FirstVisitCard';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
 import { holdingTotals, valueSplit, lastPriceUpdate } from '../utils/holdingTotals';
 import { AddHoldingModal } from '../components/investment/AddHoldingModal';
@@ -371,6 +372,9 @@ export const Investments: React.FC = () => {
               },
             ]} />
           </PageHead>
+
+          {/* Prices are free and need no key. Shown once per user. */}
+          <FirstVisitCard page="investments" />
 
           {/* *** THE GAIN LEADS, AND THE "Holdings: 2" CARD IS GONE. ***
               Four cards stood here: Total Value, Total Gain/Loss, Total Cost and
