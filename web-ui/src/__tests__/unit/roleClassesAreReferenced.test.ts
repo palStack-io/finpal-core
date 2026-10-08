@@ -36,6 +36,10 @@ const THEME = readFileSync(join(SRC, 'styles', 'finpal-theme.css'), 'utf8');
  * Unreferenced ON PURPOSE. Each entry is a claim someone has to defend in review.
  */
 const DELIBERATELY_UNREFERENCED: Record<string, string> = {
+  'fp-guide-target':
+    'The tour outlines its current target by `classList.add(\'fp-guide-target\')` on an ' +
+    'element the page owns, so no `className=` ever spells it; GuideTour.test asserts the ' +
+    'class is added and removed.',
   'fp-card':
     'The app renders cards at TWO radii — 12px at four sites and 16px at four ' +
     'more — so there is no single card shell to adopt. Picking either would ' +

@@ -247,7 +247,7 @@ export const Transactions: React.FC = () => {
 
           {/* The page head, with the quietest band in the set — this page is the
               density test, and a loud ridge competes with the first rows. */}
-          <PageHead
+          <PageHead guide="transactions"
             band="transactions"
             title="Transactions"
             /* *** TWO SPANS, NOT ONE STRING. *** `getByText` matches a

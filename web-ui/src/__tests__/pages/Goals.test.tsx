@@ -20,6 +20,7 @@ import { server } from '../mocks/server';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { Goals } from '../../pages/Goals';
+import { useGuideStore } from '../../store/guideStore';
 
 vi.mock('../../contexts/ToastContext', () => ({
   useToast: () => ({ showToast: vi.fn() }),
@@ -1050,5 +1051,46 @@ describe('Goals page — learnPal is ON', () => {
     // An archived goal has released its accounts and is not being climbed, so
     // "next at 25%" would invite the user somewhere they deliberately stopped.
     expect(screen.queryByTestId('goal-strip-1')).toBeNull();
+  });
+});
+
+describe('goals page — its guide', () => {
+  const COPY = { heading: 'Goals: every goal is a mountain', lines: ['One.', 'Two.'], pose: 'map' as const, tour: [{ target: 'goal-new', title: 'T', body: 'B' }] };
+  const prime = (dismissed: string[]) => useGuideStore.setState({
+    status: 'ready', lang: 'en', pages: { goals: COPY }, dismissed: dismissed as never, toured: [],
+  });
+
+  it('mounts the guide card itself, and tags what its tour points at', async () => {
+    prime([]);
+    mockGoals([PAYOFF_GOAL]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByRole('region', { name: /goals: every goal is a mountain/i })).toBeInTheDocument();
+    await screen.findByText('Pay off Chase Amazon');
+    expect(document.querySelector('[data-guide="goal-new"]')).not.toBeNull();
+    expect(document.querySelector('[data-guide="goal-list"]')).not.toBeNull();
+  });
+
+  it('shows Nova\'s button in the header once the card is dismissed', async () => {
+    prime(['goals']);
+    mockGoals([PAYOFF_GOAL]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    expect(await screen.findByRole('button', { name: /about this page/i })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /goals: every goal is a mountain/i })).toBeNull();
+  });
+});
+
+
+describe('Goals page — the tour must not point at an empty list (review finding 6)', () => {
+  it('has no goal-list target when there are no goals, and has one when there are', async () => {
+    mockGoals([]);
+    const { unmount } = render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText(/no goals yet/i);
+    expect(document.querySelector('[data-guide="goal-list"]')).toBeNull();
+    unmount();
+
+    mockGoals([PAYOFF_GOAL]);
+    render(<MemoryRouter><Goals /></MemoryRouter>);
+    await screen.findByText('Pay off Chase Amazon');
+    expect(document.querySelector('[data-guide="goal-list"]')).not.toBeNull();
   });
 });

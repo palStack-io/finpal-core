@@ -1875,3 +1875,21 @@ select.fp-select-compact:not([multiple]):not([size]) {
   .basecamp-row { flex-direction: column; align-items: stretch; }
   .basecamp-row__everest { display: flex; justify-content: center; }
 }
+
+/* ── Page guides ───────────────────────────────────────────────────────────────
+   Role classes, not inline, because the card needs a media query: art beside the
+   text on a wide screen, stacked on a phone. */
+.fp-guide-card { display: flex; gap: 16px; align-items: flex-start; padding: 20px;
+  margin: 16px 0 8px; background: var(--surface-hover); border: 1px solid var(--border-light);
+  border-radius: 12px; }
+.fp-guide-card-body { flex: 1; min-width: 0; }
+.fp-guide-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+@media (max-width: 767px) {
+  .fp-guide-card { flex-direction: column; gap: 12px; padding: 16px; }
+}
+.fp-guide-btn { display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--border-light); background: var(--bg-card); }
+.fp-guide-btn:focus-visible { outline: 2px solid var(--brand-main-green); outline-offset: 2px; }
+.fp-guide-target { outline: 3px solid var(--brand-main-green); outline-offset: 4px;
+  border-radius: 8px; }

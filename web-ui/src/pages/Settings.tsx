@@ -23,6 +23,8 @@ import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, 
 import { apiErrorMessage } from '../utils/apiError';
 import { useToast } from '../contexts/ToastContext';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
+import { PageGuide } from '../components/guide/PageGuide';
+import { GuideButton } from '../components/guide/GuideButton';
 
 // ---------------------------------------------------------------------------
 // ModuleCard — per-module hide/show toggle card for Settings > Modules tab
@@ -558,7 +560,10 @@ export const Settings: React.FC = () => {
                 while its sections were <h2>s underneath nothing. A screen reader
                 reading the outline found five level-2 sections and no page.
                 Styling is unchanged. */}
-            <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Settings</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Settings</h1>
+              <GuideButton page="settings" />
+            </div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Account & preferences</div>
           </div>
         </div>
@@ -600,6 +605,8 @@ export const Settings: React.FC = () => {
       {/* Content area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '48px 56px' }}>
         <div style={{ maxWidth: '860px' }}>
+          {/* Settings has no PageHead (a two-pane layout), so it mounts its guide directly. */}
+          <PageGuide page="settings" />
           <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '32px' }}>
               {activeTab === 'profile' && (
                 <div>

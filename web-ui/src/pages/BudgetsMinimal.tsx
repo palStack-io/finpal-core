@@ -1007,7 +1007,7 @@ const BudgetsMinimal = () => {
               The mockup's sentence, too: a limit is only useful for the part of
               your spending that can move, which is the whole reason this page
               groups by spending type. */}
-          <PageHead
+          <PageHead guide="budgets"
             band="budgets"
             title="Budgets"
             subtitle={(() => {
@@ -1021,7 +1021,7 @@ const BudgetsMinimal = () => {
             })()}
             right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               {/* Compact Month Navigator */}
-              <div style={{
+              <div data-guide="budget-month" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -1144,7 +1144,7 @@ const BudgetsMinimal = () => {
                   Nothing else is dropped: the progress bar and every caption
                   ride in `note`, which takes a node precisely so a caller can
                   put its own furniture there. */}
-            <div>
+            <div data-guide="budget-totals">
                 <TotalsRow cells={[
                   {
                     label: 'Total budgeted',

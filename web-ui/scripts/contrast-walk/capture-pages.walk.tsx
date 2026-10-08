@@ -5,6 +5,7 @@
  * The palette adoption took that page to zero AA failures, which says nothing
  * about the two pages nobody had rendered.
  */
+import { useState } from 'react';
 import { it, beforeAll, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -176,6 +177,7 @@ import { RecurringTransactions } from '../../src/components/RecurringTransaction
 import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
+import { useGuideStore } from '../../src/store/guideStore';
 
 /**
  * `a-starter-buffer`'s approved body, copied from `lesson_bodies.py`. Kept here
@@ -209,6 +211,48 @@ const LESSON_BODY = [
     '> finance guidance, not a rule finPal applies and not a threshold anyone checks you against.',
     '',
 ].join('\n');
+
+
+/**
+ * *** PAGE GUIDES: THE CARD AND THE HELP BUTTON. *** The store is primed BEFORE the page's first
+ * render: priming in `drive` races the page's own `load()`, which on failure writes
+ * `status: 'failed'` and would remove the card just before it is serialised. A capture is of
+ * THE GUIDE (its landmark or its button), not of a page that merely rendered.
+ */
+const GUIDE_COPY = {
+  accounts: { heading: 'Accounts: where your money actually sits', pose: 'map', lines: [
+    'Every account you have, whether a bank, a card, a loan or cash, in one list, with what it holds or owes right now.',
+    'Connect a bank through SimpleFIN (Settings, then Integrations) to keep balances current, or add an account by hand for anything a bank link cannot see.',
+    'Net worth at the top is simply what you have minus what you owe. It moves when a balance does, and for no other reason.'] },
+  budgets: { heading: 'Budgets: a plan for the month, then the truth', pose: 'pack', lines: [
+    'Give a category a limit for the month and watch how much of it is spent so far.',
+    'Limits are grouped as fixed, flexible and non-monthly, so a big yearly bill does not look like overspending in the month it lands.',
+    'Nothing here changes your money. It only measures it against what you said you would do.'] },
+  goals: { heading: 'Goals: every goal is a mountain', pose: 'summit', lines: [
+    'A goal is something you are saving toward, or a debt you are paying off. Each one becomes a peak on your range.',
+    'The size comes from the amount, and the climb is how far along you are.',
+    'Link an account and finPal tracks the progress for you.'] },
+  dashboard: { heading: 'Dashboard: where you stand today', pose: 'lookout', lines: [
+    'Your goals drawn as a range, so you can see how far up each one you are.',
+    'Below it, your totals and how this month\'s spending is going.',
+    'It only reads your accounts and transactions. Nothing on this page changes your money.'] },
+};
+
+const withGuide = (
+  Page: React.FC, page: keyof typeof GUIDE_COPY, dismissed: boolean,
+): React.FC => () => {
+  useState(() => {
+    useGuideStore.setState({
+      status: 'ready', lang: 'en', pages: { [page]: GUIDE_COPY[page] }, toured: [],
+      dismissed: dismissed ? [page] : [],
+    });
+    return null;
+  });
+  return <Page />;
+};
+
+const findGuideCard = async (heading: RegExp) => { await screen.findByRole('region', { name: heading }); };
+const findGuideButton = async () => { await screen.findByRole('button', { name: /about this page/i }); };
 
 const OUT = join(__dirname, 'captured');
 
@@ -1571,6 +1615,16 @@ const cases: Case[] = [
   // and the sweep dutifully walked three stale copies of the same page. The
   // capture now clears the directory, and the page is here as itself.
   ['accounts', Accounts as React.FC],
+  // Page guides: the first-open card, then the help button once it is dismissed.
+  ['accounts-guide', withGuide(Accounts as React.FC, 'accounts', false), async () => findGuideCard(/Accounts: where/)],
+  ['accounts-guide-button', withGuide(Accounts as React.FC, 'accounts', true), async () => findGuideButton()],
+  ['budgets-guide', withGuide(BudgetsMinimal as React.FC, 'budgets', false), async () => findGuideCard(/Budgets: a plan/)],
+  ['budgets-guide-button', withGuide(BudgetsMinimal as React.FC, 'budgets', true), async () => findGuideButton()],
+  ['goals-guide', withGuide(Goals as React.FC, 'goals', false), async () => findGuideCard(/Goals: every goal/)],
+  ['goals-guide-button', withGuide(Goals as React.FC, 'goals', true), async () => findGuideButton()],
+  ['dashboard-guide', withGuide(Dashboard as React.FC, 'dashboard', false), async () => findGuideCard(/Dashboard: where you stand/)],
+  ['dashboard-guide-button', withGuide(Dashboard as React.FC, 'dashboard', true), async () => findGuideButton()],
+
   /**
    * Captured with a category `<select>` FOCUSED, for the reason budgets and
    * categories are: a focused control is the only state in which its own border
@@ -1703,6 +1757,8 @@ const cases: Case[] = [
 ];
 
 it.each(cases)('captures %s', async (name, Page, drive, entry, floor) => {
+  // Each capture starts from an unprimed guide store (the guide fixtures prime their own).
+  useGuideStore.getState().reset();
   // 50 unless the page says otherwise; see the `floor` note on `Case`.
   const minElements = floor ?? 50;
   const { container } = render(

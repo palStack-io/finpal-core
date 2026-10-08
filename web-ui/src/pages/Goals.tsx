@@ -762,12 +762,12 @@ export const Goals: React.FC = () => {
           range vocabulary comes from. The card bodies below already carry the
           mockup's artwork, subline and summit note from an earlier pass — the
           head is what was left. */}
-      <PageHead
+      <PageHead guide="goals"
         band="goals"
         title="Goals"
         subtitle="Link a goal to an account and finPal works the progress out from the balance, so the number is never one you typed."
         right={
-          <button type="button" style={primaryButtonStyle} onClick={() => openCreate()}>
+          <button type="button" data-guide="goal-new" style={primaryButtonStyle} onClick={() => openCreate()}>
             <Plus size={16} /> New goal
           </button>
         }
@@ -1098,7 +1098,7 @@ export const Goals: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gap: 16 }}>
+      <div data-guide={active.length > 0 ? 'goal-list' : undefined} style={{ display: 'grid', gap: 16 }}>
         {active.map((goal) => (
           <GoalRow
             key={goal.id}

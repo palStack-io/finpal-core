@@ -109,7 +109,7 @@ const PointsPalOverview: React.FC = () => {
           Bricolage Grotesque stays everywhere it is doing real work — the card
           faces, and the figures inside `TotalsRow`'s own type. What changed is
           the page TITLE. */}
-      <PageHead
+      <PageHead guide="pointspal"
         band="pointspal"
         title="pointsPal"
         subtitle="Your rewards at a glance — cap alerts, missed points, and top opportunities."

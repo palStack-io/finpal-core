@@ -640,7 +640,7 @@ const MyCards: React.FC = () => {
           *** Owner decision 2026-09-16; the coins spec already draws this
           module with a head, so this implements that drawing rather than
           pre-empting it. Bricolage stays on the card faces and the figures. */}
-      <PageHead
+      <PageHead guide="pointspal-cards"
         band="pointspal"
         title="My Cards"
         subtitle="Balances, earn rates, cap rules, and verification status."

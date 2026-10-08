@@ -23,6 +23,7 @@ import { server } from '../mocks/server';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { Accounts } from '../../pages/Accounts';
+import { useGuideStore } from '../../store/guideStore';
 
 // Following App_routes.test.tsx: the page reads ToastContext, and a toast is not
 // what any assertion here is about — the in-form error box is.
@@ -203,5 +204,28 @@ describe('A refused assignment tells the user why', () => {
     expect(
       screen.queryByText(/Request failed with status code/),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('accounts page — its guide', () => {
+  const COPY = { heading: 'Accounts: where your money sits', lines: ['One.', 'Two.'], pose: 'map' as const };
+  const prime = (dismissed: string[]) => useGuideStore.setState({
+    status: 'ready', lang: 'en', pages: { accounts: COPY }, dismissed: dismissed as never, toured: [],
+  });
+
+  it('mounts the guide card itself, and tags what its tour points at', async () => {
+    prime([]);
+    mockAccounts(HOUSEHOLD_ACCOUNTS, [ALICE, BOB]);
+    render(<MemoryRouter><Accounts /></MemoryRouter>);
+    expect(await screen.findByRole('region', { name: /accounts: where your money sits/i })).toBeInTheDocument();
+    await screen.findByText('Alice Checking');
+  });
+
+  it('shows Nova\'s button in the header once the card is dismissed', async () => {
+    prime(['accounts']);
+    mockAccounts(HOUSEHOLD_ACCOUNTS, [ALICE, BOB]);
+    render(<MemoryRouter><Accounts /></MemoryRouter>);
+    expect(await screen.findByRole('button', { name: /about this page/i })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /accounts: where your money sits/i })).toBeNull();
   });
 });

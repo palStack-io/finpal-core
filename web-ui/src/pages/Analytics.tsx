@@ -560,7 +560,7 @@ export const Analytics: React.FC = () => {
         {/* "Analytics", not "Analytics Dashboard" — the app has a Dashboard and
             it is a different page. The mockup's sentence says what this one is
             for, and the member filter still qualifies whose money it is. */}
-        <PageHead
+        <PageHead guide="analytics"
           band="analytics"
           title="Analytics"
           subtitle={<>

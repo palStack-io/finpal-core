@@ -27,6 +27,7 @@
  *     npx vitest run --config scripts/contrast-walk/vitest.walk.config.ts
  *   node scripts/modal-walk/run.mjs
  */
+import { useEffect, useState } from 'react';
 import { it, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -46,6 +47,7 @@ import { CategoryManagement } from '../../src/components/CategoryManagement';
 import { TransactionRules } from '../../src/components/TransactionRules';
 import { ToastProvider } from '../../src/contexts/ToastContext';
 import { ThemeProvider } from '../../src/contexts/ThemeContext';
+import { useGuideStore } from '../../src/store/guideStore';
 
 /**
  * `a-starter-buffer`'s approved body, copied from `lesson_bodies.py`. Kept here
@@ -79,6 +81,50 @@ const LESSON_BODY = [
     '> finance guidance, not a rule finPal applies and not a threshold anyone checks you against.',
     '',
 ].join('\n');
+
+
+/**
+ * A page guide with its tour offered, primed BEFORE the page's first render (priming after it
+ * races the page's own `load()`).
+ */
+const TOUR_COPY = {
+  goals: { heading: 'Goals: every goal is a mountain', pose: 'summit',
+    lines: ['A goal is something you are saving toward, or a debt you are paying off.', 'The size comes from the amount, and the climb is how far along you are.'],
+    tour: [{ target: 'goal-new', title: 'Start a goal', body: 'Name it, give it an amount, and choose whether you are saving up or paying down.' },
+           { target: 'goal-list', title: 'Your goals', body: 'Each goal shows how far along it is and what is left to go.' }] },
+};
+
+/**
+ * jsdom has no `matchMedia`, so without this the tour renders its DESKTOP popover pinned to the
+ * top-left at every width and the phone layout is never measured. Only the phone query reports a
+ * match; the stub is removed when the page unmounts.
+ */
+const stubPhone = () => {
+  (window as any).matchMedia = (query: string) => ({
+    matches: query.includes('max-width: 767px'), media: query, onchange: null,
+    addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {},
+    dispatchEvent: () => false,
+  });
+};
+
+const withTour = (Page: React.FC, page: 'goals', phone = false): React.FC => () => {
+  useEffect(() => () => { delete (window as any).matchMedia; }, []);
+  useState(() => {
+    if (phone) stubPhone();
+    useGuideStore.getState().reset();
+    useGuideStore.setState({ status: 'ready', lang: 'en', pages: { [page]: TOUR_COPY[page] }, dismissed: [], toured: [] });
+    return null;
+  });
+  return <Page />;
+};
+
+/** Start the tour and return THE TOUR'S dialog (not merely some dialog). */
+const openTour = async (stepTitle: string) => {
+  await userEvent.click(await screen.findByRole('button', { name: /show me around/i }, { timeout: 6000 }));
+  const dialog = await screen.findByRole('dialog', { name: /page tour/i });
+  await within(dialog).findByText(stepTitle);
+  return dialog as HTMLElement;
+};
 
 const OUT = join(__dirname, 'captured');
 
@@ -531,6 +577,8 @@ type Case = {
   Page: React.FC;
   /** Drives the app to the state, and returns an element INSIDE the modal. */
   open: () => Promise<HTMLElement>;
+  /** Elements the modal must have to count as real. 15 unless it is deliberately small (the tour step is a sentence and two buttons). */
+  floor?: number;
 };
 
 const openImportModal = async () => {
@@ -711,6 +759,18 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'guide-tour-goals',
+    Page: withTour(Goals as React.FC, 'goals'),
+    open: async () => openTour('Start a goal'),
+    floor: 6,
+  },
+  {
+    name: 'guide-tour-goals-phone',
+    Page: withTour(Goals as React.FC, 'goals', true),
+    open: async () => openTour('Start a goal'),
+    floor: 6,
+  },
+  {
     name: 'slidepanel-add-account',
     Page: Accounts as React.FC,
     open: async () => {
@@ -865,7 +925,7 @@ it.each(cases.map((c) => [c.name, c] as const))('captures %s', async (name, c) =
   /* Positive, like contrast-walk's readiness gate: waiting for a spinner to be
      absent is satisfied by a spinner that never existed. */
   await waitFor(() => {
-    expect(root.querySelectorAll('*').length).toBeGreaterThanOrEqual(15);
+    expect(root.querySelectorAll('*').length).toBeGreaterThanOrEqual(c.floor ?? 15);
   }, { timeout: 6000 });
 
   const inContainer = container.contains(root);
@@ -879,7 +939,7 @@ it.each(cases.map((c) => [c.name, c] as const))('captures %s', async (name, c) =
   }
 
   const painted = root.querySelectorAll('*').length;
-  if (painted < 15) throw new Error(`${name}: only ${painted} elements in the modal — captured a stub`);
+  if (painted < (c.floor ?? 15)) throw new Error(`${name}: only ${painted} elements in the modal — captured a stub`);
 
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, `${name}.html`), assemble(container.innerHTML, portals), 'utf8');

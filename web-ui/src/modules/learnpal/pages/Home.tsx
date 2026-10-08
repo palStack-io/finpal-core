@@ -314,7 +314,7 @@ export const Home: React.FC = () => {
         {/* The module being absent is not an error, and it still gets a
             real head: a bare sentence on an empty page reads as a
             failure rather than as an answer. */}
-        <PageHead
+        <PageHead guide="learnpal"
           band="learnpal"
           title="learnPal"
           subtitle="learnPal is not enabled on this instance."
@@ -341,7 +341,7 @@ export const Home: React.FC = () => {
           page; this module is about lessons that unlock from your own figures,
           so the ridge steps up in even increments and reads as progress instead
           of scenery. */}
-      <PageHead
+      <PageHead guide="learnpal"
         band="learnpal"
         title="learnPal"
         subtitle="Lessons unlocked by your own figures rather than by a schedule, and the mountains your goals turned out to be."

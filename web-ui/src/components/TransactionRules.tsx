@@ -156,7 +156,7 @@ export const TransactionRules: React.FC = () => {
       {/* No wrapper at all any more: `PageHead` owns the whole head, and the
           flex row this replaced is the shape that put the actions over the
           sentence at 390px on Accounts (D-223). */}
-      <PageHead
+      <PageHead guide="rules"
         band="rules"
         title="Rules"
         subtitle="Teach finPal once and it sorts the same thing for ever."

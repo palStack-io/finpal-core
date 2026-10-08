@@ -64,7 +64,7 @@ const BestCard: React.FC = () => {
 
           Bricolage Grotesque stays everywhere it is doing real work — the card
           faces and the figures. What changed is the page TITLE only. */}
-      <PageHead
+      <PageHead guide="pointspal-recommend"
         band="pointspal"
         title="Best Card Recommender"
         subtitle="Cap-aware recommendations — we factor in where you are against each card's limits right now."

@@ -79,7 +79,7 @@ export const Kit: React.FC = () => {
     return (
       <div>
       {/* `PageHead`, like every other page — see the note on the main branch. */}
-        <PageHead band="kit" title="Your kit" subtitle={KIT_SUBTITLE} />
+        <PageHead guide="kit" band="kit" title="Your kit" subtitle={KIT_SUBTITLE} />
         <div role="alert" style={{ color: 'var(--danger-text)', marginTop: 10 }}>
           {error}
         </div>
@@ -90,7 +90,7 @@ export const Kit: React.FC = () => {
     return (
       <div>
       {/* `PageHead`, like every other page — see the note on the main branch. */}
-        <PageHead band="kit" title="Your kit" subtitle={KIT_SUBTITLE} />
+        <PageHead guide="kit" band="kit" title="Your kit" subtitle={KIT_SUBTITLE} />
         <div aria-label="Loading your kit" style={{ color: 'var(--text-secondary)', marginTop: 10 }}>
           Loading…
         </div>
@@ -157,7 +157,7 @@ export const Kit: React.FC = () => {
 
           The band carries a cairn; see `headBands.ts` for why that shape and
           not a trophy. */}
-      <PageHead
+      <PageHead guide="kit"
         band="kit"
         title="Your kit"
         subtitle={KIT_SUBTITLE}

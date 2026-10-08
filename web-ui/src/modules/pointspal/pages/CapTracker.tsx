@@ -93,7 +93,7 @@ const CapTracker: React.FC = () => {
 
           Bricolage Grotesque stays everywhere it is doing real work — the card
           faces and the figures. What changed is the page TITLE only. */}
-      <PageHead
+      <PageHead guide="pointspal-caps"
         band="pointspal"
         title="Cap Tracker"
         subtitle="Real-time spend vs. earn caps — know exactly when to switch cards."

@@ -324,7 +324,7 @@ export default function Review() {
   return (
     <div style={pageContainerStyle}>
       <div className="page-container">
-        <PageHead
+        <PageHead guide="review"
           band="review"
           title="Review"
           subtitle="Everything finPal had to guess. Confirm it or correct it — either way it stops being a guess."

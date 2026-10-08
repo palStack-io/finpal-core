@@ -1,5 +1,8 @@
 import React from 'react';
 import { HEAD_BANDS } from '../utils/headBands';
+import { PageGuide } from './guide/PageGuide';
+import { GuideButton } from './guide/GuideButton';
+import type { GuidePage } from '../services/onboardingService';
 
 interface PageHeadProps {
   /** The page's single h1. */
@@ -20,6 +23,8 @@ interface PageHeadProps {
    * rather than dead geometry.
    */
   band?: keyof typeof HEAD_BANDS;
+  /** Mounts this page's guide: the help button in the action slot, the card under the head. */
+  guide?: GuidePage;
   children?: React.ReactNode;
 }
 
@@ -48,7 +53,7 @@ interface PageHeadProps {
  * keeps right — `roleClassesAreReferenced.test.ts` exists for exactly that. One
  * component referencing it is better than eleven pages referencing it.
  */
-export const PageHead: React.FC<PageHeadProps> = ({ title, subtitle, right, band, children }) => {
+export const PageHead: React.FC<PageHeadProps> = ({ title, subtitle, right, band, guide, children }) => {
   const ridge = band ? HEAD_BANDS[band] : null;
 
   return (
@@ -63,10 +68,16 @@ export const PageHead: React.FC<PageHeadProps> = ({ title, subtitle, right, band
           <h1 className="page-title" style={{ fontSize: '27px', marginBottom: '3px' }}>{title}</h1>
           {subtitle && <p className="fp-page-head-sub">{subtitle}</p>}
         </div>
-        {right && <div className="fp-page-head-actions">{right}</div>}
+        {(right || guide) && (
+          <div className="fp-page-head-actions">
+            {guide && <GuideButton page={guide} />}
+            {right}
+          </div>
+        )}
       </div>
 
       {children}
+      {guide && <PageGuide page={guide} />}
 
       {ridge && (
         <svg
