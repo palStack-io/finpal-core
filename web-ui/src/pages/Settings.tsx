@@ -690,6 +690,9 @@ export const Settings: React.FC = () => {
                             height: '44px',
                             fontSize: '24px',
                             lineHeight: 1,
+                            // A <button> inherits the browser's black, not the theme's text colour: 1.43:1 on the
+                            // dark card, which the contrast walk found the first time it captured Settings.
+                            color: 'var(--text-primary)',
                             background: profileData.profileEmoji === emoji ? 'rgba(21, 128, 61, 0.2)' : 'var(--surface-hover)',
                             border: profileData.profileEmoji === emoji ? '2px solid #15803d' : '1px solid var(--border-light)',
                             borderRadius: '10px',
