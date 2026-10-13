@@ -191,7 +191,7 @@ export const Investments: React.FC = () => {
       setHoldings(holdingsResponse.holdings || []);
     } catch (error: any) {
       console.error('Failed to load investment data:', error);
-      showToast('Failed to load investment data', 'error');
+      showToast("We couldn't load investment data. Try again in a moment.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -210,7 +210,7 @@ export const Investments: React.FC = () => {
         }
       } catch (err) {
         console.error('Failed to create default portfolio:', err);
-        showToast('Failed to create portfolio. Please try again.', 'error');
+        showToast("We couldn't create that portfolio. Try again in a moment.", 'error');
         return false;
       }
     }
@@ -229,10 +229,10 @@ export const Investments: React.FC = () => {
       setIsRefreshing(true);
       const response = await investmentService.getHoldings();
       setHoldings(response.holdings || []);
-      showToast('Prices updated successfully', 'success');
+      showToast("Prices updated.", 'success');
     } catch (error: any) {
       console.error('Failed to refresh prices:', error);
-      showToast('Failed to refresh prices', 'error');
+      showToast("We couldn't refresh prices. Try again in a moment.", 'error');
     } finally {
       setIsRefreshing(false);
     }
@@ -583,7 +583,8 @@ export const Investments: React.FC = () => {
                 <LineChart size={32} style={{ color: 'var(--brand-main-green)' }} />
               </div>
               <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
-                No Holdings Yet
+
+                No holdings yet. Add one to start tracking your investments.
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
                 Start tracking your investments by adding your first holding

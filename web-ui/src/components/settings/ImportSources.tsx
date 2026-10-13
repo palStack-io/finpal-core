@@ -123,7 +123,7 @@ export const ImportSources: React.FC = () => {
       flash('Folder added. It will be scanned every 5 minutes.');
       await loadSources();
     } catch (err: any) {
-      setError(readError(err, 'Failed to add the folder'));
+      setError(readError(err, "We couldn't add the folder. Try again in a moment."));
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +157,7 @@ export const ImportSources: React.FC = () => {
       flash('Folder removed');
       await loadSources();
     } catch (err: any) {
-      setError(readError(err, 'Failed to remove the folder'));
+      setError(readError(err, "We couldn't remove the folder. Try again in a moment."));
     } finally {
       setBusyId(null);
     }
@@ -174,7 +174,7 @@ export const ImportSources: React.FC = () => {
       flash(`Removed ${reverted} transaction(s) from ${batch.filename}`);
       await loadBatches();
     } catch (err: any) {
-      setError(readError(err, 'Failed to undo the import'));
+      setError(readError(err, "We couldn't undo the import. Try again in a moment."));
     } finally {
       setBusyId(null);
     }
@@ -213,7 +213,8 @@ export const ImportSources: React.FC = () => {
 
         {sources.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-            No folders are being watched yet.
+
+            No folders yet. Add one to import files as they arrive.
           </p>
         ) : (
           <div style={{ marginBottom: '16px' }}>

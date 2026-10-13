@@ -74,7 +74,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
         notes: editData.notes
       });
 
-      showToast('Stock holding updated successfully', 'success');
+      showToast("Holding updated.", 'success');
       setIsEditing(false);
 
       // Refresh the parent component
@@ -88,7 +88,7 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ holding, onC
       holding.notes = editData.notes;
     } catch (error: any) {
       console.error('Failed to update holding:', error);
-      showToast('Failed to update holding', 'error');
+      showToast("We couldn't update that holding. Try again in a moment.", 'error');
     } finally {
       setIsSaving(false);
     }

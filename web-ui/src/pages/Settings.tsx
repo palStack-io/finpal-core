@@ -56,7 +56,7 @@ const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
       // *** NO OPTIMISTIC UPDATE. *** The old localStorage write could not fail;
       // a request can. Flipping the switch first and rolling it back on error
       // shows the user a state the server never accepted.
-      showToast(apiErrorMessage(err, 'Could not save that preference'), 'error');
+      showToast(apiErrorMessage(err, "We couldn't save that preference. Try again in a moment."), 'error');
     } finally {
       setSaving(false);
     }
@@ -408,7 +408,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setSaveError(apiErrorMessage(error, 'Failed to save your account changes'));
+      setSaveError(apiErrorMessage(error, "We couldn't save your account changes. Try again in a moment."));
     } finally {
       setIsSaving(false);
     }
@@ -452,7 +452,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setSaveError(apiErrorMessage(error, 'Failed to change password'));
+      setSaveError(apiErrorMessage(error, "We couldn't change your password. Check your current one and try again."));
     } finally {
       setIsSaving(false);
     }
@@ -478,7 +478,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setSaveError(apiErrorMessage(error, 'Failed to save notification settings'));
+      setSaveError(apiErrorMessage(error, "We couldn't save notification settings. Try again in a moment."));
     } finally {
       setIsSaving(false);
     }
@@ -497,7 +497,7 @@ export const Settings: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error: any) {
-      setSaveError(apiErrorMessage(error, 'Failed to export data'));
+      setSaveError(apiErrorMessage(error, "We couldn't export data. Try again in a moment."));
     } finally {
       setIsExporting(false);
     }
@@ -518,7 +518,7 @@ export const Settings: React.FC = () => {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     } catch (error: any) {
-      setSaveError(apiErrorMessage(error, 'Failed to delete account'));
+      setSaveError(apiErrorMessage(error, "We couldn't delete that account. Try again in a moment."));
       setIsDeleting(false);
     }
   };
@@ -738,7 +738,7 @@ export const Settings: React.FC = () => {
 
                   {saveSuccess && (
                     <div style={successBannerStyle}>
-                      ✓ Settings saved successfully!
+                      Settings saved.
                     </div>
                   )}
 
@@ -791,7 +791,7 @@ export const Settings: React.FC = () => {
                       marginBottom: '20px'
                     }}>
                       <Check size={20} style={{ color: 'var(--brand-green-glow)' }} />
-                      <p style={{ color: 'var(--brand-green-glow)', fontSize: '14px', fontWeight: '600', margin: 0 }}>Password changed successfully!</p>
+                      <p style={{ color: 'var(--brand-green-glow)', fontSize: '14px', fontWeight: '600', margin: 0 }}>Password changed.</p>
                     </div>
                   )}
 
@@ -1122,7 +1122,7 @@ export const Settings: React.FC = () => {
 
                   {saveSuccess && (
                     <div style={successBannerStyle}>
-                      ✓ Notification preferences saved successfully!
+                      Notification preferences saved.
                     </div>
                   )}
                 </div>

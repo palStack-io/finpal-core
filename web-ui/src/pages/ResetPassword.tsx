@@ -135,9 +135,9 @@ export const ResetPassword: React.FC = () => {
 
       if (response.success) {
         setResetSuccess(true);
-        showToast('Password reset successfully!', 'success');
+        showToast("Password reset.", 'success');
       } else {
-        showToast(response.message || 'Failed to reset password. The link may have expired.', 'error');
+        showToast(response.message || "We couldn't reset your password. Request a new reset link and try again.", 'error');
       }
     } catch (error: any) {
       console.error('Reset password error:', error);

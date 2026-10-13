@@ -415,7 +415,7 @@ export const Analytics: React.FC = () => {
       // backend outage rendered as a calm dashboard of zeroes with the health
       // ratios reporting "good" — the most misleading possible failure mode.
       console.error('Failed to load analytics:', err);
-      setError('Could not load analytics. Check your connection and try again.');
+      setError("We couldn't load analytics. Try again in a moment.");
       setLoading(false);
     }
   };
@@ -1409,7 +1409,8 @@ export const Analytics: React.FC = () => {
               {netWorthTrend.length === 0 ? (
                 <div style={emptyStateStyle}>
                   <p style={{ margin: 0, fontWeight: 500, color: 'var(--text-primary)' }}>
-                    No net worth history yet
+
+                    No history yet. Your net worth snapshots will appear here over time.
                   </p>
                   <p style={{ margin: '6px 0 0', fontSize: '14px' }}>
                     Add accounts with balances to start tracking assets and liabilities over time.

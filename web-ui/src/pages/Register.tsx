@@ -122,7 +122,7 @@ export const Register: React.FC = () => {
 
       login(response.user, response.access_token, response.refresh_token);
 
-      showToast('Account created successfully!', 'success');
+      showToast("Account added.", 'success');
       navigate('/onboarding');
     } catch (error: any) {
       console.error('Registration error:', error);

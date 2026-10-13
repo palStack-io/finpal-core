@@ -70,7 +70,7 @@ export function useLessonReader(): LessonReaderApi {
     setError(null);
     learnpalService.getLesson(row.slug)
       .then(setDetail)
-      .catch((err) => setError(apiErrorMessage(err, 'Could not open that lesson.')))
+      .catch((err) => setError(apiErrorMessage(err, "We couldn't open that lesson. Try again in a moment.")))
       .finally(() => setOpening(null));
   };
 

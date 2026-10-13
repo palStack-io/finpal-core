@@ -108,7 +108,7 @@ export const GoalAccountsControl: React.FC<GoalAccountsControlProps> = ({
       // direction, or the goal already holding the card. An Axios rejection's
       // own `message` is "Request failed with status code 400", so reaching for
       // it would discard the one sentence a user can act on.
-      setError(apiErrorMessage(err, 'Could not change the accounts on this goal.'));
+      setError(apiErrorMessage(err, "We couldn't change the accounts on this goal. Try again in a moment."));
     } finally {
       setBusy(false);
     }

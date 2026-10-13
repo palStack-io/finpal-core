@@ -73,7 +73,7 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
       }
     } catch (err: any) {
       console.error('Failed to search stock:', err);
-      const errorMsg = apiErrorMessage(err, 'Failed to find stock. Please try again.');
+      const errorMsg = apiErrorMessage(err, "We couldn't find that stock. Try again in a moment.");
 
       // Check if it's a rate limit error
       if (errorMsg.includes('Stock not found') || err.response?.status === 404) {
@@ -115,12 +115,12 @@ export const AddHoldingModal: React.FC<AddHoldingModalProps> = ({
         notes: notes
       });
 
-      showToast('Holding added successfully', 'success');
+      showToast("Holding added.", 'success');
       onSuccess();
       handleClose();
     } catch (err: any) {
       console.error('Failed to add holding:', err);
-      setError(apiErrorMessage(err, 'Failed to add holding. Please try again.'));
+      setError(apiErrorMessage(err, "We couldn't add that holding. Try again, or check the ticker."));
     } finally {
       setIsSaving(false);
     }

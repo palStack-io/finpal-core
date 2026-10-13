@@ -97,7 +97,8 @@ export const OidcCallback: React.FC = () => {
               fontWeight: 700,
               color: '#ffffff',
             }}>
-              We could not finish signing you in
+
+              We couldn't finish signing you in. Return to sign-in and try again.
             </h1>
             <p style={{ margin: '0 0 1.25rem', fontSize: '0.8125rem', color: '#9CB3A3' }}>
               {WHY[failure]} Nothing has changed on your account.

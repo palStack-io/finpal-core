@@ -107,7 +107,7 @@ const HEADINGS: Record<string, RegExp> = {
      persona rather than a fixed string — a page about somebody's climb is
      titled with who they are. Matched loosely so a different seed does not
      break the sweep. */
-  '/profile': /Demo|Your climb/,
+  '/basecamp': /Demo|Your climb/,
 };
 
 /** Routes that exist but are deliberately not walked here, each with a reason. */
@@ -123,6 +123,7 @@ const NOT_WALKED: Record<string, string> = {
   '/forgot-password': 'signed-out',
   '/reset-password': 'signed-out, and needs a token from an email',
   '/auth/callback': 'an OIDC redirect target, not a page a user opens',
+  '/profile': 'legacy bookmark redirects to /basecamp, which is walked',
   '/onboarding': 'redirects away once the demo user has completed it',
   '/groups/:id': 'a detail page; needs a live id, and groups.spec has no fixture yet',
   // *** THE CATCH-ALL IS A PAGE NOW, AND IT IS WALKED — JUST NOT BY ITS PATH.

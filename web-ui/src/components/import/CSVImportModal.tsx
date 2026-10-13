@@ -146,7 +146,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
       // Move to mapping step
       setStep('mapping');
     } catch (err) {
-      setError('Failed to parse CSV file');
+      setError("We couldn't parse CSV file. Try again in a moment.");
     }
   };
 
@@ -205,7 +205,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
         setStep('mapping');
       }
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to import transactions'));
+      setError(apiErrorMessage(err, "We couldn't import your transactions. Try again in a moment."));
       setStep('mapping');
     } finally {
       setIsLoading(false);

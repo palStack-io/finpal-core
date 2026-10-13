@@ -105,7 +105,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
         onSuccess();
       }, 1000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to save category'));
+      setError(apiErrorMessage(err, "We couldn't save that category. Try again in a moment."));
     }
   };
 
@@ -139,7 +139,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ category, parentCategories,
           marginBottom: '16px',
           fontSize: '14px'
         }}>
-          ✓ Category {category?.id ? 'updated' : 'created'} successfully!
+          Category {category?.id ? 'updated' : 'added'}.
         </div>
       )}
 
@@ -441,13 +441,13 @@ export const CategoryManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this category? This action cannot be undone.')) return;
+    if (!confirm("Delete this category? This action cannot be undone.")) return;
 
     try {
       await categoriesApi.delete(id);
       await loadCategories();
     } catch (error: any) {
-      alert(apiErrorMessage(error, 'Failed to delete category. It may have associated transactions.'));
+      alert(apiErrorMessage(error, "We couldn't delete that category. Check whether it has transactions, then try again."));
     }
   };
 
@@ -847,7 +847,7 @@ export const CategoryManagement: React.FC = () => {
             textAlign: 'center'
           }}>
             <Folder size={64} color="#64748b" style={{ margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '20px' }}>No categories found</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '20px' }}>No categories here yet. Add one to start sorting your spending.</p>
             <button
               onClick={handleAddCategory}
               style={{

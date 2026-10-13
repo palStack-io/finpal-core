@@ -248,7 +248,7 @@ export default function Review() {
       setFromPayload(next);
       setLoadError(null);
     } catch {
-      setLoadError('Could not load your review list. Try again in a moment.');
+      setLoadError("We couldn't load your review list. Try again in a moment.");
     } finally {
       setLoading(false);
     }

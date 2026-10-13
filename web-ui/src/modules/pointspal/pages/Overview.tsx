@@ -30,7 +30,7 @@ const PointsPalOverview: React.FC = () => {
       const overview = await pointspalService.getOverview();
       setData(overview);
     } catch {
-      setError('Failed to load overview. Please try again.');
+      setError("We couldn't load overview. Try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,8 @@ const PointsPalOverview: React.FC = () => {
               while every neighbouring panel had an empty state. */}
           {data.cards.length === 0 && (
             <div style={{ fontSize: 13, color: 'var(--muted)', padding: '4px 0 8px' }}>
-              No cards yet — add one to start tracking points.
+
+              No cards yet. Add one to start tracking its points.
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>

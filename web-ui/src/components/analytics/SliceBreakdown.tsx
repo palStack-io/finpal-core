@@ -80,7 +80,7 @@ export const SliceBreakdown: React.FC<{
 
       {failed && (
         <p className="fp-hint" style={{ margin: 0 }}>
-          Could not load this breakdown.
+          We couldn't load this breakdown. Try again in a moment.
         </p>
       )}
 

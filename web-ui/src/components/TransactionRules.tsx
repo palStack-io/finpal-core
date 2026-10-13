@@ -54,7 +54,7 @@ export const TransactionRules: React.FC = () => {
       setStats(statsData?.stats || null);
       setError(null);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to load rules'));
+      setError(apiErrorMessage(err, "We couldn't load your rules. Try again in a moment."));
     } finally {
       setLoading(false);
     }
@@ -65,18 +65,18 @@ export const TransactionRules: React.FC = () => {
       await transactionRulesApi.update(rule.id, { active: !rule.active });
       loadData();
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to toggle rule'));
+      setError(apiErrorMessage(err, "We couldn't change that rule. Try again in a moment."));
     }
   };
 
   const handleDelete = async (ruleId: number) => {
-    if (!confirm('Are you sure you want to delete this rule?')) return;
+    if (!confirm("Delete this rule?")) return;
 
     try {
       await transactionRulesApi.delete(ruleId);
       loadData();
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to delete rule'));
+      setError(apiErrorMessage(err, "We couldn't delete that rule. Try again in a moment."));
     }
   };
 
@@ -110,10 +110,10 @@ export const TransactionRules: React.FC = () => {
         setTimeout(() => setSuccessMessage(null), 5000);
         loadData(); // Reload to get updated match counts
       } else {
-        setError(result.error || 'Failed to apply rules');
+        setError(result.error || "We couldn't apply your rules. Try again in a moment.");
       }
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to apply rules'));
+      setError(apiErrorMessage(err, "We couldn't apply your rules. Try again in a moment."));
     } finally {
       setApplyingRules(false);
     }
@@ -286,7 +286,7 @@ export const TransactionRules: React.FC = () => {
       {rules.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
           <Zap size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 16px', opacity: 0.5 }} />
-          <p style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-primary)' }}>No rules yet</p>
+          <p style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-primary)' }}>No rules yet. Start with one transaction you often sort the same way.</p>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Create your first rule to automatically organize transactions</p>
         </div>
       ) : (
@@ -622,7 +622,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       // 400's `error` was never reachable — every other catch in this file
       // already has this order. The two `throw new Error` checks above carry no
       // `response`, so they still fall through to `err.message`.
-      setError(apiErrorMessage(err, 'Failed to save rule'));
+      setError(apiErrorMessage(err, "We couldn't save that rule. Try again in a moment."));
     } finally {
       setIsSubmitting(false);
     }
@@ -635,7 +635,7 @@ const RuleForm: React.FC<RuleFormProps> = ({ rule, categories, accounts, onSucce
       {success && (
         <div style={{ padding: '16px', background: 'rgba(134, 239, 172, 0.1)', border: '1px solid rgba(134, 239, 172, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Check size={20} style={{ color: 'var(--g-ink)' }} />
-          <p style={{ color: 'var(--g-ink)', margin: 0 }}>Rule saved successfully!</p>
+          <p style={{ color: 'var(--g-ink)', margin: 0 }}>Rule saved.</p>
         </div>
       )}
 

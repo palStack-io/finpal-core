@@ -204,7 +204,7 @@ describe('Budgets page groups', () => {
     // "-$1,720 left to budget" to somebody who has not been paid yet.
     mount(overview({ income: null, left_to_budget: null }));
     expect(await screen.findByText('Left to budget')).toBeTruthy();
-    expect(screen.getByText('No income recorded this month yet')).toBeTruthy();
+    expect(screen.getByText('No income recorded this month. Add it when you have it.')).toBeTruthy();
     // An em dash, not a figure. Zero would be a claim they earned nothing.
     expect(screen.getByText('\u2014')).toBeTruthy();
   });

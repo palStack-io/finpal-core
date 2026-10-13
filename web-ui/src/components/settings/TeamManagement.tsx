@@ -176,7 +176,7 @@ export const TeamManagement: React.FC = () => {
       const data = await teamService.getMembers();
       setMembers(data);
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to load team members'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't load team members. Try again in a moment."), 'error');
     } finally {
       setIsLoadingMembers(false);
     }
@@ -188,7 +188,7 @@ export const TeamManagement: React.FC = () => {
       const data = await teamService.getInvitations();
       setInvitations(data);
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to load invitations'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't load your invitations. Try again in a moment."), 'error');
     } finally {
       setIsLoadingInvitations(false);
     }
@@ -210,36 +210,36 @@ export const TeamManagement: React.FC = () => {
     setIsSendingInvite(true);
     try {
       await teamService.inviteUser(inviteEmail, inviteRole);
-      showToast('Invitation sent successfully', 'success');
+      showToast("Invitation sent.", 'success');
       setInviteEmail('');
       setInviteRole('member');
       loadInvitations();
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to send invitation'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't send that invitation. Try again in a moment."), 'error');
     } finally {
       setIsSendingInvite(false);
     }
   };
 
   const handleCancelInvitation = async (id: number) => {
-    if (!confirm('Are you sure you want to cancel this invitation?')) return;
+    if (!confirm("Cancel this invitation?")) return;
 
     try {
       await teamService.cancelInvitation(id);
       showToast('Invitation cancelled', 'success');
       loadInvitations();
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to cancel invitation'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't cancel that invitation. Try again in a moment."), 'error');
     }
   };
 
   const handleResendInvitation = async (id: number) => {
     try {
       await teamService.resendInvitation(id);
-      showToast('Invitation resent successfully', 'success');
+      showToast("Invitation sent again.", 'success');
       loadInvitations();
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to resend invitation'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't resend that invitation. Try again in a moment."), 'error');
     }
   };
 
@@ -272,7 +272,7 @@ export const TeamManagement: React.FC = () => {
       // Both lists move: the new owner's role changes and so does the caller's.
       await Promise.all([loadMembers(), loadInvitations()]);
     } catch (error) {
-      showToast(apiErrorMessage(error, 'Failed to transfer ownership'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't transfer ownership. Try again in a moment."), 'error');
     } finally {
       setIsTransferring(false);
     }
@@ -283,20 +283,20 @@ export const TeamManagement: React.FC = () => {
 
     try {
       await teamService.removeMember(id);
-      showToast('Member removed successfully', 'success');
+      showToast("Member removed.", 'success');
       loadMembers();
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to remove member'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't remove that member. Try again in a moment."), 'error');
     }
   };
 
   const handleUpdateRole = async (id: string, newRole: TeamRole) => {
     try {
       await teamService.updateMemberRole(id, newRole);
-      showToast('Role updated successfully', 'success');
+      showToast("Role updated.", 'success');
       loadMembers();
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to update role'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't update that role. Try again in a moment."), 'error');
     }
   };
 

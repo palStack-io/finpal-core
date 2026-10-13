@@ -145,7 +145,7 @@ export const Range: React.FC = () => {
       setRange(await learnpalService.getRange());
       setError(null);
     } catch (err) {
-      setError(apiErrorMessage(err, 'Could not load your range.'));
+      setError(apiErrorMessage(err, "We couldn't load your range. Try again in a moment."));
     } finally {
       setLoading(false);
     }

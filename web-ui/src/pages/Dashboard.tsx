@@ -366,7 +366,7 @@ export const Dashboard = () => {
       );
 
     } catch (error: any) {
-      showToast('Failed to load dashboard data', 'error');
+      showToast("We couldn't load dashboard data. Try again in a moment.", 'error');
     } finally {
       setLoading(false);
     }
@@ -464,7 +464,7 @@ export const Dashboard = () => {
         ? 'var(--text-muted)'
         : savingsRate < 0 ? 'var(--status-over)' : undefined,
       note: savingsRate === null
-        ? 'No income recorded this month yet'
+        ? "No income recorded this month. Add it when you have it."
         : savingsRate < 0
           ? 'You spent more than you earned this month'
           : 'Of income, after expenses',
@@ -859,7 +859,7 @@ export const Dashboard = () => {
                 </div>
               </div>
             )) : (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0' }}>No accounts found</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0' }}>No accounts to show here. Add one on the Accounts page to start.</div>
             )}
           </SectionCard>
         </div>
@@ -1066,7 +1066,7 @@ export const Dashboard = () => {
               </button>
             </ScrollPane>
           ) : (
-            <div style={emptyStateStyle}>No expense data found</div>
+            <div style={emptyStateStyle}>No spending to show here yet. Add a transaction, sync your bank or import a file to start.</div>
           )}
         </SectionCard>
         </div>
