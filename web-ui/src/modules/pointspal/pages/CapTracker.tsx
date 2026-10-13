@@ -47,7 +47,7 @@ const CapTracker: React.FC = () => {
       setCaps(sorted);
       setSummary(summaryData);
     } catch {
-      setError('Failed to load cap data. Please try again.');
+      setError("We couldn't load cap data. Try again in a moment.");
     } finally {
       setLoading(false);
     }

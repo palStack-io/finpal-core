@@ -65,7 +65,7 @@ describe('AddAccountForm', () => {
 
     // The Check icon appears on success, which means the request resolved and the 1000ms timer
     // is now pending. Waiting on that rather than a bare sleep.
-    await waitFor(() => expect(screen.getByText(/created/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Account added.')).toBeInTheDocument());
     expect(onSuccess, 'onSuccess fired immediately — the deferral is what this test is about')
       .not.toHaveBeenCalled();
 

@@ -198,7 +198,7 @@ export const Accounts = () => {
 
       setAccounts(formattedAccounts);
     } catch (error: any) {
-      showToast('Failed to load accounts', 'error');
+      showToast("We couldn't load your accounts. Try again in a moment.", 'error');
     } finally {
       setLoading(false);
     }
@@ -224,14 +224,14 @@ export const Accounts = () => {
 
   const handleDeleteAccount = async (accountId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this account?')) return;
+    if (!window.confirm("Delete this account?")) return;
 
     try {
       await accountService.deleteAccount(accountId);
-      showToast('Account deleted successfully', 'success');
+      showToast("Account deleted.", 'success');
       loadAccounts();
     } catch (error: any) {
-      showToast('Failed to delete account', 'error');
+      showToast("We couldn't delete that account. Try again in a moment.", 'error');
     }
   };
 
@@ -256,7 +256,7 @@ export const Accounts = () => {
       );
     } catch (error: any) {
       showToast(
-        apiErrorMessage(error, 'Could not sync accounts'),
+        apiErrorMessage(error, "We couldn't reach your bank this time. Try syncing again in a moment."),
         'error',
       );
     } finally {
@@ -661,7 +661,7 @@ export const Accounts = () => {
           ) : (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
               <Wallet size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-              <p style={{ fontSize: '18px', marginBottom: '8px' }}>No accounts yet</p>
+              <p style={{ fontSize: '18px', marginBottom: '8px' }}>No accounts yet. Add one, by bank or by hand, and finPal starts from there.</p>
               <p style={{ fontSize: '14px' }}>Add your first account to start tracking your finances</p>
             </div>
           )}
@@ -713,7 +713,7 @@ export const Accounts = () => {
           onClose={() => setShowCSVImport(false)}
           onSuccess={() => {
             setShowCSVImport(false);
-            showToast('CSV imported successfully!', 'success');
+            showToast("CSV imported.", 'success');
             loadAccounts(); // Refresh accounts after import
           }}
           accounts={accounts}

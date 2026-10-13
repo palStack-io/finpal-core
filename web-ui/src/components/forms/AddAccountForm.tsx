@@ -185,7 +185,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       }
 
       setSuccess(true);
-      showToast('Account created successfully', 'success');
+      showToast("Account added.", 'success');
       // Held in a ref and cleared on unmount. Without that, a user who navigates away
       // inside this one-second window gets `onSuccess` -- and therefore a setState --
       // on a tree that no longer exists. It also turned CI red on a run where every
@@ -201,7 +201,7 @@ export const AddAccountForm: React.FC<AddAccountFormProps> = ({ onSuccess, onCan
       // user hunting across three numeric inputs for which one it meant. The body
       // is read by `utils/apiError.ts` and only there -- see `creditFieldErrors`.
       setCreditErrors(creditFieldErrors(err));
-      const msg = apiErrorMessage(e, 'Failed to create account');
+      const msg = apiErrorMessage(e, "We couldn't create that account. Check the name and balance, then try again.");
       setApiError(msg);
       showToast(msg, 'error');
     }
@@ -225,7 +225,8 @@ return (
             <Check size={20} style={{ color: 'var(--g-ink)' }} />
           </div>
           <p style={{ color: 'var(--g-ink)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
-            Account created successfully!
+
+            Account added.
           </p>
         </div>
       )}
@@ -408,7 +409,8 @@ return (
           </select>
           {walletCards.length === 0 && (
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0 0' }}>
-              No cards in your wallet yet — add cards in pointsPal first.
+
+              No cards to link yet. Add one in pointsPal first.
             </p>
           )}
         </div>

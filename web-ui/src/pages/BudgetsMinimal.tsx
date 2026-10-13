@@ -453,7 +453,7 @@ const BudgetsMinimal = () => {
 
       setBudgets(enrichedBudgets);
     } catch (error: any) {
-      showToast('Failed to load budgets', 'error');
+      showToast("We couldn't load your budgets. Try again in a moment.", 'error');
       setBudgets([]);
       setCategories([]);
     } finally {
@@ -557,7 +557,7 @@ const BudgetsMinimal = () => {
           is_active: true,
           rollover: budgetFormData.rollover,
         });
-        showToast('Budget updated successfully', 'success');
+        showToast("Budget updated.", 'success');
       } else {
         // Create new budget
         await budgetService.createBudget({
@@ -569,7 +569,7 @@ const BudgetsMinimal = () => {
           is_active: true,
           rollover: budgetFormData.rollover,
         });
-        showToast('Budget created successfully', 'success');
+        showToast("Budget added.", 'success');
       }
 
       setShowBudgetModal(false);
@@ -583,23 +583,23 @@ const BudgetsMinimal = () => {
       });
       loadData(); // Refresh budgets
     } catch (error: any) {
-      showToast(apiErrorMessage(error, 'Failed to save budget'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't save that budget. Try again in a moment."), 'error');
     }
   };
 
   const handleDeleteBudget = async (budgetId: number) => {
-    if (!window.confirm('Are you sure you want to delete this budget?')) {
+    if (!window.confirm("Delete this budget?")) {
       return;
     }
 
     try {
       await budgetService.deleteBudget(budgetId);
-      showToast('Budget deleted successfully', 'success');
+      showToast("Budget deleted.", 'success');
       setShowBudgetModal(false);
       setEditingBudget(null);
       loadData();
     } catch (error: any) {
-      showToast('Failed to delete budget', 'error');
+      showToast("We couldn't delete that budget. Try again in a moment.", 'error');
     }
   };
 
@@ -982,7 +982,8 @@ const BudgetsMinimal = () => {
                           </div>
                         ) : (
                           <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '16px' }}>
-                            No transactions yet in this category
+
+                            Nothing recorded in this category yet. Transactions you put here will appear in this list.
                           </p>
                         )}
                       </div>
@@ -1213,7 +1214,7 @@ const BudgetsMinimal = () => {
                       ? 'var(--text-muted)'
                       : leftToBudget >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
                     note: income === null
-                      ? 'No income recorded this month yet'
+                      ? "No income recorded this month. Add it when you have it."
                       : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`,
                   },
                 ]} />
@@ -1282,7 +1283,7 @@ const BudgetsMinimal = () => {
                 padding: '48px',
                 textAlign: 'center'
               }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>No budgets yet. Create your first budget to start tracking!</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>No budgets yet. Start with one category you'd like to keep an eye on.</p>
               </div>
             ) : (
               <>

@@ -112,7 +112,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
         onSuccess();
       }, 1000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to create group'));
+      setError(apiErrorMessage(err, "We couldn't create that group. Try again in a moment."));
     }
   };
 
@@ -146,7 +146,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ onSuccess, onCancel }) => {
           marginBottom: '16px',
           fontSize: '14px'
         }}>
-          ✓ Group created successfully!
+          Group created.
         </div>
       )}
 
@@ -663,8 +663,8 @@ export const Groups: React.FC = () => {
                   margin: 0, padding: '12px 22px',
                   borderTop: '1px solid var(--border-light)',
                 }}>
-                  Not included above, because finPal could not read who owes whom:{' '}
-                  {settlement.unreadable.join(', ')}.
+                  We couldn't read who owes whom for these groups, so they aren't included above:{' '}
+                  {settlement.unreadable.join(', ')}. Try refreshing in a moment.
                 </p>
               )}
               <p className="fp-hint" style={{
@@ -739,7 +739,7 @@ export const Groups: React.FC = () => {
                   were doing this and nothing said so. The size is inline, so the
                   tag change is invisible on screen. */}
               <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
-                {searchTerm ? 'No groups match your search' : 'No groups yet'}
+                {searchTerm ? 'No groups match your search' : "No groups yet. Create one to keep shared expenses together."}
               </h2>
               {!searchTerm && (
                 <>

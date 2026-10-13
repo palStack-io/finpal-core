@@ -203,7 +203,7 @@ export const GroupDetail: React.FC = () => {
 
     } catch (error: any) {
       console.error('Failed to load group data:', error);
-      showToast('Failed to load group data', 'error');
+      showToast("We couldn't load group data. Try again in a moment.", 'error');
     } finally {
       setLoading(false);
     }
@@ -232,13 +232,13 @@ export const GroupDetail: React.FC = () => {
         }
       });
 
-      showToast('Settlement recorded successfully', 'success');
+      showToast("Settlement recorded.", 'success');
       setShowSettleModal(false);
       setSelectedBalance(null);
       loadGroupData(); // Refresh data
     } catch (error: any) {
       console.error('Failed to record settlement:', error);
-      showToast(apiErrorMessage(error, 'Failed to record settlement'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't record settlement. Try again in a moment."), 'error');
     }
   };
 
@@ -253,13 +253,13 @@ export const GroupDetail: React.FC = () => {
         email: newMemberEmail.trim()
       });
 
-      showToast('Member added successfully', 'success');
+      showToast("Member added.", 'success');
       setShowAddMemberModal(false);
       setNewMemberEmail('');
       loadGroupData(); // Refresh data
     } catch (error: any) {
       console.error('Failed to add member:', error);
-      showToast(apiErrorMessage(error, 'Failed to add member'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't add that member. Try again in a moment."), 'error');
     }
   };
 
@@ -307,12 +307,12 @@ export const GroupDetail: React.FC = () => {
         default_split_values: defaultSplitValues
       });
 
-      showToast('Group updated successfully', 'success');
+      showToast("Group updated.", 'success');
       setShowSettingsModal(false);
       loadGroupData(); // Refresh data
     } catch (error: any) {
       console.error('Failed to update group:', error);
-      showToast(apiErrorMessage(error, 'Failed to update group'), 'error');
+      showToast(apiErrorMessage(error, "We couldn't update that group. Try again in a moment."), 'error');
     }
   };
 
@@ -631,9 +631,8 @@ export const GroupDetail: React.FC = () => {
               <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 {group.expense_count === undefined ? (
                   <>
-                    Nothing to show here. This server does not report how many
-                    expenses the group has, so finPal cannot tell an empty group
-                    from a list it failed to load.
+                    We can't show this group's expenses. The server doesn't report
+                    whether there are any. Try refreshing in a moment.
                   </>
                 ) : group.expense_count > 0 ? (
                   <>
@@ -643,7 +642,7 @@ export const GroupDetail: React.FC = () => {
                     in the balances above.
                   </>
                 ) : (
-                  <>No expenses have been added to this group yet.</>
+                  <>No shared expenses yet. Add one when you have something to split.</>
                 )}
               </div>
             ) : (

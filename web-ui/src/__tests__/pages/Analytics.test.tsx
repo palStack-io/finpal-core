@@ -205,7 +205,7 @@ describe('Analytics — no fabricated figures', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(/Could not load analytics/);
+      expect(screen.getByRole('alert')).toHaveTextContent(/We couldn't load analytics/);
     });
   });
 });

@@ -153,7 +153,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
       }
       // Don't call onSave() yet — show community PR step first
     } catch {
-      setError('Failed to save card. Please try again.');
+      setError("We couldn't save that card. Try again in a moment.");
     } finally {
       setSaving(false);
     }
@@ -296,7 +296,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
                   )}
                   {!loadingPrograms && programs.length === 0 && (
                     <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--muted)' }}>
-                      No programs found. Fill in a nickname below to add manually.
+                      That search didn't find a program. Add a nickname below to enter the card by hand.
                     </div>
                   )}
                   {!loadingPrograms && programs.map((p) => (
@@ -554,7 +554,7 @@ const MyCards: React.FC = () => {
       const data = await pointspalService.getCards();
       setCards(data);
     } catch {
-      setError('Failed to load cards. Please try again.');
+      setError("We couldn't load your cards. Try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -595,7 +595,7 @@ const MyCards: React.FC = () => {
       window.open(url, '_blank', 'noopener,noreferrer');
       fetchCards();
     } catch {
-      setError('Could not open the community contribution. Please try again.');
+      setError("We couldn't open the community contribution. Try again in a moment.");
     } finally {
       setSubmittingPrId(null);
     }
@@ -655,7 +655,7 @@ const MyCards: React.FC = () => {
       {cards.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '64px 24px' }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>💳</div>
-          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 16, color: 'var(--ink)', marginBottom: 8 }}>No cards added yet</div>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 16, color: 'var(--ink)', marginBottom: 8 }}>No cards yet. Add one to keep track of its rewards.</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>Add your rewards cards to start tracking caps and earning optimization.</div>
           <button onClick={() => setEditingCard(null)} style={{ ...btnStyle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Plus size={15} /> Add your first card

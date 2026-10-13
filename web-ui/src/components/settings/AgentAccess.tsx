@@ -224,7 +224,7 @@ export const AgentAccess: React.FC = () => {
       setNewName('');
       await loadTokens();
     } catch (err: any) {
-      setError(readError(err, 'Failed to create the token'));
+      setError(readError(err, "We couldn't create the token. Try again in a moment."));
     } finally {
       setIsLoading(false);
     }
@@ -243,7 +243,7 @@ export const AgentAccess: React.FC = () => {
         : 'Token revoked.');
       await Promise.all([loadTokens(), loadActions()]);
     } catch (err: any) {
-      setError(readError(err, 'Failed to revoke the token'));
+      setError(readError(err, "We couldn't revoke the token. Try again in a moment."));
     } finally {
       setBusyId(null);
     }
@@ -257,7 +257,7 @@ export const AgentAccess: React.FC = () => {
       flash('Change applied.');
       await loadActions();
     } catch (err: any) {
-      setError(readError(err, 'Failed to apply the change'));
+      setError(readError(err, "We couldn't apply the change. Try again in a moment."));
       await loadActions();
     } finally {
       setBusyId(null);
@@ -272,7 +272,7 @@ export const AgentAccess: React.FC = () => {
       flash('Proposal rejected.');
       await loadActions();
     } catch (err: any) {
-      setError(readError(err, 'Failed to reject the proposal'));
+      setError(readError(err, "We couldn't reject the proposal. Try again in a moment."));
       await loadActions();
     } finally {
       setBusyId(null);
@@ -290,7 +290,7 @@ export const AgentAccess: React.FC = () => {
       flash('Change undone.');
       await loadActions();
     } catch (err: any) {
-      setError(readError(err, 'Failed to undo the change'));
+      setError(readError(err, "We couldn't undo the change. Try again in a moment."));
       await loadActions();
     } finally {
       setBusyId(null);
@@ -384,7 +384,8 @@ export const AgentAccess: React.FC = () => {
 
         {tokens.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-            No tokens yet.
+
+            No tokens yet. Create one when you want to connect an agent.
           </p>
         ) : (
           <div style={{ marginBottom: '16px' }}>
@@ -611,7 +612,7 @@ export const AgentAccess: React.FC = () => {
         </p>
 
         {recent.length === 0 ? (
-          <p className="fp-meta">No activity yet.</p>
+          <p className="fp-meta">No activity yet. Agent actions will appear here when they run.</p>
         ) : (
           recent.map((action) => (
             <div key={action.id} style={rowStyle}>

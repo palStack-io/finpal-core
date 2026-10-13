@@ -464,7 +464,7 @@ const GoalRow: React.FC<GoalRowProps> = ({
             contributions.length === 0
               // An empty list, never a row reading $0.00 -- a zero beside a name
               // reads as a measurement when the truth is there is nothing to show.
-              ? <p style={mutedSmallStyle}>No contributions recorded yet.</p>
+              ? <p style={mutedSmallStyle}>No contributions recorded yet. Add one when you move money toward this goal.</p>
               : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0' }}>
                   {contributions.map((row) => (
@@ -564,7 +564,7 @@ export const Goals: React.FC = () => {
       setAccounts(fetchedAccounts);
       setRange(fetchedRange);
     } catch (err) {
-      setError(apiErrorMessage(err, 'Could not load your goals.'));
+      setError(apiErrorMessage(err, "We couldn't load your goals just now. Try again in a minute."));
     } finally {
       setLoading(false);
     }
@@ -636,7 +636,7 @@ export const Goals: React.FC = () => {
       closePanel();
       await load();
     } catch (err) {
-      setFormError(apiErrorMessage(err, 'Could not delete this goal.'));
+      setFormError(apiErrorMessage(err, "We couldn't delete this goal. Try again in a moment."));
       setConfirmingDelete(null);
     } finally {
       setSaving(false);
@@ -666,7 +666,7 @@ export const Goals: React.FC = () => {
       closePanel();
       await load();
     } catch (err) {
-      setFormError(apiErrorMessage(err, 'Could not save this goal.'));
+      setFormError(apiErrorMessage(err, "We couldn't save this goal. Try again in a moment."));
     } finally {
       setSaving(false);
     }
@@ -702,7 +702,7 @@ export const Goals: React.FC = () => {
       setScope('personal');
       await load();
     } catch (err) {
-      setFormError(apiErrorMessage(err, 'Could not create this goal.'));
+      setFormError(apiErrorMessage(err, "We couldn't create this goal. Try again in a moment."));
     } finally {
       setSaving(false);
     }
@@ -713,7 +713,7 @@ export const Goals: React.FC = () => {
       await goalService.archiveGoal(goal.id);
       await load();
     } catch (err) {
-      showToast(apiErrorMessage(err, 'Could not archive this goal.'), 'error');
+      showToast(apiErrorMessage(err, "We couldn't archive this goal. Try again in a moment."), 'error');
     }
   };
 
@@ -722,7 +722,7 @@ export const Goals: React.FC = () => {
       await goalService.deleteGoal(goal.id);
       await load();
     } catch (err) {
-      showToast(apiErrorMessage(err, 'Could not delete this goal.'), 'error');
+      showToast(apiErrorMessage(err, "We couldn't delete this goal. Try again in a moment."), 'error');
     }
   };
 
@@ -894,7 +894,8 @@ export const Goals: React.FC = () => {
                   the control that expresses it has to be obvious. */}
               {accounts.length === 0 ? (
                 <p className="fp-hint">
-                  You have no accounts yet, so this goal will be tracked by hand.
+
+                  No accounts yet. You can still track this goal by hand.
                 </p>
               ) : (
                 <div
@@ -1093,7 +1094,8 @@ export const Goals: React.FC = () => {
         <div style={{ ...cardStyle, textAlign: 'center' }}>
           <Target size={28} style={{ color: 'var(--text-muted)' }} />
           <p style={{ color: 'var(--text-secondary)', marginTop: 8 }}>
-            No goals yet. Link one to an account and finPal will track it for you.
+
+            No goals yet. Choose one thing to work toward, then link it to an account or track it by hand.
           </p>
         </div>
       )}

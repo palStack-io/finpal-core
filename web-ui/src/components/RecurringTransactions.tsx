@@ -89,7 +89,7 @@ const AddRecurringModal: React.FC<{
       });
       onCreated();
     } catch (err) {
-      onError(apiErrorMessage(err, 'Could not create this recurring transaction.'));
+      onError(apiErrorMessage(err, "We couldn't create this recurring transaction. Try again in a moment."));
     } finally {
       setSaving(false);
     }
@@ -270,7 +270,7 @@ export const RecurringTransactions: React.FC = () => {
       setRecurring(data);
       setError(null);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to load recurring transactions'));
+      setError(apiErrorMessage(err, "We couldn't load your recurring transactions. Try again in a moment."));
     } finally {
       setLoading(false);
     }
@@ -288,7 +288,7 @@ export const RecurringTransactions: React.FC = () => {
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to detect patterns'));
+      setError(apiErrorMessage(err, "We couldn't detect patterns. Try again in a moment."));
     } finally {
       setDetectingPatterns(false);
     }
@@ -300,25 +300,25 @@ export const RecurringTransactions: React.FC = () => {
       setRecurring(recurring.map(r =>
         r.id === id ? { ...r, active: result.active } : r
       ));
-      setSuccess('Status updated successfully');
+      setSuccess("Status updated.");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to toggle status'));
+      setError(apiErrorMessage(err, "We couldn't change status. Try again in a moment."));
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this recurring transaction?')) {
+    if (!confirm("Delete this recurring transaction?")) {
       return;
     }
 
     try {
       await recurringService.deleteRecurringExpense(id);
       setRecurring(recurring.filter(r => r.id !== id));
-      setSuccess('Recurring transaction deleted successfully');
+      setSuccess("Recurring transaction deleted.");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to delete recurring transaction'));
+      setError(apiErrorMessage(err, "We couldn't delete that recurring transaction. Try again in a moment."));
     }
   };
 
@@ -330,7 +330,7 @@ export const RecurringTransactions: React.FC = () => {
       setSuccess('Recurring transaction created from pattern!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to create recurring transaction'));
+      setError(apiErrorMessage(err, "We couldn't create that recurring transaction. Try again in a moment."));
     }
   };
 
@@ -341,7 +341,7 @@ export const RecurringTransactions: React.FC = () => {
       setSuccess('Pattern ignored');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to ignore pattern'));
+      setError(apiErrorMessage(err, "We couldn't ignore that pattern. Try again in a moment."));
     }
   };
 
@@ -594,7 +594,8 @@ export const RecurringTransactions: React.FC = () => {
         }}>
           <Repeat size={48} color="#64748b" style={{ margin: '0 auto 16px' }} />
           <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '8px' }}>
-            No recurring transactions yet
+
+            No recurring transactions yet. Add a regular bill or income to start.
           </p>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
             Click "Detect Patterns" to find recurring transactions automatically

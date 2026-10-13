@@ -30,7 +30,7 @@ const Redeem: React.FC = () => {
       const result = await pointspalService.getRedemptionOptions();
       setData(result);
     } catch {
-      setError('Failed to load redemption options. Please try again.');
+      setError("We couldn't load redemption options. Try again in a moment.");
     } finally {
       setLoading(false);
     }

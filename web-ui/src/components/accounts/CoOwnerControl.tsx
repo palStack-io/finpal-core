@@ -108,7 +108,7 @@ export const CoOwnerControl: React.FC<CoOwnerControlProps> = ({
                 aria-label={`Remove ${owner.name} as a co-owner`}
                 onClick={() => run(
                   () => accountService.removeCoOwner(account.id, owner.id),
-                  'Could not remove that co-owner.',
+                  "We couldn't remove that co-owner. Try again in a moment.",
                 )}
                 style={{
                   display: 'flex', padding: 2, background: 'none', border: 'none',
@@ -133,7 +133,7 @@ export const CoOwnerControl: React.FC<CoOwnerControlProps> = ({
             if (!userId) return;
             void run(
               () => accountService.addCoOwner(account.id, userId),
-              'Could not add that co-owner.',
+              "We couldn't add that co-owner. Try again in a moment.",
             );
           }}
         >

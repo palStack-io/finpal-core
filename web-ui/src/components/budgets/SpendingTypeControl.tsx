@@ -54,7 +54,7 @@ export const SpendingTypeControl: React.FC<Props> = ({
     } catch {
       // Named, not swallowed. A control that silently fails to save a
       // classification is worse than one that refuses to offer it.
-      setError('Could not save');
+      setError("We couldn't save that. Try again in a moment.");
     } finally {
       setSaving(false);
     }

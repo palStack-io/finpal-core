@@ -291,7 +291,7 @@ export const Home: React.FC = () => {
       setStats(await learnpalService.getStats());
       setError(null);
     } catch (err) {
-      setError(apiErrorMessage(err, 'Could not load learnPal.'));
+      setError(apiErrorMessage(err, "We couldn't load learnPal. Try again in a moment."));
     } finally {
       setLoading(false);
     }

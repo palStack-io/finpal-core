@@ -45,7 +45,7 @@ export const InvestmentSettings: React.FC = () => {
       setSuccess(enabled ? 'Investment tracking enabled' : 'Investment tracking disabled');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to update settings'));
+      setError(apiErrorMessage(err, "We couldn't update settings. Try again in a moment."));
     } finally {
       setIsLoading(false);
     }
@@ -59,10 +59,10 @@ export const InvestmentSettings: React.FC = () => {
       await userService.updateApiSettings({
         fmpApiKey: fmpApiKey || null
       });
-      setSuccess('FMP API key saved successfully');
+      setSuccess("FMP API key saved.");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to save API key'));
+      setError(apiErrorMessage(err, "We couldn't save that API key. Try again in a moment."));
     } finally {
       setIsLoading(false);
     }

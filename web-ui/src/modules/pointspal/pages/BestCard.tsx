@@ -37,7 +37,7 @@ const BestCard: React.FC = () => {
       const data = await pointspalService.getRecommendation(category, amt);
       setResult(data);
     } catch {
-      setError('Could not fetch recommendation. Please try again.');
+      setError("We couldn't work out the best card just now. Try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -216,7 +216,7 @@ const BestCard: React.FC = () => {
                 measures **3.82:1** against a 4.5 requirement, where white
                 on the card itself measures 5.02:1. The inset was strictly
                 worse than no inset at all.
-                
+
                 A black overlay darkens the same panel instead: `#127136`,
                 white at **6.10:1**. Same visual device — a panel set into
                 the card — with the contrast moving the right way. D-103. */}

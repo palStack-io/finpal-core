@@ -125,7 +125,7 @@ describe('OidcCallback', () => {
 
     expect(
       await screen.findByRole('heading',
-        { level: 1, name: /could not finish signing you in/i })
+        { level: 1, name: /couldn't finish signing you in/i })
     ).toBeInTheDocument();
     expect(
       screen.getByText(/profile would not load/i)

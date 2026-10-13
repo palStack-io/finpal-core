@@ -122,7 +122,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       });
 
       setSuccess(true);
-      showToast('Account updated successfully', 'success');
+      showToast("Account updated.", 'success');
 
       // Wait a moment to show success message, then close
       setTimeout(() => {
@@ -135,7 +135,7 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
       // user sees one toast and three numeric boxes and has to guess. The body is
       // read by `utils/apiError.ts` and only there -- see `creditFieldErrors`.
       setCreditErrors(creditFieldErrors(err));
-      const msg = apiErrorMessage(err, 'Failed to update account');
+      const msg = apiErrorMessage(err, "We couldn't update that account. Try again in a moment.");
       setError(msg);
       showToast(msg, 'error');
     } finally {
@@ -164,7 +164,8 @@ export const EditAccountForm: React.FC<EditAccountFormProps> = ({ account, onSuc
             <Check size={20} style={{ color: 'var(--g-ink)' }} />
           </div>
           <p style={{ color: 'var(--g-ink)', fontWeight: '600', fontSize: '14px', margin: 0 }}>
-            Account updated successfully!
+
+            Account updated.
           </p>
         </div>
       )}

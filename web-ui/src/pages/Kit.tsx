@@ -41,7 +41,7 @@ export const Kit: React.FC = () => {
     try {
       setWallet(await coinService.getWallet());
     } catch {
-      setError('Your kit could not be loaded.');
+      setError("We couldn't load your Kit. Try again in a moment.");
     }
   };
 

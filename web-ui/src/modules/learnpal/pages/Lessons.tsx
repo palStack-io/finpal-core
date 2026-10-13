@@ -67,7 +67,7 @@ export const Lessons: React.FC = () => {
       setCounts(data ? { read: data.read } : null);
       setError(null);
     } catch (err) {
-      setError(apiErrorMessage(err, 'Could not load the lessons.'));
+      setError(apiErrorMessage(err, "We couldn't load the lessons. Try again in a moment."));
     } finally {
       setLoading(false);
     }

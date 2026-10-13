@@ -95,7 +95,7 @@ export const ForgotPassword: React.FC = () => {
         setEmailSent(true);
         showToast('Password reset email sent!', 'success');
       } else {
-        showToast(response.message || 'Failed to send reset email', 'error');
+        showToast(response.message || "We couldn't send reset email. Try again in a moment.", 'error');
       }
     } catch (err: any) {
       console.error('Forgot password error:', err);

@@ -158,7 +158,7 @@ export const Onboarding: React.FC = () => {
     } catch (error: any) {
       console.error('Onboarding error:', error);
       showToast(
-        apiErrorMessage(error, 'Failed to complete onboarding. Please try again.'),
+        apiErrorMessage(error, "We couldn't finish setting up. Try again from this step."),
         'error'
       );
     } finally {

@@ -240,7 +240,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ transact
       successTimer.current = setTimeout(() => { onSuccess(); }, 1000);
     } catch (err) {
       const e = err as { message?: string; response?: { data?: { error?: string } } };
-      setApiError(apiErrorMessage(e, 'Failed to create transaction'));
+      setApiError(apiErrorMessage(e, "We couldn't create that transaction. Try again in a moment."));
     }
   };
 if (loadingData) {

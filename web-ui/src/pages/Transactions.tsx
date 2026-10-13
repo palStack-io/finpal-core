@@ -152,7 +152,7 @@ export const Transactions: React.FC = () => {
       setPagination(data.pagination);
       setError(null);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to load transactions'));
+      setError(apiErrorMessage(err, "We couldn't load your transactions. Try again in a moment."));
     } finally {
       setLoading(false);
     }
@@ -182,12 +182,12 @@ export const Transactions: React.FC = () => {
 
   const handleDeleteClick = async (e: React.MouseEvent, transactionId: number) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
+    if (window.confirm("Delete this transaction?")) {
       try {
         await transactionsApi.delete(transactionId);
         fetchTransactions();
       } catch (err: any) {
-        alert(apiErrorMessage(err, 'Failed to delete transaction'));
+        alert(apiErrorMessage(err, "We couldn't delete that transaction. Try again in a moment."));
       }
     }
   };
@@ -423,7 +423,7 @@ export const Transactions: React.FC = () => {
                 <div className="fp-ledger">
                   {transactions.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No transactions found</p>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Nothing matches that search. Try fewer words or a wider date range.</p>
                     </div>
                   ) : (
                     Object.entries(groupedTransactions).map(([dateLabel, txns]) => (

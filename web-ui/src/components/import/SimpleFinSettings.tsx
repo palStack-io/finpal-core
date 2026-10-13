@@ -65,7 +65,7 @@ export const SimpleFinSettings: React.FC = () => {
 
     try {
       await accountService.connectSimpleFin(setupToken.trim());
-      setSuccess('SimpleFin connected successfully!');
+      setSuccess("SimpleFin connected.");
       setShowConnectForm(false);
       setSetupToken('');
 
@@ -75,14 +75,14 @@ export const SimpleFinSettings: React.FC = () => {
       // Auto-enable SimpleFin after connection
       await handleToggleEnabled(true);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to connect SimpleFin'));
+      setError(apiErrorMessage(err, "We couldn't connect SimpleFin. Try again in a moment."));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDisconnect = async () => {
-    if (!confirm('Are you sure you want to disconnect SimpleFin? Your existing accounts and transactions will remain.')) {
+    if (!confirm("Disconnect SimpleFin? Your existing accounts and transactions will remain.")) {
       return;
     }
 
@@ -91,12 +91,12 @@ export const SimpleFinSettings: React.FC = () => {
 
     try {
       await accountService.disconnectSimpleFin();
-      setSuccess('SimpleFin disconnected successfully');
+      setSuccess("SimpleFin disconnected.");
       setIsConnected(false);
       setIsEnabled(false);
       await loadSimpleFinStatus();
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to disconnect SimpleFin'));
+      setError(apiErrorMessage(err, "We couldn't disconnect SimpleFin. Try again in a moment."));
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +114,7 @@ export const SimpleFinSettings: React.FC = () => {
       setSuccess(enabled ? 'SimpleFin enabled' : 'SimpleFin disabled');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Failed to update settings'));
+      setError(apiErrorMessage(err, "We couldn't update settings. Try again in a moment."));
     } finally {
       setIsLoading(false);
     }
