@@ -235,7 +235,7 @@ const CardEditModal: React.FC<CardEditModalProps> = ({ card, onSave, onCancel })
               style={{ flex: 2, padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--g700)', color: '#fff', fontSize: 13, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
               <ExternalLink size={14} />
-              {submittingPr ? 'Opening…' : 'Submit PR for communal points'}
+              {submittingPr ? 'Opening…' : 'Share card on GitHub'}
             </button>
           </div>
 

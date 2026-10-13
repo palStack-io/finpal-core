@@ -336,3 +336,10 @@ Exact replacements shared by core, premium and mobile. Spanish translations rema
 | No cards yet. Add them in the web app and they will show up here. | No cards yet. Add one in the web app, then come back here to track its rewards. | Aún no tienes tarjetas. Añade una en la aplicación web y vuelve aquí para seguir sus recompensas. |
 
 Core group summary (draft): "We couldn't read who owes whom for these groups, so they aren't included above: [group names]. Try refreshing in a moment."
+
+### Buttons (draft, 2026-10-12)
+
+| Today | Rewrite (draft) | Spanish (draft) |
+|---|---|---|
+| Confirm Settlement | Record payment | Registrar pago |
+| Submit PR for communal points | Share card on GitHub | Compartir tarjeta en GitHub |

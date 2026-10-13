@@ -756,7 +756,7 @@ export const GroupDetail: React.FC = () => {
                       fontWeight: '600'
                     }}
                   >
-                    Confirm Settlement
+                    Record payment
                   </button>
                 </div>
               </div>
