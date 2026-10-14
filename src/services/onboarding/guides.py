@@ -33,7 +33,7 @@ PAGE_GUIDES = {
         'pose': 'map',
         'copy': {
             'en': {
-                'heading': 'Accounts: where your money actually sits',
+                'heading': 'Accounts: your money in one place',
                 'lines': [
                     'Every account you have, whether a bank, a card, a loan or cash, in one list, '
                     'with what it holds or owes right now.',
@@ -44,7 +44,7 @@ PAGE_GUIDES = {
                 ],
             },
             'es': {
-                'heading': 'Cuentas: dónde está realmente tu dinero',
+                'heading': 'Cuentas: tu dinero en un solo lugar',
                 'lines': [
                     'Todas tus cuentas, ya sea una cuenta bancaria, una tarjeta, un préstamo o efectivo, '
                     'en una sola lista, con lo que tienen o deben ahora mismo.',
@@ -60,22 +60,21 @@ PAGE_GUIDES = {
         'pose': 'pack',
         'copy': {
             'en': {
-                'heading': 'Budgets: a plan for the month, then the truth',
+                'heading': 'Budgets: a plan you can adjust',
                 'lines': [
                     'Give a category a limit for the month and watch how much of it is spent so far.',
                     'Limits are grouped as fixed, flexible and non-monthly. Put a big yearly bill '
                     'under non-monthly and it does not look like overspending in the month it lands.',
-                    'Nothing here changes your money. It only measures it against what you '
-                    'said you would do.',
+                    'A budget compares your spending with your plan. If things change, you can review the plan.',
                 ],
             },
             'es': {
-                'heading': 'Presupuestos: un plan para el mes, y luego la verdad',
+                'heading': 'Presupuestos: un plan que puedes ajustar',
                 'lines': [
                     'Ponle un límite a una categoría para el mes y mira cuánto llevas gastado.',
                     'Los límites se agrupan en fijos, flexibles y no mensuales. Pon una factura '
                     'anual grande en no mensuales y no parecerá un exceso en el mes en que llega.',
-                    'Nada de aquí cambia tu dinero. Solo lo compara con lo que dijiste que harías.',
+                    'Un presupuesto compara tus gastos con tu plan. Si las cosas cambian, puedes revisar el plan.',
                 ],
             },
         },
@@ -96,7 +95,7 @@ PAGE_GUIDES = {
         'pose': 'summit',
         'copy': {
             'en': {
-                'heading': 'Goals: every goal is a mountain',
+                'heading': "Goals: one thing you're working toward",
                 'lines': [
                     'A goal is something you are saving toward, or a debt you are paying off. '
                     'Each one becomes a peak on your range, which you can see on the Dashboard.',
@@ -105,7 +104,7 @@ PAGE_GUIDES = {
                 ],
             },
             'es': {
-                'heading': 'Metas: cada meta es una montaña',
+                'heading': 'Metas: algo en lo que estás trabajando',
                 'lines': [
                     'Una meta es algo para lo que ahorras, o una deuda que estás pagando. '
                     'Cada una se convierte en una cumbre de tu cordillera, que puedes ver en el Panel.',
@@ -265,17 +264,17 @@ PAGE_GUIDES = {
         'pose': 'map',
         'copy': {
             'en': {
-                'heading': 'Review: everything finPal had to guess',
+                'heading': 'Review: confirm how your transactions are sorted',
                 'lines': [
                     'When finPal sorts a transaction or pairs two transfers on its own, it shows up here for you to confirm or correct.',
-                    'Either way it stops being a guess. A confirmed one is yours from then on.',
+                    'Start with one transaction. Confirm its category or choose a better fit.',
                 ],
             },
             'es': {
-                'heading': 'Revisión: todo lo que finPal tuvo que adivinar',
+                'heading': 'Revisión: confirma cómo se clasifican tus transacciones',
                 'lines': [
                     'Cuando finPal ordena una transacción o empareja dos transferencias por su cuenta, aparece aquí para que la confirmes o la corrijas.',
-                    'De cualquier forma deja de ser una suposición. Una confirmada es tuya desde entonces.',
+                    'Empieza con una transacción. Confirma su categoría o elige una que encaje mejor.',
                 ],
             },
         },
@@ -286,14 +285,14 @@ PAGE_GUIDES = {
             'en': {
                 'heading': 'Kit: what your coins buy',
                 'lines': [
-                    'Coins come from telling finPal the truth about your own money. Not from opening the app, and not from spending less.',
+                    'Coins come from recording details about your own money. Opening the app or spending less does not earn them.',
                     'Kit is what you can spend them on: gear for the climb. It changes nothing about your money.',
                 ],
             },
             'es': {
                 'heading': 'Equipo: lo que compran tus monedas',
                 'lines': [
-                    'Las monedas vienen de decirle a finPal la verdad sobre tu propio dinero. No de abrir la app, ni de gastar menos.',
+                    'Las monedas vienen de registrar detalles de tu propio dinero. Abrir la app o gastar menos no te da monedas.',
                     'El equipo es en lo que puedes gastarlas: material para la escalada. No cambia nada de tu dinero.',
                 ],
             },
@@ -303,14 +302,14 @@ PAGE_GUIDES = {
         'pose': 'lookout',
         'copy': {
             'en': {
-                'heading': 'Analytics: where the money went, and where it is heading',
+                'heading': 'Analytics: understand how your money moves',
                 'lines': [
                     'Spending by category, income against spending, net worth over time, and how money moves between them.',
                     'Pick the period at the top, or compare two periods side by side. Every chart is built from the same transactions.',
                 ],
             },
             'es': {
-                'heading': 'Analítica: a dónde fue el dinero y hacia dónde va',
+                'heading': 'Analítica: entiende cómo se mueve tu dinero',
                 'lines': [
                     'El gasto por categoría, los ingresos frente al gasto, el patrimonio neto en el tiempo y cómo se mueve el dinero entre ellos.',
                     'Elige el periodo arriba, o compara dos periodos lado a lado. Todos los gráficos salen de las mismas transacciones.',
@@ -424,14 +423,14 @@ PAGE_GUIDES = {
                 'heading': 'My cards: what each one earns',
                 'lines': [
                     'Your cards with their balances, earn rates, cap rules and whether the details have been verified.',
-                    'Keep these right and every recommendation on the other pages is right.',
+                    "Review a card's details when its rates or rules change. Recommendations use the details saved here.",
                 ],
             },
             'es': {
                 'heading': 'Mis tarjetas: lo que gana cada una',
                 'lines': [
                     'Tus tarjetas con sus saldos, tasas de ganancia, reglas de límite y si los detalles han sido verificados.',
-                    'Mantenlas correctas y todas las recomendaciones de las otras páginas lo serán.',
+                    'Revisa los detalles de una tarjeta cuando cambien sus tasas o reglas. Las recomendaciones usan los detalles guardados aquí.',
                 ],
             },
         },
@@ -463,15 +462,15 @@ PAGE_GUIDES = {
             'en': {
                 'heading': 'learnPal: lessons from your own figures',
                 'lines': [
-                    'Short lessons that unlock from your own figures: what your debt actually costs, where your money goes, what a month of yours looks like.',
-                    'Nothing generic, and nothing you have to study.',
+                    'Short lessons that unlock from your own figures: what your debt costs, where your money goes and what a month of yours looks like.',
+                    "Start with one lesson when you're ready.",
                 ],
             },
             'es': {
                 'heading': 'learnPal: lecciones a partir de tus propias cifras',
                 'lines': [
-                    'Lecciones cortas que se desbloquean con tus propias cifras: lo que realmente cuesta tu deuda, a dónde va tu dinero, cómo es un mes tuyo.',
-                    'Nada genérico, y nada que tengas que estudiar.',
+                    'Lecciones cortas que se desbloquean con tus propias cifras: lo que cuesta tu deuda, a dónde va tu dinero y cómo es un mes tuyo.',
+                    'Empieza con una lección cuando quieras.',
                 ],
             },
         },
