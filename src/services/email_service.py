@@ -572,41 +572,92 @@ finPal never sends your password by email.
         columns landed in the right fields", while failed rows mean "some data did
         not arrive at all".
 
-        *** THIS TEMPLATE IS A BARE FRAGMENT AND ITS COLOURS FOLLOW DIFFERENT RULES.
-        There is no <html>, no <body> and no surface of its own, so it renders on
-        whatever background the mail client supplies — in practice white. The other six
-        templates paint their own dark card, and their muted text is #9CB3A3 (7.22:1 on
-        that card, 2.24:1 on white). A sweep that set the muted colour across the whole
-        file therefore made THIS one unreadable, which is why the value here is #56685D:
-        5.94:1 on white, and the same --kt-soft the light theme uses. Caught by
-        test_email_templates_are_on_brand.py, which measures each template against the
-        surface it actually has rather than assuming one background for the file. ***
-
-        It also carries no brand colour at all, deliberately left alone: giving it the
-        header, badge and card the others have is a redesign, not a colour fix.
+        *** IT WEARS THE SAME CARD AS THE OTHERS (2026-10-14). *** It was a bare
+        fragment with no surface of its own, so its colours followed the mail client's
+        white and it carried no brand at all; a dark-mode render showed black text on a
+        dark page. It now uses the shared card, header and copyright line, and the same
+        #e2e8f0 / #9CB3A3 / #86efac palette that test_email_templates_are_on_brand.py
+        measures on that card.
         """
         reasons = []
         if guessed_mapping:
             reasons.append(
-                '<li><strong>The columns were guessed.</strong> Check that the '
-                'date, description and amount landed in the right fields.</li>')
+                '<li style="margin:0 0 10px"><strong style="color:#ffffff">The columns were guessed.</strong> '
+                'Check that the date, description and amount landed in the right fields.</li>')
         if errors:
             reasons.append(
-                f'<li><strong>{errors} row(s) were not imported.</strong> '
+                f'<li style="margin:0 0 10px"><strong style="color:#ffffff">{errors} row(s) were not imported.</strong> '
                 'Review these rows to see what needs correcting.</li>')
 
         subject = f"Check your import: {filename}"
         html_body = f"""
-        <p>Hi {user_name},</p>
-        <p>finPal imported <strong>{filename}</strong> and brought in
-           <strong>{imported}</strong> transaction(s). Review the items below before relying on this import.</p>
-        <ul>{''.join(reasons)}</ul>
-        <p><a href="{review_link}">Review this import</a></p>
-        <p>If it looks wrong, you can undo this batch from the review screen. Other transactions in your account are not affected.</p>
-        <p style="color:#56685D;font-size:13px">You are getting this because an
-           automatic import needed attention. finPal does not email you about
-           imports that go through cleanly.</p>
-        """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0E1711;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #16241A 0%, #0E1711 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;">
+                    <tr>
+                        <td style="padding: 40px 40px 0; text-align: center;">
+                            <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 26px; font-weight: 700;">
+                                Check your import
+                            </h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 24px 40px;">
+                            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                                Hi <strong style="color: #86efac;">{user_name}</strong>,
+                            </p>
+                            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                                finPal imported <strong style="color: #ffffff;">{filename}</strong> and brought in
+                                <strong style="color: #ffffff;">{imported}</strong> transaction(s). Review the items below before relying on this import.
+                            </p>
+                            <ul style="color: #e2e8f0; font-size: 15px; line-height: 1.6; margin: 0 0 24px; padding-left: 20px;">{''.join(reasons)}</ul>
+                            <table role="presentation" style="width: 100%; margin: 0 0 24px;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <a href="{review_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                            Review this import
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                                If it looks wrong, you can undo this batch from the review screen. Other transactions in your account are not affected.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                            <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                                You are getting this because an automatic import needed attention.
+                                finPal does not email you about imports that go through cleanly.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <table role="presentation" style="max-width: 600px; margin: 24px auto 0;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <p style="color: #7E9488; font-size: 12px; margin: 0;">
+                                © 2026 finPal
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
         text_lines = [f"Hi {user_name},", "",
                       f"finPal imported {filename} and brought in {imported} transaction(s). "
                       "Review the items below before relying on this import.", ""]
