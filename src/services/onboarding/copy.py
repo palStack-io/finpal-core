@@ -62,9 +62,7 @@ MODULE_COPY = {
     'learnpal': {
         'name': 'learnPal',
         'intro': (
-            'Short lessons that unlock from your own figures: what your debt '
-            'actually costs, where your money goes, what a month of yours '
-            'looks like. Nothing generic, and nothing you have to study.'
+            "Short lessons that unlock from your own figures: what your debt costs, where your money goes and what a month of yours looks like. Start with one when you're ready."
         ),
         'gives': 'badges',
     },
@@ -93,15 +91,11 @@ MODULE_COPY = {
 # the screen whose whole job is to establish that the numbers are the user's.
 ORIENTATION = {
     'welcome': {
-        'heading': 'finPal is for making the numbers true.',
+        'heading': 'Start with your own money picture.',
         'lines': [
-            'Most money apps start by telling you what to do. This one starts '
-            'by getting your own figures straight, because almost every '
-            'decision people regret was made on a number they had wrong.',
+            'finPal starts with your own figures. Add one account and build from there.',
             # Voice rule 11, in the second paragraph — deliberately.
-            'Rent, food and borrowing have outrun wages, and no app fixes '
-            'that. What finPal can do is show you your own position without '
-            'flattering it or scolding you for it.',
+            'Money can be hard to keep track of. finPal shows where things stand, so you can choose a next step at your own pace.',
         ],
     },
     'mountains': {
