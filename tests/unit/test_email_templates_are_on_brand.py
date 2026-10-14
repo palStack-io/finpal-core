@@ -234,20 +234,14 @@ def test_enough_templates_render_to_make_this_meaningful(rendered):
         assert '<p' in html or '<table' in html, f'{name} produced no markup'
 
 
-def test_exactly_one_template_is_an_unstyled_fragment(rendered):
+def test_no_template_is_an_unstyled_fragment(rendered):
     """
-    Pins the asymmetry rather than hiding it. `send_import_review_email` has no chrome at
-    all — no header, no badge, no card, no brand colour — and that is a real
-    inconsistency in finPal's email, left alone here because giving it the other six
-    templates' layout is a redesign and not a colour fix.
-
-    If a second fragment appears, this fails and somebody has to decide which way the
-    inconsistency should be resolved, instead of it doubling quietly.
+    Every email wears the same card. `send_import_review_email` was the one bare fragment
+    (no header, no card, no brand colour) until 2026-10-14, when it moved onto the shared
+    card. A new fragment fails here, so the inconsistency cannot come back quietly.
     """
     fragments = sorted(n for n, html in rendered.items() if _kind(html) == FRAGMENT)
-    assert fragments == ['send_import_review_email'], (
-        f'unstyled email templates changed: {fragments}'
-    )
+    assert fragments == [], f'unstyled email templates: {fragments}'
 
 
 def test_no_template_uses_an_off_brand_colour(rendered):
@@ -272,13 +266,6 @@ def test_every_template_actually_carries_the_brand_green(rendered):
     ]
     assert missing == [], f'these render with no finPal green in them: {missing}'
 
-    # And the fragment's lack of one is asserted, not merely skipped — so "it has no brand
-    # colour" stays a recorded fact rather than a gap in the sweep.
-    fragment = rendered['send_import_review_email']
-    assert not any(g.lower() in fragment.lower() for g in BRAND_GREENS), (
-        'send_import_review_email has grown a brand colour — good, but then it should be '
-        'held to the same standard as the others and moved out of the fragment case'
-    )
 
 
 # The lookbehind is load-bearing: without it this also matched `background-color:`, so the
