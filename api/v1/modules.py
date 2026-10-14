@@ -30,7 +30,7 @@ import logging
 
 from flask import current_app
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 
 from src.services.onboarding.copy import (
     DATA_STATEMENT, MODULE_COPY, ORIENTATION, first_visit_copy,
@@ -208,8 +208,14 @@ class HardMonth(Resource):
         return {'opening': hard_month_state(get_jwt_identity(), lang)}, 200
 
 
+hard_month_dismiss_model = ns.model('HardMonthDismiss', {
+    'key': fields.String(required=True, description="The opening's episode key, e.g. hm-month:2026-09"),
+})
+
+
 @ns.route('/hard-month/dismiss')
 class HardMonthDismiss(Resource):
+    @ns.expect(hard_month_dismiss_model, validate=False)
     @jwt_required()
     def post(self):
         """Close this episode's opening on every device. Idempotent."""
