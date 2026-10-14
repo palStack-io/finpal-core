@@ -631,8 +631,8 @@ class OverviewView(Resource):
                 action_items.append({
                     'type': 'capped',
                     'emoji': _CATEGORY_EMOJI.get(a.category, '💳'),
-                    'title': f'{a.category.title()} cap hit on {card_name}',
-                    'description': f'Switch cards to keep earning points',
+                    'title': f'{a.category.title()} has reached its cap on {card_name}',
+                    'description': 'Review your cards to choose where to put your next purchase.',
                     'value': '0x',
                     'value_label': 'effective rate',
                     'link_to': '/pointspal/caps',
@@ -641,8 +641,8 @@ class OverviewView(Resource):
                 action_items.append({
                     'type': 'warning',
                     'emoji': _CATEGORY_EMOJI.get(a.category, '💳'),
-                    'title': f'{a.category.title()} cap at {pct}% on {card_name}',
-                    'description': f'Approaching spend cap',
+                    'title': f'{a.category.title()} is at {pct}% of its cap on {card_name}',
+                    'description': 'Review the cap before your next purchase.',
                     'value': f'{pct}%',
                     'value_label': 'cap used',
                     'link_to': '/pointspal/caps',
@@ -1015,9 +1015,9 @@ class FacadeAlertList(Resource):
             card_name = card.card_nickname if card else 'Unknown'
             pct = int(a.pct_used or 0)
             if a.alert_type == 'capped':
-                msg = f'{a.category.title()} cap hit on {card_name} — switch cards to keep earning'
+                msg = f'{a.category.title()} has reached its cap on {card_name}. Review your cards to choose where to put your next purchase.'
             else:
-                msg = f'{a.category.title()} spend on {card_name} is at {pct}% of cap'
+                msg = f'{a.category.title()} is at {pct}% of its cap on {card_name}. Review the cap before your next purchase.'
             result.append({
                 'id': a.id,
                 'type': a.alert_type,

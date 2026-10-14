@@ -94,11 +94,8 @@ class EmailService:
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
-                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 32px;">👥</span>
-                            </div>
                             <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
-                                You're Invited!
+                                Your finPal invitation
                             </h1>
                         </td>
                     </tr>
@@ -110,19 +107,19 @@ class EmailService:
                                 <strong style="color: #86efac;">{inviter_name}</strong> has invited you to join the group <strong style="color: #86efac;">"{group_name}"</strong> on finPal.
                             </p>
                             <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-                                finPal makes it easy to track shared expenses, split bills, and manage group finances. Join now to start collaborating!
+                                Open your invitation to join the group and see its shared expenses.
                             </p>
 
                             <!-- Features -->
                             <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin: 0 0 32px;">
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    📊 Track shared expenses
+                                    Track shared expenses
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    💸 Split bills automatically
+                                    Split bills automatically
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0; line-height: 1.6;">
-                                    ✅ Settle up with ease
+                                    Settle shared balances
                                 </p>
                             </div>
 
@@ -131,7 +128,7 @@ class EmailService:
                                 <tr>
                                     <td style="text-align: center;">
                                         <a href="{invite_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            Accept Invitation
+                                            Open invitation
                                         </a>
                                     </td>
                                 </tr>
@@ -173,16 +170,16 @@ class EmailService:
 """
 
         text_body = f"""
-You're Invited!
+Your finPal invitation
 
 {inviter_name} has invited you to join the group "{group_name}" on finPal.
 
-finPal makes it easy to track shared expenses, split bills, and manage group finances.
+Open your invitation to join the group and see its shared expenses.
 
 What you can do:
 - Track shared expenses
 - Split bills automatically
-- Settle up with ease
+- Settle shared balances
 
 Accept your invitation here:
 {invite_link}
@@ -202,7 +199,7 @@ If you don't want to join this group, you can safely ignore this email.
         login_link: str
     ) -> bool:
         """Send welcome email to new user"""
-        subject = f"Welcome to finPal, {user_name}!"
+        subject = f"Welcome to finPal, {user_name}"
 
         html_body = f"""
 <!DOCTYPE html>
@@ -219,11 +216,8 @@ If you don't want to join this group, you can safely ignore this email.
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
-                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 32px;">💰</span>
-                            </div>
                             <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
-                                Welcome to finPal!
+                                Welcome to finPal
                             </h1>
                         </td>
                     </tr>
@@ -235,7 +229,7 @@ If you don't want to join this group, you can safely ignore this email.
                                 Hi <strong style="color: #86efac;">{user_name}</strong>,
                             </p>
                             <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-                                Thank you for signing up! We're excited to help you take control of your finances.
+                                Thanks for joining finPal. Sign in when you're ready to start with your accounts.
                             </p>
 
                             <!-- Features -->
@@ -244,19 +238,19 @@ If you don't want to join this group, you can safely ignore this email.
                                     Here's what you can do:
                                 </h3>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    📊 Track your income and expenses
+                                    Track your income and expenses
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    💳 Manage multiple accounts
+                                    Manage multiple accounts
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    🎯 Set and monitor budgets
+                                    Set and monitor budgets
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    👥 Split expenses with groups
+                                    Split expenses with groups
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0; line-height: 1.6;">
-                                    📈 View detailed analytics
+                                    View detailed analytics
                                 </p>
                             </div>
 
@@ -265,7 +259,7 @@ If you don't want to join this group, you can safely ignore this email.
                                 <tr>
                                     <td style="text-align: center;">
                                         <a href="{login_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            Get Started
+                                            Sign in
                                         </a>
                                     </td>
                                 </tr>
@@ -277,7 +271,7 @@ If you don't want to join this group, you can safely ignore this email.
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                             <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
-                                Need help getting started? Check out our <a href="#" style="color: #22c55e;">guides</a> or <a href="#" style="color: #22c55e;">contact support</a>.
+                                Start with one account. You can add the others when you're ready.
                             </p>
                         </td>
                     </tr>
@@ -300,11 +294,11 @@ If you don't want to join this group, you can safely ignore this email.
 """
 
         text_body = f"""
-Welcome to finPal!
+Welcome to finPal
 
 Hi {user_name},
 
-Thank you for signing up! We're excited to help you take control of your finances.
+Thanks for joining finPal. Sign in when you're ready to start with your accounts.
 
 Here's what you can do:
 - Track your income and expenses
@@ -313,9 +307,9 @@ Here's what you can do:
 - Split expenses with groups
 - View detailed analytics
 
-Get started: {login_link}
+Sign in: {login_link}
 
-Need help? Check out our guides or contact support.
+Start with one account. You can add the others when you're ready.
 
 © 2026 finPal
 """
@@ -329,7 +323,7 @@ Need help? Check out our guides or contact support.
         verification_link: str
     ) -> bool:
         """Send email verification email"""
-        subject = "Verify Your Email Address"
+        subject = "Verify your email address"
 
         html_body = f"""
 <!DOCTYPE html>
@@ -346,11 +340,8 @@ Need help? Check out our guides or contact support.
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
-                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 32px;">✉️</span>
-                            </div>
                             <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
-                                Verify Your Email
+                                Verify your email address
                             </h1>
                         </td>
                     </tr>
@@ -362,7 +353,7 @@ Need help? Check out our guides or contact support.
                                 Hi <strong style="color: #86efac;">{user_name}</strong>,
                             </p>
                             <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-                                Thanks for signing up for finPal! Please verify your email address to get started.
+                                Verify your email address to finish setting up your finPal account.
                             </p>
 
                             <!-- CTA Button -->
@@ -370,7 +361,7 @@ Need help? Check out our guides or contact support.
                                 <tr>
                                     <td style="text-align: center;">
                                         <a href="{verification_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            Verify Email Address
+                                            Verify your email address
                                         </a>
                                     </td>
                                 </tr>
@@ -384,15 +375,15 @@ Need help? Check out our guides or contact support.
                             <!-- Info Box -->
                             <div style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 16px; margin: 24px 0;">
                                 <p style="color: #22c55e; font-size: 14px; font-weight: 600; margin: 0 0 8px;">
-                                    ℹ️ Why verify?
+                                    Why verify?
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 13px; margin: 0; line-height: 1.5;">
-                                    Verifying your email helps us keep your account secure and ensures you receive important notifications.
+                                    This confirms that this email address belongs to you.
                                 </p>
                             </div>
 
                             <p style="color: #9CB3A3; font-size: 13px; margin: 24px 0 0; text-align: center; line-height: 1.5;">
-                                This link will expire in 24 hours. If you didn't sign up for finPal, you can safely ignore this email.
+                                This link expires in 24 hours. If you didn't sign up for finPal, you can ignore this email.
                             </p>
                         </td>
                     </tr>
@@ -401,7 +392,7 @@ Need help? Check out our guides or contact support.
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                             <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
-                                Having trouble? <a href="#" style="color: #22c55e;">Contact support</a>
+                                If the button doesn't open, copy the link into your browser.
                             </p>
                         </td>
                     </tr>
@@ -424,20 +415,20 @@ Need help? Check out our guides or contact support.
 """
 
         text_body = f"""
-Verify Your Email Address
+Verify your email address
 
 Hi {user_name},
 
-Thanks for signing up for finPal! Please verify your email address to get started.
+Verify your email address to finish setting up your finPal account.
 
 Verify your email: {verification_link}
 
-ℹ️ Why verify?
-Verifying your email helps us keep your account secure and ensures you receive important notifications.
+Why verify?
+This confirms that this email address belongs to you.
 
-This link will expire in 24 hours. If you didn't sign up for finPal, you can safely ignore this email.
+This link expires in 24 hours. If you didn't sign up for finPal, you can ignore this email.
 
-Having trouble? Contact support.
+If the button doesn't open, copy the link into your browser.
 
 © 2026 finPal
 """
@@ -452,7 +443,7 @@ Having trouble? Contact support.
         expires_in: str = "1 hour"
     ) -> bool:
         """Send password reset email"""
-        subject = "Reset Your finPal Password"
+        subject = "Reset your finPal password"
 
         html_body = f"""
 <!DOCTYPE html>
@@ -469,11 +460,8 @@ Having trouble? Contact support.
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
-                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 32px;">🔐</span>
-                            </div>
                             <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
-                                Password Reset Request
+                                Reset your finPal password
                             </h1>
                         </td>
                     </tr>
@@ -485,7 +473,7 @@ Having trouble? Contact support.
                                 Hi <strong style="color: #86efac;">{user_name}</strong>,
                             </p>
                             <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-                                We received a request to reset your password for your finPal account.
+                                You can choose a new password for your finPal account using the link below.
                             </p>
 
                             <!-- CTA Button -->
@@ -493,7 +481,7 @@ Having trouble? Contact support.
                                 <tr>
                                     <td style="text-align: center;">
                                         <a href="{reset_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            Reset Password
+                                            Reset your finPal password
                                         </a>
                                     </td>
                                 </tr>
@@ -507,10 +495,10 @@ Having trouble? Contact support.
                             <!-- Security Notice -->
                             <div style="background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; padding: 16px; margin: 24px 0;">
                                 <p style="color: #fbbf24; font-size: 14px; font-weight: 600; margin: 0 0 8px;">
-                                    ⚠️ Security Notice
+                                    About this link
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 13px; margin: 0; line-height: 1.5;">
-                                    This link will expire in <strong>{expires_in}</strong>. If you didn't request a password reset, please ignore this email or contact support if you have concerns.
+                                    This link expires in <strong>{expires_in}</strong>. If you didn't request a reset, you can ignore this email. Your password will stay the same.
                                 </p>
                             </div>
                         </td>
@@ -520,7 +508,7 @@ Having trouble? Contact support.
                     <tr>
                         <td style="padding: 32px 40px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                             <p style="color: #9CB3A3; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
-                                For security reasons, we never send your password via email.
+                                finPal never sends your password by email.
                             </p>
                         </td>
                     </tr>
@@ -543,18 +531,18 @@ Having trouble? Contact support.
 """
 
         text_body = f"""
-Password Reset Request
+Reset your finPal password
 
 Hi {user_name},
 
-We received a request to reset your password for your finPal account.
+You can choose a new password for your finPal account using the link below.
 
 Reset your password: {reset_link}
 
-⚠️ Security Notice
-This link will expire in {expires_in}. If you didn't request a password reset, please ignore this email or contact support if you have concerns.
+About this link
+This link expires in {expires_in}. If you didn't request a reset, you can ignore this email. Your password will stay the same.
 
-For security reasons, we never send your password via email.
+finPal never sends your password by email.
 
 © 2026 finPal
 """
@@ -600,37 +588,34 @@ For security reasons, we never send your password via email.
         reasons = []
         if guessed_mapping:
             reasons.append(
-                '<li><strong>The columns were guessed.</strong> finPal had not seen '
-                'this file layout before, so it worked out which column was the '
-                'date, the description and the amount. Worth a look to confirm it '
-                'guessed right.</li>')
+                '<li><strong>The columns were guessed.</strong> Check that the '
+                'date, description and amount landed in the right fields.</li>')
         if errors:
             reasons.append(
-                f'<li><strong>{errors} row(s) could not be imported.</strong> '
-                'The rest went in; these did not.</li>')
+                f'<li><strong>{errors} row(s) were not imported.</strong> '
+                'Review these rows to see what needs correcting.</li>')
 
         subject = f"Check your import: {filename}"
         html_body = f"""
         <p>Hi {user_name},</p>
         <p>finPal imported <strong>{filename}</strong> and brought in
-           <strong>{imported}</strong> transaction(s), but it would like you to
-           check something:</p>
+           <strong>{imported}</strong> transaction(s). Review the items below before relying on this import.</p>
         <ul>{''.join(reasons)}</ul>
         <p><a href="{review_link}">Review this import</a></p>
-        <p>If it looks wrong you can undo the whole batch from that screen, and
-           nothing else in your account is affected.</p>
+        <p>If it looks wrong, you can undo this batch from the review screen. Other transactions in your account are not affected.</p>
         <p style="color:#56685D;font-size:13px">You are getting this because an
            automatic import needed attention. finPal does not email you about
            imports that go through cleanly.</p>
         """
         text_lines = [f"Hi {user_name},", "",
-                      f"finPal imported {filename} and brought in {imported} transaction(s), "
-                      "but it would like you to check something:", ""]
+                      f"finPal imported {filename} and brought in {imported} transaction(s). "
+                      "Review the items below before relying on this import.", ""]
         if guessed_mapping:
-            text_lines.append("- The columns were guessed. Confirm they landed in the right fields.")
+            text_lines.append("- The columns were guessed. Check that the date, description and amount landed in the right fields.")
         if errors:
-            text_lines.append(f"- {errors} row(s) could not be imported.")
+            text_lines.append(f"- {errors} row(s) were not imported. Review these rows to see what needs correcting.")
         text_lines += ["", f"Review this import: {review_link}", "",
+                       "If it looks wrong, you can undo this batch from the review screen. Other transactions in your account are not affected.", "",
                        "finPal does not email you about imports that go through cleanly."]
 
         return self.send_email(to_email, subject, html_body, "\n".join(text_lines))
@@ -659,11 +644,8 @@ For security reasons, we never send your password via email.
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 0; text-align: center;">
-                            <div style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 32px;">🏠</span>
-                            </div>
                             <h1 style="margin: 0 0 16px; color: #ffffff; font-size: 28px; font-weight: 700;">
-                                You're Invited!
+                                Your finPal invitation
                             </h1>
                         </td>
                     </tr>
@@ -675,19 +657,19 @@ For security reasons, we never send your password via email.
                                 <strong style="color: #86efac;">{inviter_name}</strong> has invited you to join their household on finPal.
                             </p>
                             <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-                                finPal helps households track expenses, manage budgets, and stay on top of finances together. Create your account to get started!
+                                Open your invitation to join the household and see its shared finances.
                             </p>
 
                             <!-- Features -->
                             <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin: 0 0 32px;">
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    📊 Shared expense tracking
+                                    Shared expense tracking
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
-                                    💰 Household budgets
+                                    Household budgets
                                 </p>
                                 <p style="color: #e2e8f0; font-size: 14px; margin: 0; line-height: 1.6;">
-                                    📈 Financial insights for everyone
+                                    Financial insights for everyone
                                 </p>
                             </div>
 
@@ -696,7 +678,7 @@ For security reasons, we never send your password via email.
                                 <tr>
                                     <td style="text-align: center;">
                                         <a href="{invite_link}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            Accept Invitation
+                                            Open invitation
                                         </a>
                                     </td>
                                 </tr>
@@ -738,11 +720,11 @@ For security reasons, we never send your password via email.
 """
 
         text_body = f"""
-You're Invited!
+Your finPal invitation
 
 {inviter_name} has invited you to join their household on finPal.
 
-finPal helps households track expenses, manage budgets, and stay on top of finances together.
+Open your invitation to join the household and see its shared finances.
 
 What you can do:
 - Shared expense tracking

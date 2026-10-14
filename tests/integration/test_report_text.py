@@ -160,3 +160,16 @@ def test_a_weekly_report_has_no_net_worth_section_in_either_renderer(db):
     assert 'Net worth</h2>' not in render_html(report)
     # But the net worth TILE is in both, and that is a different thing.
     assert 'Net worth:' in render_text(report)
+
+
+@pytest.mark.parametrize("cadence,period", [("weekly", WEEK), ("monthly", MONTH)])
+def test_report_offers_one_small_step_before_the_figures(db, cadence, period):
+    me, _ = _household(name="Ann")
+    report = build_report(me.id, period, cadence)
+    line = "Start with one spending category you'd like to understand. You can review its transactions in finPal when you're ready."
+    html = render_html(report)
+    text = render_text(report)
+    assert line in html and line in text
+    assert "Ann" in html and "Ann" in text
+    assert html.index(line) < html.index("The numbers")
+    assert text.index(line) < text.index("THE NUMBERS")

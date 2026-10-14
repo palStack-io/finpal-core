@@ -70,3 +70,27 @@ def test_pointspal_alerts_returns_200(client, db, auth_headers):
     headers = auth_headers(user)
     resp = client.get('/api/v1/pointspal/alerts', headers=headers)
     assert resp.status_code == 200
+
+
+@pytest.mark.parametrize("kind,pct,next_step", [
+    ("capped", 100, "Review your cards to choose where to put your next purchase."),
+    ("warning_95", 95, "Review the cap before your next purchase."),
+    ("warning_80", 80, "Review the cap before your next purchase."),
+])
+def test_persisted_alert_preserves_data_and_gives_next_step(client, db, auth_headers, kind, pct, next_step):
+    from src.modules.pointspal.models import UserCard, OptimizerAlert
+    user = UserFactory()
+    card = UserCard(user_id=user.id, card_nickname="My everyday card")
+    db.session.add(card)
+    db.session.flush()
+    alert = OptimizerAlert(user_id=user.id, user_card_id=card.id, category="groceries", period_type="monthly", period_key="2026-10", alert_type=kind, pct_used=pct)
+    db.session.add(alert)
+    db.session.commit()
+    response = client.get("/api/v1/pointspal/alerts", headers=auth_headers(user))
+    assert response.status_code == 200
+    item = next(x for x in response.get_json() if x["id"] == alert.id)
+    assert item["type"] == kind and item["dismissed"] is False
+    assert "Groceries" in item["message"] and "My everyday card" in item["message"]
+    assert next_step in item["message"]
+    if kind != "capped":
+        assert f"{pct}%" in item["message"]
