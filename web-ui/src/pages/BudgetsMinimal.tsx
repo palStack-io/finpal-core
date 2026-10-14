@@ -21,6 +21,7 @@ import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
 import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
 import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
 import { PageHead } from '../components/PageHead';
+import { HardMonthCard } from '../components/onboarding/HardMonthCard';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
 interface BudgetWithDetails extends Budget {
@@ -1127,6 +1128,8 @@ const BudgetsMinimal = () => {
               </button>
             </div>}
           >
+            {/* Phase 1e: one calm line after a hard month, before the totals. */}
+            <HardMonthCard />
               {/* *** ONE HAIRLINE-SEPARATED ROW, NOT FOUR CARDS WITH ICON
                   CHIPS. *** Owner, 2026-09-19: the KPI "look differes for
                   each page", and Accounts is the one to match. `TotalsRow`'s

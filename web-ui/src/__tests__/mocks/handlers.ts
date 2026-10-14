@@ -20,6 +20,8 @@ export const guideHandlers = [
   http.get(`${BASE}/api/v1/modules/guides`, () =>
     HttpResponse.json({ pages: {}, dismissed: [], toured: [], lang: 'en' }),
   ),
+  // Phase 1e: Dashboard and Budgets ask for the hard-month opening; none by default.
+  http.get(`${BASE}/api/v1/modules/hard-month`, () => HttpResponse.json({ opening: null })),
 ];
 
 export const authHandlers = [

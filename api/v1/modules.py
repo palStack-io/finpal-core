@@ -177,8 +177,50 @@ class Guides(Resource):
 
         user_id = get_jwt_identity()
         lang = resolve_lang(request.args.get('lang'), request.headers.get('Accept-Language'))
+        _note_visit(user_id)
         return {'pages': guides_for(lang, _enabled_module_names()), 'lang': lang,
                 **guide_state(user_id)}, 200
+
+
+def _note_visit(user_id):
+    """Every client loads the guides when it opens, so this is the visit signal the
+    hard-month opening reads. A failure here must never take the guides down."""
+    try:
+        from src.services.onboarding.hard_month import record_visit
+        record_visit(user_id)
+    except Exception:
+        from src.extensions import db
+        db.session.rollback()
+        logger.exception('guides: could not record the visit')
+
+
+@ns.route('/hard-month')
+class HardMonth(Resource):
+    @jwt_required()
+    def get(self):
+        """The one calm opening Dashboard and Budgets show after a hard month or a long
+        gap, or `{"opening": null}`. Never more than one (Phase 1e)."""
+        from flask import request
+        from src.services.onboarding.guides import resolve_lang
+        from src.services.onboarding.hard_month import hard_month_state
+
+        lang = resolve_lang(request.args.get('lang'), request.headers.get('Accept-Language'))
+        return {'opening': hard_month_state(get_jwt_identity(), lang)}, 200
+
+
+@ns.route('/hard-month/dismiss')
+class HardMonthDismiss(Resource):
+    @jwt_required()
+    def post(self):
+        """Close this episode's opening on every device. Idempotent."""
+        from flask import request
+        from src.services.onboarding.hard_month import dismiss as dismiss_opening
+
+        key = (request.get_json(silent=True) or {}).get('key') or ''
+        try:
+            return dismiss_opening(get_jwt_identity(), key), 200
+        except ValueError:
+            return {'error': 'Unknown opening'}, 400
 
 
 def _guide_write(action, page):

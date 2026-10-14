@@ -106,6 +106,16 @@ export interface GuidesPayload extends GuidesState {
   lang: string;
 }
 
+/** Phase 1e: the one calm opening after a hard month or a long gap (server copy). */
+export interface HardMonthOpening {
+  state: 'off_plan' | 'returning';
+  key: string;
+  text: string;
+  action: string;
+  href: string;
+  dismiss: string;
+}
+
 export const onboardingService = {
   /** Unauthenticated on the server: it carries no user data and must render
    *  before a session has settled. */
@@ -138,5 +148,16 @@ export const onboardingService = {
   dismissFirstVisit: async (page: FirstVisitPage): Promise<FirstVisitState> => {
     const response = await api.post<FirstVisitState>(`/api/v1/modules/first-visit/${page}`);
     return response.data;
+  },
+
+  /** At most one opening, or null. Also counts as today's visit on the server. */
+  getHardMonth: async (lang?: string): Promise<HardMonthOpening | null> => {
+    const response = await api.get<{ opening: HardMonthOpening | null }>(
+      '/api/v1/modules/hard-month', { params: lang ? { lang } : {} });
+    return response.data.opening;
+  },
+
+  dismissHardMonth: async (key: string): Promise<void> => {
+    await api.post('/api/v1/modules/hard-month/dismiss', { key });
   },
 };

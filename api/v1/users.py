@@ -896,6 +896,12 @@ def _delete_all_user_data(user_id):
 
     Tag.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     LoginEvent.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    # Phase 1e: the visit mark every client writes on open, and the guide / hard-month
+    # dismissals. Both key on users.id with no ON DELETE, so leaving them blocks the delete.
+    from src.models.act_event import TeachingSeen
+    from src.models.visit_mark import VisitMark
+    TeachingSeen.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    VisitMark.query.filter_by(user_id=user_id).delete(synchronize_session=False)
 
     # Remove user from group memberships
     db.session.execute(group_users.delete().where(group_users.c.user_id == user_id))

@@ -19,6 +19,7 @@ import {
 import { SectionCard } from '../components/SectionCard';
 import { ScrollPane } from '../components/ScrollPane';
 import { PageHead } from '../components/PageHead';
+import { HardMonthCard } from '../components/onboarding/HardMonthCard';
 import { GoalRange } from '../components/dashboard/GoalRange';
 import EmptyRange from '../components/dashboard/EmptyRange';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
@@ -599,6 +600,8 @@ export const Dashboard = () => {
               Everest exists to fill: base camp's own audience had no mountain
               at all (D-205). `EmptyRange` still carries the invitation when
               there is neither a goal nor any altitude yet. */}
+          {/* Phase 1e: one calm line after a hard month or a long gap, before the range and totals. */}
+          <HardMonthCard />
           <div data-guide="dashboard-range">
           {(goals.length > 0 || everest) ? (
             <GoalRange
