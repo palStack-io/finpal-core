@@ -16,8 +16,10 @@ somebody has. That is D-101, which this project hit four times in three days.
 from decimal import Decimal
 
 
-# The conventional options, offered as options. finPal does not choose.
-MONTH_OPTIONS = (3, 6)
+# The conventional options, offered as options. finPal does not choose. Nine joined three and six on
+# 2026-10-15 (owner): the 'How much is enough' lesson names what pushes a buffer up (income that varies,
+# being the only earner), and nine months is the figure that case reaches for.
+MONTH_OPTIONS = (3, 6, 9)
 
 
 def buffer_picture(user_id, scope_ids=None, analytics=None):

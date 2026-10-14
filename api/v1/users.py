@@ -902,6 +902,11 @@ def _delete_all_user_data(user_id):
     from src.models.visit_mark import VisitMark
     TeachingSeen.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     VisitMark.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    try:
+        from src.modules.learnpal.models import LearnQuizAnswer
+        LearnQuizAnswer.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    except ImportError:
+        pass
 
     # Remove user from group memberships
     db.session.execute(group_users.delete().where(group_users.c.user_id == user_id))

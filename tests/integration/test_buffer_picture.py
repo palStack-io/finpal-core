@@ -34,15 +34,15 @@ def _seed(db, essentials=2000.0, liquid=8000.0):
     return user
 
 
-def test_it_offers_both_conventions_and_recommends_neither(db):
+def test_it_offers_three_six_and_nine_months_and_recommends_none(db):
     user = _seed(db)
     picture = buffer_picture(user.id, [user.id])
 
     assert picture['essential_monthly'] == 2000.0
     assert picture['held'] == 8000.0
     assert picture['months_covered'] == 4.0
-    assert [t['months'] for t in picture['targets']] == [3, 6]
-    # 3 months is already covered; 6 is not.
+    assert [t['months'] for t in picture['targets']] == [3, 6, 9]
+    # 3 months is already covered; 6 and 9 are not.
     by_months = {t['months']: t for t in picture['targets']}
     assert by_months[3]['target'] == 6000.0
     assert by_months[6]['target'] == 12000.0
@@ -50,6 +50,9 @@ def test_it_offers_both_conventions_and_recommends_neither(db):
     # and a 0 would read as "exactly enough", which is a different fact.
     assert by_months[3]['short_by'] == -2000.0
     assert by_months[6]['short_by'] == 4000.0
+    # Nine (owner, 2026-10-15): for income that varies or a single earner.
+    assert by_months[9]['target'] == 18000.0
+    assert by_months[9]['short_by'] == 10000.0
 
 
 def test_NO_SPENDING_MEANS_NO_PICTURE_RATHER_THAN_A_ZERO_TARGET(db):
