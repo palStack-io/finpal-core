@@ -64,6 +64,8 @@ NO_DEMO_ROWS_BY_DESIGN = {
     # `_coins_award`'s own docstring refuses for coins.
     'everest_watermarks': 'written on the first wallet read; a freshly seeded '
                           'demo has not been looked at yet',
+    'visit_marks': 'Phase 1e: written when a client opens finPal; a freshly seeded '
+                   'demo has not been opened, and seeding a past visit would fake a return',
     'teaching_seen': 'records which explanations the user has been shown; a '
                      'freshly seeded demo has been shown none, which is what '
                      'makes the teaching panels appear',
