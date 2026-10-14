@@ -251,6 +251,7 @@ def render_html(report):
                                        font-size: 24px; font-weight: 700;"
                             >{escape(report['period']['label'])}</h1>
                             <p style="margin: 0; color: {MUTED}; font-size: 14px;">{names}</p>
+                            <p style="color: {BODY}; font-size: 14px; line-height: 1.6;">Start with one spending category you'd like to understand. You can review its transactions in finPal when you're ready.</p>
                         </td>
                     </tr>
                     {''.join(sections)}
@@ -332,6 +333,7 @@ def render_text(report):
         f"finPal · {cadence} report",
         report['period']['label'],
         ' & '.join(report['household']['names']),
+        "Start with one spending category you'd like to understand. You can review its transactions in finPal when you're ready.",
         '',
         'THE NUMBERS',
     ]
