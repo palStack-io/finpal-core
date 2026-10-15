@@ -6,7 +6,7 @@ import { bufferByHand } from '../../utils/bufferByHand';
 /**
  * What an emergency fund would need to be, in the reader's own figures.
  *
- * *** IT OFFERS THREE AND SIX MONTHS AND PICKS NEITHER. *** Those are
+ * *** IT OFFERS THREE, SIX AND NINE MONTHS AND PICKS NONE. *** Those are
  * conventions, not facts: which is right depends on job security, dependants
  * and health, and finPal knows none of them. It states what each would cost
  * and what they already hold. The same line `avalanche-vs-snowball` walks, and

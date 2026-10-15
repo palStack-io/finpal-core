@@ -22,11 +22,12 @@ these paths as "learnPal is not installed" and render nothing, NOT as an error -
 which is the same discipline as `peak` being absent from a goal payload.
 """
 
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.extensions import db
-from src.modules.learnpal.models import LearnCompletion, LearnMilestone
+from src.modules.learnpal.models import LearnCompletion, LearnMilestone, LearnQuizAnswer
+from src.modules.learnpal.lesson_quizzes import QUIZZES, quiz_for
 from src.modules.learnpal.range import range_for_user
 from src.modules.learnpal.stats import stats_for_user
 
@@ -131,8 +132,48 @@ class LearnLesson(Resource):
                 'earned': earned,
                 'body_md': m.body_md if earned else None,
                 'locked': not earned,
+                # Phase 5d: the quick check and the lesson's one action, only once the lesson is yours.
+                'quiz': quiz_for(m.slug) if earned else None,
             },
         }, 200
+
+
+quiz_answers_model = learnpal_ns.model('LearnQuizAnswers', {
+    'answers': fields.List(fields.Raw, required=True,
+                           description='[{question_id, choice}] where choice is "0".."2" or "not_sure"'),
+})
+
+
+@learnpal_ns.route('/lessons/<string:slug>/quiz')
+class LearnLessonQuiz(Resource):
+    @learnpal_ns.expect(quiz_answers_model, validate=False)
+    @jwt_required()
+    def post(self, slug):
+        """Record a lesson's quick-check answers. Awards nothing.
+
+        Refuses a lesson the user has not earned (the quiz is part of the lesson). Unknown questions and
+        choices are ignored rather than stored; "not_sure" is recorded as not right, never as wrong.
+        """
+        from flask import request
+        user_id = get_jwt_identity()
+        quiz = QUIZZES.get(slug)
+        if quiz is None or LearnMilestone.query.filter_by(slug=slug).first() is None:
+            return {'success': False, 'error': 'Lesson not found'}, 404
+        if LearnCompletion.query.filter_by(user_id=user_id, milestone_slug=slug).first() is None:
+            return {'success': False, 'error': 'This lesson is not unlocked yet'}, 409
+        by_id = {q['id']: q for q in quiz['questions']}
+        stored = 0
+        for a in (request.get_json(silent=True) or {}).get('answers') or []:
+            q = by_id.get(str(a.get('question_id', '')))
+            choice = str(a.get('choice', ''))
+            if q is None or choice not in ('0', '1', '2', 'not_sure'):
+                continue
+            right = choice != 'not_sure' and bool(q['options'][int(choice)]['right'])
+            db.session.add(LearnQuizAnswer(user_id=user_id, milestone_slug=slug,
+                                           question_id=q['id'], choice=choice, right=right))
+            stored += 1
+        db.session.commit()
+        return {'success': True, 'recorded': stored}, 200
 
 
 @learnpal_ns.route('/lessons/<string:slug>/read')

@@ -65,4 +65,9 @@ export const learnpalService = {
   async markRead(slug: string): Promise<void> {
     await api.post(`/api/v1/learnpal/lessons/${encodeURIComponent(slug)}/read`, {});
   },
+
+  /** Phase 5d: record quick-check answers. Awards nothing; the server ignores unknown questions. */
+  async postQuiz(slug: string, answers: { question_id: string; choice: string }[]): Promise<void> {
+    await api.post(`/api/v1/learnpal/lessons/${encodeURIComponent(slug)}/quiz`, { answers });
+  },
 };

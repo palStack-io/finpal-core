@@ -109,6 +109,29 @@ export interface LessonDetail {
   /** `null` while locked. A locked lesson answers 200, never 403. */
   body_md: string | null;
   locked: boolean;
+  /** Phase 5d: the quick check, `null` while locked or for a lesson with none. */
+  quiz?: LessonQuiz | null;
+}
+
+/** One answer to a quick-check question. Every option carries its explanation, right or not. */
+export interface LessonQuizOption {
+  text: string;
+  right: boolean;
+  why: string;
+}
+
+export interface LessonQuizQuestion {
+  id: string;
+  prompt: string;
+  options: LessonQuizOption[];
+  /** The line shown for "Not sure", which is never marked wrong. */
+  not_sure: string;
+}
+
+export interface LessonQuiz {
+  /** The lesson's one action, into the person's own finPal. */
+  action: { label: string; href: string };
+  questions: LessonQuizQuestion[];
 }
 
 export type { PeakScale };

@@ -30,9 +30,12 @@
  *     itself rather than letting a second click stack two fetches.
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { SlidePanel } from '../../components/SlidePanel';
 import LessonBody from './LessonBody';
+import LessonQuiz from './LessonQuiz';
+import { BufferCalculator } from '../../components/goals/BufferCalculator';
+import { useAuthStore } from '../../store/authStore';
 import { learnpalService } from './service';
 import { apiErrorMessage } from '../../utils/apiError';
 import type { LessonDetail } from '../../types/learnpal';
@@ -60,8 +63,20 @@ export interface LessonReaderApi {
   error: string | null;
 }
 
+/**
+ * Lessons about the emergency fund carry the calculator (Phase 5c, owner 2026-10-15: "how much they need to
+ * save for 3, 6 and 9 months"). It is the same `BufferCalculator` the Goals panel uses, in the reader's own
+ * figures, with no target to pick: here it shows, the Goals panel sets.
+ */
+const LESSONS_WITH_BUFFER_CALCULATOR = new Set([
+  'a-starter-buffer', 'why-a-buffer-comes-first', 'how-much-is-enough',
+]);
+
 export function useLessonReader(): LessonReaderApi {
   const [detail, setDetail] = useState<LessonDetail | null>(null);
+  const top = useRef<HTMLDivElement>(null);
+  const { user } = useAuthStore();
+  const currency = user?.default_currency_code || 'USD';
   const [opening, setOpening] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +104,22 @@ export function useLessonReader(): LessonReaderApi {
             is nothing to sanitise — which is how the markdown question that
             deferred this got answered by not being raised. Its own header
             carries the rest. */}
+        <div ref={top} />
         <LessonBody markdown={detail?.body_md ?? null} />
+        {detail?.body_md && LESSONS_WITH_BUFFER_CALCULATOR.has(detail.slug) && (
+          <div data-testid="lesson-buffer-calculator" style={{ marginTop: '1.5rem' }}>
+            <BufferCalculator currency={currency} />
+          </div>
+        )}
+        {detail?.body_md && detail.quiz && (
+          <LessonQuiz
+            key={detail.slug}
+            slug={detail.slug}
+            quiz={detail.quiz}
+            onReadAgain={() => top.current?.scrollIntoView({ block: 'start' })}
+            onLeave={() => setDetail(null)}
+          />
+        )}
       </SlidePanel>
     ),
   };

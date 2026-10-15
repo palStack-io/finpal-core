@@ -76,7 +76,7 @@ if _PointsPalModule().is_enabled():
 # default it claimed to cover.
 from src.modules.learnpal.manifest import LearnPalModule as _LearnPalModule
 if _LearnPalModule().is_enabled():
-    from src.modules.learnpal.models import LearnMilestone, LearnCompletion
+    from src.modules.learnpal.models import LearnMilestone, LearnCompletion, LearnQuizAnswer
 
 __all__ = [
     'group_users',

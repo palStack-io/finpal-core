@@ -144,3 +144,19 @@ class LearnCompletion(db.Model):
 
     def __repr__(self):
         return f'<LearnCompletion {self.user_id} {self.milestone_slug}>'
+
+
+class LearnQuizAnswer(db.Model):
+    """One answer to a lesson's quick check (Phase 5d). Recorded so spaced recall (5e) can ask again later and
+    5g can measure whether the check helps. Awards nothing; "not_sure" is a real answer, never wrong."""
+    __tablename__ = 'learn_quiz_answers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(120), db.ForeignKey('users.id', name='fk_learn_quiz_answers_user'),
+                        nullable=False, index=True)
+    milestone_slug = db.Column(db.String(60), nullable=False)
+    question_id = db.Column(db.String(20), nullable=False)
+    #: The option index chosen ("0".."2") or "not_sure".
+    choice = db.Column(db.String(10), nullable=False)
+    right = db.Column(db.Boolean, nullable=False, default=False)
+    answered_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)

@@ -28,16 +28,17 @@ describe('a buffer worked out by hand', () => {
     expect(picture?.targets).toEqual([
       { months: 3, target: 6150 },
       { months: 6, target: 12300 },
+      { months: 9, target: 18450 },
     ]);
     expect(picture?.spare).toBeNull();
     expect(picture?.monthsAtHalfSpare).toBeNull();
   });
 
-  it('offers three months and six, and picks neither', () => {
+  it('offers three, six and nine months, and picks none', () => {
     /* Which is right depends on job security, dependants and health, none of
        which finPal knows — the same line `buffer_picture` walks. */
-    expect([...MONTH_OPTIONS]).toEqual([3, 6]);
-    expect(bufferByHand(1000, null)?.targets).toHaveLength(2);
+    expect([...MONTH_OPTIONS]).toEqual([3, 6, 9]);
+    expect(bufferByHand(1000, null)?.targets).toHaveLength(3);
   });
 
   it('states what is spare, and how long HALF of it takes', () => {

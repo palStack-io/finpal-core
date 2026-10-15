@@ -21,8 +21,9 @@
  * clients doing one arithmetic two ways is D-101. A test diffs the files.
  */
 
-/** The conventional options, offered as options. finPal picks neither. */
-export const MONTH_OPTIONS = [3, 6] as const;
+/** The conventional options, offered as options. finPal picks none. Nine joined on 2026-10-15 (owner), for
+ *  income that varies or a single earner, as the 'How much is enough' lesson describes. */
+export const MONTH_OPTIONS = [3, 6, 9] as const;
 
 export interface ByHandTarget {
   months: number;
@@ -78,7 +79,8 @@ export const bufferByHand = (
     ? Math.round((incomeMonthly - fixedMonthly) * 100) / 100
     : null;
 
-  const sixMonth = targets[targets.length - 1].target;
+  // By months, not position: nine joined the options and the line still speaks of six (2026-10-15).
+  const sixMonth = Math.round(fixedMonthly * 6 * 100) / 100;
   const rate = spare !== null && spare > 0 ? spare / 2 : null;
   const monthsAtHalfSpare = rate === null ? null : Math.ceil(sixMonth / rate);
 
