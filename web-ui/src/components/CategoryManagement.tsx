@@ -10,6 +10,7 @@ import { PageHead } from './PageHead';
 import { TotalsRow } from './dashboard/TotalsRow';
 import { SliceBreakdown } from './analytics/SliceBreakdown';
 import { formatMoney } from '../styles/money';
+import { useAuthStore } from '../store/authStore';
 import { analyticsService } from '../services/analyticsService';
 import { lastFullMonth } from '../utils/monthKeys';
 import { spendingTypeByName, splitSpendByGroup, SpendSplit } from '../utils/spendingGroups';
@@ -345,6 +346,10 @@ const bigStatStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold'
 const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)' };
 
 export const CategoryManagement: React.FC = () => {
+  // The figures are the user's own currency, as on Analytics. Formatting without it fell back to USD,
+  // so a EUR household saw "$1,200.00" here (2026-10-15).
+  const { user } = useAuthStore();
+  const currency = user?.default_currency_code || 'USD';
   // *** THE ONLY THING THIS PAGE DECIDES IS ITS OWN NAME. *** The
   // server owns which acts a `categories` mutation can move; a client-side
   // map would be a second list to keep in step with `acts.py`. The hook
@@ -653,14 +658,14 @@ export const CategoryManagement: React.FC = () => {
               cells={[
                 {
                   label: 'Fixed',
-                  value: formatMoney(split.fixed),
+                  value: formatMoney(split.fixed, { currency }),
                   note: split.fixed === 0
                     ? `nothing landed in ${split.label.split(' ')[0]}`
                     : 'arrives whatever you do',
                 },
                 {
                   label: 'Flexible',
-                  value: formatMoney(split.flexible),
+                  value: formatMoney(split.flexible, { currency }),
                   valueColor: 'var(--g-ink)',
                   note: split.flexible === 0
                     ? `nothing landed in ${split.label.split(' ')[0]}`
@@ -674,7 +679,7 @@ export const CategoryManagement: React.FC = () => {
                   // `coins/_kit.css` carries the same warning with the same
                   // number: it "survives as --seg-4, which is a FILL and never
                   // carries a label".
-                  value: formatMoney(split.non_monthly),
+                  value: formatMoney(split.non_monthly, { currency }),
                   valueColor: 'var(--au-ink)',
                   note: split.non_monthly === 0
                     ? `nothing landed in ${split.label.split(' ')[0]}`
@@ -685,7 +690,7 @@ export const CategoryManagement: React.FC = () => {
                 // problem rather than as finished.
                 ...(split.unsorted > 0 ? [{
                   label: 'Not sorted yet',
-                  value: formatMoney(split.unsorted),
+                  value: formatMoney(split.unsorted, { currency }),
                   valueColor: 'var(--text-secondary)',
                   // NOT folded into flexible. Unsorted means finPal does not
                   // know; calling it movable would claim the user said so.
@@ -693,6 +698,16 @@ export const CategoryManagement: React.FC = () => {
                 }] : []),
               ]}
             />
+        )}
+        {/* *** INSIDE THE HEAD, UNDER THE FIGURES IT QUALIFIES. *** It sat after the head with a negative
+            margin, so it rode on the head's mountain band at the page edge (owner, 2026-10-15). */}
+        {split && split.unattributable.length > 0 && (
+          <p className="fp-hint" data-testid="split-left-out"
+            style={{ margin: '4px 0 0', fontSize: 12.5, lineHeight: 1.5, position: 'relative' }}>
+            Left out of the figures above, because more than one category shares
+            the name and they are sorted differently:{' '}
+            {split.unattributable.join(', ')}.
+          </p>
         )}
       </PageHead>
 
@@ -723,13 +738,6 @@ export const CategoryManagement: React.FC = () => {
           `splitSpendByGroup` refuses an ambiguous name rather than guessing,
           and anything it could not attribute is named below rather than
           quietly missing from a total. */}
-      {split && split.unattributable.length > 0 && (
-        <p className="fp-hint" style={{ marginTop: '-12px', marginBottom: '24px' }}>
-          Left out of the figures above, because more than one category shares
-          the name and they are sorted differently:{' '}
-          {split.unattributable.join(', ')}.
-        </p>
-      )}
 
       {/* *** THE THREE COUNT CARDS ARE GONE, AND THE SPLIT ABOVE IS WHY. ***
           They said Main Categories 19, Subcategories 128, Total Items 147 —
@@ -926,7 +934,7 @@ export const CategoryManagement: React.FC = () => {
                       {spend.amount > 0 ? (
                         <p style={bodyTextStyle}>
                           <strong style={{ color: 'var(--text-primary)' }}>
-                            {formatMoney(spend.amount)}
+                            {formatMoney(spend.amount, { currency })}
                           </strong>
                           {` · ${share.toFixed(0)}% of the month`}
                           {subcategories.length > 0
@@ -1031,7 +1039,7 @@ export const CategoryManagement: React.FC = () => {
                     }}
                     start={lastFullMonth().start}
                     end={lastFullMonth().end}
-                    format={(amount) => formatMoney(amount)}
+                    format={(amount) => formatMoney(amount, { currency })}
                     onClose={() => setOpenCategory(null)}
                   />
                 )}
