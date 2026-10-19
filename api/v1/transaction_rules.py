@@ -6,6 +6,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.exceptions import HTTPException
 
+from src.utils.messages import GENERIC_ERROR
 from src.extensions import db
 from src.models.transaction_rule import TransactionRule
 from src.services.transaction_rule.validation import (
@@ -451,7 +452,7 @@ class BulkApplyRules(Resource):
             logger.exception('BulkApplyRules.post failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -512,7 +513,7 @@ class SuggestRule(Resource):
             logger.exception('SuggestRule.post failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 

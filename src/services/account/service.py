@@ -685,7 +685,7 @@ class SimpleFinService:
 
         settings = SimpleFin.query.filter_by(user_id=user_id).first()
         if not settings or not settings.access_url:
-            return False, 'SimpleFin not connected', []
+            return False, 'Connect your bank first, or add your accounts by hand.', []
 
         try:
             sf_client = SimpleFinClient(current_app)
@@ -694,7 +694,7 @@ class SimpleFinService:
                 settings.get_access_url(), days_back=1
             )
             if not raw_data:
-                return False, 'Failed to fetch accounts from SimpleFin', []
+                return False, "We couldn't reach your bank this time. Try syncing again in a moment.", []
 
             processed = sf_client.process_raw_accounts(raw_data)
             # *** THE INFERENCE NEEDS THE RAW ACCOUNT, NOT THE PROCESSED ONE. ***
@@ -795,7 +795,7 @@ class SimpleFinService:
 
         settings = SimpleFin.query.filter_by(user_id=user_id).first()
         if not settings or not settings.access_url:
-            return False, 'SimpleFin not connected', 0
+            return False, 'Connect your bank first, or add your accounts by hand.', 0
 
         # How far back to fetch: 2 days beyond the last sync, and never more than
         # SimpleFIN answers in one request. A first sync takes the whole window

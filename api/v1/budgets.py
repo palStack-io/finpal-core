@@ -2,6 +2,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.utils.messages import GENERIC_ERROR
 from src.models.budget import Budget
 from src.extensions import db
 from schemas import budget_schema, budgets_schema
@@ -73,7 +74,7 @@ class BudgetList(Resource):
             }, 200
         except Exception as e:
             logger.exception("Failed to list budgets")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
     @ns.doc('create_budget', security='Bearer')
     @ns.expect(budget_model)
@@ -243,7 +244,7 @@ class BudgetDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
     @ns.doc('delete_budget', security='Bearer')
@@ -274,7 +275,7 @@ class BudgetDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -664,7 +665,7 @@ class BudgetOverview(Resource):
             # entirely, so a 500 reached the user as a bare "Internal server
             # error" with NOTHING in the container log. See #124.
             logger.exception('BudgetOverview.get failed')
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
 
 @ns.route('/<int:id>/progress')

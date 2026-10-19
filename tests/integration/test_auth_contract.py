@@ -392,7 +392,7 @@ def test_login_rejects_a_wrong_password_the_same_way_as_an_unknown_user(
                                 'password': 'testpassword'})
     assert wrong.status_code == unknown.status_code == 401
     assert wrong.get_json() == unknown.get_json() == {
-        'error': 'Invalid email or password'}
+        'error': "That email and password don't match. Check them and try again, or reset your password."}
 
 
 @BOTH_SPELLINGS
@@ -689,7 +689,7 @@ def test_verify_email_rejects_an_unknown_token(client, db, slash):
     resp = client.post(f'/api/v1/auth/verify-email{slash}',
                        json={'token': 'not-a-real-token'})
     assert resp.status_code == 400
-    assert resp.get_json() == {'error': 'Invalid verification token'}
+    assert resp.get_json() == {'error': "That link doesn't look right. Request a new one and we'll send it again."}
 
 
 # --- POST /resend-verification -------------------------------------------
@@ -956,7 +956,7 @@ def test_reset_password_rejects_an_unknown_token(client, db, slash):
     resp = client.post(f'/api/v1/auth/reset-password{slash}', json={
         'token': 'not-a-real-token', 'password': 'longenough1'})
     assert resp.status_code == 400
-    assert resp.get_json() == {'error': 'Invalid reset token'}
+    assert resp.get_json() == {'error': "That link doesn't look right. Request a new one."}
 
 
 @BOTH_SPELLINGS
@@ -968,7 +968,7 @@ def test_reset_password_spends_the_token(client, db, user, slash):
     again = client.post(f'/api/v1/auth/reset-password{slash}',
                         json={'token': token, 'password': 'thirdpassword1'})
     assert again.status_code == 400
-    assert again.get_json() == {'error': 'Invalid reset token'}
+    assert again.get_json() == {'error': "That link doesn't look right. Request a new one."}
 
 
 # --- POST /oidc ----------------------------------------------------------

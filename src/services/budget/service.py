@@ -109,7 +109,7 @@ class BudgetService:
             from src.utils.household import visible_user_ids
             category = db.session.get(Category, category_id)
             if not category or category.user_id not in visible_user_ids(user_id):
-                return False, 'Invalid category selected', None
+                return False, "That category isn't available. Pick another.", None
 
         # Parse start date
         if start_date:
@@ -146,7 +146,7 @@ class BudgetService:
                 Budget.active.is_(True),
             ).first()
             if existing_budget:
-                return False, f'An active {period} budget already exists for this category. Please edit or deactivate it first.', None
+                return False, f'You already have a {period} budget for this category. Open it to change it, or pause it first.', None
 
         try:
             # Create new budget
@@ -173,7 +173,7 @@ class BudgetService:
         except Exception:
             db.session.rollback()
             current_app.logger.exception('Error adding budget')
-            return False, 'Error adding budget', None
+            return False, "We couldn't save that budget. Try again in a moment.", None
 
     def update_budget(self, budget_id, user_id, category_id=None, name=None, amount=None,
                       period=None, include_subcategories=None, start_date=None, is_recurring=None):
@@ -219,7 +219,7 @@ class BudgetService:
         except Exception:
             db.session.rollback()
             current_app.logger.exception('Error updating budget')
-            return False, 'Error updating budget'
+            return False, "We couldn't update that budget. Try again in a moment."
 
     def toggle_budget(self, budget_id, user_id):
         """
@@ -243,7 +243,7 @@ class BudgetService:
         except Exception:
             db.session.rollback()
             current_app.logger.exception('Error toggling budget')
-            return False, 'Error toggling budget', None
+            return False, "We couldn't change that budget. Try again in a moment.", None
 
     def delete_budget(self, budget_id, user_id):
         """
@@ -265,7 +265,7 @@ class BudgetService:
         except Exception:
             db.session.rollback()
             current_app.logger.exception('Error deleting budget')
-            return False, 'Error deleting budget'
+            return False, "We couldn't delete that budget. Try again in a moment."
 
     # Budget Analysis Methods
 

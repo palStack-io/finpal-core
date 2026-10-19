@@ -2,6 +2,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.utils.messages import GENERIC_ERROR
 from src.models.account import Account
 from src.models.transaction import CategorySplit, Expense
 from src.extensions import db
@@ -28,7 +29,7 @@ def _refuse(details):
     committed by whatever ran next. Every validation exit goes through here.
     """
     db.session.rollback()
-    return {'success': False, 'error': 'Validation error',
+    return {'success': False, 'error': 'Some of what you entered needs another look.',
             'details': details}, 400
 
 
@@ -328,7 +329,7 @@ class TransactionList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -560,7 +561,7 @@ class TransactionDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
     @ns.doc('delete_transaction', security='Bearer')
@@ -600,7 +601,7 @@ class TransactionDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 

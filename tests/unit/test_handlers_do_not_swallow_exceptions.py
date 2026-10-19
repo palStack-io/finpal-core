@@ -47,7 +47,8 @@ import pytest
 
 API_ROOT = Path(__file__).resolve().parents[2] / 'api'
 
-GENERIC = 'Internal server error'
+# The handlers answer with `GENERIC_ERROR` (src/utils/messages.py); that token in the source is what marks one.
+GENERIC = 'GENERIC_ERROR'
 LOG_MARKERS = ('logger.', 'current_app.logger', 'logging.', 'log.')
 
 

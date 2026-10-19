@@ -35,7 +35,7 @@ class CurrencyService:
         # Validate currency code format
         code = code.upper()
         if not code or len(code) != 3 or not code.isalpha():
-            return False, 'Invalid currency code. Please use 3-letter ISO currency code (e.g., USD, EUR, GBP)', None
+            return False, 'Pick a currency from the list, like USD or EUR.', None
         
         # Check if currency already exists
         existing = self.get_currency(code)

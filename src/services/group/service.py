@@ -38,7 +38,7 @@ class GroupService:
         # Check if user is member
         user = db.session.get(User, user_id)
         if user not in group.members:
-            return False, 'Access denied. You are not a member of this group.', None
+            return False, "You're not in this group yet. Ask the group's owner for an invitation.", None
 
         return True, 'Success', group
 

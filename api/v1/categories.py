@@ -3,6 +3,7 @@ from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.exceptions import HTTPException
+from src.utils.messages import GENERIC_ERROR
 from src.models.category import Category
 from src.extensions import db
 from src.services.category.service import CategoryService, UNSET
@@ -137,7 +138,7 @@ class CategoryList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 

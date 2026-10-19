@@ -2,6 +2,7 @@
 from flask import jsonify, request
 from flask_restx import Namespace, Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.utils.messages import GENERIC_ERROR
 from src.models.personal_access_token import SCOPE_READ
 from src.services.analytics.service import AnalyticsService
 from src.services.analytics.spending_summary import (
@@ -165,7 +166,7 @@ class Dashboard(Resource):
 
         except Exception as e:
             logger.exception("Dashboard data fetch failed")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
 
 @ns.route('/stats')
@@ -216,7 +217,7 @@ class Statistics(Resource):
             logger.exception("Statistics fetch failed")
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 500
 
 
@@ -255,7 +256,7 @@ class Trends(Resource):
             logger.exception("Spending trends fetch failed")
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 500
 
 
@@ -320,7 +321,7 @@ class TopCategories(Resource):
             logger.exception('Failed to load top categories')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 500
 
 
@@ -359,7 +360,7 @@ class Summary(Resource):
             logger.exception("Financial summary fetch failed")
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 500
 
     def _calculate_budget_remaining(self, dashboard_data):
@@ -398,7 +399,7 @@ class CashFlow(Resource):
 
         except Exception as e:
             logger.exception("Cashflow data fetch failed")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
 
 @ns.route('/health')
@@ -423,7 +424,7 @@ class FinancialHealth(Resource):
 
         except Exception as e:
             logger.exception("Financial health fetch failed")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
 
 @ns.route('/networth')
@@ -453,7 +454,7 @@ class NetWorth(Resource):
 
         except Exception as e:
             logger.exception("Net worth trend fetch failed")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
 
 @ns.route('/monthly-comparison')
@@ -489,7 +490,7 @@ class MonthlyComparison(Resource):
 
         except Exception as e:
             logger.exception("Monthly comparison fetch failed")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
 
 @ns.route('/spending-summary')

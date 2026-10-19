@@ -2,6 +2,7 @@
 from flask import request, current_app
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.utils.messages import GENERIC_ERROR
 from src.models.investment import Portfolio, Investment, InvestmentTransaction
 from src.extensions import db
 from src.utils.household import visible_user_ids, is_household_member, can_manage_owned
@@ -136,7 +137,7 @@ class PortfolioList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -218,7 +219,7 @@ class PortfolioDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
     @ns.doc('delete_portfolio', security='Bearer')
@@ -263,7 +264,7 @@ class PortfolioDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -376,7 +377,7 @@ class InvestmentList(Resource):
         if not shares or shares <= 0:
             return {
                 'success': False,
-                'error': 'shares is required and must be greater than zero.',
+                'error': 'Enter how many shares you hold.',
             }, 400
 
         # D-85: PARSE THE DATE BEFORE THE INSERT. Both clients send `purchase_date` as a
@@ -462,7 +463,7 @@ class InvestmentList(Resource):
             logger.exception('Error adding holding')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -542,7 +543,7 @@ class InvestmentDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
     @ns.doc('delete_holding', security='Bearer')
@@ -579,7 +580,7 @@ class InvestmentDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -676,7 +677,7 @@ class TransactionList(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -698,7 +699,7 @@ class StockQuote(Resource):
         if not stock_data:
             return {
                 'success': False,
-                'error': f'Stock not found: {symbol}. Please try again later or check the symbol.'
+                'error': f"We couldn't find {symbol}. Check the symbol, or try again in a moment."
             }, 404
 
         return {

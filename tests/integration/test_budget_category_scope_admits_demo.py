@@ -67,7 +67,7 @@ def test_a_demo_account_cannot_budget_against_the_households_category(client, db
     resp = client.post(URL, headers=auth_headers(demo), json=_payload(household_cat))
 
     assert resp.status_code == 400, resp.get_data(as_text=True)[:300]
-    assert 'invalid category' in str(resp.get_json()).lower()
+    assert "isn't available" in str(resp.get_json()).lower()
     assert Budget.query.filter_by(category_id=household_cat.id).count() == 0
 
 
