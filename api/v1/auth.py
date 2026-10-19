@@ -636,7 +636,7 @@ class Login(Resource):
             # S-07: one message for a wrong password and an unknown address, so
             # login is not an account-existence oracle either.
             if not user or not user.check_password(password):
-                return {'error': 'Invalid email or password'}, 401
+                return {'error': "That email and password don't match. Check them and try again, or reset your password."}, 401
 
             access_token = create_access_token(
                 identity=email, additional_claims={'email': email})
@@ -876,10 +876,10 @@ class VerifyEmail(Resource):
             user = User.query.filter_by(verification_token=token).first()
 
             if not user:
-                return {'error': 'Invalid verification token'}, 400
+                return {'error': "That link doesn't look right. Request a new one and we'll send it again."}, 400
 
             if not user.verify_email_token(token):
-                return {'error': 'Verification token has expired'}, 400
+                return {'error': "That link has expired. Request a new one and we'll send it right away."}, 400
 
             user.clear_verification_token()
             db.session.commit()
@@ -1093,10 +1093,10 @@ class ResetPassword(Resource):
             user = User.query.filter_by(reset_token=token).first()
 
             if not user:
-                return {'error': 'Invalid reset token'}, 400
+                return {'error': "That link doesn't look right. Request a new one."}, 400
 
             if not user.verify_reset_token(token):
-                return {'error': 'Reset token has expired'}, 400
+                return {'error': "That link has expired. Request a new one and we'll send it right away."}, 400
 
             user.set_password(new_password)
             user.clear_reset_token()

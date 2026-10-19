@@ -180,7 +180,7 @@ def test_a_second_budget_for_the_same_category_is_refused_ACROSS_MEMBERS(
     }, headers=auth_headers(bob))
 
     assert resp.status_code == 400
-    assert 'already exists' in resp.get_json()['error']
+    assert 'already have a' in resp.get_json()['error']
 
 
 def test_a_member_can_budget_against_a_category_someone_else_created(

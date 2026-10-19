@@ -366,7 +366,7 @@ class PasswordResetConfirm(Resource):
 
         user = User.query.filter_by(id=email).first()
         if not user or not user.verify_reset_token(token):
-            return {'message': 'Invalid or expired reset token'}, 400
+            return {'message': "That link has expired or doesn't look right. Request a new one."}, 400
 
         user.set_password(new_password)
         user.clear_reset_token()
@@ -1078,7 +1078,7 @@ class ModulePreference(Resource):
         # entire point of this endpoint, and a truthiness test would read a
         # deliberate hide as a missing field and answer 400.
         if 'visible' not in data or not isinstance(data['visible'], bool):
-            return {'success': False, 'error': 'Validation error',
+            return {'success': False, 'error': 'Some of what you entered needs another look.',
                     'details': {'visible': ['A boolean is required.']}}, 400
 
         # *** REFUSE A SLUG THAT IS NOT A REGISTERED MODULE. *** Without this the

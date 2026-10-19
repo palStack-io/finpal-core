@@ -2,6 +2,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.utils.messages import GENERIC_ERROR
 from src.services.recurring.service import RecurringService
 from src.models.recurring import RecurringExpense
 from src.extensions import db
@@ -56,7 +57,7 @@ class RecurringList(Resource):
 
         except Exception as e:
             logger.exception("Failed to list recurring transactions")
-            return {'success': False, 'error': 'Internal server error', 'recurring': []}, 500
+            return {'success': False, 'error': GENERIC_ERROR, 'recurring': []}, 500
 
     @ns.doc('create_recurring', security='Bearer')
     @ns.expect(recurring_model)
@@ -107,7 +108,7 @@ class RecurringList(Resource):
             logger.exception('RecurringList.post failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -171,7 +172,7 @@ class RecurringDetail(Resource):
             logger.exception('RecurringDetail.put failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
     @ns.doc('delete_recurring', security='Bearer')
@@ -201,7 +202,7 @@ class RecurringDetail(Resource):
             logger.exception('RecurringDetail.delete failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -236,7 +237,7 @@ class RecurringToggle(Resource):
             logger.exception('RecurringToggle.post failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -263,7 +264,7 @@ class RecurringDetect(Resource):
             logger.exception('RecurringDetect.get failed')
             return {
                 'success': False,
-                'error': 'Internal server error',
+                'error': GENERIC_ERROR,
                 'patterns': []
             }, 500
 
@@ -321,7 +322,7 @@ class RecurringIgnore(Resource):
             logger.exception('RecurringIgnore.post failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
 
@@ -389,5 +390,5 @@ class RecurringFromPattern(Resource):
             logger.exception('RecurringFromPattern.post failed')
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400

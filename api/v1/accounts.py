@@ -3,6 +3,7 @@ from flask import request, current_app
 from flask_restx import Namespace, Resource, fields, reqparse
 from werkzeug.datastructures import FileStorage
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.utils.messages import GENERIC_ERROR
 from src.models.account import Account
 from src.extensions import db
 from schemas import account_schema, accounts_schema
@@ -135,7 +136,7 @@ class AccountList(Resource):
             }, 200
         except Exception as e:
             logger.exception("Failed to list accounts")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
     @ns.doc('create_account', security='Bearer')
     @ns.expect(account_model)
@@ -354,7 +355,7 @@ class AccountDetail(Resource):
             db.session.rollback()
             return {
                 'success': False,
-                'error': 'Internal server error'
+                'error': GENERIC_ERROR
             }, 400
 
     @ns.doc('delete_account', security='Bearer')
@@ -744,7 +745,7 @@ class SimpleFinFetch(Resource):
         settings = simplefin_service.get_simplefin_settings(current_user_id)
 
         if not settings:
-            return {'success': False, 'error': 'SimpleFin not connected'}, 400
+            return {'success': False, 'error': 'Connect your bank first, or add your accounts by hand.'}, 400
 
         try:
             # Initialize SimpleFin client
@@ -754,7 +755,7 @@ class SimpleFinFetch(Resource):
             raw_data = sf_client.get_accounts_with_transactions(settings.access_url, days_back=30)
 
             if not raw_data:
-                return {'success': False, 'error': 'Failed to fetch accounts from SimpleFin'}, 500
+                return {'success': False, 'error': "We couldn't reach your bank this time. Try syncing again in a moment."}, 500
 
             # Process accounts
             processed_accounts = sf_client.process_raw_accounts(raw_data)
@@ -779,7 +780,7 @@ class SimpleFinFetch(Resource):
 
         except Exception as e:
             current_app.logger.error(f"Error fetching SimpleFin accounts: {str(e)}")
-            return {'success': False, 'error': 'Internal server error'}, 500
+            return {'success': False, 'error': GENERIC_ERROR}, 500
 
 
 @ns.route('/import-csv')

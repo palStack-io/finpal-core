@@ -69,7 +69,8 @@ def test_reset_password_really_accepts_either_spelling(client, db, spelling):
     assert 'required' not in message, (
         f'sending only `{spelling}` was treated as a missing password, so the '
         f'two spellings are NOT interchangeable and the model is wrong: {body}')
-    assert 'token' in message, (
+    # The refusal now says "That link doesn't look right" (no internal word "token"); it is still the bad-link answer.
+    assert 'link' in message, (
         f'expected the request to fail on the bad token, meaning `{spelling}` '
         f'was accepted; got: {body}')
 

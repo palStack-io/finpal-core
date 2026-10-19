@@ -46,7 +46,7 @@ class TransactionService:
                 if amount <= 0:
                     return False, 'Amount must be greater than zero', None
             except ValueError:
-                return False, 'Invalid amount format', None
+                return False, "That amount doesn't look right. Use numbers only, like 12.50.", None
 
             # Get currency information
             currency_code = form_data.get('currency_code')
@@ -297,7 +297,7 @@ class TransactionService:
                 if form_data.get('amount') is not None:
                     expense.amount = float(form_data['amount'])
             except (ValueError, TypeError):
-                return False, 'Invalid amount provided'
+                return False, "That amount doesn't look right. Use numbers only, like 12.50."
 
             try:
                 expense.date = datetime.strptime(form_data.get('date', ''), '%Y-%m-%d')
@@ -348,8 +348,7 @@ class TransactionService:
                     # arrive by the same door carrying row data, so say what is
                     # wrong rather than quoting the exception.
                     current_app.logger.exception('Invalid category split data')
-                    return False, ('Invalid category split data — each split '
-                                   'needs a category and a numeric amount')
+                    return False, 'Each split needs a category and an amount.'
             else:
                 # Clear splits only on an explicit "off"; a bare category_id
                 # change is not a request to discard them.

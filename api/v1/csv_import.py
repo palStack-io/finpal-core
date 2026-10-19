@@ -149,7 +149,7 @@ class CSVImport(Resource):
             if 'date' not in mapping or 'description' not in mapping or 'amount' not in mapping:
                 return {
                     'success': False,
-                    'error': 'Required mappings: date, description, amount'
+                    'error': 'Choose which columns hold the date, description and amount.'
                 }, 400
 
             stream = io.StringIO(file.stream.read().decode('UTF8'), newline=None)
