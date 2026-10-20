@@ -5,16 +5,18 @@ import RecommendTable from '../components/RecommendTable';
 import { Loading } from '../../../components/common/Loading';
 import { ScopeTag } from '../../../components/ScopeTag';
 import { useMoney } from '../../../hooks/useMoney';
+import { CreditCard } from 'lucide-react';
 
+// Plain names: no emoji in our copy (voice rule).
 const CATEGORIES = [
-  { label: '✈️ Travel',        value: 'travel' },
-  { label: '🍽️ Dining',       value: 'dining' },
-  { label: '🛒 Groceries',     value: 'groceries' },
-  { label: '⛽ Gas',           value: 'gas' },
-  { label: '🛍️ Shopping',     value: 'shopping' },
-  { label: '💊 Pharmacy',      value: 'pharmacy' },
-  { label: '🎬 Entertainment', value: 'entertainment' },
-  { label: '🌐 Other',         value: 'other' },
+  { label: 'Travel',        value: 'travel' },
+  { label: 'Dining',        value: 'dining' },
+  { label: 'Groceries',     value: 'groceries' },
+  { label: 'Gas',           value: 'gas' },
+  { label: 'Shopping',      value: 'shopping' },
+  { label: 'Pharmacy',      value: 'pharmacy' },
+  { label: 'Entertainment', value: 'entertainment' },
+  { label: 'Other',         value: 'other' },
 ];
 
 const BestCard: React.FC = () => {
@@ -25,6 +27,8 @@ const BestCard: React.FC = () => {
   // was invented — the page's empty state already says to enter an amount.
   const [amount, setAmount] = useState('');
   const [result, setResult] = useState<RecommendationResult | null>(null);
+  // D-318: none of the person's cards covers the category. An answer, not an error.
+  const [noCard, setNoCard] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +37,11 @@ const BestCard: React.FC = () => {
     if (!amt || amt <= 0) return;
     setLoading(true);
     setError(null);
+    setNoCard(false);
     try {
       const data = await pointspalService.getRecommendation(category, amt);
       setResult(data);
+      if (!data) setNoCard(true);
     } catch {
       setError("We couldn't work out the best card just now. Try again in a moment.");
     } finally {
@@ -176,7 +182,19 @@ const BestCard: React.FC = () => {
             </div>
           )}
 
-          {!loading && !result && !error && (
+          {noCard && !loading && !error && (
+            <div data-testid="best-card-none" role="status" style={{ ...cardStyle, textAlign: 'center', padding: '40px 24px', color: 'var(--muted)' }}>
+              <CreditCard size={32} aria-hidden="true" style={{ marginBottom: 12, color: 'var(--muted)' }} />
+              <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 14, color: 'var(--ink3)', marginBottom: 6 }}>
+                No card covers this
+              </div>
+              <div style={{ fontSize: 12 }}>
+                None of your cards earns a bonus on {catLabel.toLocaleLowerCase()}. Add cards in pointsPal, or use whichever card you prefer.
+              </div>
+            </div>
+          )}
+
+          {!loading && !result && !error && !noCard && (
             <div style={{ ...cardStyle, textAlign: 'center', padding: '48px 24px', color: 'var(--muted)' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>✦</div>
               <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 14, color: 'var(--ink3)', marginBottom: 6 }}>
