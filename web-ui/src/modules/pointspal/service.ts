@@ -278,11 +278,26 @@ export const pointspalService = {
     return response.data.pr_url;
   },
 
-  async getRecommendation(category: string, amount: number): Promise<RecommendationResult> {
-    const response = await api.get<RecommendationResult>(
-      `${BASE}/recommend?category=${encodeURIComponent(category)}&amount=${amount}`
-    );
-    return response.data;
+  /**
+   * The best card for a purchase, or `null` when none of the person's cards covers the category.
+   *
+   * *** "NO CARD COVERS THIS" IS A 404, NOT AN ERROR (D-318). *** `/recommend` answers
+   * 404 `{"message": "No cards found for 'gas'"}` when nothing matches (its only 404),
+   * so axios threw and the page said "We couldn't work out the best card just now" to
+   * someone with no gas card. A 404 with a JSON body is that answer; a missing route
+   * (an HTML 404) and every other failure still throw.
+   */
+  async getRecommendation(category: string, amount: number): Promise<RecommendationResult | null> {
+    try {
+      const response = await api.get<RecommendationResult>(
+        `${BASE}/recommend?category=${encodeURIComponent(category)}&amount=${amount}`
+      );
+      return response.data;
+    } catch (err) {
+      const response = (err as { response?: { status?: number; data?: unknown } })?.response;
+      if (response?.status === 404 && response.data !== null && typeof response.data === 'object') return null;
+      throw err;
+    }
   },
 
   async getAlerts(): Promise<Alert[]> {
