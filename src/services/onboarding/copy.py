@@ -191,6 +191,36 @@ ORIENTATION = {
 }
 
 
+# *** THE GENTLER FIRST RUN (4h, owner approved 2026-10-27). *** A second way
+# through first run, offered on the first screen: "Start small" (the default)
+# or "Show me everything first", which is the orientation above, unchanged.
+# Research basis is weak to moderate (avoiding a look at money protects against
+# short-term distress, so the first screen should lower the cost of looking), so
+# this is a design choice, not a claim. No quiz, no question about how the person
+# feels about money. Mobile only today; a server older than this sends no
+# `gentle_start`, and the client then runs the full tour as before. No figure
+# anywhere, for the reason given on ORIENTATION.
+GENTLE_START = {
+    'choose': {
+        'heading': 'Welcome. There is nothing to catch up on.',
+        'lines': [
+            'Most people were never taught this, and looking at your money can feel heavy. finPal starts small. You set the pace and can stop any time.',
+        ],
+        'start_small': 'Start small',
+        'show_everything': 'Show me everything first',
+    },
+    'about': {
+        'heading': 'A calm place to see where things stand.',
+        'lines': [
+            'You choose what to add. Nothing is graded, and a hard month does not break anything.',
+        ],
+        'card_title': 'Your pace',
+        'card_body': 'Add one account, one goal, or just look around.',
+        'tour_link': 'Tell me about mountains and coins',
+    },
+}
+
+
 # *** THE FIRST-VISIT CARDS (owner, 2026-10-01): shown once on Accounts and on
 # Investments, dismissed for good, remembered on the server so a dismissal on
 # the web holds on the phone. ***
