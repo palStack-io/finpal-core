@@ -221,6 +221,22 @@ GENTLE_START = {
 }
 
 
+# *** THE FIRST HOME SCREEN (4h, 2026-10-27, approved mockup): after "Start small" a new person
+# lands on ONE small, optional thing to try instead of the full dashboard. *** It is a goal because
+# a goal with a day is the smallest act the product has (Phase 1 warmth, rule 6: a first step, not
+# a task list). "Not now" is a real answer and the dashboard is one tap away. Mobile only today; a
+# server older than this sends no `first_home`, and the client then goes straight to the dashboard
+# as before. A first-run screen has no data, so no figure anywhere (digits are asserted absent).
+FIRST_HOME = {
+    'heading': 'Good to have you here.',
+    'card_title': 'One small thing to try',
+    'card_body': 'Add a goal and pick the day you will work on it. About a minute.',
+    'action': 'Add a goal',
+    'later': 'Not now? That is fine. Your dashboard is one tap away.',
+    'dashboard': 'Go to my dashboard',
+}
+
+
 # *** THE FIRST-VISIT CARDS (owner, 2026-10-01): shown once on Accounts and on
 # Investments, dismissed for good, remembered on the server so a dismissal on
 # the web holds on the phone. ***

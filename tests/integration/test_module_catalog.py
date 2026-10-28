@@ -213,3 +213,13 @@ def test_the_gentle_start_is_served_and_carries_no_figure(client):
     assert gentle['about']['tour_link']
     digits = sorted({ch for ch in str(gentle) if ch.isdigit()})
     assert not digits, f'gentle_start carries the digits {digits}'
+
+
+def test_the_first_home_card_is_served_and_carries_no_figure(client):
+    """4h: the one optional thing on the first home screen is one more payload key. An older
+    server omits it and the client goes straight to the dashboard, so it must be additive."""
+    home = client.get('/api/v1/modules/catalog').get_json()['first_home']
+    for key in ('heading', 'card_title', 'card_body', 'action', 'later', 'dashboard'):
+        assert home[key]
+    digits = sorted({ch for ch in str(home) if ch.isdigit()})
+    assert not digits, f'first_home carries the digits {digits}'
