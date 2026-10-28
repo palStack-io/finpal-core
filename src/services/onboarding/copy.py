@@ -29,10 +29,11 @@ the product yet. Every string below is true for a user with an empty database.
 # D-201 shipped — a link offered to a user that goes nowhere. When the docs host
 # serves it, a link belongs here and nowhere else.
 DATA_STATEMENT = {
-    'heading': 'Your money stays on your server.',
+    'heading': 'Your money stays in your finPal.',
     'lines': [
         'finPal has no analytics, no tracking and no AI. Nothing you tell it '
-        'about your money is sent to us. There is no "us" in the path.',
+        'about your money is passed on to anyone, whether it runs on your own '
+        'server or on one we host.',
         'It is used only to answer your own requests, for your own account. '
         'Never sold, never pooled, never used to train anything.',
         'The only things that ever leave are ones you switch on yourself: a '
