@@ -33,7 +33,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 
 from src.services.onboarding.copy import (
-    DATA_STATEMENT, GENTLE_START, MODULE_COPY, ORIENTATION, first_visit_copy,
+    DATA_STATEMENT, FIRST_HOME, GENTLE_START, MODULE_COPY, ORIENTATION, first_visit_copy,
 )
 from src.services.onboarding.first_visit import dismiss, dismissed_pages
 
@@ -96,6 +96,8 @@ class ModuleCatalog(Resource):
             'orientation': ORIENTATION,
             # The gentler first run; absent on an older server (clients fall back to the tour).
             'gentle_start': GENTLE_START,
+            # The one optional card on the first home screen (4h). Absent on an older server.
+            'first_home': FIRST_HOME,
             'first_acts': _first_acts(),
             # The cards on a user's first visit to Accounts and Investments.
             # Whether THIS user has dismissed one is per-user and authed, so it
