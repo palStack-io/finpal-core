@@ -198,3 +198,18 @@ def test_base_camp_offers_three_universal_acts_from_the_registry(client):
     # there: a ceiling is a denominator finPal chose, and decision 5 permits one
     # only when the user picked the target.
     assert all('ceiling' not in act for act in acts)
+
+
+def test_the_gentle_start_is_served_and_carries_no_figure(client):
+    """4h: the second way through first run is one more payload key. A missing
+    key must not break an older client (it falls back to the full tour), and a
+    first-run screen has no data, so there is no digit in it either."""
+    gentle = client.get('/api/v1/modules/catalog').get_json()['gentle_start']
+    for name in ('choose', 'about'):
+        assert gentle[name]['heading']
+        assert gentle[name]['lines']
+    assert gentle['choose']['start_small']
+    assert gentle['choose']['show_everything']
+    assert gentle['about']['tour_link']
+    digits = sorted({ch for ch in str(gentle) if ch.isdigit()})
+    assert not digits, f'gentle_start carries the digits {digits}'

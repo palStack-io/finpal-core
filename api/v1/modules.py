@@ -33,7 +33,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 
 from src.services.onboarding.copy import (
-    DATA_STATEMENT, MODULE_COPY, ORIENTATION, first_visit_copy,
+    DATA_STATEMENT, GENTLE_START, MODULE_COPY, ORIENTATION, first_visit_copy,
 )
 from src.services.onboarding.first_visit import dismiss, dismissed_pages
 
@@ -94,6 +94,8 @@ class ModuleCatalog(Resource):
             # The five orientation screens. Same reasoning as the module copy:
             # a client holding it could only be corrected by shipping.
             'orientation': ORIENTATION,
+            # The gentler first run; absent on an older server (clients fall back to the tour).
+            'gentle_start': GENTLE_START,
             'first_acts': _first_acts(),
             # The cards on a user's first visit to Accounts and Investments.
             # Whether THIS user has dismissed one is per-user and authed, so it
