@@ -23,7 +23,7 @@ import { api } from './api';
  *   { "success": true,
  *     "modules": [ { "slug": "pointspal", "name": "pointsPal",
  *                    "intro": "Which card to pay with…", "gives": "nothing to collect…" } ],
- *     "data": { "heading": "Your money stays on your server.",
+ *     "data": { "heading": "Your money stays in your finPal.",
  *               "lines": ["finPal has no analytics…", "…", "…"],
  *               "operator_note": "finPal is open source and runs on a server…" } }
  */

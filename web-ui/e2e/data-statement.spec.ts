@@ -23,7 +23,7 @@ test.describe('where your data lives', () => {
     await expect(block).toBeVisible();
 
     // The heading, as a statement.
-    await expect(block).toContainText(/stays on your server/i);
+    await expect(block).toContainText(/stays in your finPal/i);
 
     // *** ALL THREE LINES, COUNTED. *** A dropped line renders a shorter
     // promise and nothing looks broken — the failure mode here is quiet.

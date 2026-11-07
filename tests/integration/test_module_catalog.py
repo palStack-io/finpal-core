@@ -223,3 +223,14 @@ def test_the_first_home_card_is_served_and_carries_no_figure(client):
         assert home[key]
     digits = sorted({ch for ch in str(home) if ch.isdigit()})
     assert not digits, f'first_home carries the digits {digits}'
+
+
+def test_the_data_statement_no_longer_claims_a_server_the_user_owns(client):
+    """4h follow-up: the heading said "on your server" and a line said "sent to us ... no us in the path".
+    Both are wrong on the hosted edition, where the operator is us. The served statement must be true on
+    either edition; the operator note still says who holds the database."""
+    data = client.get('/api/v1/modules/catalog').get_json()['data']
+    served = ' '.join([data['heading'], *data['lines']]).lower()
+    for phrase in ('on your server', 'sent to us', 'no "us"'):
+        assert phrase not in served, f'the data statement still says {phrase!r}'
+    assert 'holds the database' in data['operator_note']
