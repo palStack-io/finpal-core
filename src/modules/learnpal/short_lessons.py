@@ -78,10 +78,10 @@ SHORT_LESSONS = {
     'month': {
         'skill': 'read-your-month',
         'long_lesson': 'where-your-money-goes',
-        'card': "{month} is easier to read as a shape than as forty small pieces. Here's yours.",
+        'card': "{month} is easier to read as a shape than as many small pieces. Here's yours.",
         'number': "{biggest_category} was your biggest category at {biggest_amount}, from {income} that came in.",
         'explain': [
-            "Most people find one category bigger than they would have guessed, and it is rarely the one they worried about.",
+            "Most people find one category bigger than they would have guessed, and it is often a different one than they expected.",
             "Often the price moved, not the habit. You can only choose about money you can see.",
             "Nothing here needs changing today. Looking is the step.",
         ],
