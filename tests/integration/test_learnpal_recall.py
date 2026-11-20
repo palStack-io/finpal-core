@@ -164,3 +164,20 @@ def test_out_of_range_choice_or_missing_question_is_a_miss(user, monkeypatch):
     r = _db.session.get(LearnRecall, r.id)
     assert r.misses == 2 and r.due_on == TODAY + timedelta(days=21)
     assert r.question_id != 'gone-question'
+
+
+def test_due_recall_rotates_a_recall_whose_question_is_gone(user):
+    r = _recall(user, question_id='gone-question')
+    got = due_recall(user.id, TODAY)
+    assert got is not None and got.id == r.id and got.question_id != 'gone-question'
+    assert any(q['id'] == got.question_id for q in QUIZZES[got.milestone_slug]['questions'])
+
+
+def test_due_recall_skips_an_unfixable_recall(user):
+    broken = _recall(user, skill='no-such-skill', milestone_slug='no-such-lesson', question_id='gone', due=TODAY - timedelta(days=5))
+    other = LearnRecall(user_id=user.id, skill='interest', milestone_slug='what-your-apr-costs',
+                        question_id=QUIZZES['what-your-apr-costs']['questions'][0]['id'], due_on=TODAY)
+    _db.session.add(other)
+    _db.session.commit()
+    assert due_recall(user.id, TODAY).id == other.id
+    assert _db.session.get(LearnRecall, broken.id).done_at is None

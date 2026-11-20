@@ -22,6 +22,7 @@ these paths as "learnPal is not installed" and render nothing, NOT as an error -
 which is the same discipline as `peak` being absent from a goal payload.
 """
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 from flask import request
@@ -45,6 +46,8 @@ from src.modules.learnpal.short_lessons import (
     NOT_NOW_LINE, SHORT_LESSONS, UNDERSTOOD_LINE, WHEN_PROMPT)
 
 learnpal_ns = Namespace('learnpal', description='learnPal lessons, gear and the range')
+
+logger = logging.getLogger(__name__)
 
 SET_ASIDE_DAYS = 30
 WHY_SCREENS = ('budgets', 'goals', 'debt', 'dashboard')
@@ -245,10 +248,22 @@ def _set_aside_recently(user_id, skill_id):
     return row.set_aside_at > datetime.utcnow() - timedelta(days=SET_ASIDE_DAYS)
 
 
+def _render(short_id, template_key, figures):
+    """A template filled with the person's figures, or None when a figure is missing."""
+    try:
+        return SHORT_LESSONS[short_id][template_key].format(**figures)
+    except KeyError as missing:
+        logger.warning('short lesson %s: %s template needs figure %s', short_id, template_key, missing)
+        return None
+
+
 def _card(user_id, short_id, figures):
+    """The card dict, or None when its template cannot be filled (treated as not relevant)."""
     short = SHORT_LESSONS[short_id]
-    return {'id': short_id, 'skill': short['skill'],
-            'card': short['card'].format(**figures), 'action': short['action']}
+    text = _render(short_id, 'card', figures)
+    if text is None:
+        return None
+    return {'id': short_id, 'skill': short['skill'], 'card': text, 'action': short['action']}
 
 
 def _open_cards(user_id):
@@ -259,7 +274,7 @@ def _open_cards(user_id):
         if _marks.used_on_money(user_id, skill_id) or _set_aside_recently(user_id, skill_id):
             continue
         figures = figures_for(user_id, short_id)
-        if figures is not None:
+        if figures is not None and _card(user_id, short_id, figures) is not None:
             out.append((short_id, figures))
     return out
 
@@ -298,10 +313,11 @@ class LearnShort(Resource):
         user_id = get_jwt_identity()
         short = SHORT_LESSONS.get(short_id)
         figures = figures_for(user_id, short_id) if short else None
-        if figures is None:
+        number = _render(short_id, 'number', figures) if figures is not None else None
+        if figures is None or number is None or _render(short_id, 'card', figures) is None:
             return {'success': False, 'error': 'Lesson not found'}, 404
         return {'id': short_id, 'skill': short['skill'], 'long_lesson': short.get('long_lesson'),
-                'number': short['number'].format(**figures),
+                'number': number,
                 'explain': short['explain'], 'try': figures['try'], 'action': short['action'],
                 'when': bool(short['when']),
                 'lines': {'not_now': NOT_NOW_LINE, 'understood': UNDERSTOOD_LINE,
@@ -315,9 +331,18 @@ class LearnShortFinish(Resource):
         user_id = get_jwt_identity()
         if short_id not in SHORT_LESSONS:
             return {'success': False, 'error': 'Lesson not found'}, 404
+        user = _user(user_id)
         outcome = (request.get_json(silent=True) or {}).get('outcome')
+        if not _marks.learning_on(user):
+            # Off: write nothing, hand back the row as it stands.
+            skill = skill_by_id(SHORT_LESSONS[short_id]['skill'])
+            row = _marks._mark_row(user_id, skill['id'])
+            return _marks._progress_row(skill, row, _marks.used_on_money(user_id, skill['id'])), 200
+        figures = figures_for(user_id, short_id)
+        if figures is None or _render(short_id, 'card', figures) is None:
+            return {'success': False, 'error': 'Lesson not found'}, 404
         try:
-            return _marks.record_finish(user_id, short_id, outcome), 200
+            return _marks.record_finish(user_id, short_id, outcome, _local_today(user)), 200
         except ValueError:
             return {'success': False, 'error': 'Unknown outcome'}, 400
 

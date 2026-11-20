@@ -120,8 +120,11 @@ def _unlock_long_lesson(user_id, slug):
         _unlock(user_id, slug, verified_by='read')
 
 
-def record_finish(user_id, short_id, outcome):
-    """A short lesson was finished. Returns that skill's progress row."""
+def record_finish(user_id, short_id, outcome, today=None):
+    """A short lesson was finished. Returns that skill's progress row.
+
+    `today` is the person's local date (the routes pass it); it dates the first recall.
+    """
     if outcome not in OUTCOMES:
         raise ValueError(f'unknown outcome: {outcome}')
     short = SHORT_LESSONS.get(short_id)
@@ -140,7 +143,7 @@ def record_finish(user_id, short_id, outcome):
         row.set_aside_at = now
     if first:
         from src.modules.learnpal.recall import schedule_first_recall
-        schedule_first_recall(user_id, skill_id, date.today())
+        schedule_first_recall(user_id, skill_id, today or date.today())
         _unlock_long_lesson(user_id, short.get('long_lesson'))
     db.session.commit()
     return _progress_row(skill, row, used_on_money(user_id, skill_id))

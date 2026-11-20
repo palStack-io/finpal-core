@@ -83,9 +83,19 @@ def due_recall(user_id, today):
     user = db.session.get(User, user_id)
     if user is None or not learning_on(user) or quiet_day(user_id, today):
         return None
-    return LearnRecall.query.filter(
+    due = LearnRecall.query.filter(
         LearnRecall.user_id == user_id, LearnRecall.done_at.is_(None),
-        LearnRecall.due_on <= today).order_by(LearnRecall.due_on, LearnRecall.id).first()
+        LearnRecall.due_on <= today).order_by(LearnRecall.due_on, LearnRecall.id).all()
+    for recall in due:
+        if _question(recall) is None:
+            # Its question was removed from QUIZZES: move to the skill's first question so it
+            # never blocks the skill; if the skill has none at all, skip to the next due one.
+            _rotate(recall)
+            db.session.commit()
+            if _question(recall) is None:
+                continue
+        return recall
+    return None
 
 
 def _question_cycle(skill_id):

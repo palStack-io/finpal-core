@@ -142,3 +142,35 @@ def test_profile_saves_learn_as_you_go(client, h, user):
     _db.session.commit()
     me = client.get('/api/v1/auth/me', headers=h).get_json()
     assert me['learn_as_you_go'] is True
+
+
+def test_missing_figure_in_a_template_is_not_a_500(client, h, user, monkeypatch):
+    _debt(user)
+    monkeypatch.setitem(learn_routes.SHORT_LESSONS['interest'], 'card', 'Needs {no_such_figure}')
+    assert client.get(f'{BASE}/why?screen=debt', headers=h).get_json()['cards'] == []
+    assert client.get(f'{BASE}/this-week', headers=h).get_json()['lesson'] is None
+    assert client.get(f'{BASE}/short/interest', headers=h).status_code == 404
+    assert client.post(f'{BASE}/short/interest/finish', headers=h, json={'outcome': 'finished'}).status_code == 404
+    monkeypatch.undo()
+    monkeypatch.setitem(learn_routes.SHORT_LESSONS['interest'], 'number', 'Needs {no_such_figure}')
+    assert client.get(f'{BASE}/short/interest', headers=h).status_code == 404
+
+
+def test_finish_not_relevant_is_404_and_off_writes_nothing(client, h, user):
+    assert client.post(f'{BASE}/short/interest/finish', headers=h, json={'outcome': 'finished'}).status_code == 404
+    assert LearnSkillMark.query.count() == 0
+    _debt(user)
+    user.learn_as_you_go = False
+    _db.session.commit()
+    r = client.post(f'{BASE}/short/interest/finish', headers=h, json={'outcome': 'finished'})
+    assert r.status_code == 200 and r.get_json()['id'] == 'interest'
+    assert r.get_json()['marks']['understood'] is False
+    assert LearnSkillMark.query.count() == 0 and LearnRecall.query.count() == 0
+
+
+def test_finish_dates_first_recall_by_local_today(client, h, user, monkeypatch):
+    _debt(user)
+    far = date(2031, 1, 10)
+    monkeypatch.setattr(learn_routes, '_local_today', lambda u: far)
+    client.post(f'{BASE}/short/interest/finish', headers=h, json={'outcome': 'finished'})
+    assert LearnRecall.query.filter_by(user_id=user.id, skill='interest').one().due_on == far + timedelta(days=3)
