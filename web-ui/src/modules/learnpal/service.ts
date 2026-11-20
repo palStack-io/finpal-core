@@ -9,7 +9,10 @@
  */
 
 import { api } from '../../services/api';
-import type { LearnRange, LearnStats, LessonDetail, LessonRow } from '../../types/learnpal';
+import type {
+  LearnRange, LearnStats, LessonDetail, LessonRow, RecallChoice, RecallQuestion,
+  ShortLesson, ShortOutcome, SkillProgress, ThisWeek, WhyCard,
+} from '../../types/learnpal';
 
 const notInstalled = (err: unknown): boolean =>
   (err as { response?: { status?: number } })?.response?.status === 404;
@@ -69,5 +72,47 @@ export const learnpalService = {
   /** Phase 5d: record quick-check answers. Awards nothing; the server ignores unknown questions. */
   async postQuiz(slug: string, answers: { question_id: string; choice: string }[]): Promise<void> {
     await api.post(`/api/v1/learnpal/lessons/${encodeURIComponent(slug)}/quiz`, { answers });
+  },
+
+  // --- Learn as you use it. `enabled: false` means the person turned learning off. ---
+
+  async getSkillsProgress(): Promise<{ enabled: boolean; skills: SkillProgress[] }> {
+    const r = await api.get<{ enabled: boolean; skills: SkillProgress[] }>(
+      '/api/v1/learnpal/skills-progress');
+    return r.data;
+  },
+
+  async getWhy(screen: string): Promise<{ enabled: boolean; cards: WhyCard[] }> {
+    const r = await api.get<{ enabled: boolean; cards: WhyCard[] }>(
+      '/api/v1/learnpal/why', { params: { screen } });
+    return r.data;
+  },
+
+  async getShortLesson(id: string): Promise<ShortLesson> {
+    const r = await api.get<ShortLesson>(
+      `/api/v1/learnpal/short/${encodeURIComponent(id)}`);
+    return r.data;
+  },
+
+  async finishShortLesson(id: string, outcome: ShortOutcome): Promise<SkillProgress> {
+    const r = await api.post<SkillProgress>(
+      `/api/v1/learnpal/short/${encodeURIComponent(id)}/finish`, { outcome });
+    return r.data;
+  },
+
+  async getThisWeek(): Promise<ThisWeek> {
+    const r = await api.get<ThisWeek>('/api/v1/learnpal/this-week');
+    return r.data;
+  },
+
+  async getRecall(): Promise<{ enabled: boolean; recall: RecallQuestion | null }> {
+    const r = await api.get<{ enabled: boolean; recall: RecallQuestion | null }>(
+      '/api/v1/learnpal/recall');
+    return r.data;
+  },
+
+  async answerRecall(id: number, choice: RecallChoice): Promise<unknown> {
+    const r = await api.post(`/api/v1/learnpal/recall/${id}`, { choice });
+    return r.data;
   },
 };
