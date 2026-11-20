@@ -194,6 +194,8 @@ def test_debt_order_needs_two_rated_debts(user):
     f = figures_for(user.id, 'debt-order')
     assert (f['count'], f['highest_rate_account'], f['smallest_account']) == ('3', 'Store', 'Tiny')
     assert f['try']['kind'] == 'debt_order'
+    # The chart marks where each method starts; the names are the server's, never re-derived by a client.
+    assert (f['try']['highest_rate'], f['try']['smallest']) == ('Store', 'Tiny')
 
 
 def test_buffer_needs_monthly_essentials(user):

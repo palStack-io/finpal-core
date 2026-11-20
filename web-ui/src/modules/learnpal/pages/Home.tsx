@@ -7,6 +7,7 @@ import { BadgeIcon } from '../../../components/BadgeIcon';
 import { useLessonReader, type LessonReaderApi } from '../LessonReader';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
 import { learnpalService } from '../service';
+import { SkillsCard, useSkillsProgress } from '../SkillsCard';
 import { apiErrorMessage } from '../../../utils/apiError';
 import type { LearnStats, StatsNext, StatsRecent } from '../../../types/learnpal';
 
@@ -284,6 +285,8 @@ export const Home: React.FC = () => {
   /* Shared with `Lessons`, so a lesson opens the same way from either screen
      and the `has_body` rule lives in one place. See `LessonReader`. */
   const reader = useLessonReader();
+  // The same skills trail as the Dashboard's (design move 2, 2026-11-20); absent when learning is off.
+  const { skills } = useSkillsProgress();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -367,6 +370,8 @@ export const Home: React.FC = () => {
         />
         <HighestCard stats={stats} />
       </div>
+
+      {skills && <div style={{ marginTop: 16 }}><SkillsCard skills={skills} /></div>}
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 16 }}>
         <section

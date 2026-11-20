@@ -17,6 +17,7 @@ import { Button } from '../../components/common/Button';
 import { formatMoney } from '../../styles/money';
 import { useAuthStore } from '../../store/authStore';
 import { learnpalService } from './service';
+import { LessonChart, MonthsToClear } from './LessonChart';
 import type {
   InterestPoint, ShortLesson, ShortOutcome, ShortTry, SkillMarks, SkillProgress,
 } from '../../types/learnpal';
@@ -283,7 +284,13 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
           {last ? 'Want to make it real?' : STEP_TITLES[step]}
         </h3>
 
-        {step === 0 && <p data-testid="short-number" style={{ fontSize: 17, lineHeight: 1.5 }}>{lesson.number}</p>}
+        {step === 0 && (
+          <>
+            <p data-testid="short-number" style={{ fontSize: 17, lineHeight: 1.5 }}>{lesson.number}</p>
+            {/* The same figures as a picture; missing figures draw nothing (design move 1, 2026-11-20). */}
+            <LessonChart t={lesson.try} currency={lesson.try.currency || userCurrency} />
+          </>
+        )}
 
         {step === 1 && lesson.explain.map((line, i) => (
           <p key={i} style={{ lineHeight: 1.55, margin: '0 0 10px' }}>{line}</p>
@@ -292,7 +299,12 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
         {step === 2 && (
           <>
             {lesson.try.kind === 'interest'
-              ? <InterestTry t={lesson.try} currency={lesson.try.currency || userCurrency} />
+              ? (
+                <>
+                  <InterestTry t={lesson.try} currency={lesson.try.currency || userCurrency} />
+                  <MonthsToClear t={lesson.try} currency={lesson.try.currency || userCurrency} />
+                </>
+              )
               : <FiguresTry t={lesson.try} currency={lesson.try.currency || userCurrency} />}
             <p className="fp-hint" style={{ marginTop: 10 }}>
               Nothing changes until you choose to. This is only a preview.
