@@ -211,6 +211,8 @@ def remove_member(member_id):
     if target.is_admin:
         return jsonify({'error': 'Cannot remove another admin'}), 400
 
+    from src.modules.learnpal.marks import delete_user_learn_rows
+    delete_user_learn_rows(member_id)
     db.session.delete(target)
     db.session.commit()
 

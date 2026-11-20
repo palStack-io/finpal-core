@@ -325,6 +325,8 @@ def delete_demo_users():
         user = User.query.filter_by(id=email).first()
         if user:
             # Delete all related data (cascade should handle this)
+            from src.modules.learnpal.marks import delete_user_learn_rows
+            delete_user_learn_rows(user.id)
             db.session.delete(user)
             deleted_count += 1
             logger.info(f"Deleted demo user: {email}")

@@ -23,7 +23,7 @@ which is the same discipline as `peak` being absent from a goal payload.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
@@ -41,7 +41,7 @@ from src.modules.learnpal.learn_skills import skill_by_id
 from src.modules.learnpal.models import LearnRecall, LearnSkillMark
 from src.modules.learnpal.recall import (
     CHOICES, RecallNotFound, answer_recall, due_recall, quiet_day)
-from src.modules.learnpal.short_figures import figures_for, relevant_short_lessons
+from src.modules.learnpal.short_figures import figures_for
 from src.modules.learnpal.short_lessons import (
     NOT_NOW_LINE, SHORT_LESSONS, UNDERSTOOD_LINE, WHEN_PROMPT)
 
@@ -236,9 +236,10 @@ def _user(user_id):
 
 
 def _local_today(user):
-    """The person's own date (their saved timezone), else the UTC date."""
-    from src.services.report.period import _local_date
-    return _local_date(datetime.now(timezone.utc), getattr(user, 'timezone', None))
+    """The person's own date (their saved timezone), else the UTC date. The hard-month opening
+    reads the same function, so quiet_day and the opening agree near midnight."""
+    from src.services.onboarding.hard_month import local_today
+    return local_today(user)
 
 
 def _set_aside_recently(user_id, skill_id):
@@ -266,16 +267,22 @@ def _card(user_id, short_id, figures):
     return {'id': short_id, 'skill': short['skill'], 'card': text, 'action': short['action']}
 
 
-def _open_cards(user_id):
-    """Relevant short lessons whose skill is not used and not set aside in the last 30 days."""
+def _open_cards(user_id, first_only=False):
+    """Relevant short lessons whose skill is not used and not set aside in the last 30 days.
+
+    The cheap checks (used, set aside) come first, and figures are built once per lesson
+    (they are the relevance check). `first_only` stops at the first card (/this-week).
+    """
     out = []
-    for short_id in relevant_short_lessons(user_id):
+    for short_id in SHORT_LESSONS:
         skill_id = SHORT_LESSONS[short_id]['skill']
         if _marks.used_on_money(user_id, skill_id) or _set_aside_recently(user_id, skill_id):
             continue
         figures = figures_for(user_id, short_id)
         if figures is not None and _card(user_id, short_id, figures) is not None:
             out.append((short_id, figures))
+            if first_only:
+                break
     return out
 
 
@@ -301,6 +308,7 @@ class LearnSkillsProgress(Resource):
 @learnpal_ns.route('/why')
 class LearnWhy(Resource):
     @jwt_required()
+    @_marks.memoised
     def get(self):
         """Cards for one screen: relevant, not yet used, not set aside lately."""
         user_id = get_jwt_identity()
@@ -362,6 +370,7 @@ class LearnShortFinish(Resource):
 @learnpal_ns.route('/this-week')
 class LearnThisWeek(Resource):
     @jwt_required()
+    @_marks.memoised
     def get(self):
         """The first open short lesson, or None (off, a quiet day, or nothing to teach)."""
         user_id = get_jwt_identity()
@@ -370,7 +379,7 @@ class LearnThisWeek(Resource):
             return {'enabled': False, 'lesson': None}, 200
         if quiet_day(user_id, _local_today(user)):
             return {'enabled': True, 'lesson': None}, 200
-        cards = _open_cards(user_id)
+        cards = _open_cards(user_id, first_only=True)
         lesson = _card(user_id, *cards[0]) if cards else None
         return {'enabled': True, 'lesson': lesson}, 200
 
@@ -378,6 +387,7 @@ class LearnThisWeek(Resource):
 @learnpal_ns.route('/recall')
 class LearnRecallToday(Resource):
     @jwt_required()
+    @_marks.memoised
     def get(self):
         """The one quiz question due today, or None."""
         user_id = get_jwt_identity()

@@ -4,7 +4,7 @@
 row, so later data loss (a deleted card, a cleared budget) cannot empty a mark. Turning
 the learn_as_you_go switch off changes nothing here: rows are kept, only the teaching stops.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func
@@ -15,14 +15,11 @@ from src.models.budget import Budget
 from src.models.category import Category
 from src.models.debt_plan import DebtPlan
 from src.models.goal import Goal
-from src.models.transaction import Expense
 from src.modules.learnpal.learn_skills import LEARN_SKILLS, skill_by_id
 from src.modules.learnpal.models import LearnCompletion, LearnMilestone, LearnSkillMark
 from src.modules.learnpal.short_lessons import SHORT_LESSONS
 
 OUTCOMES = ('finished', 'action', 'not_now')
-MIN_MONTH_TRANSACTIONS = 10
-MONTH_WINDOW_DAYS = 60
 
 
 def learning_on(user):
@@ -59,25 +56,29 @@ def _buffer_started(user_id):
     return Decimal(str(pic['held'])) >= target
 
 
-def _count_budgets_non_monthly(user_id):
-    return db.session.query(func.count(Budget.id)).join(
+def _sinking_fund_set(user_id):
+    """A sinking fund is set: a budget that `is_sinking_fund` reads as one (a yearly budget on a
+    Non-Monthly category). Any other Non-Monthly budget is exactly what the card teaches about."""
+    from src.services.budget.sinking import is_sinking_fund
+    rows = db.session.query(Category.spending_type, Budget.period).join(
         Category, Category.id == Budget.category_id).filter(
-        Budget.user_id == user_id, Category.spending_type == 'non_monthly').scalar() or 0
+        Budget.user_id == user_id, Category.spending_type == 'non_monthly').all()
+    return any(is_sinking_fund(st, period) for st, period in rows)
 
 
 def _evidence(user_id, skill_id):
     if skill_id == 'read-your-month':
-        since = datetime.utcnow() - timedelta(days=MONTH_WINDOW_DAYS)
-        n = db.session.query(func.count(Expense.id)).filter(
-            Expense.user_id == user_id, Expense.category_id.isnot(None),
-            Expense.date >= since).scalar() or 0
-        return n >= MIN_MONTH_TRANSACTIONS
+        # Correction 2026-11-20: categorised transactions are mostly the rules' work, so counting
+        # them marked nearly everyone and the card never showed. Core keeps no record of a category
+        # set by hand (no source column on expenses; category mappings are also seeded), so only
+        # the lesson's own action counts (action_taken_at, checked by the callers).
+        return False
     if skill_id == 'fixed-costs':
         return db.session.query(func.count(Category.id)).filter(
             Category.user_id == user_id, Category.spending_type == 'fixed',
             Category.spending_type_source == 'user').scalar() > 0
     if skill_id == 'non-monthly':
-        return _count_budgets_non_monthly(user_id) > 0
+        return _sinking_fund_set(user_id)
     if skill_id == 'buffer':
         return _buffer_started(user_id)
     if skill_id == 'interest':
@@ -103,12 +104,51 @@ def _get_or_create(user_id, skill_id):
     return row
 
 
+def request_memo():
+    """The per-request memo of a read route wrapped in `memoised`, else None (no caching).
+
+    Only those routes turn it on, for the length of one handler: `flask.g` belongs to the app
+    context, which can outlive a request (the test client and fixtures reuse one), so a memo left
+    on would hand a later call an answer from before a write.
+    """
+    from flask import g, has_app_context
+    return g.get('_learn_memo') if has_app_context() else None
+
+
+def memoised(handler):
+    """Decorate a read route: `used_on_money` and `quiet_day` are computed once per handler call."""
+    from functools import wraps
+
+    @wraps(handler)
+    def wrapper(*args, **kwargs):
+        from flask import g
+        previous = g.get('_learn_memo')
+        g._learn_memo = {}
+        try:
+            return handler(*args, **kwargs)
+        finally:
+            g._learn_memo = previous
+    return wrapper
+
+
+def clear_request_memo():
+    """Write paths call this so a later read in the same request sees the write."""
+    memo = request_memo()
+    if memo is not None:
+        memo.clear()
+
+
 def used_on_money(user_id, skill_id):
     """Has this person used the skill on their own money? Data evidence, or action taken."""
+    memo = request_memo()
+    key = ('used', user_id, skill_id)
+    if memo is not None and key in memo:
+        return memo[key]
     row = _mark_row(user_id, skill_id)
-    if row is not None and row.action_taken_at is not None:
-        return True
-    return bool(_evidence(user_id, skill_id))
+    used = (row is not None and row.action_taken_at is not None) or bool(_evidence(user_id, skill_id))
+    if memo is not None:
+        memo[key] = used
+    return used
 
 
 def _progress_row(skill, row, used):
@@ -120,6 +160,7 @@ def _progress_row(skill, row, used):
 
 def skills_progress(user_id):
     """Marks for the six skills in LEARN_SKILLS order. Writes back `used` once true."""
+    clear_request_memo()
     now = datetime.utcnow()
     out = []
     for skill in LEARN_SKILLS:
@@ -169,11 +210,17 @@ def record_finish(user_id, short_id, outcome, today=None):
         schedule_first_recall(user_id, skill_id, today or date.today())
         _unlock_long_lesson(user_id, short.get('long_lesson'))
     db.session.commit()
+    clear_request_memo()
     return _progress_row(skill, row, used_on_money(user_id, skill_id))
 
 
-def delete_user_learn_rows(user_id):
+def delete_user_learn_rows(user_id, keep_completions=False):
     """Delete a user's learnPal rows from every learn table that exists. Returns rows removed.
+
+    Every path that deletes a `users` row calls this first with the default: `learn_completions`
+    has a FK to users with no ON DELETE, so one finished short lesson (which unlocks its long
+    lesson) blocked account deletion on Postgres. `keep_completions=True` is for "Delete all
+    data", which keeps the account and has always kept lesson unlocks (they are permanent).
 
     LEARNPAL_ENABLED is off by default, and then create_all never makes the learn_* tables
     even though the models import fine. A DELETE on a missing table would fail (and poison a
@@ -184,7 +231,9 @@ def delete_user_learn_rows(user_id):
 
     inspector = inspect(db.session.connection())
     removed = 0
-    for model in (LearnQuizAnswer, LearnCompletion, LearnSkillMark, LearnRecall):
+    models = (LearnQuizAnswer, LearnSkillMark, LearnRecall) if keep_completions else (
+        LearnQuizAnswer, LearnCompletion, LearnSkillMark, LearnRecall)
+    for model in models:
         if inspector.has_table(model.__tablename__):
             removed += model.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     return removed

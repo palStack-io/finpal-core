@@ -489,6 +489,9 @@ class Account(Resource):
 
         try:
             _delete_all_user_data(user_id)
+            # learnPal: every learn row, completions too (their FK to users has no ON DELETE).
+            from src.modules.learnpal.marks import delete_user_learn_rows
+            delete_user_learn_rows(user_id)
             db.session.delete(user)
             db.session.commit()
         except Exception:
@@ -909,11 +912,10 @@ def _delete_all_user_data(user_id):
     from src.models.visit_mark import VisitMark
     TeachingSeen.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     VisitMark.query.filter_by(user_id=user_id).delete(synchronize_session=False)
-    try:
-        from src.modules.learnpal.models import LearnQuizAnswer
-        LearnQuizAnswer.query.filter_by(user_id=user_id).delete(synchronize_session=False)
-    except ImportError:
-        pass
+    # learnPal: quiz answers, skill marks and recalls (only the learn tables that exist). Lesson
+    # unlocks stay: this keeps the account. The account-delete path clears them as well.
+    from src.modules.learnpal.marks import delete_user_learn_rows
+    delete_user_learn_rows(user_id, keep_completions=True)
 
     # Remove user from group memberships
     db.session.execute(group_users.delete().where(group_users.c.user_id == user_id))
