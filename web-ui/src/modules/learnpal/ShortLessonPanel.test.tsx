@@ -224,3 +224,38 @@ describe('SkillDots', () => {
     expect(screen.getByLabelText('Understood, not yet used, not yet remembered')).toBeTruthy();
   });
 });
+
+describe('ShortLessonPanel money', () => {
+  const buffer = (currency?: string): ShortLesson => ({
+    ...LESSON, id: 'buffer', skill: 'buffer',
+    try: { kind: 'buffer', ...(currency ? { currency } : {}), essential_monthly: '3065.00', held: '1530.00',
+           buffer_amount: '1530.00', targets: [{ months: 3, target: '9195.00' }] },
+  });
+  const toStep3 = async () => {
+    await screen.findByTestId('short-number');
+    for (let i = 0; i < 2; i++) await userEvent.click(screen.getByTestId('short-next'));
+  };
+
+  it("formats step 3 with the try block's currency (GBP shows a pound sign)", async () => {
+    serve(buffer('GBP')); draw();
+    await toStep3();
+    expect(screen.getByText('£3,065.00')).toBeTruthy();
+    expect(screen.queryByText(/\$/)).toBeNull();
+  });
+
+  it("falls back to the person's currency from the auth store", async () => {
+    useAuthStore.setState({
+      user: { id: 'a@test.com', name: 'A', default_currency_code: 'EUR' } as never, token: 't',
+      refreshToken: 'r', isAuthenticated: true,
+    });
+    serve(buffer()); draw();
+    await toStep3();
+    expect(screen.getByText(/€\s?3,065\.00|3,065\.00\s?€/)).toBeTruthy();
+  });
+
+  it('formats the interest slider in the try currency', async () => {
+    serve({ ...LESSON, try: { ...(LESSON.try as object), currency: 'GBP' } as never }); draw();
+    await toStep3();
+    expect(screen.getByTestId('try-extra-value').textContent).toBe('£0.00');
+  });
+});

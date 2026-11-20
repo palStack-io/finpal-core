@@ -263,15 +263,15 @@ export interface InterestPoint {
 }
 
 export type ShortTry =
-  | { kind: 'interest'; balance: string; apr: string; interest_month: string;
+  | { kind: 'interest'; currency?: string; balance: string; apr: string; interest_month: string;
       base_payment: string; covers_interest: boolean; points: InterestPoint[] }
-  | { kind: 'buffer'; essential_monthly: string; held: string; buffer_amount: string;
+  | { kind: 'buffer'; currency?: string; essential_monthly: string; held: string; buffer_amount: string;
       targets: { months: number; target: string }[] }
-  | { kind: 'fixed_share'; income: string; fixed_amount: string; share_percent: string }
-  | { kind: 'sinking'; item: string; yearly: string; monthly: string }
-  | { kind: 'month'; income: string; spent: string; biggest_category: string;
+  | { kind: 'fixed_share'; currency?: string; income: string; fixed_amount: string; share_percent: string }
+  | { kind: 'sinking'; currency?: string; item: string; yearly: string; monthly: string }
+  | { kind: 'month'; currency?: string; income: string; spent: string; biggest_category: string;
       biggest_amount: string }
-  | { kind: 'debt_order'; debts: { name: string; balance: string; apr: string }[] };
+  | { kind: 'debt_order'; currency?: string; debts: { name: string; balance: string; apr: string }[] };
 
 export interface ShortLesson {
   id: string;

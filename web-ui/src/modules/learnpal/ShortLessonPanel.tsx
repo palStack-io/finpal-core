@@ -15,6 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SlidePanel } from '../../components/SlidePanel';
 import { Button } from '../../components/common/Button';
 import { formatMoney } from '../../styles/money';
+import { useAuthStore } from '../../store/authStore';
 import { learnpalService } from './service';
 import type {
   InterestPoint, ShortLesson, ShortOutcome, ShortTry, SkillMarks, SkillProgress,
@@ -24,7 +25,8 @@ const STEPS = 4;
 const STEP_TITLES = ['Your number', 'What is going on', 'Try it on your numbers', 'Do one thing'];
 const NEVER_CLEARS = "This payment doesn't get ahead of the interest yet";
 
-const money = (v: string) => formatMoney(Number(v));
+/** Money in the lesson's own currency (the server's `try.currency`), else the person's. */
+const moneyIn = (currency: string) => (v: string) => formatMoney(Number(v), { currency });
 
 /** "Mar 2028", counted from today. */
 const monthsFromNow = (months: number): string => {
@@ -70,7 +72,8 @@ const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div style={row}><span className="fp-hint">{label}</span><span style={figure}>{value}</span></div>
 );
 
-const InterestTry: React.FC<{ t: Extract<ShortTry, { kind: 'interest' }> }> = ({ t }) => {
+const InterestTry: React.FC<{ t: Extract<ShortTry, { kind: 'interest' }>; currency: string }> = ({ t, currency }) => {
+  const money = moneyIn(currency);
   const [k, setK] = useState(0);
   const point: InterestPoint = t.points[k];
   const first = t.points[0];
@@ -107,7 +110,8 @@ const InterestTry: React.FC<{ t: Extract<ShortTry, { kind: 'interest' }> }> = ({
 };
 
 /** Read-only figures for every kind that has no slider. */
-const FiguresTry: React.FC<{ t: Exclude<ShortTry, { kind: 'interest' }> }> = ({ t }) => {
+const FiguresTry: React.FC<{ t: Exclude<ShortTry, { kind: 'interest' }>; currency: string }> = ({ t, currency }) => {
+  const money = moneyIn(currency);
   switch (t.kind) {
     case 'buffer':
       return (
@@ -167,6 +171,7 @@ export const ShortLessonPanel: React.FC<ShortLessonPanelProps> = (props) => (
 
 const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClose, onFinished }) => {
   const navigate = useNavigate();
+  const userCurrency = useAuthStore((st) => st.user?.default_currency_code) || 'USD';
   const [lesson, setLesson] = useState<ShortLesson | null>(null);
   const [failed, setFailed] = useState<'gone' | 'error' | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -265,8 +270,8 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
         {step === 2 && (
           <>
             {lesson.try.kind === 'interest'
-              ? <InterestTry t={lesson.try} />
-              : <FiguresTry t={lesson.try} />}
+              ? <InterestTry t={lesson.try} currency={lesson.try.currency || userCurrency} />
+              : <FiguresTry t={lesson.try} currency={lesson.try.currency || userCurrency} />}
             <p className="fp-hint" style={{ marginTop: 10 }}>
               Nothing changes until you choose to. This is only a preview.
             </p>
