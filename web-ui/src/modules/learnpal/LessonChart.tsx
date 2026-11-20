@@ -15,7 +15,7 @@
  */
 import React from 'react';
 import { formatMoney } from '../../styles/money';
-import type { ShortTry } from '../../types/learnpal';
+import type { DebtCompare, DebtMethodResult, ShortTry } from '../../types/learnpal';
 
 type Interest = Extract<ShortTry, { kind: 'interest' }>;
 
@@ -204,11 +204,85 @@ const InterestSplit: React.FC<{ t: Interest; money: (n: number) => string }> = (
   );
 };
 
+/** One method as drawn: never, or its months (in the server's words) and its interest. */
+type Method = { never: true; first: string } | { never: false; first: string; months: number; span: string; interest: number };
+const clears = (m: Method): m is Extract<Method, { never: false }> => m.never === false;
+
+function method(r: DebtMethodResult | undefined, names: string[]): Method | null {
+  if (!r || typeof r.first !== 'string' || !names.includes(r.first)) return null;
+  if (r.never === true) return { never: true, first: r.first };
+  const months = num(r.months); const interest = num(r.interest_total);
+  if (r.never !== false || months === null || !Number.isInteger(months) || months <= 0) return null;
+  if (interest === null || interest < 0 || typeof r.span !== 'string' || !r.span) return null;
+  return { never: false, first: r.first, months, span: r.span, interest };
+}
+
+type Compared = { basis: 'plan' | 'minimums'; monthly: number; rate: Method; size: Method };
+
+/** The comparison as drawn, or null when anything is missing or out of range (then the balances chart stands). */
+function compared(c: DebtCompare | undefined, names: string[]): Compared | null {
+  if (!c || (c.basis !== 'plan' && c.basis !== 'minimums')) return null;
+  const monthly = num(c.monthly);
+  const rate = method(c.avalanche, names); const size = method(c.snowball, names);
+  if (monthly === null || monthly <= 0 || !rate || !size) return null;
+  return { basis: c.basis, monthly, rate, size };
+}
+
+/**
+ * Both methods on the person's own monthly amount (`try.compare`, the server's `debt_comparison`): two bars each,
+ * months to debt-free (green) and the interest on the way (rust), each scaled to the larger of the two methods. A
+ * method that never clears says so and draws no bar.
+ */
+const DebtCompareChart: React.FC<{ c: Compared; money: (n: number) => string }> = ({ c, money }) => {
+  const { rate, size, monthly } = c;
+  const rows = [{ name: 'Highest rate first', m: rate }, { name: 'Smallest balance first', m: size }];
+  const done = rows.map((r) => r.m).filter(clears);
+  const mostMonths = Math.max(1, ...done.map((m) => m.months));
+  const mostInterest = Math.max(0, ...done.map((m) => m.interest));
+  const sentence = (name: string, m: Method) => (clears(m)
+    ? `${name}: debt-free in ${m.span}, ${money(m.interest)} interest`
+    : `${name}: at this amount, the payments don't get ahead of the interest yet`);
+  const basis = `Paying ${money(monthly)} a month, ${c.basis === 'plan' ? 'your plan' : 'your minimums'}`;
+  const label = `${[...rows.map((r) => sentence(r.name, r.m)), basis].join('. ')}.`;
+  return (
+    <Frame title="Two ways to pay it down, on your numbers" label={label}>
+      <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rows.map(({ name, m }) => (
+          <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{sentence(name, m)}</span>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{`Starts with ${m.first}`}</span>
+            {clears(m) && (
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: '6px 12px', alignItems: 'center',
+                fontSize: 13, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums',
+              }}>
+                <span>Debt-free in</span>
+                <div style={{ ...track, height: 10, background: 'transparent' }}>
+                  <span data-part="months" style={{ width: pct(m.months, mostMonths), background: GREEN }} />
+                </div>
+                <span style={{ textAlign: 'right' }}>{m.span}</span>
+                <span>Interest</span>
+                <div style={{ ...track, height: 10, background: 'transparent' }}>
+                  <span data-part="interest-total" style={{ width: pct(m.interest, mostInterest), background: RUST }} />
+                </div>
+                <span style={{ textAlign: 'right' }}>{money(m.interest)}</span>
+              </div>
+            )}
+          </div>
+        ))}
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{basis}</span>
+      </div>
+    </Frame>
+  );
+};
+
 const DebtOrderChart: React.FC<{ t: Extract<ShortTry, { kind: 'debt_order' }>; money: (n: number) => string }> = (
   { t, money },
 ) => {
   const debts = (t.debts ?? []).map((d) => ({ name: d.name, apr: d.apr, balance: num(d.balance) }));
   if (debts.length < 2 || debts.some((d) => d.balance === null || d.balance < 0)) return null;
+  const both = compared(t.compare, debts.map((d) => d.name));
+  if (both) return <DebtCompareChart c={both} money={money} />;
   const scale = Math.max(...debts.map((d) => d.balance as number));
   const { highest_rate: highest, smallest } = t;
   const start = (name: string): string | null => {

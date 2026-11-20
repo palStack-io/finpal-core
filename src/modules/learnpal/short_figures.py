@@ -38,7 +38,8 @@ from src.models.user import User
 from src.modules.learnpal.short_lessons import SHORT_LESSONS
 from src.services.budget.sinking import is_sinking_fund, monthly_set_aside
 from src.services.goal.buffer import buffer_picture
-from src.services.goal.projection import AVALANCHE, SNOWBALL, order_debts
+from src.services.goal.debt_compare import debt_comparison
+from src.services.goal.projection import AVALANCHE, SNOWBALL, span_words
 from src.utils.money import format_money
 
 logger = logging.getLogger(__name__)
@@ -315,21 +316,30 @@ def _month(user_id):
 
 
 def _debt_order(user_id):
-    debts = _owed_accounts(user_id, rated_only=True)
-    if len(debts) < 2:
+    """The debts and both payoff methods, from `debt_comparison` (the one computation of each method's figures):
+    every balance owed with a recorded rate, 0% included, in the base currency."""
+    c = debt_comparison(user_id)
+    if len(c.debts) < 2:
         return None
-    highest = order_debts(debts, AVALANCHE)[0]
-    smallest = order_debts(debts, SNOWBALL)[0]
+    highest, smallest = c.names[c.first[AVALANCHE]], c.names[c.first[SNOWBALL]]
+    figures = {'kind': 'debt_order', 'currency': c.currency,
+               # `highest_rate` / `smallest` name where each method starts, so the chart marks them without
+               # re-deriving the order (ties and all) on the client.
+               'highest_rate': highest, 'smallest': smallest,
+               'debts': [{'name': c.names[d.id], 'balance': _plain(d.owed), 'apr': f'{d.apr:.2f}'}
+                         for d in sorted(c.debts, key=lambda d: d.id)]}
+    if c.methods is not None:
+        # Both methods on the person's own monthly amount; `span` is the months in words ("6 years").
+        figures['compare'] = {'basis': c.basis, 'monthly': _plain(c.budget), **{
+            method: {'first': c.names[m['first']], 'never': m['never'], 'months': m['months'],
+                     'span': None if m['never'] else span_words(m['months']),
+                     'interest_total': None if m['never'] else _plain(m['interest_total'])}
+            for method, m in c.methods.items()}}
     return {
-        'count': str(len(debts)),
-        'highest_rate_account': highest.name,
-        'smallest_account': smallest.name,
-        # `highest_rate` / `smallest` name where each method starts, so the chart marks them without
-        # re-deriving the order (ties and all) on the client.
-        'try': {'kind': 'debt_order', 'currency': _user_format(user_id)[0],
-                'highest_rate': highest.name, 'smallest': smallest.name, 'debts': [
-            {'name': a.name, 'balance': _plain(-_d(a.balance)), 'apr': f'{_d(a.apr):.2f}'}
-            for a in debts]},
+        'count': str(len(c.debts)),
+        'highest_rate_account': highest,
+        'smallest_account': smallest,
+        'try': figures,
     }
 
 
