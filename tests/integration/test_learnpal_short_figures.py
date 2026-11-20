@@ -267,6 +267,7 @@ def test_templates_format_with_figures(user):
         card = lesson['card'].format(**f)
         number = lesson['number'].format(**f)
         for text in (card, number):
+            assert not re.search(r'\b(\w+)\s+\1\b', text, re.I), text
             assert 'None' not in text and '{' not in text and '}' not in text
             # no bare leading-zero decimals ("0.4 months"); "$1,860.00" is fine
             assert not re.search(r'(?<![\d,.])0\.\d', text), text
@@ -279,3 +280,23 @@ def test_interest_ignores_loans(user):
     assert figures_for(user.id, 'interest') is None
     _card(user, 1000, 20, name='Visa')
     assert figures_for(user.id, 'interest')['account'] == 'Visa'
+
+
+def test_every_try_block_carries_the_currency(user):
+    _rich_user(user)
+    for sid in relevant_short_lessons(user.id):
+        assert figures_for(user.id, sid)['try']['currency'] == 'USD', sid
+
+
+def test_try_currency_follows_the_person(user):
+    from src.models.currency import Currency
+    if _db.session.get(Currency, 'GBP') is None:
+        _db.session.add(Currency(code='GBP', name='Pound', symbol='£'))
+    user.default_currency_code = 'GBP'
+    _db.session.commit()
+    AccountFactory(user_id=user.id, type='savings', balance=500, name='Rainy day',
+                   currency_code='GBP')
+    cat = CategoryFactory(user_id=user.id, spending_type='fixed')
+    ExpenseFactory(user_id=user.id, amount=1600, category_id=cat.id, date=_last_month(3))
+    f = figures_for(user.id, 'buffer')
+    assert f['try']['currency'] == 'GBP' and f['buffer_amount'].startswith('£')

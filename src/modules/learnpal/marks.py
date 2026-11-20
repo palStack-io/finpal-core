@@ -5,6 +5,7 @@ row, so later data loss (a deleted card, a cleared budget) cannot empty a mark. 
 the learn_as_you_go switch off changes nothing here: rows are kept, only the teaching stops.
 """
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from sqlalchemy import func
 
@@ -29,12 +30,33 @@ def learning_on(user):
     return getattr(user, 'learn_as_you_go', None) is not False
 
 
-def _owed_interest_known(user_id):
-    """At least one account owed, and every owed account has a rate above zero."""
-    owed = [a for a in Account.query.filter(
-        Account.user_id == user_id, Account.type.in_(('credit', 'loan'))).all()
-        if a.balance is not None and a.balance < 0]
-    return bool(owed) and all(a.apr is not None and a.apr > 0 for a in owed)
+def _payoff_goal_with_owed_card(user_id):
+    """A payoff goal (kind payoff, or a paydown by its numbers) that includes an owed credit account."""
+    from src.models.goal_account import GoalAccount
+    goals = [g for g in Goal.query.filter(Goal.user_id == user_id, Goal.status != 'archived').all()
+             if g.kind == 'payoff' or (g.start_amount is not None and g.target_amount is not None
+                                       and (g.start_amount < 0 or g.target_amount < g.start_amount))]
+    for g in goals:
+        ids = {r.account_id for r in GoalAccount.query.filter_by(goal_id=g.id).all()}
+        if g.account_id:
+            ids.add(g.account_id)
+        if not ids:
+            continue
+        for a in Account.query.filter(Account.id.in_(ids), Account.user_id == user_id,
+                                      Account.type == 'credit').all():
+            if a.balance is not None and a.balance < 0:
+                return True
+    return False
+
+
+def _buffer_started(user_id):
+    """Money held has reached the starter cushion (half a month of essentials)."""
+    from src.modules.learnpal.short_figures import starter_buffer
+    starter = starter_buffer(user_id)
+    if starter is None:
+        return False
+    pic, _monthly, target = starter
+    return Decimal(str(pic['held'])) >= target
 
 
 def _count_budgets_non_monthly(user_id):
@@ -57,10 +79,11 @@ def _evidence(user_id, skill_id):
     if skill_id == 'non-monthly':
         return _count_budgets_non_monthly(user_id) > 0
     if skill_id == 'buffer':
-        return db.session.query(func.count(Goal.id)).filter(
-            Goal.user_id == user_id, Goal.kind == 'savings').scalar() > 0
+        return _buffer_started(user_id)
     if skill_id == 'interest':
-        return _owed_interest_known(user_id)
+        return (db.session.query(func.count(DebtPlan.id)).filter(
+            DebtPlan.user_id == user_id).scalar() > 0
+            or _payoff_goal_with_owed_card(user_id))
     if skill_id == 'pay-down':
         return db.session.query(func.count(DebtPlan.id)).filter(
             DebtPlan.user_id == user_id).scalar() > 0

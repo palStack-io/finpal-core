@@ -37,7 +37,7 @@ SHORT_LESSONS = {
         'skill': 'buffer',
         'long_lesson': 'a-starter-buffer',
         'card': "A small cushion in {account} changes what the next surprise costs. Here's what a first one looks like.",
-        'number': "{buffer_amount} is about {buffer_months} of your usual month. That covers the next thing that breaks.",
+        'number': "{buffer_amount} is {buffer_months} of your usual month. That covers the next thing that breaks.",
         'explain': [
             "Three to six months of expenses is a long way off for most people. Most of the protection comes from the first small bit.",
             "The first target is whatever covers the next thing that breaks, so it does not land on a card.",
