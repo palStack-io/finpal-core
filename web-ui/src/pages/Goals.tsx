@@ -6,6 +6,7 @@ import { goalFigures } from '../utils/goalFigures';
 import { goalTrackingLabel } from '../utils/goalTracking';
 import { MountainSilhouette } from '../components/MountainSilhouette';
 import { PageHead } from '../components/PageHead';
+import { WhyCard } from '../modules/learnpal/WhyCard';
 import { heightForMagnitude } from '../utils/mountainGeometry';
 import {
   UNMEASURED_SUBLINE, peakColorVar, peakEyebrow, peakHardestLine,
@@ -784,6 +785,7 @@ export const Goals: React.FC = () => {
           A suggestion cannot move with them, because a suggestion is what
           makes somebody OPEN the panel. It shrank to one line instead, and it
           preselects its own kind. */}
+      <WhyCard screen="goals" />
       <GoalSuggestions onStart={openCreate} />
 
       {/* *** THE FORM COMES IN FROM THE SIDE, LIKE EVERY OTHER PAGE'S. ***

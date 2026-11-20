@@ -21,6 +21,7 @@ import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
 import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
 import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
 import { PageHead } from '../components/PageHead';
+import { WhyCard } from '../modules/learnpal/WhyCard';
 import { HardMonthCard } from '../components/onboarding/HardMonthCard';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
 
@@ -1223,6 +1224,8 @@ const BudgetsMinimal = () => {
                 ]} />
             </div>
           </PageHead>
+
+          <WhyCard screen="budgets" />
 
           {/* Top Stats */}
           {(() => {

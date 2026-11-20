@@ -325,7 +325,9 @@ class LearnShort(Resource):
         number = _render(short_id, 'number', figures) if figures is not None else None
         if figures is None or number is None or _render(short_id, 'card', figures) is None:
             return {'success': False, 'error': 'Lesson not found'}, 404
-        return {'id': short_id, 'skill': short['skill'], 'long_lesson': short.get('long_lesson'),
+        return {'id': short_id, 'skill': short['skill'],
+                'skill_title': skill_by_id(short['skill'])['title'],
+                'long_lesson': short.get('long_lesson'),
                 'number': number,
                 'explain': short['explain'], 'try': figures['try'], 'action': short['action'],
                 'when': bool(short['when']),

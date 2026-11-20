@@ -54,8 +54,9 @@ def test_why_and_short_and_this_week_shapes(client, h, user):
     assert client.get(f'{BASE}/why?screen=goals', headers=h).get_json()['cards'] == []
     assert client.get(f'{BASE}/why?screen=nope', headers=h).status_code == 400
     short = client.get(f'{BASE}/short/interest', headers=h).get_json()
-    assert set(short) == {'id', 'skill', 'long_lesson', 'number', 'explain', 'try', 'action', 'when', 'lines'}
+    assert set(short) == {'id', 'skill', 'skill_title', 'long_lesson', 'number', 'explain', 'try', 'action', 'when', 'lines'}
     assert short['try']['kind'] == 'interest' and short['when'] is True
+    assert short['skill_title'] == 'Understand interest'
     assert set(short['lines']) == {'not_now', 'understood', 'when_prompt'}
     assert client.get(f'{BASE}/short/buffer', headers=h).status_code == 404
     assert client.get(f'{BASE}/short/nope', headers=h).status_code == 404

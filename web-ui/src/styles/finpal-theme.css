@@ -1916,3 +1916,21 @@ select.fp-select-compact:not([multiple]):not([size]) {
   .fp-settings-aside-footer { display: none; }
   .fp-settings-content { overflow-y: visible; padding: 20px 16px; }
 }
+
+/* Dashboard "This week" card: two columns, one under 640px. */
+.fp-this-week {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 639px) {
+  .fp-this-week {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The Learn as you go switch thumb: slides with transform, and not at all under reduced motion. */
+.fp-switch-thumb { transition: transform 0.2s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .fp-switch-thumb { transition: none; }
+}
