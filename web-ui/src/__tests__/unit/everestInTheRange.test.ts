@@ -68,10 +68,8 @@ describe('Everest in the range', () => {
   };
 
   it('uses the ROCK token, never a goal colour', () => {
-    // Everest is drawn with kind 'everest', which maps to the rock token and nothing else.
-    expect(everestDrawing()).toMatch(/'everest'/);
+    expect(everestDrawing()).toMatch(/--peak-unmeasured/);
     expect(everestDrawing()).not.toMatch(/--peak-cost|--peak-build/);
-    expect(range()).toMatch(/everest: 'var\(--peak-unmeasured\)'/);
   });
 
   it('draws at ZERO altitude too, as base camp', () => {
@@ -107,8 +105,15 @@ describe('Everest in the range', () => {
     expect(everestDrawing()).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
 
-  it('draws no snow cap any more: the real profile and its contours carry the shape', () => {
-    /* Design move 3 (2026-11-20). Real profiles carry no snow paths, so the range must not paint one. */
-    expect(range()).not.toMatch(/shape\.snow/);
+  it("Everest's snow is its own token, never the card colour — a hole on the dark card", () => {
+    /* Owner screenshot 2026-09-26: in dark mode the cap was `--bg-card`, so the
+       summit vanished into the background. */
+    expect(range()).not.toMatch(/shape\.snow\}\s*fill="var\(--bg-card\)"/);
+    expect(range()).toMatch(/shape\.snow\}\s*fill="var\(--peak-snow\)"/);
+    const css = readFileSync('src/styles/finpal-theme.css', 'utf8');
+    const dark = css.slice(css.indexOf('[data-theme="dark"]'));
+    const snow = dark.match(/--peak-snow:\s*([^;]+);/);
+    expect(snow, 'the dark theme sets --peak-snow').not.toBeNull();
+    expect(snow![1]).not.toMatch(/bg-card/);
   });
 });

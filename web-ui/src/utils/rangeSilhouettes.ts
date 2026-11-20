@@ -41,8 +41,6 @@
  * ground and y=0 is the summit. The caller scales uniformly.
  */
 
-import { boxSilhouette, profileFor } from './realRange';
-
 export interface RangeSilhouette {
   /** The mountain, filled with `currentColor`. */
   body: string;
@@ -57,20 +55,51 @@ export interface RangeSilhouette {
   snowOpacity?: number;
 }
 
-/*
- * *** SINCE 2026-11-20 THESE ARE GENERATED FROM REAL ELEVATION (design move 3). *** Each body is the mountain's
- * real profile (`peakProfiles.ts`) fitted to the 100 x 100 box by `boxSilhouette`, summit near the top. The
- * hand-drawn shade and snow paths are gone: they were drawn for the traced outlines and do not fit the real ones.
- */
-const glyph = (slug: string): RangeSilhouette => ({ body: boxSilhouette(profileFor(slug)!, 100, 100, 4) });
-
 /**
  * Indexed by band, 0 (Table Mountain) to 5 (Everest) — the same order the
  * server's `BAND_ORDER` uses and the same order the card silhouettes use.
  */
 export const RANGE_SILHOUETTES: RangeSilhouette[] = [
-  glyph('table-mountain'), glyph('ben-nevis'), glyph('mount-fuji'),
-  glyph('mount-rainier'), glyph('aconcagua'), glyph('everest'),
+  // 0 — Table Mountain. Flat top, wide shoulders, no snow.
+  {
+    body: 'M0,100 L14,74 L30,40 L70,38 L86,72 L100,100 Z',
+    shade: 'M70,38 L86,72 L100,100 L58,100 Z',
+  },
+  // 1 — Ben Nevis. One summit, asymmetric, a light cap.
+  {
+    body: 'M0,100 L18,72 L40,34 L52,12 L64,30 L82,68 L100,100 Z',
+    shade: 'M52,12 L64,30 L82,68 L100,100 L54,100 Z',
+    snow: 'M52,12 L64,30 L57,26 L49,31 L44,25 Z',
+    snowOpacity: 0.5,
+  },
+  // 2 — a steeper single summit.
+  {
+    body: 'M0,100 L14,76 L34,38 L50,8 L62,26 L80,66 L100,100 Z',
+    shade: 'M50,8 L62,26 L80,66 L100,100 L52,100 Z',
+    snow: 'M50,8 L62,26 L54,22 L46,28 L40,20 Z',
+    snowOpacity: 0.62,
+  },
+  // 3 — Mount Rainier. Broad shoulders, a wide snowfield, a subsidiary bump.
+  {
+    body: 'M0,100 L12,78 L28,44 L44,10 L54,2 L62,14 L72,10 L86,62 L100,100 Z',
+    shade: 'M54,2 L62,14 L72,10 L86,62 L100,100 L56,100 Z',
+    snow: 'M44,10 L54,2 L62,14 L72,10 L78,30 L68,24 L58,34 L48,22 L40,30 Z',
+    snowOpacity: 0.9,
+  },
+  // 4 — twin summit, the second slightly lower.
+  {
+    body: 'M0,100 L10,80 L24,46 L38,6 L48,18 L58,4 L70,22 L86,64 L100,100 Z',
+    shade: 'M58,4 L70,22 L86,64 L100,100 L60,100 Z',
+    snow: 'M38,6 L48,18 L58,4 L70,22 L62,20 L54,30 L44,18 L34,26 Z',
+    snowOpacity: 0.92,
+  },
+  // 5 — Everest. The tallest, the sharpest, the most snow.
+  {
+    body: 'M0,100 L8,82 L22,48 L36,12 L46,0 L56,14 L66,6 L82,60 L100,100 Z',
+    shade: 'M46,0 L56,14 L66,6 L82,60 L100,100 L48,100 Z',
+    snow: 'M36,12 L46,0 L56,14 L66,6 L74,32 L64,26 L54,38 L44,24 L34,32 Z',
+    snowOpacity: 0.95,
+  },
 ];
 
 /**

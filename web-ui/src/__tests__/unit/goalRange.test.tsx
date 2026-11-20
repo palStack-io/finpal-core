@@ -29,14 +29,16 @@ const withPeak = (over: Partial<Goal>): Goal => ({
 } as Goal);
 
 describe('the goal range', () => {
-  it('prints the NAME and the real MOUNTAIN, and keeps the money behind the interaction', () => {
-    /* Design move 3 (approved 2026-11-20) labels every peak "<goal> · <peak> <elevation> m". The 2026-09-19
-       decision that hid the mountain behind the hover was about crowding in the old slots; the money (the
-       figures that made three lines) is what stays behind the interaction. */
+  it('prints the NAME, and keeps the mountain behind the interaction', () => {
+    /* Owner, 2026-09-19: three printed lines per peak got "overpowering" with
+       several goals, and the geometry agreed — SLOT is 124 units and
+       `Mount Rainier · 4,392 m · saving` is ~170, so captions were already
+       wider than the space they own. The mountain and its height moved into
+       the detail; the name did not. */
     render(<GoalRange goals={[withPeak({})]} currency="USD" />);
     expect(screen.getByText('Emergency fund')).toBeTruthy();
-    expect(screen.getByText('Mount Rainier 4,392 m · saving')).toBeTruthy();
-    expect(screen.queryByText(/still to save/)).toBeNull();
+    expect(screen.queryByText(/Mount Rainier/)).toBeNull();
+    expect(screen.queryByText(/4,392 m/)).toBeNull();
   });
 
   it('shows the mountain, the height and the money on FOCUS, not just hover', () => {
@@ -50,10 +52,11 @@ describe('the goal range', () => {
 
     fireEvent.focus(peak);
     expect(peak.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('Mount Rainier · 4,392 m')).toBeTruthy();
     expect(screen.getByText(/8,000.00 still to save/)).toBeTruthy();
 
     fireEvent.blur(peak);
-    expect(screen.queryByText(/8,000.00 still to save/)).toBeNull();
+    expect(screen.queryByText('Mount Rainier · 4,392 m')).toBeNull();
   });
 
   it('answers a screen reader WITHOUT the interaction', () => {
@@ -63,7 +66,7 @@ describe('the goal range', () => {
     const name = screen.getByRole('button', { name: /Emergency fund/ })
       .getAttribute('aria-label') ?? '';
     expect(name).toContain('saving');
-    expect(name).toContain('Emergency fund · Mount Rainier 4,392 m');
+    expect(name).toContain('Mount Rainier · 4,392 m');
     expect(name).toContain('still to save');
   });
 
@@ -117,8 +120,8 @@ describe('the goal range', () => {
        that could not go with it: a detail you have to point at answers the
        reporter's question only for a reader with a mouse, which is the shape
        of the defect, not a fix for it. */
-    expect(screen.getByText('Mount Rainier 4,392 m · saving')).toBeTruthy();
-    expect(screen.getByText('Ben Nevis 1,345 m · debt')).toBeTruthy();
+    expect(screen.getByText('saving')).toBeTruthy();
+    expect(screen.getByText('debt')).toBeTruthy();
   });
 
   it('labels an UNMEASURED peak too — the scale is never unknown', () => {
@@ -326,90 +329,5 @@ describe('Everest says what it is doing there', () => {
     expect(screen.getByText('you are at base camp')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Everest/ }).getAttribute('aria-label') ?? '')
       .toContain('financial literacy');
-  });
-});
-
-describe('real mountains, drawn from real elevation (design move 3)', () => {
-  const EVEREST = { altitude_m: 6200, summit_m: 8849, at_summit: false };
-  const debt = withPeak({
-    id: 2, name: 'Pay off the Visa',
-    peak: {
-      scale: 'cost', magnitude: 13.33, unmeasured: false, band: 0,
-      mountain: { slug: 'table-mountain', name: 'Table Mountain', elevation_m: 1085 },
-    },
-  } as Partial<Goal>);
-  /** The summit's height above the ground line, in drawing units, read off the drawn skyline. */
-  const summitHeight = (container: HTMLElement, id: string) => {
-    const g = container.querySelector(`[data-testid="peak-${id}"]`)!;
-    const ys = [...(g.querySelector('path[fill="none"]')!.getAttribute('d') ?? '').matchAll(/[ML][\d.]+,([\d.]+)/g)]
-      .map((m) => Number(m[1]));
-    const ground = Number(container.querySelector('svg > line')!.getAttribute('y1'));
-    return ground - Math.min(...ys);
-  };
-
-  it('draws each peak to its TRUE height on one scale', () => {
-    const { container } = render(<GoalRange goals={[withPeak({}), debt]} currency="USD" everest={EVEREST} />);
-    const ev = summitHeight(container, 'everest');
-    expect(summitHeight(container, '1') / ev).toBeCloseTo(4392 / 8849, 2);
-    expect(summitHeight(container, '2') / ev).toBeCloseTo(1085 / 8849, 2);
-  });
-
-  it('colours by kind: saving green, debt rust, Everest grey', () => {
-    const { container } = render(<GoalRange goals={[withPeak({}), debt]} currency="USD" everest={EVEREST} />);
-    expect(container.querySelector('[data-testid="peak-1"]')!.getAttribute('data-kind')).toBe('saving');
-    expect(container.querySelector('[data-testid="peak-2"]')!.getAttribute('data-kind')).toBe('debt');
-    expect(container.querySelector('[data-testid="peak-everest"]')!.getAttribute('data-kind')).toBe('everest');
-    expect(container.querySelector('[data-testid="peak-1"] path[fill="none"]')!.getAttribute('stroke')).toBe('var(--peak-build)');
-    expect(container.querySelector('[data-testid="peak-2"] path[fill="none"]')!.getAttribute('stroke')).toBe('var(--peak-cost)');
-    expect(container.querySelector('[data-testid="peak-everest"] path[fill="none"]')!.getAttribute('stroke')).toBe('var(--peak-unmeasured)');
-  });
-
-  it('a band-5 SAVING goal is a green Everest beside the shared grey one', () => {
-    const big = withPeak({ id: 9, name: 'House', peak: {
-      scale: 'build', magnitude: 50000, unmeasured: false, band: 5,
-      mountain: { slug: 'everest', name: 'Everest', elevation_m: 8849 },
-    } } as Partial<Goal>);
-    const { container } = render(<GoalRange goals={[big]} currency="USD" everest={EVEREST} />);
-    expect(container.querySelector('[data-testid="peak-9"]')!.getAttribute('data-kind')).toBe('saving');
-    expect(container.querySelector('[data-testid="peak-everest"]')!.getAttribute('data-kind')).toBe('everest');
-  });
-
-  it('draws contour lines every 1,000 m inside each mountain', () => {
-    const { container } = render(<GoalRange goals={[withPeak({})]} currency="USD" everest={EVEREST} />);
-    const levels = (id: string) => [...container.querySelectorAll(`[data-testid="peak-${id}"] [data-contour]`)]
-      .map((l) => Number(l.getAttribute('data-contour')));
-    expect(levels('1')).toEqual([1000, 2000, 3000, 4000]);
-    expect(levels('everest')).toEqual([1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000]);
-  });
-
-  it('puts the ONE climber at the altitude from acts, on Everest, never at a money height', () => {
-    const { container } = render(<GoalRange goals={[withPeak({})]} currency="USD" everest={EVEREST} />);
-    const dots = container.querySelectorAll('[data-testid="climber"]');
-    expect(dots.length).toBe(1);
-    const ground = Number(container.querySelector('svg > line')!.getAttribute('y1'));
-    const ev = summitHeight(container, 'everest');
-    const dotHeight = ground - Number(dots[0].getAttribute('cy'));
-    expect(dotHeight / ev).toBeCloseTo(6200 / 8849, 2);
-    // The goal is half saved; nothing on the picture turns that into a height or a percentage.
-    expect(container.textContent).not.toMatch(/% up/);
-  });
-
-  it('an unmeasured goal is a grey ridge with no contours and no elevation', () => {
-    const grey = withPeak({ id: 3, name: 'Store card', peak: {
-      scale: 'cost', magnitude: null, unmeasured: true, band: null, mountain: null,
-    } } as unknown as Partial<Goal>);
-    const { container } = render(<GoalRange goals={[grey]} currency="USD" />);
-    const g = container.querySelector('[data-testid="peak-3"]')!;
-    expect(g.getAttribute('data-kind')).toBe('unmeasured');
-    expect(g.querySelectorAll('[data-contour]').length).toBe(0);
-    expect(screen.getByText('debt')).toBeTruthy();
-  });
-
-  it('names the whole range for a screen reader: every mountain, its real height, and where you stand', () => {
-    render(<GoalRange goals={[withPeak({}), debt]} currency="USD" everest={EVEREST} />);
-    const label = screen.getByRole('group', { name: /real mountains/ }).getAttribute('aria-label') ?? '';
-    expect(label).toContain('Emergency fund · Mount Rainier 4,392 m, saving');
-    expect(label).toContain('Pay off the Visa · Table Mountain 1,085 m, debt');
-    expect(label).toContain('Everest 8,849 m, you are at 6,200 m');
   });
 });
