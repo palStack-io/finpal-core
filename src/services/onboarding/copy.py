@@ -102,9 +102,9 @@ ORIENTATION = {
     'mountains': {
         'heading': 'Anything you are working towards is drawn as a mountain.',
         'lines': [
-            'The height is the size of the problem, not how hard you have '
-            'tried. A mountain never shrinks because you had a bad month, and '
-            'it never grows to make a point.',
+            "A goal's mountain is sized by the goal, and how far up it you are "
+            'is your progress toward it. A mountain never shrinks because you '
+            'had a bad month, and it never grows to make a point.',
         ],
         # *** MARKED AS EXAMPLES, AND CARRYING NO AMOUNTS. *** A new user has no
         # goals, so anything shown here is illustrative; saying so is cheaper
@@ -112,11 +112,11 @@ ORIENTATION = {
         # something about them.
         'examples': [
             {'label': 'Example',
-             'text': 'Paying off a card is a mountain whose height is what the '
-                     'debt is costing you every month.'},
+             'text': 'Paying off a card: the mountain is the debt, and you '
+                     'climb it as you pay it down.'},
             {'label': 'Example',
-             'text': 'Saving for something is a mountain whose height is what '
-                     'is still left to save.'},
+             'text': 'Saving for something: the mountain is what you are '
+                     'saving for, and you climb it as you save.'},
         ],
     },
     # Step 3 is the one this whole flow exists for. Four panels, each answering
@@ -126,8 +126,8 @@ ORIENTATION = {
         'heading': 'Four different things, four different questions.',
         'panels': [
             {'title': 'Mountains', 'question': 'What am I climbing?',
-             'answer': 'Your goals, at the size of what they ask. Drawn from '
-                       'your money and nothing else.'},
+             'answer': 'Your goals, each sized by the goal. How far up you are '
+                       'is your progress, from your money and nothing else.'},
             {'title': 'Coins', 'question': 'What do I earn?',
              'answer': 'Coins come for telling finPal the truth about your '
                        'money, like naming an account or recording a rate. '

@@ -99,7 +99,7 @@ PAGE_GUIDES = {
                 'lines': [
                     'A goal is something you are saving toward, or a debt you are paying off. '
                     'Each one becomes a peak on your range, which you can see on the Dashboard.',
-                    'The size comes from the amount, and the climb is how far along you are.',
+                    'A goal\'s mountain is sized by the goal, and how far up it you are is your progress toward it.',
                     'Link an account and finPal tracks the progress for you.',
                 ],
             },
@@ -108,7 +108,7 @@ PAGE_GUIDES = {
                 'lines': [
                     'Una meta es algo para lo que ahorras, o una deuda que estás pagando. '
                     'Cada una se convierte en una cumbre de tu cordillera, que puedes ver en el Panel.',
-                    'El tamaño depende del monto, y el ascenso es cuánto has avanzado.',
+                    'La montaña de una meta tiene el tamaño de la meta, y lo alto que has subido en ella es tu avance hacia ella.',
                     'Vincula una cuenta y finPal registra el progreso por ti.',
                 ],
             },
