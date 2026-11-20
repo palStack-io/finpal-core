@@ -35,16 +35,54 @@ def test_new_user_six_skills_all_false(user):
     assert LearnSkillMark.query.count() == 0
 
 
-def test_existing_apr_counts_as_used(user):
+def _payoff_goal(user, account, kind='payoff'):
+    _db.session.add(Goal(user_id=user.id, name='Clear it', kind=kind, account_id=account.id,
+                         start_amount=Decimal('-500'), target_amount=Decimal('0')))
+    _db.session.commit()
+
+
+def test_apr_alone_is_not_use(user):
     AccountFactory(user_id=user.id, type='credit', balance=Decimal('-500'), apr=Decimal('19.9'))
-    assert _marks(user.id)['interest']['used'] is True
+    assert _marks(user.id)['interest']['used'] is False
 
 
 def test_interest_never_vacuously_used(user):
     assert used_on_money(user.id, 'interest') is False
-    AccountFactory(user_id=user.id, type='credit', balance=Decimal('-500'), apr=Decimal('19.9'))
     AccountFactory(user_id=user.id, type='loan', balance=Decimal('-900'), apr=None)
     assert used_on_money(user.id, 'interest') is False
+
+
+def test_payoff_goal_on_owed_card_counts_as_interest_used(user):
+    card = AccountFactory(user_id=user.id, type='credit', balance=Decimal('-500'))
+    assert used_on_money(user.id, 'interest') is False
+    _payoff_goal(user, card)
+    assert _marks(user.id)['interest']['used'] is True
+
+
+def test_payoff_goal_on_cleared_or_savings_account_does_not(user):
+    cleared = AccountFactory(user_id=user.id, type='credit', balance=Decimal('0'))
+    _payoff_goal(user, cleared)
+    assert used_on_money(user.id, 'interest') is False
+
+
+def test_debt_plan_counts_as_interest_used(user):
+    _db.session.add(DebtPlan(user_id=user.id, method='avalanche'))
+    _db.session.commit()
+    assert used_on_money(user.id, 'interest') is True
+
+
+def test_buffer_used_needs_the_starter_cushion(user):
+    cat = CategoryFactory(user_id=user.id, spending_type='fixed')
+    last = datetime.utcnow().replace(day=1, hour=12) - timedelta(days=5)
+    ExpenseFactory(user_id=user.id, amount=1600, category_id=cat.id, date=last)
+    saver = AccountFactory(user_id=user.id, type='savings', balance=Decimal('100'))
+    _db.session.add(Goal(user_id=user.id, name='Rainy', kind='savings', account_id=saver.id,
+                         start_amount=Decimal('0'), target_amount=Decimal('1000')))
+    _db.session.commit()
+    assert used_on_money(user.id, 'buffer') is False  # a savings goal alone is not use
+    saver.balance = Decimal('800')
+    _db.session.commit()
+    assert used_on_money(user.id, 'buffer') is True
 
 
 def test_finish_sets_understood_and_schedules_recall(user):
@@ -67,6 +105,8 @@ def test_action_outcome_marks_used(user):
 
 def test_marks_never_go_down(user):
     card = AccountFactory(user_id=user.id, type='credit', balance=Decimal('-500'), apr=Decimal('20'))
+    _db.session.add(DebtPlan(user_id=user.id, method='avalanche'))
+    _db.session.commit()
     assert _marks(user.id)['interest']['used'] is True
     _db.session.delete(card)
     _db.session.commit()

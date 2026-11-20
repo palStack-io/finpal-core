@@ -168,33 +168,45 @@ def _interest(user_id):
         'interest_month': _money(interest, user_id, card.currency_code),
         'balance': _money(balance, user_id, card.currency_code),
         'apr': _apr_words(apr),
-        'try': {'kind': 'interest', 'balance': _plain(balance), 'apr': f'{apr:.2f}',
+        'try': {'kind': 'interest', 'currency': card.currency_code or _user_format(user_id)[0],
+                'balance': _plain(balance), 'apr': f'{apr:.2f}',
                 'interest_month': _plain(interest), 'base_payment': _plain(base),
                 'covers_interest': base > interest,
                 'points': points},
     }
 
 
-def _buffer(user_id):
+def starter_buffer(user_id):
+    """(picture, monthly, target) for the first cushion, or None when finPal cannot say.
+
+    A first cushion, not the three-to-six months of the long lesson: half a month
+    of essentials, in whole tens. Shared with the buffer skill's `used` evidence.
+    """
     pic = buffer_picture(user_id)
     if not pic:
         return None
     monthly = _d(pic['essential_monthly'])
     if monthly <= 0:
         return None
-    # A first cushion, not the three-to-six months of the long lesson: half a month
-    # of essentials, in whole tens.
     target = (monthly / 2 / 10).quantize(Decimal('1'), rounding=ROUND_HALF_UP) * 10
     if target <= 0:
         return None
+    return pic, monthly, target
+
+
+def _buffer(user_id):
+    starter = starter_buffer(user_id)
+    if starter is None:
+        return None
+    pic, monthly, target = starter
     savings = Account.query.filter(Account.user_id == user_id, Account.type == 'savings').all()
     account = max(savings, key=lambda a: _d(a.balance)).name if savings else 'a savings account'
     return {
         'account': account,
         'buffer_amount': _money(target, user_id),
         'buffer_months': _months_phrase(float(target / monthly)),
-        'try': {'kind': 'buffer', 'essential_monthly': _plain(monthly),
-                'held': _plain(pic['held']), 'buffer_amount': _plain(target),
+        'try': {'kind': 'buffer', 'currency': _user_format(user_id)[0],
+                'essential_monthly': _plain(monthly), 'held': _plain(pic['held']), 'buffer_amount': _plain(target),
                 'targets': [{'months': t['months'], 'target': _plain(t['target'])}
                             for t in pic['targets']]},
     }
@@ -232,7 +244,7 @@ def _fixed_share(user_id):
         'fixed_share': _share_words(ratio),
         'fixed_amount': _money(fixed, user_id),
         'income': _money(income, user_id),
-        'try': {'kind': 'fixed_share', 'income': _plain(income), 'fixed_amount': _plain(fixed),
+        'try': {'kind': 'fixed_share', 'currency': _user_format(user_id)[0], 'income': _plain(income), 'fixed_amount': _plain(fixed),
                 'share_percent': f'{round(ratio * 100)}'},
     }
 
@@ -265,7 +277,7 @@ def _non_monthly(user_id):
         'item': item,
         'yearly': _money(yearly, user_id),
         'monthly': _money(monthly, user_id),
-        'try': {'kind': 'sinking', 'item': item, 'yearly': _plain(yearly),
+        'try': {'kind': 'sinking', 'currency': _user_format(user_id)[0], 'item': item, 'yearly': _plain(yearly),
                 'monthly': _plain(monthly)},
     }
 
@@ -293,7 +305,7 @@ def _month(user_id):
         'spent': _money(spent, user_id),
         'biggest_category': top.name,
         'biggest_amount': _money(top.total, user_id),
-        'try': {'kind': 'month', 'income': _plain(income), 'spent': _plain(spent),
+        'try': {'kind': 'month', 'currency': _user_format(user_id)[0], 'income': _plain(income), 'spent': _plain(spent),
                 'biggest_category': top.name, 'biggest_amount': _plain(top.total)},
     }
 
@@ -308,7 +320,7 @@ def _debt_order(user_id):
         'count': str(len(debts)),
         'highest_rate_account': highest.name,
         'smallest_account': smallest.name,
-        'try': {'kind': 'debt_order', 'debts': [
+        'try': {'kind': 'debt_order', 'currency': _user_format(user_id)[0], 'debts': [
             {'name': a.name, 'balance': _plain(-_d(a.balance)), 'apr': f'{_d(a.apr):.2f}'}
             for a in debts]},
     }
