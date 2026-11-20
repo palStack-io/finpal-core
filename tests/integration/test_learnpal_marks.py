@@ -136,3 +136,15 @@ def test_learn_as_you_go_column_is_reconciled(app, db):
     applied = reconcile_schema(app, db)
     assert 'learn_as_you_go' in {c['name'] for c in inspect(db.engine).get_columns('users')}
     assert any('learn_as_you_go' in s for s in applied), applied
+
+
+def test_deletion_works_when_learn_tables_are_absent(user):
+    """Module off (the default): create_all never made the learn_* tables."""
+    other = UserFactory()
+    _db.session.commit()
+    for t in ('learn_recalls', 'learn_skill_marks', 'learn_quiz_answers', 'learn_completions'):
+        _db.session.execute(_db.text(f'DROP TABLE {t}'))
+    _db.session.commit()
+    ok, _ = AuthService().admin_delete_user(user.id, other.id)
+    assert ok
+    assert _learnpal_reset(other.id) == 0

@@ -144,3 +144,21 @@ def record_finish(user_id, short_id, outcome):
         _unlock_long_lesson(user_id, short.get('long_lesson'))
     db.session.commit()
     return _progress_row(skill, row, used_on_money(user_id, skill_id))
+
+
+def delete_user_learn_rows(user_id):
+    """Delete a user's learnPal rows from every learn table that exists. Returns rows removed.
+
+    LEARNPAL_ENABLED is off by default, and then create_all never makes the learn_* tables
+    even though the models import fine. A DELETE on a missing table would fail (and poison a
+    Postgres transaction), so each table is checked first. Does not commit.
+    """
+    from sqlalchemy import inspect
+    from src.modules.learnpal.models import LearnQuizAnswer, LearnRecall
+
+    inspector = inspect(db.session.connection())
+    removed = 0
+    for model in (LearnQuizAnswer, LearnCompletion, LearnSkillMark, LearnRecall):
+        if inspector.has_table(model.__tablename__):
+            removed += model.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    return removed
