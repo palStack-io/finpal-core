@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import { userService } from '../../services/userService';
 import { useToast } from '../../contexts/ToastContext';
 import { apiErrorMessage } from '../../utils/apiError';
+import { Switch } from '../common/Switch';
 
 /**
  * "Learn as you go": the one switch for the Dashboard lessons and the "Why?" cards. Off keeps what
@@ -42,25 +43,13 @@ export const LearningSwitch: React.FC = () => {
           Short lessons from your own numbers on the Dashboard, and "Why?" next to figures. Turn it off any time; what you already learned is kept.
         </div>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-labelledby="learn-as-you-go-title"
-        aria-describedby="learn-as-you-go-sub"
-        onClick={toggle}
-        aria-disabled={saving}
-        style={{
-          width: 44, height: 24, borderRadius: 12, padding: 0, border: 'none', flexShrink: 0,
-          cursor: saving ? 'wait' : 'pointer', background: on ? 'var(--g500)' : 'var(--border-light)',
-          position: 'relative', opacity: saving ? 0.6 : 1,
-        }}
-      >
-        <div className="fp-switch-thumb" style={{
-          position: 'absolute', top: 3, left: 3, borderRadius: '50%', width: 18, height: 18, background: '#fff',
-          transform: on ? 'translateX(20px)' : 'translateX(0)',
-        }} />
-      </button>
+      <Switch
+        checked={on}
+        onChange={() => { void toggle(); }}
+        labelledBy="learn-as-you-go-title"
+        describedBy="learn-as-you-go-sub"
+        busy={saving}
+      />
     </div>
   );
 };

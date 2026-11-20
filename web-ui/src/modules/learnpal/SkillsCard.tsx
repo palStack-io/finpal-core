@@ -9,7 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { SectionCard } from '../../components/SectionCard';
 import { learnpalService } from './service';
-import { SkillDots } from './ShortLessonPanel';
+import { MARK_NAMES, SkillDots } from './ShortLessonPanel';
 import type { SkillProgress } from '../../types/learnpal';
 
 export interface SkillsProgressState {
@@ -34,6 +34,8 @@ export function useSkillsProgress(): SkillsProgressState {
 export const SkillsCard: React.FC<{ skills: SkillProgress[] }> = ({ skills }) => (
   <div data-testid="skills-card">
     <SectionCard title="Your skills">
+      {/* The dots' legend, in words, once (UX audit 2026-11-20 P1-6). */}
+      <p className="fp-hint" style={{ margin: '0 0 4px', fontSize: 13 }}>{MARK_NAMES.join(' · ')}</p>
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {skills.map((s) => (
           <li key={s.id} style={{
@@ -41,7 +43,7 @@ export const SkillsCard: React.FC<{ skills: SkillProgress[] }> = ({ skills }) =>
             borderBottom: '1px solid var(--border-light)', color: 'var(--text-primary)', fontSize: 15,
           }}>
             <span>{s.title}</span>
-            <SkillDots marks={s.marks} />
+            <SkillDots marks={s.marks} skill={s.title} />
           </li>
         ))}
       </ul>

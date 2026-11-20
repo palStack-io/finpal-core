@@ -160,12 +160,12 @@ describe('Transactions page', () => {
     // 500.00. The sign is U+2212 MINUS, not a hyphen: `formatMoney` uses it so
     // negative rows stay aligned in a tabular column.
     await waitFor(() => {
-      expect(screen.getByText('\u2212$1,200.00')).toBeInTheDocument();
+      expect(screen.getByText('\u2212\u2060$1,200.00')).toBeInTheDocument();
     });
-    expect(screen.getByText('+$300.00')).toBeInTheDocument();
-    expect(screen.getByText('\u2212$900.00')).toBeInTheDocument();
+    expect(screen.getByText('+\u2060$300.00')).toBeInTheDocument();
+    expect(screen.getByText('\u2212\u2060$900.00')).toBeInTheDocument();
     // The page's own 50 rows total 500.00; nothing should be reporting that.
-    expect(screen.queryByText('\u2212$500.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('\u2212\u2060$500.00')).not.toBeInTheDocument();
   });
 
   it('asks the server for the next page', async () => {
@@ -198,8 +198,8 @@ describe('Transactions page', () => {
     // And the cards follow the filter rather than describing all time. With no
     // expenses in the filtered set, Total Income and Net Balance both read
     // +$400.00, so this counts rather than expecting one.
-    await waitFor(() => expect(screen.getAllByText('+$400.00').length).toBeGreaterThan(0));
-    expect(screen.queryByText('\u2212$1,200.00')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText('+\u2060$400.00').length).toBeGreaterThan(0));
+    expect(screen.queryByText('\u2212\u2060$1,200.00')).not.toBeInTheDocument();
   });
 
   it('sends the search term to the server', async () => {

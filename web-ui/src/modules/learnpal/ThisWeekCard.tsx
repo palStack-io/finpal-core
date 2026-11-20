@@ -6,11 +6,13 @@
  *
  * The first heading names the held week ("This week, Nov 16 – 22: understand this"): the server keeps one lesson
  * Monday to Sunday unless it is taken or set aside, so the dates say why it has not changed since yesterday.
- * "Not now" is recorded on the server (`not_now`) and hides the card. A fetch error or a person who
+ * "Not now" is recorded on the server (`not_now`) and hides the card. "Do this" records `action` (fire-and-forget)
+ * and goes to the action's page; when that page is the one already open (the month lesson's action is the
+ * Dashboard, where this card lives), it opens the short lesson instead of doing nothing. A fetch error or a person who
  * turned learning off renders nothing. Core edition: literal English, no motion. Stacks under 640px.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import type { SlotState } from '../../components/home/DashboardSlot';
 import { learnpalService } from './service';
@@ -83,10 +85,23 @@ const linkButton: React.CSSProperties = {
 
 export const ThisWeekCard: React.FC<{ week: ThisWeekState }> = ({ week }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState<string | null>(null);
   const { lesson, hide } = week;
   // The dates keep a lesson held all week from looking stale ("This week, Nov 16 – 22: understand this").
   const range = week.week ? weekRange(week.week.start, week.week.end) : '';
+
+  const doThis = () => {
+    if (!lesson) return;
+    if (lesson.action.href === location.pathname) {
+      // Navigating to the page already open would do nothing; the lesson is the useful next step,
+      // and its own step 4 records the action.
+      setOpen(lesson.id);
+      return;
+    }
+    learnpalService.finishShortLesson(lesson.id, 'action').catch(() => undefined);
+    navigate(lesson.action.href);
+  };
 
   const notNow = () => {
     if (!lesson) return;
@@ -116,7 +131,7 @@ export const ThisWeekCard: React.FC<{ week: ThisWeekState }> = ({ week }) => {
           <div style={{ minWidth: 0 }}>
             <h2 style={heading}>Do this</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-              <Button data-testid="this-week-action" onClick={() => navigate(lesson.action.href)}>
+              <Button data-testid="this-week-action" onClick={doThis}>
                 {lesson.action.label}
               </Button>
               <button type="button" data-testid="this-week-not-now" onClick={notNow} style={{

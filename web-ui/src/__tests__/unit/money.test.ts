@@ -85,15 +85,17 @@ describe('formatMoneyParts', () => {
 describe('formatMoney', () => {
   it('reassembles into a plain string for labels and tooltips', () => {
     expect(formatMoney(1234.5)).toBe('$1,234.50');
-    expect(formatMoney(-40)).toBe('−$40.00');
-    expect(formatMoney(40, { signed: true })).toBe('+$40.00');
+    // U+2060 keeps the sign on the figure's line (UX audit 2026-11-20 P0-1).
+    expect(formatMoney(-40)).toBe('−\u2060$40.00');
+    expect(formatMoney(40, { signed: true })).toBe('+\u2060$40.00');
   });
 });
 
 describe('tone', () => {
   it('keeps semantic accents literal, per the frontend conventions', () => {
     expect(moneyStyle({ tone: 'income' }).color).toBe('#22c55e');
-    expect(moneyStyle({ tone: 'expense' }).color).toBe('#ef4444');
+    // Money out is a quiet tone, not red (voice rule 1, UX audit 2026-11-20 P1-4).
+    expect(moneyStyle({ tone: 'expense' }).color).toBe('var(--text-secondary)');
   });
 
   it('defaults to the theme foreground so neutral figures follow the theme', () => {

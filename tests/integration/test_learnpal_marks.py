@@ -188,3 +188,44 @@ def test_deletion_works_when_learn_tables_are_absent(user):
     ok, _ = AuthService().admin_delete_user(user.id, other.id)
     assert ok
     assert _learnpal_reset(other.id) == 0
+
+
+def test_not_now_first_sets_aside_without_understanding(user):
+    """QA 2026-11-20 #1: "Not now" on the This week card, without reading the lesson, is not mark 1."""
+    _db.session.add(LearnMilestone(slug='what-your-apr-costs', title='t'))
+    _db.session.commit()
+    row = record_finish(user.id, 'interest', 'not_now')
+    assert row['marks']['understood'] is False
+    mark = LearnSkillMark.query.filter_by(user_id=user.id, skill='interest').one()
+    assert mark.set_aside_at is not None and mark.understood_at is None
+    assert LearnRecall.query.filter_by(user_id=user.id).count() == 0
+    assert LearnCompletion.query.filter_by(user_id=user.id).count() == 0
+    # Reading it later still earns the mark, the recall and the long lesson.
+    row = record_finish(user.id, 'interest', 'finished')
+    assert row['marks']['understood'] is True
+    assert LearnRecall.query.filter_by(user_id=user.id, skill='interest').count() == 1
+    assert LearnCompletion.query.filter_by(
+        user_id=user.id, milestone_slug='what-your-apr-costs').count() == 1
+
+
+def test_action_first_sets_understood_and_schedules_recall(user):
+    row = record_finish(user.id, 'buffer', 'action')
+    assert row['marks']['understood'] is True
+    assert LearnRecall.query.filter_by(user_id=user.id, skill='buffer').count() == 1
+
+
+def test_delete_learn_rows_clears_the_held_week(user):
+    """QA 2026-11-20 #5: "Delete all data" and the demo reset clear the held This week pick too."""
+    from src.modules.learnpal.marks import delete_user_learn_rows
+    user.learn_week_of, user.learn_week_lesson = date(2026, 11, 16), 'interest'
+    _db.session.commit()
+    delete_user_learn_rows(user.id, keep_completions=True)
+    _db.session.commit()
+    _db.session.refresh(user)
+    assert user.learn_week_of is None and user.learn_week_lesson is None
+    user.learn_week_of, user.learn_week_lesson = date(2026, 11, 16), 'interest'
+    _db.session.commit()
+    _learnpal_reset(user.id)
+    _db.session.commit()
+    _db.session.refresh(user)
+    assert user.learn_week_of is None and user.learn_week_lesson is None

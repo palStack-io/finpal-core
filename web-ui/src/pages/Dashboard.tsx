@@ -462,7 +462,7 @@ export const Dashboard = () => {
     {
       label: 'Monthly Expenses',
       value: formatCurrency(monthlyExpenses),
-      valueColor: 'var(--status-over)',
+      // Ink, not clay: calm money colour (voice rule 1, UX audit 2026-11-20 P1-4): figures in ink, the minus sign and the label carry the direction.
       note: 'Spending this month',
     },
     {
@@ -472,7 +472,7 @@ export const Dashboard = () => {
       value: savingsRate === null ? '—' : `${savingsRate.toFixed(1)}%`,
       valueColor: savingsRate === null
         ? 'var(--text-muted)'
-        : savingsRate < 0 ? 'var(--status-over)' : undefined,
+        : undefined, // ink either way; the note says when it is negative (voice rule 1)
       note: savingsRate === null
         ? "No income recorded this month. Add it when you have it."
         : savingsRate < 0
@@ -863,15 +863,16 @@ export const Dashboard = () => {
                       in a column invite adding them up: $8,800 against a real
                       net of $7,200. Measured on the demo.
 
-                      The sign is the fact, so the sign is printed, and a
-                      negative balance wears the direction's clay — the same
-                      token an over-budget row uses, so "money the wrong way"
-                      looks the same everywhere on this page. */}
+                      The sign is the fact, so the sign is printed (joined to
+                      the figure with U+2060 so it never wraps alone). Since
+                      2026-11-20 the figure stays in ink: voice rule 1, "No red
+                      first" (UX audit P1-4). */}
                   <p style={{
-                    color: account.balance < 0 ? 'var(--status-over)' : 'var(--text-primary)',
+                    // Ink either way since 2026-11-20 (voice rule 1): the printed sign is the fact.
+                    color: 'var(--text-primary)',
                     fontSize: '16px', fontWeight: '600', marginBottom: 0, ...tabular,
                   }}>
-                    {account.balance < 0 ? '−' : ''}{formatCurrency(Math.abs(account.balance))}
+                    {account.balance < 0 ? '−\u2060' : ''}{formatCurrency(Math.abs(account.balance))}
                   </p>
                 </div>
               </div>
@@ -915,7 +916,7 @@ export const Dashboard = () => {
                           <td style={{ padding: '16px 12px', color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', verticalAlign: 'top' }}>
                             {formatMonthLabel(month.month)}
                           </td>
-                          <td style={{ padding: '16px 12px', textAlign: 'right', color: 'var(--accent-red)', fontWeight: '700', fontSize: '16px', verticalAlign: 'top' }}>
+                          <td style={{ padding: '16px 12px', textAlign: 'right', color: 'var(--text-primary)', fontWeight: '700', fontSize: '16px', verticalAlign: 'top' }}>
                             {formatCurrency(month.total)}
                           </td>
                           <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
@@ -958,7 +959,7 @@ export const Dashboard = () => {
                                     border: `1px solid color-mix(in srgb, ${cat.color || 'var(--text-secondary)'} 45%, transparent)`,
                                     display: 'inline-block'
                                   }}>{cat.name}</span>
-                                  <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(cat.total)}</span>
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(cat.total)}</span>
                                 </div>
                               ))}
                             </div>
@@ -984,7 +985,7 @@ export const Dashboard = () => {
                                     border: `1px solid color-mix(in srgb, ${acc.color || 'var(--text-secondary)'} 45%, transparent)`,
                                     display: 'inline-block'
                                   }}>{acc.name}</span>
-                                  <span style={{ color: 'var(--accent-red)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(acc.total)}</span>
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{formatCurrency(acc.total)}</span>
                                 </div>
                               ))}
                             </div>
@@ -1056,7 +1057,7 @@ export const Dashboard = () => {
                                           <td style={tableCellSecondary}>
                                             {txn.account?.name || txn.account || 'Unknown'}
                                           </td>
-                                          <td style={{ padding: '8px', textAlign: 'right', color: 'var(--accent-red)', fontWeight: '600', fontSize: '13px' }}>
+                                          <td style={{ padding: '8px', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: '600', fontSize: '13px' }}>
                                             {formatCurrency(Math.abs(txn.amount))}
                                           </td>
                                         </tr>

@@ -1934,3 +1934,16 @@ select.fp-select-compact:not([multiple]):not([size]) {
 @media (prefers-reduced-motion: reduce) {
   .fp-switch-thumb { transition: none; }
 }
+
+/* An in-text link in the theme's ink (the short lesson's "Read more"): underline on hover and focus only. */
+.fp-ink-link:hover,
+.fp-ink-link:focus-visible { text-decoration: underline !important; }
+
+/* Headline figure rows (TotalsRow): one column at phone width, so a 26px figure never wraps or collides
+   (UX audit 2026-11-20 P0-1: the minus sign sat on its own line at 390px). */
+.fp-totals-row { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+@media (max-width: 480px) {
+  .fp-totals-row { grid-template-columns: 1fr; }
+  .fp-totals-row > div { border-right: none !important; }
+  .fp-totals-row > div + div { border-top: 1px solid var(--border-light); }
+}

@@ -241,3 +241,36 @@ def test_this_week_with_nothing_to_teach_has_no_dates_and_holds_nothing(client, 
     assert _week_on(client, h, monkeypatch, MON) == {'enabled': True, 'lesson': None}
     _db.session.refresh(user)
     assert user.learn_week_of is None and user.learn_week_lesson is None
+
+
+def test_recall_answer_refused_before_it_is_due(client, h, user):
+    """QA 2026-11-20 #7: the POST follows the same schedule as the GET. 409, nothing written."""
+    today = learn_routes._local_today(user)
+    r = schedule_first_recall(user.id, 'buffer', today)  # due in three days
+    _db.session.commit()
+    resp = client.post(f'{BASE}/recall/{r.id}', headers=h, json={'choice': 'not_sure'})
+    assert resp.status_code == 409
+    assert resp.get_json()['error'] == 'This question is not due yet'
+    _db.session.refresh(r)
+    assert r.answered_on is None and r.misses == 0
+
+
+def test_recall_answer_refused_after_one_today(client, h, user):
+    today = learn_routes._local_today(user)
+    first = _due_recall(user)
+    second = schedule_first_recall(user.id, 'interest', today - timedelta(days=5))
+    second.due_on = today - timedelta(days=1)
+    _db.session.commit()
+    assert client.post(f'{BASE}/recall/{first.id}', headers=h, json={'choice': 'not_sure'}).status_code == 200
+    again = client.post(f'{BASE}/recall/{second.id}', headers=h, json={'choice': 'not_sure'})
+    assert again.status_code == 409
+    assert again.get_json()['error'] == 'One question a day: this one waits for tomorrow'
+    _db.session.refresh(second)
+    assert second.answered_on is None and second.misses == 0
+
+
+def test_recall_answer_for_someone_elses_recall_is_still_404(client, h, user):
+    other = UserFactory()
+    r = schedule_first_recall(other.id, 'buffer', date.today())  # not due, and not theirs
+    _db.session.commit()
+    assert client.post(f'{BASE}/recall/{r.id}', headers=h, json={'choice': '0'}).status_code == 404
