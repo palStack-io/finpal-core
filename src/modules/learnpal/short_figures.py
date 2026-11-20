@@ -334,7 +334,10 @@ def _debt_order(user_id):
         'count': str(len(debts)),
         'highest_rate_account': highest.name,
         'smallest_account': smallest.name,
-        'try': {'kind': 'debt_order', 'currency': _user_format(user_id)[0], 'debts': [
+        # `highest_rate` / `smallest` name where each method starts, so the chart marks them without
+        # re-deriving the order (ties and all) on the client.
+        'try': {'kind': 'debt_order', 'currency': _user_format(user_id)[0],
+                'highest_rate': highest.name, 'smallest': smallest.name, 'debts': [
             {'name': a.name, 'balance': _plain(-_d(a.balance)), 'apr': f'{_d(a.apr):.2f}'}
             for a in debts]},
     }

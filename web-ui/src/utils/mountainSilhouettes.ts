@@ -21,6 +21,8 @@
  * is a taller mountain without a single stretched path.
  */
 
+import { boxSilhouette, profileFor } from './realRange';
+
 export interface MountainSilhouette {
   /** The viewBox is `0 0 100 boxHeight`. Taller band, taller box. */
   boxHeight: number;
@@ -32,53 +34,24 @@ export interface MountainSilhouette {
   snowOpacity?: number;
 }
 
+/*
+ * *** SINCE 2026-11-20 THESE ARE GENERATED FROM REAL ELEVATION, NOT TRACED BY HAND (design move 3). *** Each body is
+ * the mountain's real profile (`peakProfiles.ts`, one transect through the surveyed summit, public elevation data)
+ * fitted to its band's box by `boxSilhouette`: the transect spans the 100-wide box and its relief, from the lowest
+ * ground it crosses to the summit, spans the box height down from the same summit line the hand-traced shapes used.
+ * The hand-drawn snow caps are gone: they belonged to the traced outlines and do not fit the real ones.
+ */
+const glyph = (slug: string, boxHeight: number, summitY: number): MountainSilhouette =>
+  ({ boxHeight, body: boxSilhouette(profileFor(slug)!, 100, boxHeight, summitY) });
+
 /** Indexed by band, 0 (smallest) to 5 (largest). `BAND_ORDER` on the server. */
 export const MOUNTAIN_SILHOUETTES: MountainSilhouette[] = [
-  // 0 — Table Mountain, 1,085 m. The flat top and nothing else, so no snow.
-  {
-    boxHeight: 30,
-    body: 'M0,30 L7,27 L17,16 L23,8 L77,7 L83,17 L92,26 L100,30 Z',
-  },
-  // 1 — Ben Nevis, 1,345 m. Rounded dome with the sheer north face on one side.
-  {
-    boxHeight: 42,
-    body: 'M0,42 L9,37 L24,27 L38,18 L50,13 L57,15 L63,10 L70,13 L74,24 '
-        + 'L77,37 L86,40 L100,42 Z',
-    snow: 'M63,10 L70,13 L74,24 L67,20 L60,16 Z',
-    snowOpacity: 0.7,
-  },
-  // 2 — Mount Fuji, 3,776 m. Symmetric cone, concave flanks, crater notch.
-  {
-    boxHeight: 56,
-    body: 'M0,56 C22,54 32,44 43,20 L46,12 L48,10 L52,10 L54,12 L57,20 '
-        + 'C68,44 78,54 100,56 Z',
-    snow: 'M46,12 L48,10 L52,10 L54,12 L57,20 L50,17 L43,20 Z',
-    snowOpacity: 0.85,
-  },
-  // 3 — Mount Rainier, 4,392 m. Broad and glaciated, with a wide snowy summit.
-  {
-    boxHeight: 68,
-    body: 'M0,68 L6,64 L17,50 L29,34 L39,24 L47,19 L58,18 L66,22 L75,32 '
-        + 'L85,49 L94,62 L100,68 Z',
-    snow: 'M39,24 L47,19 L58,18 L66,22 L75,32 L64,29 L56,32 L47,28 L41,31 Z',
-    snowOpacity: 0.85,
-  },
-  // 4 — Aconcagua, 6,961 m. A massive angular ridge with several sub-peaks.
-  {
-    boxHeight: 84,
-    body: 'M0,84 L8,71 L18,57 L24,62 L34,40 L42,26 L50,14 L58,22 L64,19 '
-        + 'L71,33 L79,48 L87,63 L95,75 L100,84 Z',
-    snow: 'M50,14 L58,22 L64,19 L69,27 L60,25 L53,29 L46,24 L43,28 L42,26 Z',
-    snowOpacity: 0.8,
-  },
-  // 5 — Everest, 8,849 m. Jagged pyramid, and the shoulder is what names it.
-  {
-    boxHeight: 100,
-    body: 'M0,100 L9,90 L19,77 L27,67 L33,73 L41,48 L47,28 L51,11 L56,21 '
-        + 'L60,18 L67,37 L74,52 L82,70 L90,86 L100,100 Z',
-    snow: 'M51,11 L56,21 L60,18 L65,29 L57,27 L50,32 L44,26 L46,33 L47,28 Z',
-    snowOpacity: 0.85,
-  },
+  glyph('table-mountain', 30, 7),     // 1,085 m. The flat front table.
+  glyph('ben-nevis', 42, 10),         // 1,345 m. The summit plateau, then Carn Mor Dearg.
+  glyph('mount-fuji', 56, 10),        // 3,776 m. The cone.
+  glyph('mount-rainier', 68, 18),     // 4,392 m. Broad and glaciated.
+  glyph('aconcagua', 84, 14),         // 6,961 m.
+  glyph('everest', 100, 11),          // 8,849 m.
 ];
 
 /**
