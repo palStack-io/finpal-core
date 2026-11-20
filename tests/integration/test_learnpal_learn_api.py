@@ -6,6 +6,7 @@ import pytest
 
 from src.extensions import db as _db
 from src.modules.learnpal import routes as learn_routes
+from src.modules.learnpal.marks import record_finish
 from src.modules.learnpal.models import LearnRecall, LearnSkillMark
 from src.modules.learnpal.recall import schedule_first_recall
 from tests.factories import AccountFactory, UserFactory
@@ -175,3 +176,68 @@ def test_finish_dates_first_recall_by_local_today(client, h, user, monkeypatch):
     monkeypatch.setattr(learn_routes, '_local_today', lambda u: far)
     client.post(f'{BASE}/short/interest/finish', headers=h, json={'outcome': 'finished'})
     assert LearnRecall.query.filter_by(user_id=user.id, skill='interest').one().due_on == far + timedelta(days=3)
+
+
+# ------------------------------------------------------------------ "This week" held Monday to Sunday
+
+MON, FRI, NEXT_MON = date(2026, 11, 16), date(2026, 11, 20), date(2026, 11, 23)
+
+
+@pytest.fixture
+def relevant(monkeypatch):
+    """Which short lessons are relevant, set by the test; the card text is the lesson id."""
+    ids = set()
+    monkeypatch.setattr(learn_routes, 'figures_for', lambda uid, sid, lang='en': {'id': sid} if sid in ids else None)
+    monkeypatch.setattr(learn_routes, '_card',
+                        lambda uid, sid, fig, lang='en': {'id': sid, 'skill': learn_routes.SHORT_LESSONS[sid]['skill'],
+                                                          'card': sid, 'action': None})
+    return ids
+
+
+def _week_on(client, h, monkeypatch, day):
+    monkeypatch.setattr(learn_routes, '_local_today', lambda u: day)
+    return client.get(f'{BASE}/this-week', headers=h).get_json()
+
+
+def test_this_week_holds_its_lesson_all_week_and_names_the_dates(client, h, user, relevant, monkeypatch):
+    first, second = list(learn_routes.SHORT_LESSONS)[:2]
+    relevant.add(second)
+    body = _week_on(client, h, monkeypatch, MON)
+    assert body['lesson']['id'] == second
+    assert body['week'] == {'start': '2026-11-16', 'end': '2026-11-22'}
+    _db.session.refresh(user)
+    assert (user.learn_week_of, user.learn_week_lesson) == (MON, second)
+
+    relevant.add(first)            # an earlier lesson becomes relevant mid-week: the held one stays
+    body = _week_on(client, h, monkeypatch, FRI)
+    assert body['lesson']['id'] == second and body['week']['start'] == '2026-11-16'
+
+    body = _week_on(client, h, monkeypatch, NEXT_MON)   # a new week picks again
+    assert body['lesson']['id'] == first
+    assert body['week'] == {'start': '2026-11-23', 'end': '2026-11-29'}
+
+
+def test_this_week_moves_on_when_set_aside_or_no_longer_relevant(client, h, user, relevant, monkeypatch):
+    ids = list(learn_routes.SHORT_LESSONS)
+    relevant.update(ids[:3])
+    assert _week_on(client, h, monkeypatch, MON)['lesson']['id'] == ids[0]
+    record_finish(user.id, ids[0], 'not_now', MON)   # the route's own relevance check is not faked here
+    assert _week_on(client, h, monkeypatch, MON)['lesson']['id'] == ids[1]
+    relevant.discard(ids[1])
+    assert _week_on(client, h, monkeypatch, FRI)['lesson']['id'] == ids[2]
+    _db.session.refresh(user)
+    assert user.learn_week_lesson == ids[2]
+
+
+def test_this_week_finished_without_the_action_stays_for_the_week(client, h, user, relevant, monkeypatch):
+    first = list(learn_routes.SHORT_LESSONS)[0]
+    relevant.add(first)
+    assert _week_on(client, h, monkeypatch, MON)['lesson']['id'] == first
+    record_finish(user.id, first, 'finished', MON)
+    assert _week_on(client, h, monkeypatch, FRI)['lesson']['id'] == first
+
+
+def test_this_week_with_nothing_to_teach_has_no_dates_and_holds_nothing(client, h, user, relevant, monkeypatch):
+    assert _week_on(client, h, monkeypatch, MON) == {'enabled': True, 'lesson': None}
+    _db.session.refresh(user)
+    assert user.learn_week_of is None and user.learn_week_lesson is None

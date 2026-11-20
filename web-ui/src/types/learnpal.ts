@@ -292,6 +292,8 @@ export type ShortOutcome = 'finished' | 'action' | 'not_now';
 export interface ThisWeek {
   enabled: boolean;
   lesson: WhyCard | null;
+  /** The Monday-Sunday week the lesson is held for (ISO dates); sent with a lesson. */
+  week?: { start: string; end: string };
 }
 
 export interface RecallQuestion {

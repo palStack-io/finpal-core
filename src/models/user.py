@@ -27,6 +27,11 @@ class User(UserMixin, db.Model):
     user_color = db.Column(db.String(7), default="#15803d")
     # learnPal "learn as you use it": False turns the in-app teaching off. NULL reads as on.
     learn_as_you_go = db.Column(db.Boolean, nullable=True, default=True, server_default=db.true())
+    # The "This week" lesson held for the person's Monday-Sunday week: the Monday it was picked and the
+    # short lesson id. NULL = nothing held yet; a stale Monday means pick again. Added at boot by
+    # schema_reconcile (nullable, no default).
+    learn_week_of = db.Column(db.Date, nullable=True)
+    learn_week_lesson = db.Column(db.String(40), nullable=True)
     profile_emoji = db.Column(db.String(10), nullable=True)
     # OIDC related fields
     oidc_id = db.Column(db.String(255), nullable=True, index=True, unique=True)

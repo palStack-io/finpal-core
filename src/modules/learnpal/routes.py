@@ -267,6 +267,18 @@ def _card(user_id, short_id, figures):
     return {'id': short_id, 'skill': short['skill'], 'card': text, 'action': short['action']}
 
 
+def _open_one(user_id, short_id):
+    """(short_id, figures) when the lesson is open: its skill not used, not set aside lately, and
+    the lesson relevant (figures build and the card renders). Else None."""
+    skill_id = SHORT_LESSONS[short_id]['skill']
+    if _marks.used_on_money(user_id, skill_id) or _set_aside_recently(user_id, skill_id):
+        return None
+    figures = figures_for(user_id, short_id)
+    if figures is None or _card(user_id, short_id, figures) is None:
+        return None
+    return short_id, figures
+
+
 def _open_cards(user_id, first_only=False):
     """Relevant short lessons whose skill is not used and not set aside in the last 30 days.
 
@@ -275,15 +287,33 @@ def _open_cards(user_id, first_only=False):
     """
     out = []
     for short_id in SHORT_LESSONS:
-        skill_id = SHORT_LESSONS[short_id]['skill']
-        if _marks.used_on_money(user_id, skill_id) or _set_aside_recently(user_id, skill_id):
-            continue
-        figures = figures_for(user_id, short_id)
-        if figures is not None and _card(user_id, short_id, figures) is not None:
-            out.append((short_id, figures))
+        opened = _open_one(user_id, short_id)
+        if opened is not None:
+            out.append(opened)
             if first_only:
                 break
     return out
+
+
+def _week_pick(user, user_id, today):
+    """This week's lesson, held Monday to Sunday (spec 5.5: "it stays the same all week unless taken
+    or set aside, then the next one comes"). Returns ((short_id, figures) or None, monday).
+
+    The held lesson is kept while it is still open; once it is taken (used), set aside or no longer
+    relevant, the next open one is picked and held instead. The pick is saved on the user row.
+    """
+    monday = today - timedelta(days=today.weekday())
+    held = None
+    if user is not None and user.learn_week_of == monday and user.learn_week_lesson in SHORT_LESSONS:
+        held = _open_one(user_id, user.learn_week_lesson)
+    if held is None:
+        cards = _open_cards(user_id, first_only=True)
+        held = cards[0] if cards else None
+        if held is not None and user is not None and \
+                (user.learn_week_of, user.learn_week_lesson) != (monday, held[0]):
+            user.learn_week_of, user.learn_week_lesson = monday, held[0]
+            db.session.commit()
+    return held, monday
 
 
 finish_model = learnpal_ns.model('LearnShortFinish', {
@@ -372,16 +402,20 @@ class LearnThisWeek(Resource):
     @jwt_required()
     @_marks.memoised
     def get(self):
-        """The first open short lesson, or None (off, a quiet day, or nothing to teach)."""
+        """This week's held short lesson and its Monday-Sunday dates, or None (off, a quiet day, nothing to teach)."""
         user_id = get_jwt_identity()
         user = _user(user_id)
         if not _marks.learning_on(user):
             return {'enabled': False, 'lesson': None}, 200
         if quiet_day(user_id, _local_today(user)):
             return {'enabled': True, 'lesson': None}, 200
-        cards = _open_cards(user_id, first_only=True)
-        lesson = _card(user_id, *cards[0]) if cards else None
-        return {'enabled': True, 'lesson': lesson}, 200
+        held, monday = _week_pick(user, user_id, _local_today(user))
+        lesson = _card(user_id, *held) if held else None
+        if lesson is None:
+            return {'enabled': True, 'lesson': None}, 200
+        # The dates the card names ("This week, Nov 16 - 22"), so a held lesson never looks stale.
+        return {'enabled': True, 'lesson': lesson,
+                'week': {'start': monday.isoformat(), 'end': (monday + timedelta(days=6)).isoformat()}}, 200
 
 
 @learnpal_ns.route('/recall')
