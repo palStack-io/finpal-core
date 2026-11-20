@@ -26,8 +26,21 @@ class RecallNotFound(LookupError):
     The route maps this to 404, so another person's recall id reveals nothing."""
 
 
+def _free_day(user_id, day):
+    """`day`, or the first later day no other open recall of this person is due on."""
+    taken = {r.due_on for r in LearnRecall.query.filter(
+        LearnRecall.user_id == user_id, LearnRecall.done_at.is_(None),
+        LearnRecall.due_on >= day).all()}
+    while day in taken:
+        day += timedelta(days=1)
+    return day
+
+
 def schedule_first_recall(user_id, skill_id, today):
     """Create the first recall for a skill (step 0, due in 3 days). Idempotent.
+
+    One recall a day: when another open recall is already due on that day, the new one moves to
+    the next free day (two skills finished together are asked three and four days later).
 
     Uses the first question of the skill's first lesson that has a quiz. Returns the
     open LearnRecall, or None when the skill has no quiz at all. Does not commit.
@@ -45,7 +58,7 @@ def schedule_first_recall(user_id, skill_id, today):
             recall = LearnRecall(
                 user_id=user_id, skill=skill_id, milestone_slug=slug,
                 question_id=questions[0]['id'],
-                due_on=today + timedelta(days=FIRST_RECALL_DAYS), step=0, misses=0)
+                due_on=_free_day(user_id, today + timedelta(days=FIRST_RECALL_DAYS)), step=0, misses=0)
             db.session.add(recall)
             db.session.flush()
             return recall
@@ -59,6 +72,19 @@ def quiet_day(user_id, today):
     dismissed). finPal core has no goal plan-day or fresh-start service (grep of src/ and api/
     finds neither), so those two are not checked here.
     """
+    from src.modules.learnpal.marks import request_memo
+
+    memo = request_memo()
+    key = ('quiet', user_id, today)
+    if memo is not None and key in memo:
+        return memo[key]
+    quiet = _quiet_day(user_id, today)
+    if memo is not None:
+        memo[key] = quiet
+    return quiet
+
+
+def _quiet_day(user_id, today):
     from src.services.onboarding.hard_month import (
         RETURN_WINDOW_DAYS, _dismissed, over_budget_last_month)
     from src.models.visit_mark import VisitMark
@@ -75,13 +101,17 @@ def quiet_day(user_id, today):
 def due_recall(user_id, today):
     """The one recall to ask today (earliest due, not done), or None.
 
-    None when learning is off, or on a quiet day (see quiet_day).
+    None when learning is off, on a quiet day (see quiet_day), or when a recall was already
+    answered today (at most one a day).
     """
     from src.models.user import User
     from src.modules.learnpal.marks import learning_on
 
     user = db.session.get(User, user_id)
     if user is None or not learning_on(user) or quiet_day(user_id, today):
+        return None
+    if LearnRecall.query.filter(LearnRecall.user_id == user_id,
+                                LearnRecall.answered_on == today).first() is not None:
         return None
     due = LearnRecall.query.filter(
         LearnRecall.user_id == user_id, LearnRecall.done_at.is_(None),
@@ -140,6 +170,7 @@ def answer_recall(recall_id, user_id, choice, today):
     if recall is None or recall.user_id != user_id or recall.done_at is not None:
         raise RecallNotFound(recall_id)
     question = _question(recall)
+    recall.answered_on = today
     right, why = None, ''
     if choice == 'not_now':
         recall.due_on = today + timedelta(days=NOT_NOW_DAYS)
@@ -170,6 +201,8 @@ def answer_recall(recall_id, user_id, choice, today):
                 days=FIRST_MISS_DAYS if recall.misses == 1 else LATER_MISS_DAYS)
             _rotate(recall)
     db.session.commit()
+    from src.modules.learnpal.marks import clear_request_memo
+    clear_request_memo()
     skill = skill_by_id(recall.skill)
     marks = _progress_row(skill, _get_or_create(user_id, recall.skill), used_on_money(user_id, recall.skill))
     db.session.commit()

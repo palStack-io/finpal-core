@@ -404,6 +404,10 @@ class MemberDetail(Resource):
                 Invitation.invited_by == member_id)
         ).delete(synchronize_session=False)
 
+        # learnPal rows are the member's own progress, not records someone else owns, and
+        # `learn_completions` (no ON DELETE) would otherwise block the delete.
+        from src.modules.learnpal.marks import delete_user_learn_rows
+        delete_user_learn_rows(member_id)
         db.session.delete(target)
         db.session.commit()
 

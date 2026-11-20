@@ -14,10 +14,11 @@ Budgets open with one calm line and one action before the totals. Decided by Har
   in `TeachingSeen` like the page guides.
 
 Nothing here changes money, budgets or rewards, and nothing is sent anywhere.
-Days are UTC days; finPal has no per-user timezone on the server.
+Days are the person's own dates (their saved `users.timezone`, else UTC), the same date
+learnPal's quiet_day reads, so the opening and the quiet day agree near midnight (2026-11-20).
 """
 from calendar import monthrange
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.exc import IntegrityError
 
@@ -52,8 +53,26 @@ COPY = {
 }
 
 
+def _now():
+    return datetime.now(timezone.utc)
+
+
 def _today():
-    return datetime.utcnow().date()
+    return _now().date()
+
+
+def local_today(user):
+    """The person's own date: their saved timezone, else UTC (then `_today()`, the UTC date)."""
+    tz = getattr(user, 'timezone', None)
+    if not tz or tz.upper() == 'UTC':
+        return _today()
+    from src.services.report.period import _local_date
+    return _local_date(_now(), tz)
+
+
+def person_today(user_id):
+    from src.models.user import User
+    return local_today(db.session.get(User, user_id))
 
 
 def record_visit(user_id, today=None):
@@ -62,7 +81,7 @@ def record_visit(user_id, today=None):
     Idempotent within a day, and safe to call from any request a client makes on open.
     Returns the mark.
     """
-    today = today or _today()
+    today = today or person_today(user_id)
     mark = db.session.get(VisitMark, user_id)
     if mark is None:
         mark = VisitMark(user_id=user_id, last_seen_on=today)
@@ -92,7 +111,7 @@ def over_budget_last_month(user_id, today=None):
     """Monthly budgets that spent past their limit in the last completed month."""
     from src.services.budget.service import BudgetService
 
-    today = today or _today()
+    today = today or person_today(user_id)
     year, month = _previous_month(today)
     month_end = datetime(year, month, monthrange(year, month)[1], 23, 59, 59)
     rows, _, _ = BudgetService().get_all_budgets(user_id, year=year, month=month)
@@ -116,7 +135,7 @@ def _dismissed(user_id, key):
 
 def hard_month_state(user_id, lang='en', today=None):
     """At most one opening for this person today, or None."""
-    today = today or _today()
+    today = today or person_today(user_id)
     mark = record_visit(user_id, today)
     copy = COPY.get(lang, COPY['en'])
 

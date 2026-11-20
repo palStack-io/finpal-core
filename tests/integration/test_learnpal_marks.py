@@ -124,12 +124,12 @@ def test_evidence_rules(user):
     _db.session.add(DebtPlan(user_id=user.id, method='avalanche'))
     _db.session.commit()
     assert used_on_money(user.id, 'pay-down') is True
+    # Correction 2026-11-20: categorised transactions (mostly the rules' work) are not use; only
+    # the lesson's action is (test_learnpal_final_review.py).
     cat = CategoryFactory(user_id=user.id)
-    for _ in range(9):
+    for _ in range(10):
         ExpenseFactory(user_id=user.id, category_id=cat.id, date=datetime.utcnow())
     assert used_on_money(user.id, 'read-your-month') is False
-    ExpenseFactory(user_id=user.id, category_id=cat.id, date=datetime.utcnow())
-    assert used_on_money(user.id, 'read-your-month') is True
 
 
 def test_learning_off_keeps_rows(user):

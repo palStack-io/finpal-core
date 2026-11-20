@@ -200,6 +200,9 @@ class LearnRecall(db.Model):
     step = db.Column(db.Integer, nullable=False, default=0)
     misses = db.Column(db.Integer, nullable=False, default=0)
     done_at = db.Column(db.DateTime, nullable=True)
+    #: The person's local date this recall was last answered (any choice, "Not now" included).
+    #: At most one recall is asked a day: `due_recall` returns none on a day one was answered.
+    answered_on = db.Column(db.Date, nullable=True)
 
     __table_args__ = (
         db.Index('ix_learn_recalls_user_due', 'user_id', 'due_on'),

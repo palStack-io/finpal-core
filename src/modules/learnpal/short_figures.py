@@ -21,6 +21,7 @@ is gone. It is capped at 600 months; a payment that does not outrun the interest
 or that hits the cap, is reported as `months: None, interest_total: None` (never
 cleared), which is true, rather than a made-up number.
 """
+import logging
 from calendar import month_name
 from datetime import datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
@@ -39,6 +40,8 @@ from src.services.budget.sinking import is_sinking_fund, monthly_set_aside
 from src.services.goal.buffer import buffer_picture
 from src.services.goal.projection import AVALANCHE, SNOWBALL, order_debts
 from src.utils.money import format_money
+
+logger = logging.getLogger(__name__)
 
 CENTS = Decimal('0.01')
 MAX_MONTHS = 600
@@ -141,7 +144,7 @@ def _interest_run(balance, apr, payment):
 
 # ------------------------------------------------------------------ per lesson
 
-def _interest(user_id):
+def _interest(user_id, with_points=True):
     # The copy says "card", so loans are left out here (debt-order keeps them).
     cards = _owed_accounts(user_id, rated_only=True, types=('credit',))
     if not cards:
@@ -157,7 +160,8 @@ def _interest(user_id):
         base = max(FALLBACK_MIN_FLOOR, interest + balance * FALLBACK_MIN_PRINCIPAL_RATE
                    ).quantize(CENTS, rounding=ROUND_CEILING)
     points = []
-    for extra in SLIDER_EXTRAS:
+    # A relevance check needs no slider: skip the 31 payoff runs (up to 600 months each).
+    for extra in (SLIDER_EXTRAS if with_points else ()):
         months, total = _interest_run(balance, apr, base + extra)
         points.append({'extra': extra, 'months': months,
                        'interest_total': None if total is None else _plain(total)})
@@ -332,18 +336,29 @@ _BUILDERS = {
 }
 
 
-def figures_for(user_id, short_id):
-    """The lesson's template values plus its `try` block, or None when not relevant."""
+def figures_for(user_id, short_id, relevance_only=False):
+    """The lesson's template values plus its `try` block, or None when not relevant.
+
+    `relevance_only`: the caller only asks "is it relevant?", so the interest slider's points are
+    not computed (the rest is the same, so the answer is the same).
+    """
     build = _BUILDERS.get(short_id)
     if build is None or short_id not in SHORT_LESSONS:
         return None
     try:
+        if relevance_only and build is _interest:
+            return build(user_id, with_points=False)
         return build(user_id)
     except (ValueError, TypeError):
         # format_money refuses an unknown currency; no sentence beats one in the wrong unit.
+        return None
+    except ArithmeticError:
+        # A decimal InvalidOperation or a division by zero on odd stored figures: not relevant.
+        logger.warning('short lesson %s: figures could not be computed for %s', short_id, user_id,
+                       exc_info=True)
         return None
 
 
 def relevant_short_lessons(user_id):
     """Short-lesson ids that apply to this person, in SHORT_LESSONS (priority) order."""
-    return [sid for sid in SHORT_LESSONS if figures_for(user_id, sid) is not None]
+    return [sid for sid in SHORT_LESSONS if figures_for(user_id, sid, relevance_only=True) is not None]
