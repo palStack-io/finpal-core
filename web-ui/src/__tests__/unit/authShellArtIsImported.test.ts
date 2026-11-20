@@ -54,9 +54,10 @@ describe('the range art is imported, never copied', () => {
       .toMatch(/import\s*\{[^}]*RANGE_SILHOUETTES[^}]*\}\s*from\s*'\.\.\/\.\.\/utils\/rangeSilhouettes'/);
   });
 
+  /* Since 2026-11-20 the shapes are generated from real elevation and carry a body only (the hand-drawn shade
+     and snow fitted the traced outlines, not the real ones). */
   it.each([
-    ['body', 1], ['shade', 1], ['snow', 1],
-    ['body', 0], ['shade', 0],
+    ['body', 1], ['body', 0], ['body', 5],
   ] as const)('never inlines RANGE_SILHOUETTES[%i].%s', (part, band) => {
     const d = RANGE_SILHOUETTES[band][part as 'body'];
     expect(d, `band ${band} has no ${part}`).toBeTruthy();
