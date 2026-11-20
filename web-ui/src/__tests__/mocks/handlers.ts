@@ -465,6 +465,11 @@ export const firstVisitHandlers = [
   ),
 ];
 
+// ── learnpal: the Why card on Budgets, Goals and Accounts asks on every mount; off by default ──
+export const learnpalHandlers = [
+  http.get('*/api/v1/learnpal/why', () => HttpResponse.json({ enabled: false, cards: [] })),
+];
+
 // ── Combined ──────────────────────────────────────────────────────────────────
 export const handlers = [
   ...firstVisitHandlers,
@@ -477,4 +482,5 @@ export const handlers = [
   ...pointspalHandlers,
   ...importHandlers,
   ...reviewHandlers,
+  ...learnpalHandlers,
 ];
