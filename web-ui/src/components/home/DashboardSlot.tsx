@@ -5,7 +5,8 @@
  */
 import React from 'react';
 
-export type SlotState = 'loading' | 'show' | 'hide';
+/** `hold`: this entry was shown and then dismissed; nothing later may fill the slot until the next load. */
+export type SlotState = 'loading' | 'show' | 'hide' | 'hold';
 
 export interface SlotEntry {
   key: string;
@@ -15,7 +16,7 @@ export interface SlotEntry {
 
 export const DashboardSlot: React.FC<{ entries: SlotEntry[] }> = ({ entries }) => {
   for (const entry of entries) {
-    if (entry.state === 'loading') return null;
+    if (entry.state === 'loading' || entry.state === 'hold') return null;
     if (entry.state === 'show') return <React.Fragment key={entry.key}>{entry.render()}</React.Fragment>;
   }
   return null;

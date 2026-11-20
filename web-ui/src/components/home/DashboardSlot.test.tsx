@@ -33,4 +33,9 @@ describe('DashboardSlot', () => {
     const { container } = render(<DashboardSlot entries={[entry('a', 'hide'), entry('b', 'hide')]} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('shows nothing for a held entry, even when a later one has something', () => {
+    const { container } = render(<DashboardSlot entries={[entry('recall', 'hold'), entry('this-week', 'show')]} />);
+    expect(container).toBeEmptyDOMElement();
+  });
 });

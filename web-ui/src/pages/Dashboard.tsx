@@ -127,7 +127,7 @@ export const Dashboard = () => {
   const hardMonth = useHardMonth();
   const recall = useRecall();
   const thisWeek = useThisWeek();
-  const skills = useSkillsProgress();
+  const { skills, loading: skillsLoading } = useSkillsProgress();
   const [timeRange, setTimeRange] = useState('month');
   const [loading, setLoading] = useState(true);
 
@@ -725,7 +725,7 @@ export const Dashboard = () => {
         {/* Cash flow, full width. `fp-main-aside` is `2fr 1fr` and the aside
             was the duplicate category donut; with one child left it took two
             thirds of the row and left a third blank. */}
-        <div className={skills ? 'fp-main-aside' : undefined} style={{ marginBottom: '24px' }}>
+        <div className={skills || skillsLoading ? 'fp-main-aside' : undefined} style={{ marginBottom: '24px' }}>
           <SectionCard
             title="Cash Flow"
             action={
@@ -791,6 +791,7 @@ export const Dashboard = () => {
             )}
           </SectionCard>
           {skills && <SkillsCard skills={skills} />}
+          {skillsLoading && <div aria-hidden="true" data-testid="skills-placeholder" />}
         </div>
 
         {/* Budget + Accounts Row */}

@@ -12,17 +12,23 @@ import { learnpalService } from './service';
 import { SkillDots } from './ShortLessonPanel';
 import type { SkillProgress } from '../../types/learnpal';
 
-/** `null` until known, and `null` forever when off or failed. */
-export function useSkillsProgress(): SkillProgress[] | null {
-  const [skills, setSkills] = useState<SkillProgress[] | null>(null);
+export interface SkillsProgressState {
+  /** True while the fetch is out: the Dashboard reserves the column so Cash Flow does not jump. */
+  loading: boolean;
+  /** `null` when off, empty or failed: no column. */
+  skills: SkillProgress[] | null;
+}
+
+export function useSkillsProgress(): SkillsProgressState {
+  const [state, setState] = useState<SkillsProgressState>({ loading: true, skills: null });
   useEffect(() => {
     let live = true;
     learnpalService.getSkillsProgress()
-      .then((r) => { if (live) setSkills(r.enabled && r.skills.length > 0 ? r.skills : null); })
-      .catch(() => { /* hidden */ });
+      .then((r) => { if (live) setState({ loading: false, skills: r.enabled && r.skills.length > 0 ? r.skills : null }); })
+      .catch(() => { if (live) setState({ loading: false, skills: null }); });
     return () => { live = false; };
   }, []);
-  return skills;
+  return state;
 }
 
 export const SkillsCard: React.FC<{ skills: SkillProgress[] }> = ({ skills }) => (

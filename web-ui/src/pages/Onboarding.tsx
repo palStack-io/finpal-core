@@ -13,6 +13,7 @@ import { tabular } from '../styles/money';
 import { Orientation } from '../components/onboarding/Orientation';
 import { BaseCamp } from '../components/onboarding/BaseCamp';
 import { RidgeScene } from '../components/onboarding/OnboardingArt';
+import { LearnQuestion } from '../components/onboarding/LearnQuestion';
 
 /**
  * *** THIS PAGE'S SHELL IS A FIXED DARK GRADIENT IN BOTH THEMES, SO ITS TEXT
@@ -128,7 +129,7 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleNext = () => {
-    if (step < 4) {
+    if (step < 5) {
       setStep(step + 1);
     }
   };
@@ -286,10 +287,10 @@ export const Onboarding: React.FC = () => {
               strip, deliberately: it is one flow. */}
           <div
             role="group"
-            aria-label={`Step ${step} of 4`}
+            aria-label={`Step ${step} of 5`}
             style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginBottom: '2rem' }}
           >
-            {[1, 2, 3, 4].map((n) => (
+            {[1, 2, 3, 4, 5].map((n) => (
               <span
                 key={n}
                 style={{
@@ -668,6 +669,10 @@ export const Onboarding: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Step 5: Learn as you go. Saves on the click (PUT /users/profile): the
+                onboarding endpoint does not take this field. Unanswered stays NULL, which reads as on. */}
+            {step === 5 && <LearnQuestion />}
           </div>
 
           {/* Navigation Buttons */}
@@ -713,7 +718,7 @@ export const Onboarding: React.FC = () => {
               Back
             </button>
 
-            {step < 4 ? (
+            {step < 5 ? (
               <button
                 onClick={handleNext}
                 style={{

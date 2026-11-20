@@ -7,6 +7,7 @@ import { server } from '../../__tests__/mocks/server';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { RecallCard, useRecall } from './RecallCard';
+import { DashboardSlot } from '../../components/home/DashboardSlot';
 
 beforeAll(() => { api.defaults.adapter = 'http'; });
 beforeEach(() => {
@@ -93,5 +94,30 @@ describe('RecallCard', () => {
       expect(screen.queryByTestId('recall-card')).toBeNull();
       unmount();
     }
+  });
+
+  it('holds the slot after Not now and after Done: the next card does not fill it this visit', async () => {
+    const SlotHost: React.FC = () => {
+      const r = useRecall();
+      return (
+        <DashboardSlot entries={[
+          { key: 'recall', state: r.state, render: () => <RecallCard recall={r} /> },
+          { key: 'this-week', state: 'show', render: () => <p>this week card</p> },
+        ]} />
+      );
+    };
+    serve({ enabled: true, recall });
+    answerWith({ right: true, why: 'Because.', marks });
+    const first = render(<SlotHost />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Not now' }));
+    await waitFor(() => expect(screen.queryByTestId('recall-card')).toBeNull());
+    expect(screen.queryByText('this week card')).toBeNull();
+    first.unmount();
+
+    render(<SlotHost />);
+    await userEvent.click(await screen.findByRole('button', { name: recall.options[0] }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByTestId('recall-card')).toBeNull());
+    expect(screen.queryByText('this week card')).toBeNull();
   });
 });

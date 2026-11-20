@@ -19,8 +19,8 @@ const skills = ['Interest', 'Buffer', 'Fixed costs', 'Sinking funds', 'Your mont
 }));
 
 const Host: React.FC = () => {
-  const s = useSkillsProgress();
-  return <div data-testid="host">{s && <SkillsCard skills={s} />}</div>;
+  const { skills: s, loading } = useSkillsProgress();
+  return <div data-testid="host" data-loading={String(loading)}>{s && <SkillsCard skills={s} />}</div>;
 };
 const serve = (body: unknown, status = 200) =>
   server.use(http.get('*/api/v1/learnpal/skills-progress', () => HttpResponse.json(body as never, { status })));
@@ -42,5 +42,17 @@ describe('SkillsCard', () => {
       await waitFor(() => expect(screen.queryByTestId('skills-card')).toBeNull());
       unmount();
     }
+  });
+
+  it('reports loading until the fetch settles, then not loading with or without skills', async () => {
+    serve({ enabled: true, skills });
+    const { unmount } = render(<Host />);
+    expect(screen.getByTestId('host')).toHaveAttribute('data-loading', 'true');
+    await waitFor(() => expect(screen.getByTestId('host')).toHaveAttribute('data-loading', 'false'));
+    unmount();
+    serve({ enabled: false, skills: [] });
+    render(<Host />);
+    await waitFor(() => expect(screen.getByTestId('host')).toHaveAttribute('data-loading', 'false'));
+    expect(screen.queryByTestId('skills-card')).toBeNull();
   });
 });

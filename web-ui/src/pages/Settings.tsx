@@ -12,6 +12,7 @@ import { teamService } from '../services/teamService';
 import { railTag, type RailFacts } from '../utils/settingsRailTags';
 import { ImportSources } from '../components/settings/ImportSources';
 import { AgentAccess } from '../components/settings/AgentAccess';
+import { LearningSwitch } from '../components/settings/LearningSwitch';
 import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
@@ -1153,6 +1154,12 @@ export const Settings: React.FC = () => {
                     How finPal behaves for you. These change what you see, never
                     what is stored.
                   </p>
+
+                  {/* Here rather than on the Modules tab: that tab is absent for a plan with no
+                      modules, and this switch is for everyone. */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <LearningSwitch />
+                  </div>
 
                   <div style={{ marginBottom: '24px' }}>
                     {/* *** A <label> THAT NAMES NOTHING IS DECORATIVE TEXT. ***

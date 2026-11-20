@@ -79,6 +79,8 @@ export interface User {
    * such key, and `undefined` must mean "nothing hidden", not "everything".
    */
   hidden_modules?: string[];
+  /** "Learn as you go". The server reads NULL as true, so absent means on. */
+  learn_as_you_go?: boolean;
 }
 
 export interface OnboardingData {
@@ -149,6 +151,8 @@ export interface ProfileUpdate {
    * fix and this field exists.
    */
   notifications?: Partial<UserNotifications>;
+  /** "Learn as you go" switch. Only sent when the user chose. */
+  learn_as_you_go?: boolean;
 }
 
 export interface PasswordChangeRequest {

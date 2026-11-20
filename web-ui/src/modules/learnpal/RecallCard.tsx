@@ -19,6 +19,7 @@ export interface RecallState {
 export function useRecall(): RecallState {
   const [recall, setRecall] = useState<RecallQuestion | null>(null);
   const [settled, setSettled] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -29,8 +30,10 @@ export function useRecall(): RecallState {
     return () => { live = false; };
   }, []);
 
-  const dismiss = () => setRecall(null);
-  return { recall, dismiss, state: !settled ? 'loading' : recall ? 'show' : 'hide' };
+  // After Done or Not now the slot is held empty, so the This week card does not appear in the same
+  // visit (the answered question would be replaced by another card under the user's cursor).
+  const dismiss = () => { setRecall(null); setDismissed(true); };
+  return { recall, dismiss, state: !settled ? 'loading' : dismissed ? 'hold' : recall ? 'show' : 'hide' };
 }
 
 const choiceButton: React.CSSProperties = {
