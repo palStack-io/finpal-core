@@ -23,7 +23,7 @@ cleared), which is true, rather than a made-up number.
 """
 from calendar import month_name
 from datetime import datetime, timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func
 
@@ -44,9 +44,10 @@ CENTS = Decimal('0.01')
 MAX_MONTHS = 600
 SLIDER_EXTRAS = range(0, 301, 10)
 MIN_MONTH_TRANSACTIONS = 10
-# Fallback minimum when the account records none (brief): max(25, 2% of balance).
+# Fallback minimum when the account records none: max(25, one month's interest + 1% of
+# balance), rounded up to the cent (the common card-minimum shape; it always outruns interest).
 FALLBACK_MIN_FLOOR = Decimal('25')
-FALLBACK_MIN_RATE = Decimal('0.02')
+FALLBACK_MIN_PRINCIPAL_RATE = Decimal('0.01')
 
 
 # --------------------------------------------------------------------- helpers
@@ -149,8 +150,11 @@ def _interest(user_id):
     if balance <= 0:
         return None
     interest = (balance * apr / Decimal('100') / Decimal('12')).quantize(CENTS, rounding=ROUND_HALF_UP)
-    base = _q(card.min_payment) if card.min_payment and _d(card.min_payment) > 0 else \
-        _q(max(FALLBACK_MIN_FLOOR, balance * FALLBACK_MIN_RATE))
+    if card.min_payment and _d(card.min_payment) > 0:
+        base = _q(card.min_payment)
+    else:
+        base = max(FALLBACK_MIN_FLOOR, interest + balance * FALLBACK_MIN_PRINCIPAL_RATE
+                   ).quantize(CENTS, rounding=ROUND_CEILING)
     points = []
     for extra in SLIDER_EXTRAS:
         months, total = _interest_run(balance, apr, base + extra)
@@ -165,6 +169,7 @@ def _interest(user_id):
         'apr': _apr_words(apr),
         'try': {'kind': 'interest', 'balance': _plain(balance), 'apr': f'{apr:.2f}',
                 'interest_month': _plain(interest), 'base_payment': _plain(base),
+                'covers_interest': base > interest,
                 'points': points},
     }
 

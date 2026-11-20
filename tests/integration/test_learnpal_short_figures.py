@@ -78,14 +78,28 @@ def test_interest_base_payment_prefers_recorded_minimum(user):
 
 
 def test_interest_base_payment_fallback(user):
-    _card(user, 1000, 20)
+    _card(user, 500, 12)  # 5.00 + 5.00 is under the 25 floor
     assert figures_for(user.id, 'interest')['try']['base_payment'] == '25.00'
-    _card(user, 5000, 20)
-    assert figures_for(user.id, 'interest')['try']['base_payment'] == '100.00'
+    _card(user, 5000, 20)  # 83.33 interest + 50.00
+    assert figures_for(user.id, 'interest')['try']['base_payment'] == '133.33'
+
+
+def test_fallback_payment_clears_the_debt(user):
+    _card(user, '1860.00', '25.00')
+    t = figures_for(user.id, 'interest')['try']
+    assert t['base_payment'] == '57.35' and t['covers_interest'] is True
+    assert t['points'][0]['months'] is not None
+
+
+def test_recorded_minimum_below_interest_is_flagged(user):
+    _card(user, '1860.00', '25.00', min_payment=Decimal('30.00'))
+    t = figures_for(user.id, 'interest')['try']
+    assert t['covers_interest'] is False
+    assert t['points'][0]['months'] is None
 
 
 def test_interest_slider_points_are_monotone(user):
-    _card(user, 1860, 25)  # base payment 37.20 does not outrun 38.75 interest
+    _card(user, 1860, 25, min_payment=Decimal('30.00'))  # recorded minimum below the 38.75 interest
     pts = figures_for(user.id, 'interest')['try']['points']
     assert [p['extra'] for p in pts] == list(range(0, 301, 10))
     assert pts[0]['months'] is None and pts[0]['interest_total'] is None
