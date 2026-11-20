@@ -279,6 +279,15 @@ def _open_cards(user_id):
     return out
 
 
+finish_model = learnpal_ns.model('LearnShortFinish', {
+    'outcome': fields.String(required=True, description='"finished", "action" or "not_now"'),
+})
+
+recall_answer_model = learnpal_ns.model('LearnRecallAnswer', {
+    'choice': fields.String(required=True, description='"0".."2", "not_sure" or "not_now"'),
+})
+
+
 @learnpal_ns.route('/skills-progress')
 class LearnSkillsProgress(Resource):
     @jwt_required()
@@ -328,6 +337,7 @@ class LearnShort(Resource):
 
 @learnpal_ns.route('/short/<string:short_id>/finish')
 class LearnShortFinish(Resource):
+    @learnpal_ns.expect(finish_model, validate=False)
     @jwt_required()
     def post(self, short_id):
         user_id = get_jwt_identity()
@@ -389,6 +399,7 @@ class LearnRecallToday(Resource):
 
 @learnpal_ns.route('/recall/<int:recall_id>')
 class LearnRecallAnswer(Resource):
+    @learnpal_ns.expect(recall_answer_model, validate=False)
     @jwt_required()
     def post(self, recall_id):
         user_id = get_jwt_identity()
