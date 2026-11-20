@@ -1,7 +1,7 @@
 <div align="center">
   <img width="200" height="200" alt="finPal" src="https://github.com/user-attachments/assets/c6a95689-a223-4f68-8d4e-549fadbcbf53" />
   <h1>finPal</h1>
-  <h3>Make the numbers true, then make them better</h3>
+  <h3>Learn money by managing yours</h3>
 
   <p>
     <a href="https://findemo.palstack.io"><strong>Try the demo →</strong></a> |
@@ -32,6 +32,29 @@ underneath it, so we rewrote the whole thing and called it finPal.
 
 What never changed is the part we started with: **it is your money, on your server, and
 nobody is selling anything about you.**
+
+---
+
+## Learn as you use it
+
+Most of us were never taught how money works, and a course you have to finish rarely sticks.
+finPal teaches from the thing you are already doing: your own budget.
+
+- **This week.** The Dashboard opens on one thing to understand and one thing to do, picked
+  from your figures. It stays the same from Monday to Sunday (the card names the dates) unless
+  you do it or set it aside, then the next one comes.
+- **"Why?" cards** sit next to the figures they explain, on Budgets, Goals and Accounts.
+- **A one-minute lesson** with your own numbers: what *your* card's interest cost last month,
+  what a first buffer would look like for *your* month. Each one ends with one small thing to do.
+- **Six skills, three marks each:** understood, used on your money, still remembered. Read your
+  month, know your fixed costs, plan for non-monthly costs, build a buffer, understand
+  interest, pay down debt.
+- **A question a few days later**, at most one a day, with "Not sure yet" and "Not now"
+  always there. Answer it and it comes back further apart; nothing is ever marked wrong.
+- **Quiet on hard days.** No lesson in a hard month, and you can turn the whole thing off in
+  Settings. What you already learned is kept.
+
+The full lessons and quizzes (learnPal) are still there behind it, unlocked by your own figures.
 
 ---
 
@@ -141,7 +164,7 @@ this one.
 - **Bank sync** via [SimpleFin](docs/simplefin.md), or drop statements in a
   [watched folder](docs/csv-import.md) and let them import themselves
 - **Optional modules** you can switch off at any time: pointsPal (which card to pay with)
-  and learnPal (the lessons above)
+  and learnPal (the lessons and "learn as you use it" above)
 - Multi-currency, multi-account, dark mode, and a mobile app in testing
 
 > [!WARNING]
