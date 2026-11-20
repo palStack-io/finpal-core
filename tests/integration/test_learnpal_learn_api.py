@@ -46,6 +46,18 @@ def test_new_user_gets_no_cards_and_six_skills(client, h):
     assert client.get(f'{BASE}/recall', headers=h).get_json() == {'enabled': True, 'recall': None}
 
 
+def test_skills_progress_names_each_skills_short_lesson_only_when_it_applies(client, h, user):
+    """The skills trail links a skill to its short lesson only when that lesson would open (not a 404)."""
+    fresh = client.get(f'{BASE}/skills-progress', headers=h).get_json()['skills']
+    assert [s['short'] for s in fresh] == [None] * 6
+    _debt(user)
+    body = client.get(f'{BASE}/skills-progress', headers=h).get_json()
+    shorts = {s['id']: s['short'] for s in body['skills']}
+    assert shorts == {'read-your-month': None, 'fixed-costs': None, 'non-monthly': None,
+                      'buffer': None, 'interest': 'interest', 'pay-down': None}
+    assert client.get(f'{BASE}/short/interest', headers=h).status_code == 200
+
+
 def test_why_and_short_and_this_week_shapes(client, h, user):
     _debt(user)
     why = client.get(f'{BASE}/why?screen=debt', headers=h).get_json()

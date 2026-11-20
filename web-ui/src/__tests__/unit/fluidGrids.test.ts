@@ -49,6 +49,15 @@ const isFluid = (template: string): boolean => {
  * grid to a new line does not silently re-exempt a different one.
  */
 const FIXED_BY_DESIGN: Record<string, string> = {
+  // ── learnPal lesson charts (design move 1, 2026-11-20). The track COUNT is the
+  // figure: ten cells are tenths of what came in, twelve steps are the months of a
+  // year. Reflowing them would change what the chart says. Each track is
+  // minmax(0, 1fr) and every cell is a decorative block with no text, so the grid
+  // shrinks with the 420px panel and never overflows; there is nothing to scroll to.
+  'modules/learnpal/LessonChart.tsx|repeat(10, minmax(0, 1fr))':
+    'fixed-share chart: ten cells, each a tenth of income; text-free, shrinks to any width',
+  'modules/learnpal/LessonChart.tsx|repeat(12, minmax(0, 1fr))':
+    'non-monthly chart: twelve monthly steps; text-free, shrinks to any width',
   // ── Decorative wallpaper: absolutely positioned, pointer-events: none, filled
   // with glyphs at 3–5% opacity. It has no reflow requirement because it carries
   // no content — there is nothing in it to cut off.

@@ -65,6 +65,25 @@ const toStep4 = async () => {
 };
 
 describe('ShortLessonPanel', () => {
+  it('draws the lesson\'s own chart under the number, and months to clear on the try step', async () => {
+    const points = [0, 10, 20, 30, 40].map((extra, i) => ({
+      extra, months: [40, 30, 24, 20, 17][i], interest_total: ['800.00', '600.00', '480.00', '400.00', '340.00'][i] }));
+    serve({ ...LESSON, try: { ...LESSON.try, points } as ShortLesson['try'] }); draw();
+    await screen.findByTestId('short-number');
+    expect(screen.getByRole('img', { name: '$38.00 of a $60.00 payment goes to interest, $22.00 off the balance.' }))
+      .toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('short-next'));
+    expect(screen.queryByTestId('lesson-chart')).toBeNull();
+    await userEvent.click(screen.getByTestId('short-next'));
+    expect(screen.getByTestId('months-to-clear')).toBeInTheDocument();
+  });
+
+  it('a lesson whose figures are missing shows its sentence and no chart', async () => {
+    serve({ ...LESSON, try: { ...LESSON.try, interest_month: undefined } as unknown as ShortLesson['try'] }); draw();
+    expect(await screen.findByText(LESSON.number)).toBeTruthy();
+    expect(screen.queryByTestId('lesson-chart')).toBeNull();
+  });
+
   it('opens on step 1 with the server number text and announces progress', async () => {
     serve(); draw();
     expect(await screen.findByText(LESSON.number)).toBeTruthy();

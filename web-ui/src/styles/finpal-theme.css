@@ -292,6 +292,9 @@
      already covered the red half; blue had no ink token at all. #1d4ed8 clears
      both blue tints (5.28 / 5.20) and is still recognisably the same blue. */
   --bl-ink: #1d4ed8;
+  /* learnPal lesson charts: rust, and only for interest and debt (design move 1, 2026-11-20).
+     #b4541a on --kt-card measures about 4.9:1, so a rust bar clears 3:1 as a non-text mark. */
+  --lp-rust: #b4541a;
   --ink: #0f172a; --ink2: #1e293b; --ink3: #334155;
   /* `--muted` was #64748b and failed AA on two of the four surfaces it lands
      on: **4.16:1** on the page wash (#edf1ea, 12 elements — the × close
@@ -526,6 +529,8 @@
      tints the icon buttons land on; the brand #3b82f6 is too dark against them
      for the same reason its light counterpart is too light. */
   --bl-ink: #60a5fa;
+  /* The dark twin of `--lp-rust`: the light value is too dark on #16241A; #f0915a is about 7:1 there. */
+  --lp-rust: #f0915a;
   --sh-xs: 0 1px 2px rgba(0,0,0,.25);
   --sh-sm: 0 2px 8px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
   --sh-md: 0 6px 20px rgba(0,0,0,.4);
@@ -1947,3 +1952,44 @@ select.fp-select-compact:not([multiple]):not([size]) {
   .fp-totals-row > div { border-right: none !important; }
   .fp-totals-row > div + div { border-top: 1px solid var(--border-light); }
 }
+
+/* ── learnPal skills trail (design move 2, mockup 2A, 2026-11-20) ────────────
+   A CONTAINER query, not a viewport one: the Dashboard puts the card in its
+   one-third aside, where six columns never fit, while the Learn page gives it
+   the full width. Under 768px of card the waypoints run down the left edge with
+   the cards beside them; from 768px they sit on a path above six columns. */
+.lp-trail { container-type: inline-size; }
+.lp-trail__path { display: none; }
+.lp-trail__cards {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.lp-trail__card {
+  position: relative; min-width: 0;
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 14px;
+  padding: 16px; margin-left: 40px;
+}
+.lp-trail__card--this-week { border: 2px solid var(--g-ink); padding: 15px; }
+.lp-trail__dot {
+  position: absolute; width: 24px; height: 24px; border-radius: 50%; box-sizing: border-box;
+  background: var(--bg-card); border: 3px solid var(--border-light);
+}
+.lp-trail__dot--on { background: var(--g-ink); border-color: var(--bg-card); box-shadow: 0 0 0 2px var(--g-ink); }
+/* Vertical: each card's own waypoint sits in the gutter, joined by a dashed line. */
+.lp-trail__dot--side { left: -41px; top: 16px; }
+.lp-trail__card:not(:last-child)::before {
+  content: ''; position: absolute; left: -30px; top: 40px; bottom: -28px;
+  border-left: 2px dashed var(--border-light);
+}
+@container (min-width: 768px) {
+  .lp-trail__path { display: block; position: relative; height: 70px; margin-bottom: 14px; }
+  .lp-trail__cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+  .lp-trail__card { margin-left: 0; }
+  /* Two-line titles keep every card's marks on one row. */
+  .lp-trail__title { min-height: 2.6em; }
+  .lp-trail__dot--side, .lp-trail__card:not(:last-child)::before { display: none; }
+}
+/* The highlighted card's border is 1px wider; keep its waypoint on the line. */
+.lp-trail__card--this-week .lp-trail__dot--side { left: -42px; top: 15px; }
+.lp-trail__card--this-week:not(:last-child)::before { left: -31px; }

@@ -41,7 +41,7 @@ from src.modules.learnpal.learn_skills import skill_by_id
 from src.modules.learnpal.models import LearnRecall, LearnSkillMark
 from src.modules.learnpal.recall import (
     CHOICES, RecallNotFound, answer_recall, due_recall, quiet_day)
-from src.modules.learnpal.short_figures import figures_for
+from src.modules.learnpal.short_figures import figures_for, relevant_short_lessons
 from src.modules.learnpal.short_lessons import (
     NOT_NOW_LINE, SHORT_LESSONS, UNDERSTOOD_LINE, WHEN_PROMPT)
 
@@ -329,10 +329,18 @@ recall_answer_model = learnpal_ns.model('LearnRecallAnswer', {
 class LearnSkillsProgress(Resource):
     @jwt_required()
     def get(self):
-        """The six skills and their marks. Listed even when learning is off."""
+        """The six skills and their marks. Listed even when learning is off.
+
+        Each skill also names its short lesson (`short`) when that lesson applies to this person's numbers
+        right now (GET short/<id> would answer 200), else None: the skills trail links only to a lesson that opens.
+        """
         user_id = get_jwt_identity()
-        return {'enabled': _marks.learning_on(_user(user_id)),
-                'skills': _marks.skills_progress(user_id)}, 200
+        skills = _marks.skills_progress(user_id)
+        relevant = set(relevant_short_lessons(user_id))
+        by_skill = {short['skill']: sid for sid, short in SHORT_LESSONS.items() if sid in relevant}
+        for row in skills:
+            row['short'] = by_skill.get(row['id'])
+        return {'enabled': _marks.learning_on(_user(user_id)), 'skills': skills}, 200
 
 
 @learnpal_ns.route('/why')

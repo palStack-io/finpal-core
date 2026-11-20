@@ -241,6 +241,8 @@ export interface SkillProgress {
   id: string;
   title: string;
   marks: SkillMarks;
+  /** GET skills-progress only: the skill's short lesson id when it applies to this person's numbers now, else null. */
+  short?: string | null;
 }
 
 export interface WhyCard {
@@ -271,7 +273,9 @@ export type ShortTry =
   | { kind: 'sinking'; currency?: string; item: string; yearly: string; monthly: string }
   | { kind: 'month'; currency?: string; income: string; spent: string; biggest_category: string;
       biggest_amount: string }
-  | { kind: 'debt_order'; currency?: string; debts: { name: string; balance: string; apr: string }[] };
+  | { kind: 'debt_order'; currency?: string; debts: { name: string; balance: string; apr: string }[];
+      /** Where each way starts, as the server orders them (absent from an older server). */
+      highest_rate?: string; smallest?: string };
 
 export interface ShortLesson {
   id: string;

@@ -46,6 +46,23 @@ const draw = () => render(
 );
 
 describe('the learnPal home', () => {
+  it('shows the skills trail when learning is on, and nothing of it when off', async () => {
+    const skills = ['Read your month', 'Know your fixed costs', 'Plan for non-monthly costs', 'Build a buffer',
+      'Understand interest', 'Pay down debt'].map((title, i) => ({
+      id: `s${i}`, title, short: null, marks: { understood: false, used: i === 3, remembered: false } }));
+    serve(EMPTY);
+    server.use(http.get(`${BASE}/api/v1/learnpal/skills-progress`, () => HttpResponse.json({ enabled: true, skills })));
+    const { unmount } = draw();
+    expect(await screen.findByTestId('skills-card')).toBeInTheDocument();
+    expect(screen.getAllByTestId('skill-card')).toHaveLength(6);
+    unmount();
+    server.use(http.get(`${BASE}/api/v1/learnpal/skills-progress`, () => HttpResponse.json({ enabled: false, skills })));
+    draw();
+    await screen.findByText('Lessons read');
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByTestId('skills-card')).toBeNull();
+  });
+
   it('SHOWS NO POINTS FIGURE OF ANY KIND', async () => {
     // Owner decision 2026-09-11: learnPal has no points, so a tile fed by a
     // figure nothing can increment would read 0 for ever.
