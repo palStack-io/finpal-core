@@ -9,10 +9,12 @@ import { apiErrorMessage } from '../../utils/apiError';
  * update (the onboarding endpoint does not take this field) and refreshes the cached user.
  * Left unanswered, the server reads NULL as on.
  */
-export const LearnQuestion: React.FC = () => {
+export const LearnQuestion: React.FC<{
+  chosen: boolean | null;
+  onChosen: (value: boolean) => void;
+}> = ({ chosen, onChosen }) => {
   const updateUser = useAuthStore((s) => s.updateUser);
   const { showToast } = useToast();
-  const [chosen, setChosen] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
   const choose = async (value: boolean) => {
@@ -21,7 +23,7 @@ export const LearnQuestion: React.FC = () => {
     try {
       const saved = await userService.updateProfile({ learn_as_you_go: value });
       updateUser({ learn_as_you_go: saved?.learn_as_you_go ?? value });
-      setChosen(value);
+      onChosen(value);
     } catch (err) {
       showToast(apiErrorMessage(err, "We couldn't save that. You can change it any time in Settings."), 'error');
     } finally {

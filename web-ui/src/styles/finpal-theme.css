@@ -1928,3 +1928,9 @@ select.fp-select-compact:not([multiple]):not([size]) {
     grid-template-columns: 1fr;
   }
 }
+
+/* The Learn as you go switch thumb: slides with transform, and not at all under reduced motion. */
+.fp-switch-thumb { transition: transform 0.2s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .fp-switch-thumb { transition: none; }
+}

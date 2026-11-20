@@ -16,7 +16,7 @@ beforeEach(() => {
 
 describe('LearnQuestion (onboarding)', () => {
   it('asks the question with both answers', () => {
-    render(<LearnQuestion />);
+    render(<LearnQuestion chosen={null} onChosen={() => {}} />);
     expect(screen.getByText('Want finPal to explain your numbers as you go?')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Yes, show me' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'No, just the numbers' })).toBeInTheDocument();
@@ -24,10 +24,17 @@ describe('LearnQuestion (onboarding)', () => {
 
   it.each([['Yes, show me', true], ['No, just the numbers', false]])('"%s" saves %s', async (label, value) => {
     vi.mocked(userService.updateProfile).mockResolvedValue({ learn_as_you_go: value } as never);
-    render(<LearnQuestion />);
+    const onChosen = vi.fn();
+    render(<LearnQuestion chosen={null} onChosen={onChosen} />);
     await userEvent.click(screen.getByRole('radio', { name: label }));
     expect(userService.updateProfile).toHaveBeenCalledWith({ learn_as_you_go: value });
-    await waitFor(() => expect(screen.getByRole('radio', { name: label })).toHaveAttribute('aria-checked', 'true'));
+    await waitFor(() => expect(onChosen).toHaveBeenCalledWith(value));
     expect(useAuthStore.getState().user?.learn_as_you_go).toBe(value);
+  });
+
+  it('shows the saved choice when remounted with it (Back then Next)', () => {
+    render(<LearnQuestion chosen={false} onChosen={() => {}} />);
+    expect(screen.getByRole('radio', { name: 'No, just the numbers' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Yes, show me' })).toHaveAttribute('aria-checked', 'false');
   });
 });

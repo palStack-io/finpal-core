@@ -49,16 +49,17 @@ export const LearningSwitch: React.FC = () => {
         aria-labelledby="learn-as-you-go-title"
         aria-describedby="learn-as-you-go-sub"
         onClick={toggle}
-        disabled={saving}
+        aria-disabled={saving}
+        className="fp-switch"
         style={{
           width: 44, height: 24, borderRadius: 12, padding: 0, border: 'none', flexShrink: 0,
           cursor: saving ? 'wait' : 'pointer', background: on ? 'var(--g500)' : 'var(--border-light)',
-          position: 'relative', transition: 'background 0.2s', opacity: saving ? 0.6 : 1,
+          position: 'relative', opacity: saving ? 0.6 : 1,
         }}
       >
-        <div style={{
-          position: 'absolute', top: 3, borderRadius: '50%', width: 18, height: 18, background: '#fff',
-          left: on ? 23 : 3, transition: 'left 0.2s',
+        <div className="fp-switch-thumb" style={{
+          position: 'absolute', top: 3, left: 3, borderRadius: '50%', width: 18, height: 18, background: '#fff',
+          transform: on ? 'translateX(20px)' : 'translateX(0)',
         }} />
       </button>
     </div>
