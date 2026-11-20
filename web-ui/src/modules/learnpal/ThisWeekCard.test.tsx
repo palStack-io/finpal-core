@@ -7,7 +7,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../../__tests__/mocks/server';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { ThisWeekCard, useThisWeek } from './ThisWeekCard';
+import { ThisWeekCard, useThisWeek, weekRange } from './ThisWeekCard';
 
 const navigate = vi.fn();
 vi.mock('react-router-dom', async () => ({
@@ -46,6 +46,12 @@ describe('ThisWeekCard', () => {
     expect(navigate).toHaveBeenCalledWith('/accounts');
   });
 
+  it('names the held week in the first heading', async () => {
+    serve({ enabled: true, lesson, week: { start: '2026-11-16', end: '2026-11-22' } });
+    mount();
+    expect(await screen.findByTestId('this-week-heading')).toHaveTextContent(/^This week, Nov 16\s*–\s*22: understand this$/);
+  });
+
   it('Not now posts not_now and hides the card', async () => {
     serve({ enabled: true, lesson });
     let body: unknown = null;
@@ -71,5 +77,16 @@ describe('ThisWeekCard', () => {
     const { container } = mount();
     await waitFor(() => expect(container.firstElementChild).toHaveAttribute('data-state', 'hide'));
     expect(screen.queryByTestId('this-week-card')).toBeNull();
+  });
+});
+
+describe('weekRange', () => {
+  it('collapses a week inside one month and spans two months', () => {
+    expect(weekRange('2026-11-16', '2026-11-22', 'en')).toBe('Nov 16 – 22');
+    expect(weekRange('2026-11-30', '2026-12-06', 'en')).toBe('Nov 30 – Dec 6');
+  });
+
+  it('gives nothing for a bad date', () => {
+    expect(weekRange('nope', '2026-11-22', 'en')).toBe('');
   });
 });
