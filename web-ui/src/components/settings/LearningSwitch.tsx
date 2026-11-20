@@ -50,7 +50,6 @@ export const LearningSwitch: React.FC = () => {
         aria-describedby="learn-as-you-go-sub"
         onClick={toggle}
         aria-disabled={saving}
-        className="fp-switch"
         style={{
           width: 44, height: 24, borderRadius: 12, padding: 0, border: 'none', flexShrink: 0,
           cursor: saving ? 'wait' : 'pointer', background: on ? 'var(--g500)' : 'var(--border-light)',
