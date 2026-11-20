@@ -29,8 +29,9 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label, labell
     aria-label={labelledBy ? undefined : label}
     aria-labelledby={labelledBy}
     aria-describedby={describedBy}
-    onClick={() => onChange(!checked)}
-    disabled={busy}
+    // aria-disabled, not `disabled`: a disabled button drops keyboard focus mid-save.
+    onClick={() => { if (!busy) onChange(!checked); }}
+    aria-disabled={busy}
     style={{
       minWidth: 44, minHeight: 44, padding: 0, border: 'none', background: 'transparent', flexShrink: 0,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

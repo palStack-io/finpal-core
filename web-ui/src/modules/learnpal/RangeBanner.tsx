@@ -112,7 +112,7 @@ export const RangeBanner: React.FC<{ range: LearnRange }> = ({ range }) => {
           </span>
         </div>
         <Link to="/learnpal/range" style={{ fontSize: 13, color: 'var(--g-ink)' }}>
-          Open learnPal
+          See your range
         </Link>
       </div>
 

@@ -48,7 +48,7 @@ describe('LearningSwitch', () => {
     vi.mocked(userService.updateProfile).mockRejectedValue(new Error('nope'));
     render(<LearningSwitch />);
     await userEvent.click(screen.getByRole('switch'));
-    await waitFor(() => expect(screen.getByRole('switch')).not.toBeDisabled());
+    await waitFor(() => expect(screen.getByRole('switch')).toHaveAttribute('aria-disabled', 'false'));
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
   });
 });

@@ -35,7 +35,8 @@ const SURFACES: Array<[string, string, string | RegExp, boolean?]> = [
   ['/goals', 'Goals', 'Goals'],
   ['/kit', 'Kit', 'Your kit'],
   ['/review', 'Review', 'Review'],
-  ['/learnpal', 'learnPal', 'learnPal', true],
+  // The Learn home has been titled "Learn" since 2026-11-20 (UX audit P1-1); the slug stays learnpal.
+  ['/learnpal', 'Learn', /^Learn$/, true],
   ['/learnpal/range', 'Your range', 'Your range', true],
   ['/learnpal/lessons', 'Lessons', /lessons/i, true],
 ];
@@ -125,7 +126,7 @@ test('the ONLY progress bar in the app is the one whose target the user chose',
        Everything else came out on 2026-09-14. If a bar appears on the learnPal
        home again, this is what says so. */
     test.skip(!(await reached(page, '/learnpal')), 'learnPal is gated off');
-    await pageIsLoaded(page, 'learnPal');
+    await pageIsLoaded(page, /^Learn$/);
     await expect(page.getByTestId('counter-bar')).toHaveCount(0);
   });
 
@@ -161,7 +162,7 @@ test('the learnPal home no longer claims the user reached the hardest peak',
        The figure is useful; "Highest you have reached" was a claim it cannot
        support. */
     test.skip(!(await reached(page, '/learnpal')), 'learnPal is gated off');
-    await pageIsLoaded(page, 'learnPal');
+    await pageIsLoaded(page, /^Learn$/);
     const text = await page.locator('body').innerText();
     expect(text).not.toContain('Highest you have reached');
   });

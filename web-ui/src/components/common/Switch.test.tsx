@@ -22,7 +22,12 @@ describe('Switch', () => {
   it('does nothing while saving', async () => {
     const onChange = vi.fn();
     render(<Switch checked={false} label="x" busy onChange={onChange} />);
-    expect(screen.getByRole('switch')).toBeDisabled();
+    const sw = screen.getByRole('switch');
+    // Focusable while saving (aria-disabled, not disabled), and the click does nothing.
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    expect(sw).not.toBeDisabled();
+    await userEvent.click(sw);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('is the control the Learn as you go row uses (UX audit 2026-11-20 P1-8)', () => {
