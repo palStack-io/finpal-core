@@ -312,10 +312,13 @@ class AccountService:
         """
         Calculate total assets, liabilities, and net worth
         Returns (total_assets, total_liabilities, net_worth, user_currency)
-        """
-        accounts = self.get_all_accounts(user_id)
 
-        # Get user's preferred currency
+        *** A THIN WRAPPER OVER `net_worth_summary` (UI audit 2026-11-20). *** This
+        had its own rule (no investments, `get_all_user_ids` scope); one definition
+        now, so any future caller cannot quote a second net worth.
+        """
+        from src.services.account.net_worth import net_worth_summary
+
         user = db.session.get(User, user_id)
         if not user_currency_code:
             user_currency_code = user.default_currency_code if user else None
@@ -323,51 +326,17 @@ class AccountService:
         user_currency = None
         if user_currency_code:
             user_currency = Currency.query.filter_by(code=user_currency_code).first()
-
-        # Fall back to base currency
         if not user_currency:
             user_currency = Currency.query.filter_by(is_base=True).first()
-
-        # Ultimate fallback to USD
         if not user_currency:
             user_currency = Currency.query.filter_by(code='USD').first()
             if not user_currency:
                 user_currency = Currency(code='USD', name='US Dollar', symbol='$', rate_to_base=1.0)
 
-        user_currency_code = user_currency.code
-
-        total_assets = 0
-        total_liabilities = 0
-
-        for account in accounts:
-            balance = account.balance or 0
-
-            # Skip near-zero balances
-            if abs(balance) < 0.01:
-                continue
-
-            # Get account's currency code
-            # NULL means the BASE currency, not the reader's — one rule for every
-            # stored row, and the same rule `calculate_asset_debt_trends` and
-            # `RateTable` use. See D-166.
-            account_currency = account.currency_code or (RateTable().base_code
-                                                         or user_currency_code)
-
-            # Convert to user's preferred currency if different
-            if account_currency != user_currency_code:
-                converted_balance = convert_currency(balance, account_currency, user_currency_code)
-            else:
-                converted_balance = balance
-
-            # Add to appropriate total
-            if account.type in ['checking', 'savings', 'investment'] and converted_balance > 0:
-                total_assets += converted_balance
-            elif account.type in ['credit', 'loan'] or converted_balance < 0:
-                total_liabilities += abs(converted_balance)
-
-        net_worth = total_assets - total_liabilities
-
-        return total_assets, total_liabilities, net_worth, user_currency
+        if user is None:
+            return 0, 0, 0, user_currency
+        totals = net_worth_summary(user, currency_code=user_currency.code)
+        return totals['total_assets'], totals['total_debts'], totals['net_worth'], user_currency
 
     # CSV Import Methods
 

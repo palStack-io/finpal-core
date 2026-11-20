@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Edit2, Trash2, RefreshCw, DollarSign, Upload, Loader2 } from 'lucide-react';
-import { accountService } from '../services/accountService';
+import { accountService, type AccountSummary } from '../services/accountService';
 import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney, Money, tabular } from '../styles/money';
@@ -265,9 +265,25 @@ export const Accounts = () => {
     }
   };
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-  const totalAssets = accounts.filter(a => a.balance > 0).reduce((sum, acc) => sum + acc.balance, 0);
-  const totalLiabilities = Math.abs(accounts.filter(a => a.balance < 0).reduce((sum, acc) => sum + acc.balance, 0));
+  /* *** ONE NET WORTH, FROM THE SERVER (UI audit 2026-11-20, P1-5). *** This page used to sum
+     the balances it listed: no investment portfolios (the Dashboard counts them), and one
+     currency added to another as if they were equal. The premium demo persona read -$7,650.00
+     here and -$3,521.80 on the Dashboard, both "Net worth". Now it reads `/accounts/summary`,
+     the function behind the Dashboard's figure, and shows a dash until it answers. */
+  const [summary, setSummary] = useState<AccountSummary | null>(null);
+  const balancesKey = accounts.map((a) => `${a.id}:${a.balance}:${(a as any).currency}`).join('|');
+  useEffect(() => {
+    let live = true;
+    accountService.getSummary()
+      .then((s) => { if (live) setSummary(s); })
+      .catch(() => { if (live) setSummary(null); });
+    return () => { live = false; };
+  }, [balancesKey]);
+  const totalsKnown = summary !== null;
+  const totalBalance = summary?.net_worth ?? 0;
+  const totalAssets = summary?.total_assets ?? 0;
+  const totalLiabilities = Math.abs(summary?.total_debts ?? 0);
+  const invested = (summary?.investment_total ?? 0) > 0;
 
   /* Pluralised and counted once. In the JSX these were
      `accounts.filter(a => a.balance > 0).length` inline, twice — two more array
@@ -372,19 +388,20 @@ export const Accounts = () => {
               label: 'Net worth',
               // Signed: `formatCurrency` here is the absolute value, and the red that used to say
               // "negative" is gone (voice rule 1), so the minus sign must be printed.
-              value: showBalances ? formatMoney(totalBalance, { currency }) : '••••••',
+              value: showBalances ? (totalsKnown ? formatMoney(totalBalance, { currency }) : '—') : '••••••',
               // Ink either way (voice rule 1, UX audit 2026-11-20 P1-4): the minus sign says it.
               valueColor: undefined,
-              note: 'assets − liabilities',
+              // The Dashboard's words when investments are counted, so the two read as one figure.
+              note: invested ? 'Accounts and investments' : 'assets − liabilities',
             },
             {
               label: 'Assets',
-              value: showBalances ? formatCurrency(totalAssets) : '••••••',
-              note: `${positiveCount} ${positiveCount === 1 ? 'account' : 'accounts'} in credit`,
+              value: showBalances ? (totalsKnown ? formatCurrency(totalAssets) : '—') : '••••••',
+              note: `${positiveCount} ${positiveCount === 1 ? 'account' : 'accounts'} in credit${invested ? ', plus investments' : ''}`,
             },
             {
               label: 'Liabilities',
-              value: showBalances ? formatCurrency(totalLiabilities) : '••••••',
+              value: showBalances ? (totalsKnown ? formatCurrency(totalLiabilities) : '—') : '••••••',
               note: `${negativeCount} ${negativeCount === 1 ? 'account' : 'accounts'} you owe on`,
             },
           ]} />

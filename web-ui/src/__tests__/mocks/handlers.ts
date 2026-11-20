@@ -185,6 +185,15 @@ export const accountHandlers = [
     HttpResponse.json({ connected: false, accountCount: 0, lastSync: null })
   ),
 
+  // Net worth from the server's one definition (UI audit 2026-11-20): the Accounts page reads this, never
+  // a local sum. Matches the one Checking account below.
+  http.get(`${BASE}/api/v1/accounts/summary`, () =>
+    HttpResponse.json({
+      success: true, net_worth: 1000.0, total_assets: 1000.0, accounts_assets: 1000.0,
+      investment_total: 0, total_debts: 0, currency: 'USD',
+    })
+  ),
+
   http.get(`${BASE}/api/v1/accounts`, () =>
     HttpResponse.json({
       success: true,

@@ -300,3 +300,47 @@ def test_try_currency_follows_the_person(user):
     ExpenseFactory(user_id=user.id, amount=1600, category_id=cat.id, date=_last_month(3))
     f = figures_for(user.id, 'buffer')
     assert f['try']['currency'] == 'GBP' and f['buffer_amount'].startswith('£')
+
+
+# --- UI audit 2026-11-20, P1-5: "Came in" names its month, and is the same income every screen counts ---------
+
+def test_fixed_share_names_the_month_its_income_came_in(user):
+    """The card says "Some of November"; the income is October's. The number line and the try block say so."""
+    from calendar import month_name
+    _income(user, 3000)
+    cat = CategoryFactory(user_id=user.id, spending_type='fixed')
+    BudgetFactory(user_id=user.id, category_id=cat.id, amount=1000)
+    f = figures_for(user.id, 'fixed-share')
+    october = month_name[_last_month().month]
+    assert f['income_month'] == october
+    assert f['try']['month'] == october
+    number = SHORT_LESSONS['fixed-share']['number'].format(**f)
+    assert october in number and '$3,000.00' in number
+
+
+def test_month_lesson_names_its_month_in_the_number_and_the_try_block(user):
+    from calendar import month_name
+    _income(user)
+    _ten_transactions(user)
+    f = figures_for(user.id, 'month')
+    october = month_name[_last_month().month]
+    assert f['try']['month'] == october
+    assert october in SHORT_LESSONS['month']['number'].format(**f)
+
+
+def test_lesson_income_is_the_shared_converted_income(user):
+    """One income definition: the lesson's "Came in" equals `income_between` for the same month and person,
+    and a row in another currency is converted (it used to be summed raw)."""
+    from src.services.analytics.service import AnalyticsService
+    from src.utils.currency_converter import convert_currency
+    _income(user, 3000)
+    ExpenseFactory(user_id=user.id, amount=100, transaction_type='income', date=_last_month(2),
+                   description='Refund', currency_code='EUR')
+    cat = CategoryFactory(user_id=user.id, spending_type='fixed')
+    BudgetFactory(user_id=user.id, category_id=cat.id, amount=1000)
+    first = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    start = (first - timedelta(days=1)).replace(day=1)
+    shared = AnalyticsService().income_between(user.id, start, first - timedelta(seconds=1), scope_ids=[user.id])
+    expected = Decimal('3000') + Decimal(str(convert_currency(Decimal('100'), 'EUR', 'USD')))
+    assert round(Decimal(str(shared)), 2) == round(expected, 2)
+    assert figures_for(user.id, 'fixed-share')['try']['income'] == f'{round(expected, 2):.2f}'

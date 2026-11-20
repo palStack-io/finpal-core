@@ -149,7 +149,8 @@ const FiguresTry: React.FC<{ t: Exclude<ShortTry, { kind: 'interest' }>; currenc
     case 'fixed_share':
       return (
         <div style={tile}>
-          <Stat label="Came in" value={money(t.income)} />
+          {/* Names the month (UI audit 2026-11-20, P1-5): it is last month's income, not the Dashboard's month so far. */}
+          <Stat label={t.month ? `Came in, ${t.month}` : 'Came in'} value={money(t.income)} />
           <Stat label="Already fixed" value={money(t.fixed_amount)} />
           <Stat label="Share of it" value={`${t.share_percent}%`} />
         </div>
@@ -164,8 +165,8 @@ const FiguresTry: React.FC<{ t: Exclude<ShortTry, { kind: 'interest' }>; currenc
     case 'month':
       return (
         <div style={tile}>
-          <Stat label="Came in" value={money(t.income)} />
-          <Stat label="Went out" value={money(t.spent)} />
+          <Stat label={t.month ? `Came in, ${t.month}` : 'Came in'} value={money(t.income)} />
+          <Stat label={t.month ? `Went out, ${t.month}` : 'Went out'} value={money(t.spent)} />
           <Stat label={`Biggest: ${t.biggest_category}`} value={money(t.biggest_amount)} />
         </div>
       );

@@ -151,21 +151,40 @@ def accounts_confirmed(user_id):
             'net worth and your debt figures are both built on that.')
 
 
+#: How often a recurring income arrives, in words. Unknown frequencies get no phrase.
+_EVERY = {
+    'daily': 'every day',
+    'weekly': 'every week',
+    'biweekly': 'every two weeks',
+    'monthly': 'every month',
+    'quarterly': 'every three months',
+    'yearly': 'every year',
+}
+
+
 def income_recorded(user_id):
-    """Nothing unless a recurring income row actually exists. See `has_a_budget`."""
+    """Nothing unless a recurring income row actually exists. See `has_a_budget`.
+
+    *** IT NAMES HOW OFTEN (UI audit 2026-11-20, P1-5). *** "finPal now knows $4,500.00
+    arrives" read as one more "what came in" beside the Dashboard's month, the lesson's
+    last month and Analytics' last 30 days. It is one expected pay from the recurring
+    rules, so it says "every month" (or every two weeks...), and with several rules it
+    names the largest instead of whichever row the database returned first.
+    """
     from src.models.recurring import RecurringExpense
-    row = db.session.query(RecurringExpense.amount).filter(
+    row = db.session.query(RecurringExpense.amount, RecurringExpense.frequency).filter(
         RecurringExpense.user_id == user_id,
         RecurringExpense.active.is_(True),
         RecurringExpense.transaction_type == 'income',
-    ).first()
+    ).order_by(RecurringExpense.amount.desc()).first()
     if row is None:
         return None
     amount = _money(row[0], _currency_for(user_id))
-    if amount is None:
+    every = _EVERY.get((row[1] or '').lower())
+    if amount is None or every is None:
         return ('finPal now knows what arrives. Everything else it shows you '
                 'is measured against it.')
-    return (f'finPal now knows {amount} arrives. Everything else it shows you '
+    return (f'finPal now knows {amount} arrives {every}. Everything else it shows you '
             'is measured against it.')
 
 

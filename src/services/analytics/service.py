@@ -1192,28 +1192,46 @@ class AnalyticsService:
         for whose money this is, and `RateTable` into the reader's base currency,
         because a figure must be restated in the currency that labels it (D-156).
         """
+        now = datetime.now()
+        month_start = datetime(now.year, now.month, 1)
+        total = self.income_between(user_id, month_start, None, scope_ids=scope_ids)
+        if total is None:
+            return None
+        # float, not Decimal: the budget overview subtracts a float planned total from this.
+        return round(float(total), 2)
+
+    def income_between(self, user_id, start, end=None, scope_ids=None):
+        """Income recorded from `start` to `end` (inclusive; open-ended when None), or None if none.
+
+        *** THE ONE "WHAT CAME IN" (UI audit 2026-11-20, P1-5). *** The Dashboard's month,
+        the budget page's income and the short lessons' "Came in" all read this, so for the
+        same window and the same people they cannot disagree. The lessons used to sum
+        `Expense.amount` raw, so a row in another currency was added as if it were dollars.
+
+        Scope follows the dashboard (`read_scope`/`scope_query`) unless the caller passes
+        `scope_ids` (the lessons pass the person alone); amounts are converted with
+        `RateTable` into the reader's base currency (D-156). Returns a Decimal.
+        """
         from src.utils.helpers import get_base_currency
         from src.utils.household import read_scope, scope_query
         from src.models.user import User
 
-        now = datetime.now()
         current_user = db.session.get(User, user_id)
         base_currency = get_base_currency(current_user)
 
         if scope_ids is None:
             scope_ids = read_scope(user_id)
 
-        month_start = datetime(now.year, now.month, 1)
-        rows = (scope_query(scope_ids)
-                .filter(Expense.date >= month_start)
-                .filter(Expense.transaction_type == 'income')
-                .all())
+        query = (scope_query(scope_ids)
+                 .filter(Expense.date >= start)
+                 .filter(Expense.transaction_type == 'income'))
+        if end is not None:
+            query = query.filter(Expense.date <= end)
+        rows = query.all()
 
         if not rows:
             return None
 
         rates = RateTable()
         amounts = rates.amounts_for(rows, base_currency['code'])
-        # float, not Decimal: RateTable returns Decimals and the budget
-        # overview subtracts a float planned total from this.
-        return round(float(sum(amounts[row.id] for row in rows)), 2)
+        return sum((Decimal(str(amounts[row.id])) for row in rows), Decimal('0'))

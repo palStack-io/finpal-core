@@ -3,7 +3,6 @@ import { useAuthStore } from '../store/authStore';
 import { PageHead } from '../components/PageHead';
 import { categoriesApi } from '../services/api/categories';
 import { spendingTypeByName, splitSpendByGroup } from '../utils/spendingGroups';
-import { getBranding } from '../config/branding';
 import analyticsService from '../services/analyticsService';
 import { flexRowGap8, flexRowGap12, flexRowBetween, flexColGap12, flexColGap16, flexColGap20, sectionHeaderStyle, pageContainerStyle, pageMaxWidthStyle, cardStyle, tableStyle } from '../styles/layoutStyles';
 import { formatMoney, tabular } from '../styles/money';
@@ -76,7 +75,6 @@ const tooltipLabelStyle: React.CSSProperties = { color: 'var(--text-primary)', m
 
 export const Analytics: React.FC = () => {
   const { user } = useAuthStore();
-  const branding = getBranding(user?.default_currency_code);
   const currency = user?.default_currency_code || 'USD';
 
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
@@ -708,6 +706,7 @@ export const Analytics: React.FC = () => {
                   to differ as long as each says what it is. */}
               <MetricCard
                 title="Total Income"
+                period={rangeLabel}
                 value={formatMoney(totals.income, { currency })}
                 change={previous && pctChange(totals.income, previous.income)}
                 icon={<TrendingUp size={24} />}
@@ -715,6 +714,7 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Total Expenses"
+                period={rangeLabel}
                 value={formatMoney(totals.expenses, { currency })}
                 change={previous && pctChange(totals.expenses, previous.expenses)}
                 higherIsBetter={false}
@@ -723,6 +723,7 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Net Savings"
+                period={rangeLabel}
                 value={formatMoney(totals.netSavings, { currency })}
                 change={previous && pctChange(totals.netSavings, previous.netSavings)}
                 icon={<DollarSign size={24} />}
@@ -730,6 +731,7 @@ export const Analytics: React.FC = () => {
               />
               <MetricCard
                 title="Savings Rate"
+                period={rangeLabel}
                 value={`${totals.savingsRate.toFixed(1)}%`}
                 change={previous && pctChange(totals.savingsRate, previous.savingsRate)}
                 icon={<Target size={24} />}
@@ -801,7 +803,7 @@ export const Analytics: React.FC = () => {
                                 <div style={tooltipBoxStyle}>
                                   <p style={tooltipLabelStyle}>{payload[0].name}</p>
                                   <p style={{ color: payload[0].payload.color, margin: 0 }}>
-                                    {branding.currencySymbol}{payload[0].value.toLocaleString()} ({payload[0].payload.percentage.toFixed(1)}%)
+                                    {formatMoney(payload[0].value as number, { currency })} ({payload[0].payload.percentage.toFixed(1)}%)
                                   </p>
                                 </div>
                               );
@@ -819,7 +821,7 @@ export const Analytics: React.FC = () => {
                             <span className="fp-hint">{cat.name || 'Unknown'}</span>
                           </div>
                           <div style={flexRowGap12}>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{formatMoney(cat.value as number, { currency })}</span>
                             <span className="fp-meta">({cat.percentage.toFixed(1)}%)</span>
                           </div>
                         </div>
@@ -1215,7 +1217,7 @@ export const Analytics: React.FC = () => {
                                 <div style={tooltipBoxStyle}>
                                   <p style={tooltipLabelStyle}>{payload[0].name}</p>
                                   <p style={{ color: payload[0].payload.color, margin: 0 }}>
-                                    {branding.currencySymbol}{payload[0].value.toLocaleString()} ({payload[0].payload.percentage.toFixed(1)}%)
+                                    {formatMoney(payload[0].value as number, { currency })} ({payload[0].payload.percentage.toFixed(1)}%)
                                   </p>
                                 </div>
                               );
@@ -1233,7 +1235,7 @@ export const Analytics: React.FC = () => {
                             <span style={metaTextStyle}>{cat.name || 'Unknown'}</span>
                           </div>
                           <div style={flexRowGap12}>
-                            <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{branding.currencySymbol}{cat.value.toLocaleString()}</span>
+                            <span style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{formatMoney(cat.value as number, { currency })}</span>
                             <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '50px', textAlign: 'right' }}>{cat.percentage.toFixed(1)}%</span>
                           </div>
                         </div>
@@ -1315,7 +1317,7 @@ export const Analytics: React.FC = () => {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
-                          {branding.currencySymbol}{category.value.toLocaleString()}
+                          {formatMoney(category.value as number, { currency })}
                         </p>
                         <p style={metaTextStyle}>{category.percentage.toFixed(1)}%</p>
                       </div>
@@ -1507,8 +1509,10 @@ const MetricCard: React.FC<{
   higherIsBetter?: boolean;
   icon: React.ReactNode;
   color: string;
-  /** Whose money this figure covers (AUDIT.md D-01). */
-}> = ({ title, value, change, higherIsBetter = true, icon, color }) => {
+  /** The window the figure covers ("Last 30 days"). UI audit 2026-11-20, P1-5: "Total Income" with no
+      window read as the Dashboard's month-to-date income and disagreed with it. */
+  period?: string;
+}> = ({ title, value, change, higherIsBetter = true, icon, color, period }) => {
   const rose = change !== undefined && change > 0;
   const good = change === undefined || change === 0
     ? true
@@ -1563,6 +1567,7 @@ const MetricCard: React.FC<{
             prop went with it rather than being left accepted-and-ignored — that
             is a dead control (D-46), and this component takes no `scope` now. */}
         {title}
+        {period && <span className="fp-meta">{period}</span>}
       </p>
       <p style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px', ...tabular }}>
         {value}
