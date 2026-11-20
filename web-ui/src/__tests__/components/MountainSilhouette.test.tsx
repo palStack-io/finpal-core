@@ -258,13 +258,13 @@ describe('MountainSilhouette — the backdrop is measured, not decorated', () =>
     }
   });
 
-  it('draws the real outline alone: no hand-drawn snow on a generated profile (2026-11-20)', () => {
+  it('still draws the snow when the peak is the subject, not the backdrop', () => {
     const { container } = render(
       <MountainSilhouette band={5} height={90} scale="cost"
                           maxPixelHeight={116} title="Everest" />,
     );
-    expect(container.querySelectorAll('path')).toHaveLength(1);
-    expect(container.querySelector('path[fill="#ffffff"]')).toBeNull();
+    expect(container.querySelectorAll('path')).toHaveLength(2);
+    expect(container.querySelector('path[fill="#ffffff"]')).not.toBeNull();
   });
 
   it('keeps the outline identical with and without the snow', () => {

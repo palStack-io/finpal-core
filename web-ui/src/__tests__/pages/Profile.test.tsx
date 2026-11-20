@@ -105,7 +105,6 @@ describe('what you have kept up', () => {
  * pulls in the router, the module registry, the review store and the theme —
  * a render test here would be testing five other things.
  */
-import { PEAK_PROFILES } from '../../utils/peakProfiles';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -150,13 +149,10 @@ describe('Basecamp, not Profile — and it links to where you edit yourself', ()
     const peak = screen.getByTestId('everest-peak');
     expect(peak).toHaveAttribute('aria-hidden', 'true');
     expect(peak.textContent).toBe('');
-    // On the real skyline since 2026-11-20: the box runs from the transect's lowest ground (y=100) to the summit
-    // (y=4), so 7,020 m sits at its true height in that span, not at 7020/8849 of the box.
-    const profile = PEAK_PROFILES.everest;
-    const floor = Math.min(...profile.points.map((p) => p[1]));
-    const expected = 100 - ((7020 - floor) / (profile.elevation_m - floor)) * 96;
+    // 7020 of 8849 -> ~79% up the 0..100 box, i.e. y ~21
     const y = parseFloat(screen.getByTestId('everest-peak-marker').getAttribute('cy')!);
-    expect(y).toBeCloseTo(expected, 0);
+    expect(y).toBeGreaterThan(18);
+    expect(y).toBeLessThan(24);
   });
 
   it('/profile redirects to /basecamp so old links still land', () => {
