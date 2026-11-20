@@ -10,7 +10,7 @@
 
 import { api } from '../../services/api';
 import type {
-  LearnRange, LearnStats, LessonDetail, LessonRow, RecallChoice, RecallQuestion,
+  LearnRange, LearnStats, LessonDetail, LessonRow, RecallChoice, RecallQuestion, RecallResult,
   ShortLesson, ShortOutcome, SkillProgress, ThisWeek, WhyCard,
 } from '../../types/learnpal';
 
@@ -111,8 +111,8 @@ export const learnpalService = {
     return r.data;
   },
 
-  async answerRecall(id: number, choice: RecallChoice): Promise<unknown> {
-    const r = await api.post(`/api/v1/learnpal/recall/${id}`, { choice });
+  async answerRecall(id: number, choice: RecallChoice): Promise<RecallResult> {
+    const r = await api.post<RecallResult>(`/api/v1/learnpal/recall/${id}`, { choice });
     return r.data;
   },
 };

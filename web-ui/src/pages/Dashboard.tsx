@@ -19,7 +19,12 @@ import {
 import { SectionCard } from '../components/SectionCard';
 import { ScrollPane } from '../components/ScrollPane';
 import { PageHead } from '../components/PageHead';
-import { HardMonthCard } from '../components/onboarding/HardMonthCard';
+import { HardMonthCardView } from '../components/onboarding/HardMonthCard';
+import { useHardMonth } from '../components/onboarding/useHardMonth';
+import { DashboardSlot } from '../components/home/DashboardSlot';
+import { RecallCard, useRecall } from '../modules/learnpal/RecallCard';
+import { ThisWeekCard, useThisWeek } from '../modules/learnpal/ThisWeekCard';
+import { SkillsCard, useSkillsProgress } from '../modules/learnpal/SkillsCard';
 import { GoalRange } from '../components/dashboard/GoalRange';
 import EmptyRange from '../components/dashboard/EmptyRange';
 import { TotalsRow } from '../components/dashboard/TotalsRow';
@@ -119,6 +124,10 @@ export const Dashboard = () => {
     cursor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
   };
 
+  const hardMonth = useHardMonth();
+  const recall = useRecall();
+  const thisWeek = useThisWeek();
+  const skills = useSkillsProgress();
   const [timeRange, setTimeRange] = useState('month');
   const [loading, setLoading] = useState(true);
 
@@ -601,7 +610,11 @@ export const Dashboard = () => {
               at all (D-205). `EmptyRange` still carries the invitation when
               there is neither a goal nor any altitude yet. */}
           {/* Phase 1e: one calm line after a hard month or a long gap, before the range and totals. */}
-          <HardMonthCard />
+          <DashboardSlot entries={[
+            { key: 'hard-month', state: hardMonth.state, render: () => <HardMonthCardView hardMonth={hardMonth} /> },
+            { key: 'recall', state: recall.state, render: () => <RecallCard recall={recall} /> },
+            { key: 'this-week', state: thisWeek.state, render: () => <ThisWeekCard week={thisWeek} /> },
+          ]} />
           <div data-guide="dashboard-range">
           {(goals.length > 0 || everest) ? (
             <GoalRange
@@ -712,7 +725,7 @@ export const Dashboard = () => {
         {/* Cash flow, full width. `fp-main-aside` is `2fr 1fr` and the aside
             was the duplicate category donut; with one child left it took two
             thirds of the row and left a third blank. */}
-        <div style={{ marginBottom: '24px' }}>
+        <div className={skills ? 'fp-main-aside' : undefined} style={{ marginBottom: '24px' }}>
           <SectionCard
             title="Cash Flow"
             action={
@@ -777,7 +790,7 @@ export const Dashboard = () => {
             </ResponsiveContainer>
             )}
           </SectionCard>
-
+          {skills && <SkillsCard skills={skills} />}
         </div>
 
         {/* Budget + Accounts Row */}

@@ -468,6 +468,10 @@ export const firstVisitHandlers = [
 // ── learnpal: the Why card on Budgets, Goals and Accounts asks on every mount; off by default ──
 export const learnpalHandlers = [
   http.get('*/api/v1/learnpal/why', () => HttpResponse.json({ enabled: false, cards: [] })),
+  // The Dashboard's slot cards and skills card: off by default so Dashboard tests see no extras.
+  http.get('*/api/v1/learnpal/this-week', () => HttpResponse.json({ enabled: false, lesson: null })),
+  http.get('*/api/v1/learnpal/recall', () => HttpResponse.json({ enabled: false, recall: null })),
+  http.get('*/api/v1/learnpal/skills-progress', () => HttpResponse.json({ enabled: false, skills: [] })),
 ];
 
 // ── Combined ──────────────────────────────────────────────────────────────────

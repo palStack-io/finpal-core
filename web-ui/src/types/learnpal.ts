@@ -303,3 +303,10 @@ export interface RecallQuestion {
 }
 
 export type RecallChoice = '0' | '1' | '2' | 'not_sure' | 'not_now';
+
+export interface RecallResult {
+  /** `null` for "Not sure yet" and "Not now": no judgement either way. */
+  right: boolean | null;
+  why: string;
+  marks: SkillMarks;
+}
