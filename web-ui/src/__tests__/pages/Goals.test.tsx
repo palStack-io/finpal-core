@@ -449,8 +449,8 @@ describe('Goals page — a goal that spans several accounts (B12)', () => {
     // *** U+2212 MINUS SIGN, NOT A HYPHEN. *** `formatMoney` renders a real
     // minus and this test first looked for `-$1,000.00`, which matched nothing.
     // Written as the escape so the next reader does not "fix" it back.
-    expect(screen.getByText(/from \u2212\$1,000\.00/)).toBeInTheDocument();
-    expect(screen.getByText(/from \u2212\$500\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/from \u2212\u2060\$1,000\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/from \u2212\u2060\$500\.00/)).toBeInTheDocument();
     // The percentage on the card is still the server's 0.4, not 1100/1500.
     expect(screen.getByText('40%')).toBeInTheDocument();
   });

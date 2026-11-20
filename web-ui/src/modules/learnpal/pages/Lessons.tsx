@@ -132,7 +132,10 @@ export const Lessons: React.FC = () => {
         title="Lessons"
         subtitle={<>
           {counts
-            ? `${counts.read} ${counts.read === 1 ? 'lesson' : 'lessons'} read.`
+            /* The count is UNLOCKED lessons (the server's `read`), so it says so in the rows'
+               own words: "17 lessons read" above rows that each said "Yours to read" made read
+               and unread look the same (UX audit 2026-11-20 P1-6). */
+            ? `${counts.read} ${counts.read === 1 ? 'lesson is' : 'lessons are'} yours to read.`
             : null}{' '}
           A lesson opens when your own figures make it relevant — not on a
           schedule, and never because you clicked something.

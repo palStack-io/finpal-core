@@ -86,6 +86,16 @@ describe('RecallCard', () => {
     expect(posted).toEqual([{ choice: 'not_now' }]);
   });
 
+  it('a 409 (not due, or one already answered today in another tab) quietly removes the card', async () => {
+    serve({ enabled: true, recall });
+    server.use(http.post('*/api/v1/learnpal/recall/7', () => HttpResponse.json(
+      { success: false, error: 'One question a day: this one waits for tomorrow' }, { status: 409 })));
+    render(<Host />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Pay a little extra' }));
+    await waitFor(() => expect(screen.queryByTestId('recall-card')).toBeNull());
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('renders nothing when off, empty or failing', async () => {
     for (const [body, status] of [[{ enabled: false, recall: null }, 200], [{ enabled: true, recall: null }, 200], [{}, 500]] as const) {
       serve(body, status);

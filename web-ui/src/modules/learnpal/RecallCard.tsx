@@ -57,8 +57,11 @@ export const RecallCard: React.FC<{ recall: RecallState }> = ({ recall: state })
       const r = await learnpalService.answerRecall(recall.id, choice);
       if (choice === 'not_now') { dismiss(); return; }
       setResult(r);
-    } catch {
-      // Left as it was so the click can be retried.
+    } catch (err) {
+      // 409: the server says this question is not for today (not due yet, or one was already
+      // answered today, e.g. in another tab). Nothing to retry, so the card goes quietly.
+      // Any other failure leaves it as it was so the click can be retried.
+      if ((err as { response?: { status?: number } })?.response?.status === 409) dismiss();
     } finally {
       setBusy(false);
     }

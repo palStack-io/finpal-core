@@ -37,6 +37,7 @@ const mount = () => render(<MemoryRouter><Host /></MemoryRouter>);
 describe('ThisWeekCard', () => {
   it('shows the sentence, the two headings and the action', async () => {
     serve({ enabled: true, lesson });
+    server.use(http.post('*/api/v1/learnpal/short/interest/finish', () => HttpResponse.json({})));
     mount();
     expect(await screen.findByText(lesson.card)).toBeInTheDocument();
     expect(screen.getByText('This week: understand this')).toBeInTheDocument();
@@ -63,6 +64,37 @@ describe('ThisWeekCard', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Not now' }));
     await waitFor(() => expect(screen.queryByText(lesson.card)).toBeNull());
     await waitFor(() => expect(body).toEqual({ outcome: 'not_now' }));
+  });
+
+  it('Do this posts action, then navigates', async () => {
+    serve({ enabled: true, lesson });
+    let body: unknown = null;
+    server.use(http.post('*/api/v1/learnpal/short/interest/finish', async ({ request }) => {
+      body = await request.json();
+      return HttpResponse.json({ id: 'interest', title: 'Interest', marks: { understood: true, used: true, remembered: false } });
+    }));
+    mount();
+    await userEvent.click(await screen.findByTestId('this-week-action'));
+    expect(navigate).toHaveBeenCalledWith('/accounts');
+    await waitFor(() => expect(body).toEqual({ outcome: 'action' }));
+  });
+
+  it('Do this on the page it points at opens the lesson instead of doing nothing', async () => {
+    const here = { ...lesson, id: 'month', skill: 'read-your-month',
+      action: { label: 'Open your dashboard', href: '/dashboard' } };
+    serve({ enabled: true, lesson: here });
+    let posted = false;
+    server.use(http.get('*/api/v1/learnpal/short/month', () => HttpResponse.json({}, { status: 404 })));
+    server.use(http.post('*/api/v1/learnpal/short/month/finish', () => {
+      posted = true;
+      return HttpResponse.json({});
+    }));
+    render(<MemoryRouter initialEntries={['/dashboard']}><Host /></MemoryRouter>);
+    await userEvent.click(await screen.findByTestId('this-week-action'));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    // Opening the lesson is not taking the action: the panel's own step 4 records that.
+    expect(posted).toBe(false);
   });
 
   it('renders nothing when learning is off', async () => {

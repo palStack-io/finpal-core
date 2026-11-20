@@ -39,12 +39,12 @@ export interface TotalsRowProps {
 export const TotalsRow: React.FC<TotalsRowProps> = ({ cells }) => (
   <div
     data-testid="page-totals"
+    className="fp-totals-row"
     style={{
       display: 'grid',
-      // `auto-fit` with a 150px floor: four across on a desktop, two on a
-      // tablet, one on a phone — without a media query, and without the
-      // orphaned-fifth-card problem that a fixed column count creates.
-      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+      // Columns live in `.fp-totals-row` (finpal-theme.css): `auto-fit` with a 150px floor, four across on
+      // a desktop and two on a tablet, and ONE under 480px. Two ~145px columns at 390px could not hold a
+      // 26px figure, so the minus sign wrapped onto its own line (UX audit 2026-11-20 P0-1).
       borderTop: '1px solid var(--border-light)',
     }}
   >
@@ -67,6 +67,8 @@ export const TotalsRow: React.FC<TotalsRowProps> = ({ cells }) => (
         <div style={{
           fontSize: '26px', fontWeight: 600, marginTop: '5px',
           fontVariantNumeric: 'tabular-nums',
+          // A figure is one unit: the sign never breaks away from its amount.
+          whiteSpace: 'nowrap',
           color: cell.valueColor ?? 'var(--text-primary)',
         }}>
           {cell.value}

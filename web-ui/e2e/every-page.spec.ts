@@ -170,7 +170,7 @@ const MODULE_HEADINGS: Record<string, RegExp> = {
   '/pointspal/recommend': /Best Card|Recommend/,
   '/pointspal/cards': /My Cards/,
   '/pointspal/redeem': /Redemption Optimizer/,
-  '/learnpal': /learnPal/,
+  '/learnpal': /^Learn$/, // titled "Learn" since 2026-11-20 (UX audit P1-1)
   // Lowercase 'r': the page is headed "Your range". `/Range/` never matched
   // it, and nobody noticed because learnPal was off in this suite until
   // 2026-09-14 — so this expectation had never once been exercised.

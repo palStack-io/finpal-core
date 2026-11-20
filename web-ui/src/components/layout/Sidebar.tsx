@@ -19,10 +19,12 @@ import {
   Moon,
   LogOut,
   ChevronRight,
+  GraduationCap,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../store/authStore';
 import { moduleRegistry } from '../../modules';
+import { MODULE_SLUG as LEARN_SLUG } from '../../modules/learnpal/manifest';
 import { useReviewStore } from '../../store/reviewStore';
 import type { ModuleManifest } from '../../modules/registry';
 import { useBadges, useCoinBalance, useOpenSurfaces } from '../../contexts/CoinAwardContext';
@@ -303,6 +305,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
   };
 
   type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }> };
+  const learnInRail = !!user?.modules?.includes(LEARN_SLUG) && !(user?.hidden_modules ?? []).includes(LEARN_SLUG);
 
   const coinBalance = useCoinBalance();
   /* Newest first, already sorted by the provider. TWO, because a third would
@@ -503,9 +506,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           // Investments is feature-gated and belongs with Accounts — both are
           // "what you hold". Spliced at render rather than declared, so the
           // group data stays a plain constant the parity test can read.
-          const items = group.heading === 'Money' && features?.investments !== false
+          let items: readonly NavItem[] = group.heading === 'Money' && features?.investments !== false
             ? [...group.items, { name: 'Investments', path: '/investments', icon: LineChart }]
             : group.items;
+          // *** LEARN IS SECOND, RIGHT AFTER DASHBOARD (UX audit 2026-11-20 P1-1). *** It was the
+          // learnPal module section, last before Settings and below the rail's fold. Spliced here for
+          // the same reason as Investments, and only when the module is on and not hidden. Its
+          // range and lessons pages are linked from the Learn page itself.
+          if (group.heading === 'Money' && learnInRail) {
+            items = [items[0], { name: 'Learn', path: `/${LEARN_SLUG}`, icon: GraduationCap }, ...items.slice(1)];
+          }
           return (
             <React.Fragment key={group.heading}>
               <NavGroupHeading>{group.heading}</NavGroupHeading>
@@ -523,7 +533,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           // point here; the point is that a payload from an older server has no
           // `hidden_modules` key, and undefined must mean NOTHING hidden.
           const hidden = new Set(user?.hidden_modules ?? []);
-          const visibleModules = activeModules.filter(m => !hidden.has(m.slug));
+          // learnPal is not listed here: it is "Learn" near the top of the rail (above).
+          const visibleModules = activeModules.filter(m => !hidden.has(m.slug) && m.slug !== LEARN_SLUG);
           if (visibleModules.length === 0) return null;
           return (
             <>

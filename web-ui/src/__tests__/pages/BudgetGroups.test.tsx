@@ -164,16 +164,17 @@ describe('Budgets page groups', () => {
     mount(overview());
     const section = await sectionFor('Flexible');
     // -123 somewhere in the group header, and NOT a 0.
-    expect(section.textContent).toMatch(/[-\u2212]\s?\$?123/);
+    expect(section.textContent).toMatch(/[-\u2212]\u2060?\s?\$?123/);
   });
 
-  it('paints a negative remaining in the over-budget token, not the ok one', async () => {
+  it('paints a negative remaining in ink, not red (voice rule 1)', async () => {
     mount(overview());
     const section = await sectionFor('Flexible');
     const negative = within(section).getByText((_, node) => (
-      node?.children.length === 0 && /[-\u2212]\s?\$?123/.test(node?.textContent ?? '')
+      node?.children.length === 0 && /[-\u2212]\u2060?\s?\$?123/.test(node?.textContent ?? '')
     ));
-    expect(negative.getAttribute('style')).toContain('var(--status-over)');
+    expect(negative.getAttribute('style')).toContain('var(--text-primary)');
+    expect(negative.getAttribute('style')).not.toMatch(/status-over|re-ink|accent-red/);
   });
 
   it('shows the Unsorted section with its count when categories are unclassified', async () => {

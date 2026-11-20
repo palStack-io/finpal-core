@@ -210,6 +210,11 @@ describe('ShortLessonPanel', () => {
     serve(); draw();
     await screen.findByTestId('short-number');
     expect(screen.getByTestId('short-read-more').getAttribute('href')).toBe('/learnpal/lessons?lesson=what-your-apr-costs');
+    // UX audit 2026-11-20 P0-2: was the browser's default blue (1.7:1 on the dark panel). The theme's
+    // link ink is 5.27:1 light and 6.94:1 dark on the card.
+    const readMore = screen.getByTestId('short-read-more');
+    expect(readMore.style.color).toBe('var(--g-ink)');
+    expect(readMore.style.fontWeight).toBe('600');
     for (let i = 0; i < 3; i++) {
       expect(document.body.textContent).not.toMatch(/wrong/i);
       await userEvent.click(screen.getByTestId('short-next'));

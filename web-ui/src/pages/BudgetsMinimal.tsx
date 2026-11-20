@@ -1203,7 +1203,8 @@ const BudgetsMinimal = () => {
                        green, which is the theme's own distinction: the inks
                        are TEXT colours, the status tokens are fills. Caught
                        by the contrast ratchet, not by eye. */
-                    valueColor: totalRemaining >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
+                    // Negative in ink with its minus sign, not red (voice rule 1, UX audit 2026-11-20 P1-4).
+                    valueColor: totalRemaining >= 0 ? 'var(--g-ink)' : 'var(--text-primary)',
                     note: `${daysLeftInMonth()} days left this month`,
                   },
                   {
@@ -1216,7 +1217,7 @@ const BudgetsMinimal = () => {
                     value: leftToBudget === null ? '—' : formatCurrency(leftToBudget),
                     valueColor: leftToBudget === null
                       ? 'var(--text-muted)'
-                      : leftToBudget >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
+                      : leftToBudget >= 0 ? 'var(--g-ink)' : 'var(--text-primary)',
                     note: income === null
                       ? "No income recorded this month. Add it when you have it."
                       : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`,
@@ -1426,10 +1427,11 @@ const BudgetsMinimal = () => {
                           )}
                           <span style={groupFigureStyle}>
                             <span className="fp-hint">Remaining</span>
-                            {/* Negative renders in clay and is NEVER clamped to
-                                zero: an overspend shown as 0 is a lie the user
-                                acts on. */}
-                            <span style={{ color: group.remaining < 0 ? 'var(--status-over)' : 'var(--text-primary)', fontWeight: 600 }}>
+                            {/* Negative is NEVER clamped to zero: an overspend
+                                shown as 0 is a lie the user acts on. It renders in
+                                ink with its minus sign, not clay (voice rule 1,
+                                UX audit 2026-11-20 P1-4). */}
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
                               {formatCurrency(group.remaining)}
                             </span>
                           </span>

@@ -13,7 +13,8 @@ export const MODULE_SLUG = 'learnpal';
 
 const manifest: ModuleManifest = {
   slug: MODULE_SLUG,
-  label: 'learnPal',
+  // User copy says "Learn" (UX audit 2026-11-20 P1-1); `learnpal` stays the slug.
+  label: 'Learn',
   icon: '⛰',
   description:
     'Your goals as a range of mountains, with a lesson unlocked by your own '
@@ -26,7 +27,7 @@ const manifest: ModuleManifest = {
   // Anything linking to `/learnpal` meaning "the range" has to move with it --
   // `RangeBanner`'s "See the whole range" was the one caller.
   navLinks: [
-    { label: 'learnPal',   path: '/learnpal' },
+    { label: 'Learn',      path: '/learnpal' },
     { label: 'Your range', path: '/learnpal/range' },
     { label: 'Lessons',    path: '/learnpal/lessons' },
   ],

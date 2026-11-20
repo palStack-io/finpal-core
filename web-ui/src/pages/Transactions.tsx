@@ -313,15 +313,16 @@ export const Transactions: React.FC = () => {
                   {
                     label: 'Total expenses',
                     value: formatMoney(-Math.abs(totalExpense), { currency }),
-                    valueColor: 'var(--re-ink)',
+                    // Ink, not red: calm money colour (voice rule 1, UX audit 2026-11-20 P1-4): figures in ink, the minus sign and the label carry the direction.
+                    valueColor: 'var(--text-primary)',
                   },
                   {
                     label: 'Net balance',
                     value: formatMoney(netBalance, { currency, signed: true }),
-                    /* Net balance KEEPS its red, and that is O1 rather than an
-                       exception to it: a negative net is a figure whose sign
-                       means something. */
-                    valueColor: netBalance >= 0 ? 'var(--g-ink)' : 'var(--re-ink)',
+                    /* Net balance used to keep its red (O1). Since 2026-11-20 a
+                       negative net is ink with its minus sign: voice rule 1, "No
+                       red first" (UX audit P1-4). Green stays for money in. */
+                    valueColor: netBalance >= 0 ? 'var(--g-ink)' : 'var(--text-primary)',
                   },
                 ]} />
             </div>

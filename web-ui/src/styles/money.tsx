@@ -164,7 +164,9 @@ export const tabular: React.CSSProperties = {
 const TONE_COLOR: Record<MoneyTone, string> = {
   neutral: 'var(--text-primary)',
   income: '#22c55e',
-  expense: '#ef4444',
+  // Money out is a quiet tone, not red: voice rule 1 ("Make looking feel safe. No red first.",
+  // UX audit 2026-11-20 P1-4). The minus sign carries the direction, never the colour alone.
+  expense: 'var(--text-secondary)',
 };
 
 export interface MoneyStyleOptions {
@@ -235,10 +237,18 @@ export function formatMoneyParts(
   return { sign, symbol, digits };
 }
 
-/** Plain string, for aria-labels, titles and chart tooltips. */
+/**
+ * U+2060 WORD JOINER, placed between a sign and the currency symbol. Unicode allows a line break
+ * between a minus and a currency symbol (both are "prefix" characters), so a narrow cell printed
+ * "−" on one line and "$3,521.80" on the next (UX audit 2026-11-20 P0-1). The joiner is zero-width
+ * and silent to screen readers, and it makes every figure this module renders one unbreakable unit.
+ */
+export const SIGN_JOINER = '\u2060';
+
+/** Plain string, for aria-labels, titles, chart tooltips and figure cells. */
 export function formatMoney(amount: number, options: FormatMoneyOptions = {}): string {
   const { sign, symbol, digits } = formatMoneyParts(amount, options);
-  return `${sign}${symbol}${digits}`;
+  return sign ? `${sign}${SIGN_JOINER}${symbol}${digits}` : `${symbol}${digits}`;
 }
 
 export interface MoneyProps extends MoneyStyleOptions, FormatMoneyOptions {
@@ -277,7 +287,7 @@ export const Money: React.FC<MoneyProps> = ({
       style={moneyStyle({ tone: resolvedTone, size, weight })}
       aria-label={formatMoney(amount, { currency, signed, round })}
     >
-      {sign}
+      {sign ? `${sign}${SIGN_JOINER}` : null}
       <span style={{ fontWeight: 400, fontSize: '0.85em', opacity: 0.7 }}>{symbol}</span>
       {digits}
     </span>

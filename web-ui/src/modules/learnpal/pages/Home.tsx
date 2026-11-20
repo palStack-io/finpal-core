@@ -316,7 +316,7 @@ export const Home: React.FC = () => {
             failure rather than as an answer. */}
         <PageHead guide="learnpal"
           band="learnpal"
-          title="learnPal"
+          title="Learn"
           subtitle="learnPal is not enabled on this instance."
         />
       </div>
@@ -343,7 +343,7 @@ export const Home: React.FC = () => {
           of scenery. */}
       <PageHead guide="learnpal"
         band="learnpal"
-        title="learnPal"
+        title="Learn"
         subtitle="Lessons unlocked by your own figures rather than by a schedule, and the mountains your goals turned out to be."
       />
 

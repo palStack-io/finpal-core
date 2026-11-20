@@ -13,6 +13,7 @@ import { railTag, type RailFacts } from '../utils/settingsRailTags';
 import { ImportSources } from '../components/settings/ImportSources';
 import { AgentAccess } from '../components/settings/AgentAccess';
 import { LearningSwitch } from '../components/settings/LearningSwitch';
+import { Switch } from '../components/common/Switch';
 import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeContext';
 import { moduleRegistry } from '../modules';
@@ -78,34 +79,15 @@ const ModuleCard: React.FC<{ manifest: ModuleManifest }> = ({ manifest }) => {
         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
           {hidden ? 'Hidden in sidebar' : 'Visible in sidebar'}
         </span>
-        {/*
-          *** A REAL <button role="switch">, NOT A BARE <div onClick>. *** It was
-          a div: no role, no keyboard access, no accessible name, and nothing a
-          screen reader would announce as a control. It was also untestable by
-          role, which is how the test that named this toggle stayed green while
-          asserting nothing at all.
-        */}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!hidden}
-          aria-label={`${manifest.label} in sidebar`}
-          onClick={toggle}
-          disabled={saving}
-          style={{
-            width: 44, height: 24, borderRadius: 12, padding: 0, border: 'none',
-            cursor: saving ? 'wait' : 'pointer',
-            background: hidden ? 'var(--border-light)' : 'var(--g500)',
-            position: 'relative', transition: 'background 0.2s',
-            opacity: saving ? 0.6 : 1,
-          }}
-        >
-          <div style={{
-            position: 'absolute', top: 3, borderRadius: '50%',
-            width: 18, height: 18, background: '#fff',
-            left: hidden ? 3 : 23, transition: 'left 0.2s',
-          }} />
-        </button>
+        {/* *** A REAL <button role="switch">, NOT A BARE <div onClick>. *** It was a div: no role, no
+            keyboard access, no accessible name. Now the shared `Switch`, the same control as "Learn as
+            you go" on Preferences (UX audit 2026-11-20 P1-8). */}
+        <Switch
+          checked={!hidden}
+          onChange={() => { void toggle(); }}
+          label={`${manifest.label} in sidebar`}
+          busy={saving}
+        />
       </div>
     </div>
   );

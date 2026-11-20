@@ -248,7 +248,7 @@ export const Login: React.FC = () => {
       art="partway"
       kicker={demoFirst ? 'Have a look round' : 'Welcome back'}
       headline={demoFirst
-        ? 'Every goal in finPal is a mountain.'
+        ? 'Learn money by managing yours.'
         : 'You left partway up.'}
       blurb={demoFirst
         ? 'Pick an account below and the whole app is already full of somebody\'s figures — accounts, budgets, goals and a shared bill or two.'

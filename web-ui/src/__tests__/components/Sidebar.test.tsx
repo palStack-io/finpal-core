@@ -94,3 +94,42 @@ describe('Sidebar — modules section', () => {
     expect(screen.getByText('pointsPal')).toBeInTheDocument();
   });
 });
+
+describe('Sidebar — Learn near the top (UX audit 2026-11-20 P1-1)', () => {
+  afterEach(() => {
+    localStorage.clear();
+    act(() => { useAuthStore.getState().logout(); });
+  });
+
+  const signIn = (extra: Record<string, unknown>) => act(() => {
+    useAuthStore.getState().login(
+      {
+        id: 't@t.com', email: 't@t.com', name: 'T', default_currency_code: 'USD',
+        hasCompletedOnboarding: true, ...extra,
+      } as any,
+      'token', 'refresh',
+    );
+  });
+
+  it('puts a plain "Learn" link second, right after Dashboard, not under Modules', () => {
+    signIn({ modules: ['learnpal'] });
+    renderSidebar();
+    const links = screen.getAllByRole('link').map((a) => a.textContent?.trim());
+    expect(links.indexOf('Learn')).toBe(links.indexOf('Dashboard') + 1);
+    expect(screen.getByRole('link', { name: 'Learn' }).getAttribute('href')).toBe('/learnpal');
+    expect(screen.queryByText('learnPal')).not.toBeInTheDocument();
+    // learnPal was the only module: no empty Modules heading is left behind.
+    expect(screen.queryByText('Modules')).not.toBeInTheDocument();
+  });
+
+  it('has no Learn link when the module is off or hidden', () => {
+    signIn({ modules: [] });
+    const { unmount } = renderSidebar();
+    expect(screen.queryByRole('link', { name: 'Learn' })).not.toBeInTheDocument();
+    unmount();
+    act(() => { useAuthStore.getState().logout(); });
+    signIn({ modules: ['learnpal'], hidden_modules: ['learnpal'] });
+    renderSidebar();
+    expect(screen.queryByRole('link', { name: 'Learn' })).not.toBeInTheDocument();
+  });
+});

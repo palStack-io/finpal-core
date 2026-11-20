@@ -446,10 +446,24 @@ class LearnRecallAnswer(Resource):
     @learnpal_ns.expect(recall_answer_model, validate=False)
     @jwt_required()
     def post(self, recall_id):
+        """Answer a recall. 404 for a recall that is missing, finished or someone else's (checked
+        first, so a foreign id reveals nothing); 400 for an unknown choice; 409 `{success: false, error}` when it is not due yet
+        or a recall was already answered today, the same schedule `GET /recall` follows."""
         user_id = get_jwt_identity()
         choice = (request.get_json(silent=True) or {}).get('choice')
+        today = _local_today(_user(user_id))
+        recall = db.session.get(LearnRecall, recall_id)
+        if recall is None or recall.user_id != user_id or recall.done_at is not None:
+            return {'success': False, 'error': 'Recall not found'}, 404
+        if str(choice) not in CHOICES:
+            return {'success': False, 'error': 'Unknown choice'}, 400
+        if recall.due_on > today:
+            return {'success': False, 'error': 'This question is not due yet'}, 409
+        if LearnRecall.query.filter(LearnRecall.user_id == user_id,
+                                    LearnRecall.answered_on == today).first() is not None:
+            return {'success': False, 'error': 'One question a day: this one waits for tomorrow'}, 409
         try:
-            return answer_recall(recall_id, user_id, str(choice), _local_today(_user(user_id))), 200
+            return answer_recall(recall_id, user_id, str(choice), today), 200
         except RecallNotFound:
             return {'success': False, 'error': 'Recall not found'}, 404
         except ValueError:

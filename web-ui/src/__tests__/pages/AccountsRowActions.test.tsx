@@ -91,12 +91,13 @@ describe('O1 holds here too: no row is red at rest', () => {
     expect(screen.getAllByLabelText('Edit account')).toHaveLength(6);
   });
 
-  it('keeps red for the balance, which is a figure whose SIGN means something', async () => {
-    // The point of O1 rather than an exception to it — the same rule that keeps
-    // Monarch's "Remaining" column red. A negative balance stays red.
+  it('keeps a negative balance in ink: the minus sign carries it, not red (voice rule 1)', async () => {
+    // This test used to pin O1's red balance. Harun approved the calm-colour rule on
+    // 2026-11-20 (UX audit P1-4, voice rule 1 "No red first"): the figure is ink and
+    // its printed minus sign says which way it goes.
     const source = readFileSync(
       join(__dirname, '..', '..', 'pages', 'Accounts.tsx'), 'utf8');
-    expect(source).toMatch(/balance < 0 \? 'var\(--accent-red\)'/);
+    expect(source).not.toMatch(/balance < 0 \? 'var\(--(accent-red|re-ink|status-over)\)'/);
   });
 });
 

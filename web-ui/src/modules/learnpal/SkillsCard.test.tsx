@@ -32,6 +32,14 @@ describe('SkillsCard', () => {
     expect(await screen.findByText('Your skills')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(6);
     expect(screen.getAllByTestId('skill-dots')).toHaveLength(6);
+    // Each row's dots name the skill and all three marks; each dot names its own mark (UX audit 2026-11-20).
+    expect(screen.getByRole('img', { name: 'Interest: understood, not yet used on your money, not yet remembered' }))
+      .toBeInTheDocument();
+    const dots = screen.getAllByTestId('skill-dots')[1].children;
+    expect([...dots].map((d) => d.getAttribute('title')))
+      .toEqual(['Understood: not yet', 'Used on your money: not yet', 'Remembered: not yet']);
+    // The three marks are named in words once, so the dots are not a code to crack.
+    expect(screen.getByText('Understood · Used on your money · Remembered')).toBeInTheDocument();
   });
 
   it('is hidden when learning is off or the fetch fails', async () => {

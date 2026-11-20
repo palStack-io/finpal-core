@@ -57,10 +57,11 @@ export const DebtPlanStatus: React.FC<{
           {status ? (
             <>
               {' · '}
-              {/* D-269: the WORD carries it, not the colour. And `--*-ink` are
-                  the text tokens; `--status-*` are fills that fail AA here. */}
+              {/* D-269: the WORD carries it, not the colour. Behind is said
+                  plainly in ink, never in red (voice rule 1, UX audit
+                  2026-11-20 P1-4); ahead and on plan keep the green ink. */}
               <span style={{ color: status.state === 'behind'
-                ? 'var(--re-ink)' : 'var(--g-ink)' }}>
+                ? 'var(--text-primary)' : 'var(--g-ink)' }}>
                 {status.state === 'ahead'
                   && `Ahead by ${money(status.difference)} this month`}
                 {status.state === 'on' && 'On plan this month'}

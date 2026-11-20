@@ -162,7 +162,7 @@ describe('Transactions page — household', () => {
     /**
      * The three card values, addressed by `data-testid="stat-value"`. A
      * transaction row renders its own amount in a `<p>`, and with one row of $10
-     * on screen a bare `getByText('\u2212$10.00')` matches both the row and the
+     * on screen a bare `getByText('\u2212\u2060$10.00')` matches both the row and the
      * card \u2014 so it would pass whether or not the card ever updated.
      *
      * This used `getAllByRole('heading', { level: 3 })`, which worked only
@@ -181,11 +181,11 @@ describe('Transactions page — household', () => {
       const row = document.querySelector('[data-testid="page-totals"]')!;
       return [...row.querySelectorAll('div')]
         .map((d) => d.textContent || '')
-        .filter((t) => /^[+\u2212-]?[$£€]/.test(t.trim()));
+        .filter((t) => /^[+\u2212-]?\u2060?[$£€]/.test(t.trim()));
     };
 
     // Both rows: $20 of expenses against $6 of income.
-    await waitFor(() => expect(cardValues()).toContain('\u2212$20.00'));
+    await waitFor(() => expect(cardValues()).toContain('\u2212\u2060$20.00'));
 
     await userEvent.selectOptions(
       screen.getByLabelText('Show transactions for'),
@@ -194,8 +194,8 @@ describe('Transactions page — household', () => {
 
     // Bob alone: $10. If the page filtered client-side the card would still say
     // $20, which is the bug this page was fixed for once already.
-    await waitFor(() => expect(cardValues()).toContain('\u2212$10.00'));
-    expect(cardValues()).not.toContain('\u2212$20.00');
+    await waitFor(() => expect(cardValues()).toContain('\u2212\u2060$10.00'));
+    expect(cardValues()).not.toContain('\u2212\u2060$20.00');
   });
 
   it('*** STATES WHOSE MONEY IT IS ONCE, NOT ONCE PER FIGURE ***', async () => {

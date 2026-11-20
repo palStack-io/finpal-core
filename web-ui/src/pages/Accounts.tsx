@@ -370,8 +370,11 @@ export const Accounts = () => {
           <TotalsRow cells={[
             {
               label: 'Net worth',
-              value: showBalances ? formatCurrency(totalBalance) : '••••••',
-              valueColor: totalBalance < 0 ? 'var(--re-ink)' : undefined,
+              // Signed: `formatCurrency` here is the absolute value, and the red that used to say
+              // "negative" is gone (voice rule 1), so the minus sign must be printed.
+              value: showBalances ? formatMoney(totalBalance, { currency }) : '••••••',
+              // Ink either way (voice rule 1, UX audit 2026-11-20 P1-4): the minus sign says it.
+              valueColor: undefined,
               note: 'assets − liabilities',
             },
             {
@@ -601,10 +604,10 @@ export const Accounts = () => {
 
                       {/* Balance */}
                       <div style={{ textAlign: 'right', minWidth: '150px' }}>
-                        <p style={{ fontSize: '24px', fontWeight: '700', color: account.balance < 0 ? 'var(--accent-red)' : 'var(--text-primary)', marginBottom: '4px' }}>
+                        <p style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
                           {showBalances ? (
                             <>
-                              {account.balance < 0 && '-'}{formatCurrency(account.balance)}
+                              {formatMoney(account.balance, { currency })}
                             </>
                           ) : '••••••'}
                         </p>

@@ -198,7 +198,11 @@ def record_finish(user_id, short_id, outcome, today=None):
     skill = skill_by_id(skill_id)
     now = datetime.utcnow()
     row = _get_or_create(user_id, skill_id)
-    first = row.understood_at is None
+    # Mark 1 is "finished the short lesson". "Not now" can come straight from the This week card
+    # without the lesson being opened, so it only sets the skill aside: no understood mark, no
+    # recall about a lesson never read, no long-lesson unlock (QA 2026-11-20 #1). The panel posts
+    # `finished` on reaching step 4, so a reader who then picks "Not now" keeps the mark.
+    first = row.understood_at is None and outcome in ('finished', 'action')
     if first:
         row.understood_at = now
     if outcome == 'action' and row.action_taken_at is None:
@@ -221,6 +225,7 @@ def delete_user_learn_rows(user_id, keep_completions=False):
     has a FK to users with no ON DELETE, so one finished short lesson (which unlocks its long
     lesson) blocked account deletion on Postgres. `keep_completions=True` is for "Delete all
     data", which keeps the account and has always kept lesson unlocks (they are permanent).
+    Also clears the held This week pick (`users.learn_week_of` / `learn_week_lesson`).
 
     LEARNPAL_ENABLED is off by default, and then create_all never makes the learn_* tables
     even though the models import fine. A DELETE on a missing table would fail (and poison a
@@ -231,6 +236,12 @@ def delete_user_learn_rows(user_id, keep_completions=False):
 
     inspector = inspect(db.session.connection())
     removed = 0
+    # The held This week pick lives on the users row; a reset or "Delete all data" starts over.
+    from src.models.user import User
+    user = db.session.get(User, user_id)
+    if user is not None:
+        user.learn_week_of = None
+        user.learn_week_lesson = None
     models = (LearnQuizAnswer, LearnSkillMark, LearnRecall) if keep_completions else (
         LearnQuizAnswer, LearnCompletion, LearnSkillMark, LearnRecall)
     for model in models:

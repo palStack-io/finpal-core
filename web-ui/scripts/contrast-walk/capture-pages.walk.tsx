@@ -1575,9 +1575,11 @@ const cases: Case[] = [
      is the only state that renders the savings bar. */
   ['kit', Kit as React.FC],
   ['sidebar', SidebarOpen, async () => {
-    // Both module headers, by name — clicking by index would silently click
-    // the same row twice if the registry order changed.
-    for (const label of ['pointsPal', 'learnPal']) {
+    // The module header, by name — clicking by index would silently click
+    // the wrong row if the registry order changed. learnPal is no longer a
+    // module section: it is the plain "Learn" link second in the rail
+    // (UX audit 2026-11-20 P1-1), so it is waited on rather than expanded.
+    for (const label of ['pointsPal']) {
       const row = await screen.findByText(label);
       await userEvent.click(row);
     }
@@ -1587,7 +1589,7 @@ const cases: Case[] = [
     // the right direction — but it is the same class of mistake as guessing a
     // heading from a route (MODULE_HEADINGS in every-page.spec.ts).
     await screen.findByText('Redeem');
-    await screen.findByText('Your range');
+    await screen.findByText('Learn');
   }, undefined, 40],
   // Nine elements is this page COMPLETE: a panel, the figure, a heading, a
   // sentence, two destinations and the unmeasured ridge. See `Case`'s `floor`.

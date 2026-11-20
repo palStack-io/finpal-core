@@ -46,3 +46,14 @@ describe('Lessons ?lesson= deep link', () => {
     expect(screen.queryByText('Body text here')).toBeNull();
   });
 });
+
+describe('Lessons count and row labels agree (UX audit 2026-11-20 P1-6)', () => {
+  it('counts unlocked lessons with the same words the rows use, with a space before the next sentence', async () => {
+    draw('/learnpal/lessons');
+    const row = await screen.findByTestId('lesson-what-your-apr-costs');
+    expect(row.textContent).toContain('Yours to read');
+    const head = document.body.textContent ?? '';
+    expect(head).toMatch(/1 lesson is yours to read\. A lesson opens/);
+    expect(head).not.toMatch(/lessons? read\./);
+  });
+});

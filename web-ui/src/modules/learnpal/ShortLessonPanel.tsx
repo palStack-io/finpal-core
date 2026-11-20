@@ -42,17 +42,32 @@ const marksLabel = (m: SkillMarks): string => [
   m.remembered ? 'remembered' : 'not yet remembered',
 ].join(', ');
 
-/** Three dots: understood, used on your money, still remembered. */
-export const SkillDots: React.FC<{ marks: SkillMarks }> = ({ marks }) => {
+/** The three marks in words, in dot order. SkillsCard prints them once as the legend. */
+export const MARK_NAMES = ['Understood', 'Used on your money', 'Remembered'] as const;
+
+/**
+ * Three dots: understood, used on your money, still remembered. The group is one image whose name says all
+ * three marks (and the skill, when given, so a row read out of context still makes sense); each dot also
+ * carries its own mark in a `title`, the hover legend (UX audit 2026-11-20).
+ */
+export const SkillDots: React.FC<{ marks: SkillMarks; skill?: string }> = ({ marks, skill }) => {
   const filled = [marks.understood, marks.used, marks.remembered];
+  const label = skill
+    ? `${skill}: ${[
+      marks.understood ? 'understood' : 'not yet understood',
+      marks.used ? 'used on your money' : 'not yet used on your money',
+      marks.remembered ? 'remembered' : 'not yet remembered',
+    ].join(', ')}`
+    : marksLabel(marks);
   return (
-    <span role="img" aria-label={marksLabel(marks)} data-testid="skill-dots"
+    <span role="img" aria-label={label} data-testid="skill-dots"
       style={{ display: 'inline-flex', gap: 6 }}>
       {filled.map((on, i) => (
-        <span key={i} aria-hidden="true" data-filled={on ? 'true' : 'false'} style={{
-          width: 10, height: 10, borderRadius: '50%', boxSizing: 'border-box',
-          border: '2px solid var(--g-ink)', background: on ? 'var(--g-ink)' : 'transparent',
-        }} />
+        <span key={i} aria-hidden="true" data-filled={on ? 'true' : 'false'}
+          title={`${MARK_NAMES[i]}: ${on ? 'yes' : 'not yet'}`} style={{
+            width: 10, height: 10, borderRadius: '50%', boxSizing: 'border-box',
+            border: '2px solid var(--g-ink)', background: on ? 'var(--g-ink)' : 'transparent',
+          }} />
       ))}
     </span>
   );
@@ -66,6 +81,13 @@ const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-betwe
 const linkButton: React.CSSProperties = {
   padding: 0, border: 0, background: 'transparent', color: 'var(--g-ink)',
   fontSize: 14, fontWeight: 600, cursor: 'pointer',
+};
+
+/* The theme's link ink, not the browser's default blue (1.7:1 on the dark panel, UX audit 2026-11-20).
+   Padded to a 44px tall target without moving the text; underlined on hover only (`.fp-ink-link`). */
+const readMoreLink: React.CSSProperties = {
+  color: 'var(--g-ink)', fontWeight: 600, fontSize: 14, textDecoration: 'none',
+  display: 'inline-block', padding: '12px 0', minHeight: 44, boxSizing: 'border-box',
 };
 
 const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
@@ -311,7 +333,7 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
         {lesson.long_lesson && (
           <p style={{ marginTop: 16 }}>
             <Link to={`/learnpal/lessons?lesson=${encodeURIComponent(lesson.long_lesson)}`} onClick={onClose} data-testid="short-read-more"
-              data-lesson={lesson.long_lesson}>Read more</Link>
+              data-lesson={lesson.long_lesson} className="fp-ink-link" style={readMoreLink}>Read more</Link>
           </p>
         )}
       </div>
