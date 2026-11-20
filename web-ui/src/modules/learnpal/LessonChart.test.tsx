@@ -89,6 +89,49 @@ describe('LessonChart', () => {
     expect(screen.getByText('Smallest balance first starts here')).toBeInTheDocument();
   });
 
+  // Alex's debts and his plan's $250 a month: the figures debt_comparison sends (2026-11-20).
+  const ALEX_DEBTS = [{ name: 'Visa Credit Card', balance: '800.00', apr: '19.99' },
+    { name: 'Student Loan', balance: '14500.00', apr: '4.50' }, { name: 'Store Card', balance: '350.00', apr: '0.00' }];
+  const COMPARE = {
+    basis: 'plan' as const, monthly: '250.00',
+    avalanche: { first: 'Visa Credit Card', never: false, months: 72, span: '6 years', interest_total: '2239.89' },
+    snowball: { first: 'Store Card', never: false, months: 72, span: '6 years', interest_total: '2266.40' },
+  };
+
+  it('debt order with the comparison: two bars per method, months to debt-free and interest, and the basis', () => {
+    draw({ kind: 'debt_order', highest_rate: 'Visa Credit Card', smallest: 'Store Card', debts: ALEX_DEBTS, compare: COMPARE });
+    const chart = screen.getByRole('img', {
+      name: 'Highest rate first: debt-free in 6 years, $2,239.89 interest. '
+        + 'Smallest balance first: debt-free in 6 years, $2,266.40 interest. Paying $250.00 a month, your plan.',
+    });
+    const months = chart.querySelectorAll('[data-part="months"]');
+    const interest = chart.querySelectorAll('[data-part="interest-total"]');
+    expect([...months].map(width)).toEqual(['100%', '100%']);
+    expect(width(interest[1])).toBe('100%');
+    expect(parseFloat(width(interest[0]))).toBeCloseTo((2239.89 / 2266.4) * 100, 6);
+    expect(screen.getByText('Starts with Visa Credit Card')).toBeInTheDocument();
+    expect(screen.getByText('Starts with Store Card')).toBeInTheDocument();
+    expect(chart.querySelector('[data-part="debt"]')).toBeNull();
+  });
+
+  it('debt order with the comparison: never is said, with no bar, and the minimums basis', () => {
+    const never = { first: 'Visa Credit Card', never: true, months: null, span: null, interest_total: null };
+    draw({ kind: 'debt_order', highest_rate: 'Visa Credit Card', smallest: 'Store Card', debts: ALEX_DEBTS,
+      compare: { ...COMPARE, basis: 'minimums', monthly: '60.00', avalanche: never, snowball: { ...never, first: 'Store Card' } } });
+    const chart = screen.getByRole('img', {
+      name: "Highest rate first: at this amount, the payments don't get ahead of the interest yet. "
+        + "Smallest balance first: at this amount, the payments don't get ahead of the interest yet. "
+        + 'Paying $60.00 a month, your minimums.',
+    });
+    expect(chart.querySelectorAll('[data-part="months"], [data-part="interest-total"]')).toHaveLength(0);
+  });
+
+  it('debt order: a malformed comparison falls back to the balances', () => {
+    draw({ kind: 'debt_order', highest_rate: 'Visa Credit Card', smallest: 'Store Card', debts: ALEX_DEBTS,
+      compare: { ...COMPARE, snowball: { ...COMPARE.snowball, months: 0 } } });
+    expect(screen.getByTestId('lesson-chart').querySelectorAll('[data-part="debt"]')).toHaveLength(3);
+  });
+
   it('a missing figure draws no chart at all', () => {
     const cases = [
       { kind: 'month', income: '', spent: '10.00', biggest_category: 'Food', biggest_amount: '5.00' },

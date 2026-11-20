@@ -275,7 +275,25 @@ export type ShortTry =
       biggest_amount: string }
   | { kind: 'debt_order'; currency?: string; debts: { name: string; balance: string; apr: string }[];
       /** Where each way starts, as the server orders them (absent from an older server). */
-      highest_rate?: string; smallest?: string };
+      highest_rate?: string; smallest?: string;
+      /** Both methods on the person's monthly amount (`debt_comparison`); absent when there is no amount. */
+      compare?: DebtCompare };
+
+/** One payoff method's result. `never`: that amount does not get ahead of the interest, so there is no total. */
+export interface DebtMethodResult {
+  first: string; never: boolean; months: number | null;
+  /** The months in words ("6 years"). */
+  span: string | null;
+  interest_total: string | null;
+}
+
+export interface DebtCompare {
+  /** Where the monthly amount came from: the person's debt plan, or the sum of their minimums. */
+  basis: 'plan' | 'minimums';
+  monthly: string;
+  avalanche: DebtMethodResult;
+  snowball: DebtMethodResult;
+}
 
 export interface ShortLesson {
   id: string;
