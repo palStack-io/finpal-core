@@ -13,6 +13,7 @@ import { tabular } from '../styles/money';
 import { Orientation } from '../components/onboarding/Orientation';
 import { BaseCamp } from '../components/onboarding/BaseCamp';
 import { RidgeScene } from '../components/onboarding/OnboardingArt';
+import { LearnQuestion } from '../components/onboarding/LearnQuestion';
 
 /**
  * *** THIS PAGE'S SHELL IS A FIXED DARK GRADIENT IN BOTH THEMES, SO ITS TEXT
@@ -84,13 +85,15 @@ export const Onboarding: React.FC = () => {
    * any of those, and the four words the product runs on — mountains, coins,
    * gear, badges — were left to be learned by guessing.
    *
-   * Three phases rather than nine steps in one counter: the existing four
-   * configure steps are untouched, orientation is four screens in front of
+   * Three phases rather than nine steps in one counter: the original four
+   * configure steps are untouched (a fifth, the Learn as you go question, was added later), orientation is four screens in front of
    * them, and base camp is the closing screen that used to be a "Complete"
    * button. `POST /auth/onboarding` still fires exactly once, from base camp.
    */
   const [phase, setPhase] = useState<'orient' | 'configure' | 'basecamp'>('orient');
   const [isLoading, setIsLoading] = useState(false);
+  // Lifted so the answer survives Back then Next. The cached user cannot tell an answer from NULL.
+  const [learnChoice, setLearnChoice] = useState<boolean | null>(null);
   // D-217: the currency grid's options come from the server, not from a list
   // this client keeps.
   const { currencies } = useCurrencies();
@@ -128,7 +131,7 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleNext = () => {
-    if (step < 4) {
+    if (step < 5) {
       setStep(step + 1);
     }
   };
@@ -286,10 +289,10 @@ export const Onboarding: React.FC = () => {
               strip, deliberately: it is one flow. */}
           <div
             role="group"
-            aria-label={`Step ${step} of 4`}
+            aria-label={`Step ${step} of 5`}
             style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginBottom: '2rem' }}
           >
-            {[1, 2, 3, 4].map((n) => (
+            {[1, 2, 3, 4, 5].map((n) => (
               <span
                 key={n}
                 style={{
@@ -384,7 +387,7 @@ export const Onboarding: React.FC = () => {
 
                 {/* Number format — #132. On the currency step rather than a step of its
                     own: what the user is deciding is how their money reads, and adding a
-                    fifth step to a "Step n of 4" flow for one radio group is worse. */}
+                    step to the configure flow for one radio group is worse. */}
                 <div style={{ marginTop: '2rem' }}>
                   <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#ffffff', marginBottom: '0.25rem' }}>
                     How should amounts look?
@@ -668,6 +671,10 @@ export const Onboarding: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Step 5: Learn as you go. Saves on the click (PUT /users/profile): the
+                onboarding endpoint does not take this field. Unanswered stays NULL, which reads as on. */}
+            {step === 5 && <LearnQuestion chosen={learnChoice} onChosen={setLearnChoice} />}
           </div>
 
           {/* Navigation Buttons */}
@@ -713,7 +720,7 @@ export const Onboarding: React.FC = () => {
               Back
             </button>
 
-            {step < 4 ? (
+            {step < 5 ? (
               <button
                 onClick={handleNext}
                 style={{

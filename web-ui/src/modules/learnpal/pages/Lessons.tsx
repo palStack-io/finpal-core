@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageHead } from '../../../components/PageHead';
 import { Loader2 } from 'lucide-react';
 import { BadgeIcon } from '../../../components/BadgeIcon';
@@ -58,6 +59,10 @@ export const Lessons: React.FC = () => {
   /* The reader is shared with `Home`, which lists recently-finished lessons and
      could not open any of them until 2026-09-16. See `LessonReader`. */
   const reader = useLessonReader();
+  /* `?lesson=<slug>` opens that lesson on load (the short lesson's "Read more"). Once only. */
+  const [params] = useSearchParams();
+  const wanted = params.get('lesson');
+  const deepLinked = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,6 +79,14 @@ export const Lessons: React.FC = () => {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const { open: openLesson, canOpen } = reader;
+  useEffect(() => {
+    if (!wanted || !rows || deepLinked.current) return;
+    deepLinked.current = true;
+    const row = rows.find((r) => r.slug === wanted);
+    if (row && row.earned && canOpen(row)) openLesson(row);
+  }, [wanted, rows, openLesson, canOpen]);
 
 
   if (loading) {

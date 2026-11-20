@@ -12,36 +12,16 @@
  * knows and nothing if the lookup fails, because the card is a nicety, not the only
  * way to anything.
  */
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { onboardingService, type HardMonthOpening } from '../../services/onboardingService';
+import { useHardMonth, type HardMonthState } from './useHardMonth';
 
-export const HardMonthCard: React.FC = () => {
-  const [opening, setOpening] = useState<HardMonthOpening | null>(null);
-  const [closing, setClosing] = useState(false);
+/** Presentational: the same card, fed by `useHardMonth()` so the Dashboard slot can ask first. */
+export const HardMonthCardView: React.FC<{ hardMonth: HardMonthState }> = ({ hardMonth }) => {
+  const { opening, closing, close } = hardMonth;
   const { pathname } = useLocation();
 
-  useEffect(() => {
-    let cancelled = false;
-    onboardingService.getHardMonth('en')
-      .then((o) => { if (!cancelled) setOpening(o); })
-      .catch(() => { /* no card beats a wrong one */ });
-    return () => { cancelled = true; };
-  }, []);
-
   if (!opening) return null;
-
-  const close = async () => {
-    setClosing(true);
-    try {
-      await onboardingService.dismissHardMonth(opening.key);
-      setOpening(null);
-    } catch {
-      // Left on screen so the click can be retried.
-    } finally {
-      setClosing(false);
-    }
-  };
 
   const here = pathname === opening.href;
   return (
@@ -75,5 +55,7 @@ export const HardMonthCard: React.FC = () => {
     </section>
   );
 };
+
+export const HardMonthCard: React.FC = () => <HardMonthCardView hardMonth={useHardMonth()} />;
 
 export default HardMonthCard;

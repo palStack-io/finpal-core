@@ -17,6 +17,7 @@ import { FirstVisitCard } from '../components/onboarding/FirstVisitCard';
 import { OwnerBadge } from '../components/OwnerBadge';
 import { CoOwnerControl } from '../components/accounts/CoOwnerControl';
 import { PageHead } from '../components/PageHead';
+import { WhyCard } from '../modules/learnpal/WhyCard';
 import { teamService } from '../services/teamService';
 import { householdScopeNote } from '../utils/scope';
 import { TeamMember } from '../types/team';
@@ -385,6 +386,8 @@ export const Accounts = () => {
             },
           ]} />
         </PageHead>
+
+        <WhyCard screen="debt" />
 
         {/*
           The pointer to bank sync. Sits above the list rather than inside the empty

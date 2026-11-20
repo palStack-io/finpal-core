@@ -225,3 +225,88 @@ export interface LearnStats {
   recent: StatsRecent[];
   next: StatsNext[];
 }
+
+// ---------------------------------------------------------------------------
+// Learn as you use it. Shapes mirror src/modules/learnpal/routes.py and
+// short_figures.py. Money inside a `try` block is a 2-place string.
+// ---------------------------------------------------------------------------
+
+export interface SkillMarks {
+  understood: boolean;
+  used: boolean;
+  remembered: boolean;
+}
+
+export interface SkillProgress {
+  id: string;
+  title: string;
+  marks: SkillMarks;
+}
+
+export interface WhyCard {
+  id: string;
+  skill: string;
+  card: string;
+  action: ShortAction;
+}
+
+export interface ShortAction {
+  label: string;
+  href: string;
+}
+
+export interface InterestPoint {
+  extra: number;
+  /** `null` when the payment never clears the balance. */
+  months: number | null;
+  interest_total: string | null;
+}
+
+export type ShortTry =
+  | { kind: 'interest'; currency?: string; balance: string; apr: string; interest_month: string;
+      base_payment: string; covers_interest: boolean; points: InterestPoint[] }
+  | { kind: 'buffer'; currency?: string; essential_monthly: string; held: string; buffer_amount: string;
+      targets: { months: number; target: string }[] }
+  | { kind: 'fixed_share'; currency?: string; income: string; fixed_amount: string; share_percent: string }
+  | { kind: 'sinking'; currency?: string; item: string; yearly: string; monthly: string }
+  | { kind: 'month'; currency?: string; income: string; spent: string; biggest_category: string;
+      biggest_amount: string }
+  | { kind: 'debt_order'; currency?: string; debts: { name: string; balance: string; apr: string }[] };
+
+export interface ShortLesson {
+  id: string;
+  skill: string;
+  skill_title: string;
+  long_lesson: string | null;
+  number: string;
+  explain: string[];
+  try: ShortTry;
+  action: ShortAction;
+  /** Offer the payday / 1st choice on the last step. */
+  when: boolean;
+  lines: { not_now: string; understood: string; when_prompt: string };
+}
+
+export type ShortOutcome = 'finished' | 'action' | 'not_now';
+
+export interface ThisWeek {
+  enabled: boolean;
+  lesson: WhyCard | null;
+}
+
+export interface RecallQuestion {
+  id: number;
+  skill: string;
+  prompt: string;
+  options: string[];
+  not_sure_label: string;
+}
+
+export type RecallChoice = '0' | '1' | '2' | 'not_sure' | 'not_now';
+
+export interface RecallResult {
+  /** `null` for "Not sure yet" and "Not now": no judgement either way. */
+  right: boolean | null;
+  why: string;
+  marks: SkillMarks;
+}

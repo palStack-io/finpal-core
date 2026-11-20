@@ -659,6 +659,7 @@ class Login(Resource):
                     'hasCompletedOnboarding': user.has_completed_onboarding,
                     'timezone': user.timezone,
                     'number_locale': user.number_locale,  # #132
+                    'learn_as_you_go': user.learn_as_you_go is not False,
                     'modules': _get_user_modules(user.id),
                     'hidden_modules': _get_hidden_modules(user.id),
                     'notifications': _notifications(user)
@@ -715,6 +716,7 @@ class CurrentUser(Resource):
                 'default_currency_code': user.default_currency_code,
                 'timezone': user.timezone,
                 'number_locale': user.number_locale,  # #132
+                'learn_as_you_go': user.learn_as_you_go is not False,
                 'hasCompletedOnboarding': user.has_completed_onboarding,  # camelCase
                 # *** modules WAS MISSING HERE AND login SENDS IT — D-63. ***
                 # The clients gate a module's nav entry AND its routes on
@@ -845,6 +847,7 @@ class CompleteOnboarding(Resource):
                 'default_currency_code': user.default_currency_code,
                 'timezone': user.timezone,
                 'number_locale': user.number_locale,  # #132
+                'learn_as_you_go': user.learn_as_you_go is not False,
                 'hasCompletedOnboarding': True,
                 'is_demo_user': user.is_demo_user,
                 'modules': _get_user_modules(user.id),

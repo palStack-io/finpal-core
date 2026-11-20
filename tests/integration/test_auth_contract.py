@@ -348,6 +348,7 @@ def test_login_returns_the_full_user_shape(client, db, user, slash):
         # formatter reads the preference from it, so a value missing here is a
         # preference that silently stops applying on the next login.
         'number_locale': user.number_locale,
+        'learn_as_you_go': True,
         'modules': DEFAULT_MODULES,
         # A user's show/hide choice, SEPARATE from entitlement — see
         # `test_module_preferences.py`. Empty for a fresh user, and it must stay
@@ -469,6 +470,7 @@ def test_me_returns_the_profile(client, db, user, auth_headers, slash):
         'default_currency_code': user.default_currency_code,
         'timezone': user.timezone,
         'number_locale': user.number_locale,  # #132
+        'learn_as_you_go': True,
         'hasCompletedOnboarding': user.has_completed_onboarding,
         'notifications': {
             'email': True,
@@ -585,6 +587,7 @@ def test_onboarding_saves_every_preference_it_accepts(
         'profile_emoji': '\U0001f9ee',
         'default_currency_code': 'GBP',
         'timezone': 'Europe/London',
+        'learn_as_you_go': True,
         'number_locale': 'de-DE',  # #132
         'hasCompletedOnboarding': True,
         'is_demo_user': False,

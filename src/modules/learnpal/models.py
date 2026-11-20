@@ -160,3 +160,47 @@ class LearnQuizAnswer(db.Model):
     choice = db.Column(db.String(10), nullable=False)
     right = db.Column(db.Boolean, nullable=False, default=False)
     answered_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class LearnSkillMark(db.Model):
+    """One row per (user, skill): the three marks of "learn as you use it".
+
+    Marks only go up. A set timestamp is never cleared, so later data loss
+    cannot empty a mark that was earned. `set_aside_at` records "Not now".
+    """
+    __tablename__ = 'learn_skill_marks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(120),
+                        db.ForeignKey('users.id', name='fk_learn_skill_marks_user', ondelete='CASCADE'),
+                        nullable=False, index=True)
+    skill = db.Column(db.String(30), nullable=False)
+    understood_at = db.Column(db.DateTime, nullable=True)
+    action_taken_at = db.Column(db.DateTime, nullable=True)
+    set_aside_at = db.Column(db.DateTime, nullable=True)
+    remembered_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'skill', name='uq_learn_skill_mark_user_skill'),
+    )
+
+
+class LearnRecall(db.Model):
+    """A scheduled "ask again later" for one quiz question of a skill's lesson."""
+    __tablename__ = 'learn_recalls'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(120),
+                        db.ForeignKey('users.id', name='fk_learn_recalls_user', ondelete='CASCADE'),
+                        nullable=False)
+    skill = db.Column(db.String(30), nullable=False)
+    milestone_slug = db.Column(db.String(60), nullable=False)
+    question_id = db.Column(db.String(20), nullable=False)
+    due_on = db.Column(db.Date, nullable=False)
+    step = db.Column(db.Integer, nullable=False, default=0)
+    misses = db.Column(db.Integer, nullable=False, default=0)
+    done_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.Index('ix_learn_recalls_user_due', 'user_id', 'due_on'),
+    )

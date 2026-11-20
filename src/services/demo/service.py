@@ -78,13 +78,12 @@ def _learnpal_reset(user_id):
     fail on an import. Missing is a normal state, not an error.
     """
     try:
-        from src.modules.learnpal.models import LearnCompletion, LearnQuizAnswer
+        from src.modules.learnpal.marks import delete_user_learn_rows
     except Exception:
         return 0
-    # Phase 5d: a reset persona has answered no quick checks either.
-    removed = LearnQuizAnswer.query.filter_by(user_id=user_id).delete(synchronize_session=False)
-    return removed + LearnCompletion.query.filter_by(user_id=user_id).delete(
-        synchronize_session=False)
+    # Quiz answers, unlocks, skill marks and recalls: a reset persona has none. Guarded per
+    # table, because with the module off the tables do not exist.
+    return delete_user_learn_rows(user_id)
 
 
 def _coins_reset(user_id):

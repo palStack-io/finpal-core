@@ -66,6 +66,10 @@ NO_DEMO_ROWS_BY_DESIGN = {
                           'demo has not been looked at yet',
     'learn_quiz_answers': 'Phase 5d: written when a person answers a lesson quick check; a freshly '
                           'seeded demo has answered none, so every quiz is there to try',
+    'learn_skill_marks': 'earned by finishing a short lesson or using a skill on real data; '
+                         'a freshly seeded demo has done neither, and seeding one would fake a mark',
+    'learn_recalls': 'scheduled when a skill is first understood; a freshly seeded demo has '
+                     'understood none',
     'visit_marks': 'Phase 1e: written when a client opens finPal; a freshly seeded '
                    'demo has not been opened, and seeding a past visit would fake a return',
     'teaching_seen': 'records which explanations the user has been shown; a '
