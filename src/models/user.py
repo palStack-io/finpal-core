@@ -25,6 +25,8 @@ class User(UserMixin, db.Model):
     default_currency_code = db.Column(db.String(3), db.ForeignKey('currencies.code'), nullable=True)
     default_currency = db.relationship('Currency', backref=db.backref('users', lazy=True))
     user_color = db.Column(db.String(7), default="#15803d")
+    # learnPal "learn as you use it": False turns the in-app teaching off. NULL reads as on.
+    learn_as_you_go = db.Column(db.Boolean, nullable=True, default=True, server_default=db.true())
     profile_emoji = db.Column(db.String(10), nullable=True)
     # OIDC related fields
     oidc_id = db.Column(db.String(255), nullable=True, index=True, unique=True)

@@ -272,3 +272,10 @@ def test_templates_format_with_figures(user):
             assert not re.search(r'(?<![\d,.])0\.\d', text), text
             assert not re.search(r'\d\.\d+%', text), text
         assert f['try']['kind'] == lesson['try_kind']
+
+
+def test_interest_ignores_loans(user):
+    AccountFactory(user_id=user.id, type='loan', balance=Decimal('-8000'), apr=Decimal('6'))
+    assert figures_for(user.id, 'interest') is None
+    _card(user, 1000, 20, name='Visa')
+    assert figures_for(user.id, 'interest')['account'] == 'Visa'

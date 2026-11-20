@@ -262,6 +262,16 @@ class AuthService:
             for group in user.groups:
                 group.members.remove(user)
 
+            # 11b. learnPal rows (optional module: absent tables are a normal state)
+            try:
+                from src.modules.learnpal.models import (
+                    LearnCompletion, LearnQuizAnswer, LearnRecall, LearnSkillMark)
+            except Exception:
+                pass
+            else:
+                for model in (LearnQuizAnswer, LearnCompletion, LearnSkillMark, LearnRecall):
+                    model.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
             # 12. Finally delete the user
             current_app.logger.info("Deleting user...")
             db.session.delete(user)

@@ -78,11 +78,15 @@ def _learnpal_reset(user_id):
     fail on an import. Missing is a normal state, not an error.
     """
     try:
-        from src.modules.learnpal.models import LearnCompletion, LearnQuizAnswer
+        from src.modules.learnpal.models import (
+            LearnCompletion, LearnQuizAnswer, LearnRecall, LearnSkillMark)
     except Exception:
         return 0
     # Phase 5d: a reset persona has answered no quick checks either.
     removed = LearnQuizAnswer.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    # "Learn as you use it": a reset persona has no skill marks or scheduled recalls.
+    removed += LearnSkillMark.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    removed += LearnRecall.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     return removed + LearnCompletion.query.filter_by(user_id=user_id).delete(
         synchronize_session=False)
 

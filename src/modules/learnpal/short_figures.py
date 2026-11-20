@@ -85,11 +85,11 @@ def _month_bounds():
     return start, end, this_start
 
 
-def _owed_accounts(user_id, rated_only=False):
-    """Cards and loans with a balance owed (balance < 0), optionally only those with apr > 0."""
+def _owed_accounts(user_id, rated_only=False, types=('credit', 'loan')):
+    """Accounts of `types` with a balance owed (balance < 0), optionally only those with apr > 0."""
     rows = Account.query.filter(
         Account.user_id == user_id,
-        Account.type.in_(('credit', 'loan')),
+        Account.type.in_(types),
     ).all()
     rows = [a for a in rows if _d(a.balance) < 0]
     if rated_only:
@@ -142,7 +142,8 @@ def _interest_run(balance, apr, payment):
 # ------------------------------------------------------------------ per lesson
 
 def _interest(user_id):
-    cards = _owed_accounts(user_id, rated_only=True)
+    # The copy says "card", so loans are left out here (debt-order keeps them).
+    cards = _owed_accounts(user_id, rated_only=True, types=('credit',))
     if not cards:
         return None
     card = max(cards, key=lambda a: -_d(a.balance))
