@@ -503,14 +503,16 @@ PAGE_GUIDES = {
                 'heading': 'Your range: every goal as a mountain',
                 'lines': [
                     'Your goals as a range of mountains, with Mount Everest in the middle for everyone.',
-                    'Altitude comes from the coins you earn and the lessons you finish, and it only goes up.',
+                    'Your height on Everest comes only from what you do, like recording a detail of your own money or '
+                    'finishing a lesson, never from how much money you have. It only goes up.',
                 ],
             },
             'es': {
                 'heading': 'Tu cordillera: cada meta como una montaña',
                 'lines': [
                     'Tus metas como una cordillera, con el Monte Everest en el centro para todos.',
-                    'La altitud viene de las monedas que ganas y las lecciones que terminas, y solo sube.',
+                    'Tu altura en el Everest viene solo de lo que haces, como registrar un dato de tu propio dinero o '
+                    'terminar una lección, nunca de cuánto dinero tienes. Solo sube.',
                 ],
             },
         },

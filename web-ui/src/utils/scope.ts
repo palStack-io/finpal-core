@@ -48,7 +48,7 @@ export const SCOPE_TAG: Record<Exclude<Scope, 'mixed'>, string> = {
 
 export const SCOPE_TITLE: Record<Scope, string> = {
   yours: 'Your own transactions and accounts only',
-  household: 'Everyone sharing this finPal instance',
+  household: 'Everyone in your household',
   mixed: 'Combines figures with different owners',
 };
 

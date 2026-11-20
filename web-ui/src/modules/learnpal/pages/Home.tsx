@@ -320,7 +320,7 @@ export const Home: React.FC = () => {
         <PageHead guide="learnpal"
           band="learnpal"
           title="Learn"
-          subtitle="learnPal is not enabled on this instance."
+          subtitle="Learn is not turned on here."
         />
       </div>
     );

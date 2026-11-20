@@ -796,7 +796,7 @@ export const GroupDetail: React.FC = () => {
                 </h2>
                 <p style={secondaryBodyStyle}>
                   Groups are for splitting costs with your household, so you can only add
-                  someone who already has an account on this instance.
+                  someone who already has an account in your household.
                 </p>
                 <input
                   type="email"
