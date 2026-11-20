@@ -159,7 +159,12 @@ export interface ShortLessonPanelProps {
   onFinished?: (progress: SkillProgress) => void;
 }
 
-export const ShortLessonPanel: React.FC<ShortLessonPanelProps> = ({ shortId, onClose, onFinished }) => {
+/** Keyed on `shortId`, so every lesson starts from fresh state without resetting it in an effect. */
+export const ShortLessonPanel: React.FC<ShortLessonPanelProps> = (props) => (
+  <ShortLessonPanelInner key={props.shortId ?? 'closed'} {...props} />
+);
+
+const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClose, onFinished }) => {
   const navigate = useNavigate();
   const [lesson, setLesson] = useState<ShortLesson | null>(null);
   const [failed, setFailed] = useState(false);
@@ -171,8 +176,6 @@ export const ShortLessonPanel: React.FC<ShortLessonPanelProps> = ({ shortId, onC
   const finishedFor = useRef<string | null>(null);
 
   useEffect(() => {
-    setLesson(null); setFailed(false); setStep(0); setProgress(null); setWhen(null);
-    moved.current = false; finishedFor.current = null;
     if (shortId === null) return;
     let live = true;
     learnpalService.getShortLesson(shortId)
