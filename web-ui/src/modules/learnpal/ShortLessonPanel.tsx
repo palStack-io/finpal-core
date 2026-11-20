@@ -29,6 +29,7 @@ const money = (v: string) => formatMoney(Number(v));
 /** "Mar 2028", counted from today. */
 const monthsFromNow = (months: number): string => {
   const d = new Date();
+  d.setDate(1); // 31 Jan + 1 month would otherwise land in March
   d.setMonth(d.getMonth() + months);
   return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 };
@@ -167,10 +168,13 @@ export const ShortLessonPanel: React.FC<ShortLessonPanelProps> = (props) => (
 const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClose, onFinished }) => {
   const navigate = useNavigate();
   const [lesson, setLesson] = useState<ShortLesson | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<'gone' | 'error' | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [snoozed, setSnoozed] = useState(false);
+  const busyRef = useRef(false);
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState<SkillProgress | null>(null);
-  const [when, setWhen] = useState<'payday' | 'first' | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
   const finishedFor = useRef<string | null>(null);
@@ -180,9 +184,11 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
     let live = true;
     learnpalService.getShortLesson(shortId)
       .then((l) => { if (live) setLesson(l); })
-      .catch(() => { if (live) setFailed(true); });
+      .catch((err) => {
+        if (live) setFailed((err as { response?: { status?: number } })?.response?.status === 404 ? 'gone' : 'error');
+      });
     return () => { live = false; };
-  }, [shortId]);
+  }, [shortId, attempt]);
 
   // Focus follows the step, but never on the first render (the panel places focus itself).
   useEffect(() => {
@@ -207,16 +213,30 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
     }
   };
 
-  const notNow = async () => { await record('not_now'); onClose(); };
-  const takeAction = async () => {
+  // One post at a time: a second click while the first is in flight does nothing.
+  const guarded = async (work: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true; setBusy(true);
+    try { await work(); } finally { busyRef.current = false; setBusy(false); }
+  };
+  const notNow = () => guarded(async () => { await record('not_now'); setSnoozed(true); });
+  const takeAction = () => guarded(async () => {
     if (!lesson) return;
     await record('action');
     onClose();
-    navigate(lesson.action.href, { state: when ? { when } : undefined });
-  };
+    navigate(lesson.action.href);
+  });
 
   const body = () => {
-    if (failed) return <p>This lesson isn't available right now.</p>;
+    if (failed === 'gone') return <p>This one doesn't apply to your numbers right now.</p>;
+    if (failed === 'error') {
+      return (
+        <div>
+          <p>We couldn't load this lesson. Try again in a moment.</p>
+          <Button onClick={() => { setFailed(null); setAttempt((n) => n + 1); }}>Try again</Button>
+        </div>
+      );
+    }
     if (!lesson) return <p className="fp-hint">Loading…</p>;
     const last = step === STEPS - 1;
     return (
@@ -253,21 +273,17 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
           </>
         )}
 
-        {step === 3 && (
+        {step === 3 && snoozed && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p data-testid="short-not-now-line" style={{ margin: 0 }}>{lesson.lines.not_now}</p>
+            <Button data-testid="short-close" onClick={onClose}>Close</Button>
+          </div>
+        )}
+
+        {step === 3 && !snoozed && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Button data-testid="short-action" onClick={takeAction}>{lesson.action.label}</Button>
-            {lesson.when && (
-              <div role="group" aria-label={lesson.lines.when_prompt}>
-                <p className="fp-hint" style={{ margin: '0 0 6px' }}>{lesson.lines.when_prompt}</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button variant="outline" size="sm" aria-pressed={when === 'payday'}
-                    onClick={() => setWhen('payday')}>On payday</Button>
-                  <Button variant="outline" size="sm" aria-pressed={when === 'first'}
-                    onClick={() => setWhen('first')}>On the 1st</Button>
-                </div>
-              </div>
-            )}
-            <button type="button" style={{ ...linkButton, alignSelf: 'flex-start' }}
+            <Button data-testid="short-action" onClick={takeAction} disabled={busy}>{lesson.action.label}</Button>
+            <button type="button" style={{ ...linkButton, alignSelf: 'flex-start' }} disabled={busy}
               data-testid="short-not-now" onClick={notNow}>Not now</button>
             {progress && (
               <div style={{ ...tile, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -283,13 +299,13 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 18, alignItems: 'center' }}>
-          {step > 0 && <Button variant="outline" onClick={() => go(step - 1)}>Back</Button>}
+          {step > 0 && !snoozed && <Button variant="outline" onClick={() => go(step - 1)}>Back</Button>}
           {!last && <Button data-testid="short-next" onClick={() => go(step + 1)}>Next</Button>}
         </div>
 
         {lesson.long_lesson && (
           <p style={{ marginTop: 16 }}>
-            <Link to="/learnpal/lessons" onClick={onClose} data-testid="short-read-more"
+            <Link to={`/learnpal/lessons?lesson=${encodeURIComponent(lesson.long_lesson)}`} onClick={onClose} data-testid="short-read-more"
               data-lesson={lesson.long_lesson}>Read more</Link>
           </p>
         )}
@@ -298,7 +314,7 @@ const ShortLessonPanelInner: React.FC<ShortLessonPanelProps> = ({ shortId, onClo
   };
 
   return (
-    <SlidePanel isOpen={shortId !== null} onClose={onClose} title="A short lesson" width="420px">
+    <SlidePanel isOpen={shortId !== null} onClose={onClose} title={lesson?.skill_title ?? 'A short lesson'} width="420px">
       {body()}
     </SlidePanel>
   );

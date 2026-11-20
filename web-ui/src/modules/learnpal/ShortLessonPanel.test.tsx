@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 const LESSON: ShortLesson = {
-  id: 'interest', skill: 'interest', long_lesson: 'what-your-apr-costs',
+  id: 'interest', skill: 'interest', skill_title: 'Understand interest', long_lesson: 'what-your-apr-costs',
   number: '$38.00 of October\'s payment went to interest on Visa.',
   explain: ['Interest arrives like a monthly bill.', 'Extra payments cut it for good.'],
   try: {
@@ -93,19 +93,86 @@ describe('ShortLessonPanel', () => {
     expect(await screen.findByTestId('skill-row')).toBeTruthy();
   });
 
-  it('Not now posts not_now and closes', async () => {
+  it('Not now posts not_now, shows the not-now line, and closes only on Close', async () => {
     serve(); const { onClose } = draw();
     await toStep4();
     await userEvent.click(screen.getByTestId('short-not-now'));
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect((await screen.findByTestId('short-not-now-line')).textContent).toBe(LESSON.lines.not_now);
     expect(posts).toContainEqual({ outcome: 'not_now' });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('short-action')).toBeNull();
+    await userEvent.click(screen.getByTestId('short-close'));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('a double click on the action posts and navigates once, and disables the buttons', async () => {
+    serve();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((r) => { release = r; });
+    server.use(http.post('*/api/v1/learnpal/short/:id/finish', async ({ request }) => {
+      const body = await request.json() as { outcome: string };
+      posts.push(body);
+      if (body.outcome === 'action') await gate;
+      return HttpResponse.json(ROW);
+    }));
+    draw();
+    await toStep4();
+    const action = screen.getByTestId('short-action');
+    fireEvent.click(action); fireEvent.click(action);
+    await waitFor(() => expect((screen.getByTestId('short-action') as HTMLButtonElement).disabled).toBe(true));
+    expect((screen.getByTestId('short-not-now') as HTMLButtonElement).disabled).toBe(true);
+    release();
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    expect(posts.filter((p) => (p as { outcome: string }).outcome === 'action')).toHaveLength(1);
+  });
+
+  it('uses the skill title as the panel title and has no when choice', async () => {
+    serve(); draw();
+    await screen.findByTestId('short-number');
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBeTruthy();
+    expect(screen.getByText('Understand interest')).toBeTruthy();
+    for (let i = 0; i < 3; i++) await userEvent.click(screen.getByTestId('short-next'));
+    expect(screen.queryByText('On payday')).toBeNull();
+  });
+
+  it('shows loading first', () => {
+    serve(); draw();
+    expect(screen.getByText(/Loading/)).toBeTruthy();
+  });
+
+  it('a 404 says the lesson no longer applies', async () => {
+    server.use(http.get('*/api/v1/learnpal/short/:id', () => HttpResponse.json({ success: false }, { status: 404 })));
+    draw();
+    expect(await screen.findByText("This one doesn't apply to your numbers right now.")).toBeTruthy();
+    expect(screen.queryByText('Try again')).toBeNull();
+  });
+
+  it('another error offers a retry that loads the lesson', async () => {
+    server.use(http.get('*/api/v1/learnpal/short/:id', () => HttpResponse.json({}, { status: 500 })));
+    draw();
+    expect(await screen.findByText("We couldn't load this lesson. Try again in a moment.")).toBeTruthy();
+    serve();
+    await userEvent.click(screen.getByText('Try again'));
+    expect(await screen.findByTestId('short-number')).toBeTruthy();
+  });
+
+  it('payoff month does not overflow from the 31st', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2027, 0, 31) });
+    try {
+      serve({ ...LESSON, try: { ...(LESSON.try as object), points: [{ extra: 0, months: 1, interest_total: '5.00' }] } as never });
+      draw();
+      await screen.findByTestId('short-number');
+      fireEvent.click(screen.getByTestId('short-next')); fireEvent.click(screen.getByTestId('short-next'));
+      const month = new Date(2027, 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+      expect(screen.getByTestId('try-result').textContent).toContain(month);
+    } finally { vi.useRealTimers(); }
   });
 
   it('the action posts action, then navigates to its href', async () => {
     serve(); const { onClose } = draw();
     await toStep4();
     await userEvent.click(screen.getByTestId('short-action'));
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/accounts', { state: undefined }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/accounts'));
     expect(posts).toContainEqual({ outcome: 'action' });
     expect(onClose).toHaveBeenCalled();
   });
@@ -142,7 +209,7 @@ describe('ShortLessonPanel', () => {
   it('links to the long lesson and never says "wrong"', async () => {
     serve(); draw();
     await screen.findByTestId('short-number');
-    expect(screen.getByTestId('short-read-more').getAttribute('data-lesson')).toBe('what-your-apr-costs');
+    expect(screen.getByTestId('short-read-more').getAttribute('href')).toBe('/learnpal/lessons?lesson=what-your-apr-costs');
     for (let i = 0; i < 3; i++) {
       expect(document.body.textContent).not.toMatch(/wrong/i);
       await userEvent.click(screen.getByTestId('short-next'));

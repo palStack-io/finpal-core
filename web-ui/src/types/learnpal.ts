@@ -276,6 +276,7 @@ export type ShortTry =
 export interface ShortLesson {
   id: string;
   skill: string;
+  skill_title: string;
   long_lesson: string | null;
   number: string;
   explain: string[];
