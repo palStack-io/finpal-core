@@ -50,6 +50,7 @@ from src.models.category import Category                      # noqa: E402
 from src.data.convert_icons_to_emoji import (                 # noqa: E402
     FALLBACK, convert_icon,
 )
+from src.models.category_icons import to_key                   # noqa: E402
 from src.data.default_categories import DEFAULT_CATEGORIES    # noqa: E402
 
 #: What a row has to look like to be considered damaged. Deliberately NOT
@@ -58,6 +59,8 @@ from src.data.default_categories import DEFAULT_CATEGORIES    # noqa: E402
 #: that. Only the fallback VALUE, stored in the column, is the fingerprint of
 #: this particular conversion having run twice.
 DAMAGED = FALLBACK
+#: The same fingerprint once icons are keys (src/models/category_icons.py): the correction turns 📁 into 'folder'.
+DAMAGED_VALUES = (FALLBACK, to_key(FALLBACK))
 
 
 def _from_default_categories():
@@ -109,7 +112,7 @@ def build_index():
     """
     index = dict(_from_signup_seeder())
     index.update(_from_default_categories())
-    index = {k: v for k, v in index.items() if v and v != FALLBACK}
+    index = {k: v for k, v in index.items() if v and v not in DAMAGED_VALUES}
     if len(index) < 100:
         raise SystemExit(
             f'the name index has only {len(index)} entries — one of the two '
@@ -131,7 +134,7 @@ def main():
 
     app = create_app()
     with app.app_context():
-        query = Category.query.filter(Category.icon == DAMAGED)
+        query = Category.query.filter(Category._icon.in_(DAMAGED_VALUES))
         if args.user:
             query = query.filter(Category.user_id == args.user)
         damaged = query.all()
@@ -163,8 +166,8 @@ def main():
         # *** VERIFY BY RE-READING, NOT BY TRUSTING THE COMMIT. *** Asserting on
         # a commit that returned is asserting on a status code; this project's
         # rule is to read the database back.
-        remaining = Category.query.filter(Category.icon == DAMAGED).count()
-        distinct = db.session.query(Category.icon).distinct().count()
+        remaining = Category.query.filter(Category._icon.in_(DAMAGED_VALUES)).count()
+        distinct = db.session.query(Category._icon).distinct().count()
         print(f'wrote {len(repairable)} icons. '
               f'{remaining} rows still {DAMAGED!r}, {distinct} distinct icons now.')
         return 0

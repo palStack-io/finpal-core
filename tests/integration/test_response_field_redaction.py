@@ -159,6 +159,9 @@ CATEGORY_KEYS = {
     # external id and no identity, so it is strictly less revealing than
     # `name`, which is already exposed. **No redaction change needed.**
     'spending_type',
+    # Reviewed the same way (2026-11-20): `icon_key` is one of a fixed set of line-icon names
+    # (src/models/category_icons.py) or null. No credential, id or identity. No redaction change needed.
+    'icon_key',
 }
 # Note: TransactionSchema declares `created_at`, but Expense has no such
 # column, so marshmallow silently omits it. Declared-but-absent, hence not

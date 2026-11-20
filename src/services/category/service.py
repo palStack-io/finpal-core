@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from flask import current_app
 from src.extensions import db
 from src.models.category import Category, CategoryMapping
+from src.models.category_icons import DEFAULT_ICON_KEY
 from src.models.transaction import Expense
 from src.models.recurring import RecurringExpense
 from src.models.budget import Budget
@@ -55,7 +56,7 @@ class CategoryService:
         ).count()
         return match_count >= 4
 
-    def add_category(self, user_id, name, icon='🏷️', color='#6c757d', parent_id=None):
+    def add_category(self, user_id, name, icon=DEFAULT_ICON_KEY, color='#6c757d', parent_id=None):
         """Add a new category - Returns (success, message, category)"""
         if not name:
             return False, 'Category name is required', None
