@@ -186,6 +186,28 @@ class AccountList(Resource):
         return {'success': True, 'account': result, 'message': 'Account created successfully'}, 201
 
 
+@ns.route('/summary')
+class AccountSummary(Resource):
+    @ns.doc('account_summary', security='Bearer')
+    @api_auth_required(scope=SCOPE_READ)
+    def get(self):
+        """Net worth, assets and debts: the one definition the Dashboard and Accounts share.
+
+        Read-only (`get_dashboard_data` syncs investments, a write). In the reader's
+        currency, over the reader's scope. See `src/services/account/net_worth.py`.
+        """
+        from src.models.user import User
+        from src.services.account.net_worth import as_numbers, net_worth_summary
+        user = db.session.get(User, get_jwt_identity())
+        if user is None:
+            return {'success': False, 'error': 'Not found.'}, 404
+        try:
+            return {'success': True, **as_numbers(net_worth_summary(user))}, 200
+        except Exception:
+            logger.exception('Failed to total accounts')
+            return {'success': False, 'error': GENERIC_ERROR}, 500
+
+
 @ns.route('/<int:id>')
 @ns.param('id', 'Account ID')
 class AccountDetail(Resource):

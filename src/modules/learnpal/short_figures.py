@@ -217,9 +217,13 @@ def _buffer(user_id):
 
 
 def _month_income(user_id, start, end):
-    return _d(db.session.query(func.coalesce(func.sum(Expense.amount), 0)).filter(
-        Expense.user_id == user_id, Expense.transaction_type == 'income',
-        Expense.date >= start, Expense.date <= end).scalar())
+    """What came in, from the one shared income function (converted; this person only).
+
+    It used to sum `Expense.amount` raw, so a row in another currency counted as dollars,
+    and it was a second definition of "came in" beside the Dashboard's (UI audit 2026-11-20).
+    """
+    from src.services.analytics.service import AnalyticsService
+    return _d(AnalyticsService().income_between(user_id, start, end, scope_ids=[user_id]))
 
 
 def _fixed_share(user_id):
@@ -243,13 +247,18 @@ def _fixed_share(user_id):
     ratio = fixed / income
     if ratio >= 1:  # "the rest is yours to choose" would not be true
         return None
+    # `month` is the month being planned (the card: "Some of November is already decided");
+    # `income_month` is the last full month, whose income the share is of. The number line
+    # and the panel's "Came in, October" say which, so it is not read as the Dashboard's
+    # month-to-date income (UI audit 2026-11-20, P1-5).
     return {
         'month': month_name[this_start.month],
+        'income_month': month_name[end.month],
         'fixed_share': _share_words(ratio),
         'fixed_amount': _money(fixed, user_id),
         'income': _money(income, user_id),
         'try': {'kind': 'fixed_share', 'currency': _user_format(user_id)[0], 'income': _plain(income), 'fixed_amount': _plain(fixed),
-                'share_percent': f'{round(ratio * 100)}'},
+                'share_percent': f'{round(ratio * 100)}', 'month': month_name[end.month]},
     }
 
 
@@ -310,7 +319,8 @@ def _month(user_id):
         'biggest_category': top.name,
         'biggest_amount': _money(top.total, user_id),
         'try': {'kind': 'month', 'currency': _user_format(user_id)[0], 'income': _plain(income), 'spent': _plain(spent),
-                'biggest_category': top.name, 'biggest_amount': _plain(top.total)},
+                'biggest_category': top.name, 'biggest_amount': _plain(top.total),
+                'month': month_name[end.month]},
     }
 
 

@@ -300,6 +300,8 @@ export const Transactions: React.FC = () => {
                   {
                     label: 'Total income',
                     value: formatMoney(totalIncome, { currency, signed: true }),
+                    // The window, said (UI audit 2026-11-20, P1-5): every matching transaction, no date limit.
+                    note: 'All time',
 /* *** INK TOKENS, NOT STATUS TOKENS — THE ROW MOVED ONTO THE BAND. ***
                        Measured against the band's resolved #dce7de: every
                        `--status-*` fill FAILS AA there (ok/warn 3.95, over
@@ -313,12 +315,16 @@ export const Transactions: React.FC = () => {
                   {
                     label: 'Total expenses',
                     value: formatMoney(-Math.abs(totalExpense), { currency }),
+                    // The window, said (UI audit 2026-11-20, P1-5): every matching transaction, no date limit.
+                    note: 'All time',
                     // Ink, not red: calm money colour (voice rule 1, UX audit 2026-11-20 P1-4): figures in ink, the minus sign and the label carry the direction.
                     valueColor: 'var(--text-primary)',
                   },
                   {
                     label: 'Net balance',
                     value: formatMoney(netBalance, { currency, signed: true }),
+                    // The window, said (UI audit 2026-11-20, P1-5): every matching transaction, no date limit.
+                    note: 'All time',
                     /* Net balance used to keep its red (O1). Since 2026-11-20 a
                        negative net is ink with its minus sign: voice rule 1, "No
                        red first" (UX audit P1-4). Green stays for money in. */

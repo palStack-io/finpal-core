@@ -225,6 +225,19 @@ describe('ShortLessonPanel', () => {
     expect(screen.getByText('Biggest: Rent')).toBeTruthy();
   });
 
+  it('"Came in" names the month the income is from (UI audit 2026-11-20, P1-5)', async () => {
+    serve({ ...LESSON, id: 'month',
+            try: { kind: 'month', income: '5200.00', spent: '2536.54',
+                   biggest_category: 'Housing', biggest_amount: '1800.00', month: 'October' } });
+    draw();
+    await screen.findByTestId('short-number');
+    await userEvent.click(screen.getByTestId('short-next'));
+    await userEvent.click(screen.getByTestId('short-next'));
+    expect(screen.getByText('Came in, October')).toBeTruthy();
+    expect(screen.getByText('Went out, October')).toBeTruthy();
+    expect(screen.queryByText('Came in')).toBeNull();
+  });
+
   it('links to the long lesson and never says "wrong"', async () => {
     serve(); draw();
     await screen.findByTestId('short-number');

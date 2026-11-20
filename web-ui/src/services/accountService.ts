@@ -12,6 +12,19 @@ import { api } from './api';
  * `AccountSchema`, on every transaction payload too. That is why the "whose
  * account this is" label on the transactions page costs no extra request.
  */
+
+/** What `/api/v1/accounts/summary` answers. Money in the reader's currency. */
+export interface AccountSummary {
+  net_worth: number;
+  total_assets: number;
+  /** Assets without the investment portfolios. */
+  accounts_assets: number;
+  /** Portfolios not linked to an account; a linked one is already its account's balance. */
+  investment_total: number;
+  /** Positive: what is owed. */
+  total_debts: number;
+  currency: string;
+}
 export interface AccountOwner {
   /** A user ID, which in finPal is an email address. */
   id: string;
@@ -149,6 +162,18 @@ export const accountService = {
       `/api/v1/accounts/${accountId}/owners/${encodeURIComponent(userId)}`,
     );
     return response.data.account;
+  },
+
+  /**
+   * Net worth, assets and debts from the server's one definition (`/accounts/summary`):
+   * every account converted into the reader's currency, plus investment portfolios not
+   * linked to an account, debts at their absolute value. The Dashboard's `net_worth` is
+   * the same function, so "Net worth" is one number on both screens (UI audit 2026-11-20).
+   */
+  async getSummary(): Promise<AccountSummary> {
+    const response = await api.get<{ success: boolean } & AccountSummary>('/api/v1/accounts/summary');
+    const { success: _ok, ...summary } = response.data;
+    return summary;
   },
 
   async getAccounts(): Promise<Account[]> {

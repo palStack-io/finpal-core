@@ -4,8 +4,8 @@ Copy follows finPal/docs/voice.md (section "Learn as you use it"). `card` and
 `number` are `str.format` templates; Task 2 supplies the figures. Money values
 arrive as ready-formatted strings. Placeholder keys per lesson:
 
-    month        card: {month}                      number: {income} {spent} {biggest_category} {biggest_amount}
-    fixed-share  card: {month}                      number: {fixed_share} {fixed_amount} {income}
+    month        card: {month}                      number: {month} {income} {spent} {biggest_category} {biggest_amount}
+    fixed-share  card: {month}                      number: {fixed_share} {fixed_amount} {income} {income_month}
     non-monthly  card: {item}                       number: {yearly} {monthly} {item}
     buffer       card: {account}                    number: {buffer_amount} {buffer_months}
     interest     card: {account} {month}            number: {interest_month} {balance} {apr} {account}
@@ -51,7 +51,7 @@ SHORT_LESSONS = {
         'skill': 'fixed-costs',
         'long_lesson': 'fixed-vs-flexible',
         'card': "Some of {month} is already decided. Here's how much of it you can still change.",
-        'number': "{fixed_amount} of what came in, {fixed_share} of it, is fixed. The rest is yours to choose again.",
+        'number': "{fixed_amount} of the {income} that came in during {income_month}, {fixed_share} of it, is fixed. The rest is yours to choose again.",
         'explain': [
             "Money going out comes in three kinds: fixed, flexible and non-monthly. The difference is how much is still a decision.",
             "A big fixed share is a fact about what things cost, not a verdict on how you handle money.",
@@ -79,7 +79,7 @@ SHORT_LESSONS = {
         'skill': 'read-your-month',
         'long_lesson': 'where-your-money-goes',
         'card': "{month} is easier to read as a shape than as many small pieces. Here's yours.",
-        'number': "{biggest_category} was your biggest category at {biggest_amount}, from {income} that came in.",
+        'number': "{biggest_category} was your biggest category in {month} at {biggest_amount}, from {income} that came in.",
         'explain': [
             "Most people find one category bigger than they would have guessed, and it is often a different one than they expected.",
             "Often the price moved, not the habit. You can only choose about money you can see.",

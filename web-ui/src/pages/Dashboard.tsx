@@ -448,6 +448,11 @@ export const Dashboard = () => {
   // the row makes them read the same on screen either way, but the DOM text is
   // what the suite and a screen reader see, and three tests anchor on
   // "Net Worth" to know the page has finished loading.
+  /* *** EACH FIGURE NAMES ITS WINDOW (UI audit 2026-11-20, P1-5). *** "Current month earnings"
+     read like the last-month "Came in" of the lesson and the last-30-days "Total Income" of
+     Analytics. This one is the calendar month to date, so it says "November so far";
+     "earnings" also overclaimed, since it counts every income row, transfers in included. */
+  const monthSoFar = `${new Date().toLocaleDateString('en-US', { month: 'long' })} so far`;
   const totalsCells = [
     {
       label: 'Net Worth',
@@ -457,13 +462,13 @@ export const Dashboard = () => {
     {
       label: 'Monthly Income',
       value: formatCurrency(monthlyIncome),
-      note: 'Current month earnings',
+      note: monthSoFar,
     },
     {
       label: 'Monthly Expenses',
       value: formatCurrency(monthlyExpenses),
       // Ink, not clay: calm money colour (voice rule 1, UX audit 2026-11-20 P1-4): figures in ink, the minus sign and the label carry the direction.
-      note: 'Spending this month',
+      note: monthSoFar,
     },
     {
       label: 'Savings Rate',

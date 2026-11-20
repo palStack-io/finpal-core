@@ -246,7 +246,6 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
     """
     from datetime import datetime, timedelta
     from src.models.account import Account
-    from src.models.investment import Portfolio
     from src.utils.currency_converter import convert_currency, RateTable
 
     # Initialize tracking
@@ -260,62 +259,21 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
     scope = list(user_ids) if user_ids else [current_user.id]
 
     accounts = Account.query.filter(Account.user_id.in_(scope)).all()
-    portfolios = Portfolio.query.filter(Portfolio.user_id.in_(scope)).all()
 
     # Get user's preferred currency code
     user_currency_code = current_user.default_currency_code or 'USD'
     # The denomination a row with no currency of its own is in. See below.
     stored_default_code = RateTable().base_code or user_currency_code
 
-    # Calculate true total assets and debts directly from accounts (for accurate current total)
-    direct_total_assets = 0
-    direct_total_debts = 0
-    investment_total = 0
-
-    for account in accounts:
-        # Get account's currency code, default to user's preferred currency
-        # *** A NULL `currency_code` MEANS THE BASE CURRENCY, NOT THE READER'S. ***
-        # One rule for every stored row — see `RateTable`'s docstring. Reading NULL
-        # as "already in whatever this reader prefers" leaves a legacy balance
-        # unconverted while relabelling it, which is D-156 itself; and once
-        # transactions started honouring the base reading (owner decision B1) the
-        # two row types on the SAME dashboard card disagreed about one NULL.
-        # Measured before changing it: a NULL-currency account of 1100 read as
-        # 1100 by a euro member while a NULL-currency expense of 110 read as 100.
-        account_currency_code = account.currency_code or stored_default_code
-
-        # Convert account balance to user's currency if needed
-        if account_currency_code != user_currency_code:
-            converted_balance = convert_currency(account.balance, account_currency_code, user_currency_code)
-        else:
-            converted_balance = account.balance
-
-        if account.type in ['checking', 'savings', 'investment'] and converted_balance > 0:
-            direct_total_assets += converted_balance
-        elif account.type in ['credit'] or converted_balance < 0:
-            # For credit cards with negative balances (standard convention)
-            direct_total_debts += abs(converted_balance)
-
-    # Add investment values to assets - calculate once to avoid duplication
-    account_linked_portfolios = []
-
-    # Calculate investment total
-    for portfolio in portfolios:
-        portfolio_value = portfolio.calculate_total_value()
-
-        # Check if this portfolio is linked to an account
-        if portfolio.account_id:
-            # If linked to an account, keep track but don't add to assets yet
-            account_linked_portfolios.append({
-                'account_id': portfolio.account_id,
-                'value': portfolio_value
-            })
-        else:
-            # If not linked to an account, add directly to assets
-            investment_total += portfolio_value
-
-    # Add investment total to assets - only those not linked to accounts
-    direct_total_assets += investment_total
+    # *** THE CURRENT TOTALS COME FROM THE ONE NET-WORTH FUNCTION (UI audit 2026-11-20). ***
+    # This block used to compute them itself: assets only for checking/savings/investment,
+    # debt only for `credit` or a negative balance, so a loan stored positive vanished
+    # from both sides; and the Accounts page summed its own balances without investments.
+    from src.services.account.net_worth import is_asset as _is_asset, is_debt as _is_debt, net_worth_summary
+    _totals = net_worth_summary(current_user, scope, user_currency_code)
+    direct_total_assets = _totals['total_assets']
+    direct_total_debts = _totals['total_debts']
+    investment_total = _totals['investment_total']
 
     # Process each account for historical trends: collect each one's monthly
     # activity first, because the month window depends on ALL of them.
@@ -334,8 +292,8 @@ def calculate_asset_debt_trends(current_user, user_ids=None):
         account_currency_code = account.currency_code or stored_default_code
 
         # Categorize account types
-        is_asset = account.type in ['checking', 'savings', 'investment'] and account.balance > 0
-        is_debt = account.type in ['credit'] or account.balance < 0
+        is_asset = _is_asset(account.type, account.balance)
+        is_debt = _is_debt(account.type, account.balance)
 
         # Skip accounts with zero or near-zero balance
         if abs(account.balance or 0) < 0.01:
