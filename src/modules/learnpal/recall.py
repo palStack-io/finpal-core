@@ -109,12 +109,16 @@ def _rotate(recall):
     here = (recall.milestone_slug, recall.question_id)
     if here in cycle and len(cycle) > 1:
         recall.milestone_slug, recall.question_id = cycle[(cycle.index(here) + 1) % len(cycle)]
+    elif here not in cycle and cycle:
+        # The question was removed from QUIZZES: start the skill's cycle over rather than stall.
+        recall.milestone_slug, recall.question_id = cycle[0]
 
 
 def answer_recall(recall_id, user_id, choice, today):
     """Record an answer to a recall. Returns {'right': bool|None, 'why': str, 'marks': {...}}.
 
-    `right` is None for "Not sure" and "Not now" (neither is a wrong answer). Raises
+    `right` is None for "Not sure" and "Not now" (neither is a wrong answer); an out-of-range choice
+    or a question that no longer exists counts as a miss (`right` False, empty `why`). Raises
     RecallNotFound for a recall that is missing, finished, or belongs to someone else, and
     ValueError for an unknown choice. Commits. Awards nothing.
     """
@@ -133,8 +137,13 @@ def answer_recall(recall_id, user_id, choice, today):
         if choice == 'not_sure':
             why = (question or {}).get('not_sure', '')
         else:
-            option = (question or {'options': []})['options'][int(choice)]
-            right, why = bool(option['right']), option['why']
+            options = (question or {}).get('options') or []
+            index = int(choice)
+            # A choice past the options, or a question that no longer exists, is a miss.
+            if index < len(options):
+                right, why = bool(options[index]['right']), options[index]['why']
+            else:
+                right = False
         if right:
             if recall.step == 0:
                 recall.step = 1

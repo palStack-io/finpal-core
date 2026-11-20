@@ -52,6 +52,7 @@ profile_update_model = ns.model('ProfileUpdate', {
     'timezone': fields.String(description='User timezone'),
     'default_currency_code': fields.String(description='Default currency code'),
     'number_locale': fields.String(description='BCP-47 tag for number formatting; null clears it'),
+    'learn_as_you_go': fields.Boolean(description='False turns the in-app teaching off'),
     # D-148. Partial: only the keys present are written.
     'notifications': fields.Nested(notification_prefs_model, required=False,
                                    description='Notification preferences. '
@@ -164,6 +165,11 @@ class Profile(Resource):
             else:
                 return {'message': 'number_locale is not a usable locale tag'}, 400
 
+        if 'learn_as_you_go' in data:
+            if not isinstance(data['learn_as_you_go'], bool):
+                return {'message': 'learn_as_you_go must be true or false'}, 400
+            user.learn_as_you_go = data['learn_as_you_go']
+
         # *** THE ONLY PLACE A NOTIFICATION PREFERENCE CAN BE CHANGED AFTER
         # ONBOARDING. D-148. ***
         #
@@ -203,6 +209,7 @@ class Profile(Resource):
             'default_currency_code': user.default_currency_code,
             'timezone': user.timezone,
             'number_locale': user.number_locale,  # #132
+            'learn_as_you_go': user.learn_as_you_go is not False,
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'has_completed_onboarding': user.has_completed_onboarding,
             # Echoed back so a client can round-trip without a second request, and in

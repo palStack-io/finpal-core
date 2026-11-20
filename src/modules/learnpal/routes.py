@@ -22,6 +22,9 @@ these paths as "learnPal is not installed" and render nothing, NOT as an error -
 which is the same discipline as `peak` being absent from a goal payload.
 """
 
+from datetime import datetime, timedelta, timezone
+
+from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -31,7 +34,21 @@ from src.modules.learnpal.lesson_quizzes import QUIZZES, quiz_for
 from src.modules.learnpal.range import range_for_user
 from src.modules.learnpal.stats import stats_for_user
 
+from src.models.user import User
+from src.modules.learnpal import marks as _marks
+from src.modules.learnpal.learn_skills import skill_by_id
+from src.modules.learnpal.models import LearnRecall, LearnSkillMark
+from src.modules.learnpal.recall import (
+    CHOICES, RecallNotFound, answer_recall, due_recall, quiet_day)
+from src.modules.learnpal.short_figures import figures_for, relevant_short_lessons
+from src.modules.learnpal.short_lessons import (
+    NOT_NOW_LINE, SHORT_LESSONS, UNDERSTOOD_LINE, WHEN_PROMPT)
+
 learnpal_ns = Namespace('learnpal', description='learnPal lessons, gear and the range')
+
+SET_ASIDE_DAYS = 30
+WHY_SCREENS = ('budgets', 'goals', 'debt', 'dashboard')
+NOT_SURE_LABEL = 'Not sure yet'
 
 
 @learnpal_ns.route('/range')
@@ -204,3 +221,154 @@ class LearnLessonRead(Resource):
 
         db.session.commit()
         return {'success': True, 'slug': slug, 'verified_by': row.verified_by}, 200
+
+
+# ---------------------------------------------------------------------------
+# Learn as you use it. Every `enabled` below is `learning_on(user)`: NULL reads
+# as on, only an explicit False is off. Off sends empty teaching, never a 4xx.
+# ---------------------------------------------------------------------------
+
+def _user(user_id):
+    return db.session.get(User, user_id)
+
+
+def _local_today(user):
+    """The person's own date (their saved timezone), else the UTC date."""
+    from src.services.report.period import _local_date
+    return _local_date(datetime.now(timezone.utc), getattr(user, 'timezone', None))
+
+
+def _set_aside_recently(user_id, skill_id):
+    row = LearnSkillMark.query.filter_by(user_id=user_id, skill=skill_id).first()
+    if row is None or row.set_aside_at is None:
+        return False
+    return row.set_aside_at > datetime.utcnow() - timedelta(days=SET_ASIDE_DAYS)
+
+
+def _card(user_id, short_id, figures):
+    short = SHORT_LESSONS[short_id]
+    return {'id': short_id, 'skill': short['skill'],
+            'card': short['card'].format(**figures), 'action': short['action']}
+
+
+def _open_cards(user_id):
+    """Relevant short lessons whose skill is not used and not set aside in the last 30 days."""
+    out = []
+    for short_id in relevant_short_lessons(user_id):
+        skill_id = SHORT_LESSONS[short_id]['skill']
+        if _marks.used_on_money(user_id, skill_id) or _set_aside_recently(user_id, skill_id):
+            continue
+        figures = figures_for(user_id, short_id)
+        if figures is not None:
+            out.append((short_id, figures))
+    return out
+
+
+@learnpal_ns.route('/skills-progress')
+class LearnSkillsProgress(Resource):
+    @jwt_required()
+    def get(self):
+        """The six skills and their marks. Listed even when learning is off."""
+        user_id = get_jwt_identity()
+        return {'enabled': _marks.learning_on(_user(user_id)),
+                'skills': _marks.skills_progress(user_id)}, 200
+
+
+@learnpal_ns.route('/why')
+class LearnWhy(Resource):
+    @jwt_required()
+    def get(self):
+        """Cards for one screen: relevant, not yet used, not set aside lately."""
+        user_id = get_jwt_identity()
+        screen = request.args.get('screen', '')
+        if screen not in WHY_SCREENS:
+            return {'success': False, 'error': 'Unknown screen'}, 400
+        if not _marks.learning_on(_user(user_id)):
+            return {'enabled': False, 'cards': []}, 200
+        cards = [_card(user_id, sid, fig) for sid, fig in _open_cards(user_id)
+                 if skill_by_id(SHORT_LESSONS[sid]['skill'])['screen'] == screen]
+        return {'enabled': True, 'cards': cards}, 200
+
+
+@learnpal_ns.route('/short/<string:short_id>')
+class LearnShort(Resource):
+    @jwt_required()
+    def get(self, short_id):
+        """One short lesson with the person's own figures; 404 when it is not relevant."""
+        user_id = get_jwt_identity()
+        short = SHORT_LESSONS.get(short_id)
+        figures = figures_for(user_id, short_id) if short else None
+        if figures is None:
+            return {'success': False, 'error': 'Lesson not found'}, 404
+        return {'id': short_id, 'skill': short['skill'], 'long_lesson': short.get('long_lesson'),
+                'number': short['number'].format(**figures),
+                'explain': short['explain'], 'try': figures['try'], 'action': short['action'],
+                'when': bool(short['when']),
+                'lines': {'not_now': NOT_NOW_LINE, 'understood': UNDERSTOOD_LINE,
+                          'when_prompt': WHEN_PROMPT}}, 200
+
+
+@learnpal_ns.route('/short/<string:short_id>/finish')
+class LearnShortFinish(Resource):
+    @jwt_required()
+    def post(self, short_id):
+        user_id = get_jwt_identity()
+        if short_id not in SHORT_LESSONS:
+            return {'success': False, 'error': 'Lesson not found'}, 404
+        outcome = (request.get_json(silent=True) or {}).get('outcome')
+        try:
+            return _marks.record_finish(user_id, short_id, outcome), 200
+        except ValueError:
+            return {'success': False, 'error': 'Unknown outcome'}, 400
+
+
+@learnpal_ns.route('/this-week')
+class LearnThisWeek(Resource):
+    @jwt_required()
+    def get(self):
+        """The first open short lesson, or None (off, a quiet day, or nothing to teach)."""
+        user_id = get_jwt_identity()
+        user = _user(user_id)
+        if not _marks.learning_on(user):
+            return {'enabled': False, 'lesson': None}, 200
+        if quiet_day(user_id, _local_today(user)):
+            return {'enabled': True, 'lesson': None}, 200
+        cards = _open_cards(user_id)
+        lesson = _card(user_id, *cards[0]) if cards else None
+        return {'enabled': True, 'lesson': lesson}, 200
+
+
+@learnpal_ns.route('/recall')
+class LearnRecallToday(Resource):
+    @jwt_required()
+    def get(self):
+        """The one quiz question due today, or None."""
+        user_id = get_jwt_identity()
+        user = _user(user_id)
+        if not _marks.learning_on(user):
+            return {'enabled': False, 'recall': None}, 200
+        recall = due_recall(user_id, _local_today(user))
+        question = None
+        if recall is not None:
+            question = next((q for q in (QUIZZES.get(recall.milestone_slug) or {}).get('questions') or []
+                             if q['id'] == recall.question_id), None)
+        if recall is None or question is None:
+            return {'enabled': True, 'recall': None}, 200
+        return {'enabled': True, 'recall': {
+            'id': recall.id, 'skill': recall.skill, 'prompt': question['prompt'],
+            'options': [o['text'] for o in question['options']],
+            'not_sure_label': NOT_SURE_LABEL}}, 200
+
+
+@learnpal_ns.route('/recall/<int:recall_id>')
+class LearnRecallAnswer(Resource):
+    @jwt_required()
+    def post(self, recall_id):
+        user_id = get_jwt_identity()
+        choice = (request.get_json(silent=True) or {}).get('choice')
+        try:
+            return answer_recall(recall_id, user_id, str(choice), _local_today(_user(user_id))), 200
+        except RecallNotFound:
+            return {'success': False, 'error': 'Recall not found'}, 404
+        except ValueError:
+            return {'success': False, 'error': 'Unknown choice'}, 400

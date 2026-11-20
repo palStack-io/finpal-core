@@ -146,3 +146,21 @@ def test_recall_writes_no_coins(user):
     answer_recall(r.id, user.id, 'not_sure', TODAY)
     answer_recall(r.id, user.id, _right(_db.session.get(LearnRecall, r.id)), TODAY)
     assert (CoinAward.query.count(), ActEvent.query.count()) == (coins, acts)
+
+
+def test_out_of_range_choice_or_missing_question_is_a_miss(user, monkeypatch):
+    r = _recall(user)
+    question = QUIZZES[r.milestone_slug]['questions'][0]
+    monkeypatch.setitem(question, 'options', question['options'][:2])  # choice '2' is now past the end
+    out = answer_recall(r.id, user.id, '2', TODAY)
+    assert out['right'] is False
+    r = _db.session.get(LearnRecall, r.id)
+    assert r.misses == 1 and r.due_on == TODAY + timedelta(days=7) and r.step == 0
+
+    r.question_id = 'gone-question'
+    _db.session.commit()
+    out = answer_recall(r.id, user.id, '0', TODAY)
+    assert out['right'] is False
+    r = _db.session.get(LearnRecall, r.id)
+    assert r.misses == 2 and r.due_on == TODAY + timedelta(days=21)
+    assert r.question_id != 'gone-question'
