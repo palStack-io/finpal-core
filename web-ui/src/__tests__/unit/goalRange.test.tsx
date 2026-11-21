@@ -11,6 +11,7 @@
  * a target the user chose. "2 of 4 goals" is not that, and a range is precisely
  * where somebody would add it.
  */
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { GoalRange } from '../../components/dashboard/GoalRange';
@@ -192,7 +193,8 @@ describe('the goal range', () => {
     render(
       <GoalRange
         goals={[withPeak({
-          id: 3, name: 'Holiday fund', target_amount: 500, current_amount: 500,
+          // Finished = the server's progress reached 1 (Dashboard C), never a zero magnitude.
+          id: 3, name: 'Holiday fund', target_amount: 500, current_amount: 500, progress: 1,
           peak: {
             scale: 'build', magnitude: 0, unmeasured: false, band: 0,
             mountain: { slug: 'table-mountain', name: 'Table Mountain', elevation_m: 1085 },
@@ -201,7 +203,9 @@ describe('the goal range', () => {
         currency="USD"
       />,
     );
-    expect(screen.getByText(/Holiday fund ✓/)).toBeTruthy();
+    // The tick is a line icon (no text glyphs as icons).
+    expect(screen.getByText(/Holiday fund/)).toBeTruthy();
+    expect(screen.getByTestId('finished-tick')).toBeTruthy();
     // No "1 of 1", no "100%", no "1 goal complete" — decision 5.
     expect(screen.queryByText(/\bof \d+\b/)).toBeNull();
     expect(screen.queryByText(/%/)).toBeNull();
@@ -262,7 +266,7 @@ describe('Everest says what it is doing there', () => {
     /* The two things that are about this reader: which peak it is, and how far
        up it they are. `8,849 m` is the same for every user on the instance, so
        it is the least useful thing the label could spend a line on. */
-    render(<GoalRange goals={[]} currency="USD" everest={EVEREST} />);
+    render(<MemoryRouter><GoalRange goals={[]} currency="USD" everest={EVEREST} /></MemoryRouter>);
     expect(screen.getByText('Everest')).toBeTruthy();
     expect(screen.getByText('you are at 7,973 m')).toBeTruthy();
     expect(screen.queryByText(/8,849 m/)).toBeNull();
@@ -275,7 +279,7 @@ describe('Everest says what it is doing there', () => {
        — a reader had to infer that from a colour, which is D-269's shape on
        the one peak that is not a goal. */
     const { container } = render(
-      <GoalRange goals={[]} currency="USD" everest={EVEREST} />);
+      <MemoryRouter><GoalRange goals={[]} currency="USD" everest={EVEREST} /></MemoryRouter>);
     const peak = screen.getByRole('button', { name: /Everest/ });
 
     fireEvent.focus(peak);
@@ -324,8 +328,8 @@ describe('Everest says what it is doing there', () => {
   });
 
   it('says base camp rather than 0 m, and still explains itself', () => {
-    render(<GoalRange goals={[]} currency="USD"
-                      everest={{ altitude_m: 0, summit_m: 8849, at_summit: false }} />);
+    render(<MemoryRouter><GoalRange goals={[]} currency="USD"
+                      everest={{ altitude_m: 0, summit_m: 8849, at_summit: false }} /></MemoryRouter>);
     expect(screen.getByText('you are at base camp')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Everest/ }).getAttribute('aria-label') ?? '')
       .toContain('financial literacy');

@@ -41,6 +41,8 @@
  * ground and y=0 is the summit. The caller scales uniformly.
  */
 
+import { RANGE_SHAPES } from './peakShapes';
+
 export interface RangeSilhouette {
   /** The mountain, filled with `currentColor`. */
   body: string;
@@ -58,49 +60,21 @@ export interface RangeSilhouette {
 /**
  * Indexed by band, 0 (Table Mountain) to 5 (Everest) — the same order the
  * server's `BAND_ORDER` uses and the same order the card silhouettes use.
+ *
+ * *** SINCE 2026-11-20 (DASHBOARD C) THESE ARE GENERATED FROM REAL ELEVATION. ***
+ * `tools/peaks/generate-silhouettes.mjs` normalises each mountain's real
+ * skyline into this box (`peakShapes.ts`): shoulders, false summits and jagged
+ * tops instead of hand-typed triangles, with a shadow face and snow above a
+ * snowline. Identity still holds: Table Mountain is flat-topped with no snow.
+ * Premium only for now; core and mobile keep the hand-drawn table until they
+ * are regenerated (the byte-identity rule above is broken until then).
  */
-export const RANGE_SILHOUETTES: RangeSilhouette[] = [
-  // 0 — Table Mountain. Flat top, wide shoulders, no snow.
-  {
-    body: 'M0,100 L14,74 L30,40 L70,38 L86,72 L100,100 Z',
-    shade: 'M70,38 L86,72 L100,100 L58,100 Z',
-  },
-  // 1 — Ben Nevis. One summit, asymmetric, a light cap.
-  {
-    body: 'M0,100 L18,72 L40,34 L52,12 L64,30 L82,68 L100,100 Z',
-    shade: 'M52,12 L64,30 L82,68 L100,100 L54,100 Z',
-    snow: 'M52,12 L64,30 L57,26 L49,31 L44,25 Z',
-    snowOpacity: 0.5,
-  },
-  // 2 — a steeper single summit.
-  {
-    body: 'M0,100 L14,76 L34,38 L50,8 L62,26 L80,66 L100,100 Z',
-    shade: 'M50,8 L62,26 L80,66 L100,100 L52,100 Z',
-    snow: 'M50,8 L62,26 L54,22 L46,28 L40,20 Z',
-    snowOpacity: 0.62,
-  },
-  // 3 — Mount Rainier. Broad shoulders, a wide snowfield, a subsidiary bump.
-  {
-    body: 'M0,100 L12,78 L28,44 L44,10 L54,2 L62,14 L72,10 L86,62 L100,100 Z',
-    shade: 'M54,2 L62,14 L72,10 L86,62 L100,100 L56,100 Z',
-    snow: 'M44,10 L54,2 L62,14 L72,10 L78,30 L68,24 L58,34 L48,22 L40,30 Z',
-    snowOpacity: 0.9,
-  },
-  // 4 — twin summit, the second slightly lower.
-  {
-    body: 'M0,100 L10,80 L24,46 L38,6 L48,18 L58,4 L70,22 L86,64 L100,100 Z',
-    shade: 'M58,4 L70,22 L86,64 L100,100 L60,100 Z',
-    snow: 'M38,6 L48,18 L58,4 L70,22 L62,20 L54,30 L44,18 L34,26 Z',
-    snowOpacity: 0.92,
-  },
-  // 5 — Everest. The tallest, the sharpest, the most snow.
-  {
-    body: 'M0,100 L8,82 L22,48 L36,12 L46,0 L56,14 L66,6 L82,60 L100,100 Z',
-    shade: 'M46,0 L56,14 L66,6 L82,60 L100,100 L48,100 Z',
-    snow: 'M36,12 L46,0 L56,14 L66,6 L74,32 L64,26 L54,38 L44,24 L34,32 Z',
-    snowOpacity: 0.95,
-  },
-];
+const SNOW_OPACITY = [undefined, 0.85, 0.92, 0.95, 0.95, 0.97];
+export const RANGE_SILHOUETTES: RangeSilhouette[] = RANGE_SHAPES.map((s, band) => ({
+  body: s.body,
+  shade: s.shade,
+  ...(s.snow ? { snow: s.snow, snowOpacity: SNOW_OPACITY[band] } : {}),
+}));
 
 /**
  * A goal finPal cannot measure: a flat ridge, no summit, no snow.
@@ -112,13 +86,13 @@ export const RANGE_UNMEASURED: RangeSilhouette = {
   body: 'M0,100 L20,86 L44,80 L70,84 L100,100 Z',
 };
 
-/*
- * *** A FINISHED GOAL HITS THIS FLOOR, AND IT STILL HAS TO LOOK LIKE SOMETHING
- * SOMEBODY CLIMBED. *** A build goal at zero magnitude is DONE, so its honest
- * height is zero — but drawing it at zero says "this never existed" rather
- * than "you finished this". At 0.18 Table Mountain rendered as a green nub
- * with its flat top invisible, and that flat top is the whole identity of that
- * particular mountain. 0.30 keeps the shape readable while leaving it
- * obviously the smallest thing in the range.
- */
-export const MIN_RANGE_HEIGHT = 0.30;
+
+/** A shape's summit on its box: the highest vertex of its body (M/L paths only). */
+export function shapeSummit(body: string): [number, number] {
+  let best: [number, number] = [50, 100];
+  for (const m of body.matchAll(/[ML]\s*(-?[\d.]+)[ ,](-?[\d.]+)/g)) {
+    const x = Number(m[1]); const y = Number(m[2]);
+    if (y < best[1]) best = [x, y];
+  }
+  return best;
+}

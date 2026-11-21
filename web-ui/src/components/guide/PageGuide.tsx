@@ -14,7 +14,9 @@ import { GuideTour } from './GuideTour';
  *
  * *** A LANDMARK, NOT A DIALOG. *** The card does not trap the page; the tour does.
  */
-export const PageGuide: React.FC<{ page: GuidePage }> = ({ page }) => {
+/** `onDemand`: the card opens only when the page's guide button asks for it (`reopen`), never on first visit
+ *  (Dashboard C and Budgets C, 2026-11-20: the tips card no longer opens on its own; the "?" stays). */
+export const PageGuide: React.FC<{ page: GuidePage; onDemand?: boolean }> = ({ page, onDemand = false }) => {
   const { status, pages, dismissed, reopened, touring, load, dismiss, closeReopened, startTour } =
     useGuideStore();
 
@@ -32,7 +34,7 @@ export const PageGuide: React.FC<{ page: GuidePage }> = ({ page }) => {
   if (status !== 'ready' || !copy) return null;
 
   const wasDismissed = dismissed.includes(page);
-  const open = !wasDismissed || reopened === page;
+  const open = onDemand ? reopened === page : (!wasDismissed || reopened === page);
   const id = `guide-${page}`;
 
   return (
@@ -51,7 +53,7 @@ export const PageGuide: React.FC<{ page: GuidePage }> = ({ page }) => {
               <button
                 type="button"
                 onClick={async () => {
-                  if (wasDismissed) closeReopened(); else await dismiss(page);
+                  if (wasDismissed || onDemand) closeReopened(); else await dismiss(page);
                   // The card is about to unmount with focus inside it; hand focus to the help button
                   // (it appears as the card goes) instead of letting it fall to <body>.
                   setTimeout(() => document.getElementById(`guide-button-${page}`)?.focus(), 0);

@@ -55,7 +55,7 @@ function useThisWeekSkill(): string | null {
 }
 
 /** The three marks, in words, in the order every card lists them. */
-const TRAIL_MARKS: { key: keyof SkillMarks; label: string }[] = [
+export const TRAIL_MARKS: { key: keyof SkillMarks; label: string }[] = [
   { key: 'understood', label: 'Understood' },
   { key: 'used', label: 'Used on your money' },
   { key: 'remembered', label: 'Still remembered' },

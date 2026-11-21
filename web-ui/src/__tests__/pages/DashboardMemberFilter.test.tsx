@@ -134,13 +134,12 @@ function mockDashboard({ members = [ALICE, BOB] }: { members?: (typeof ALICE)[] 
       });
     }),
     http.get(`${BASE}/api/v1/accounts`, () => HttpResponse.json({ success: true, accounts: [] })),
-    // NO trailing slash: `budgetService.getBudgets` requests `/api/v1/budgets`.
-    // This handler said `/budgets/` and therefore matched NOTHING, so the request
-    // escaped MSW and hit the real network — passing here only because something
-    // happened to be listening on jsdom's origin, and failing in CI with
-    // ECONNREFUSED. A trailing slash picking a different handler is this
-    // project's own oldest trap, this time in the mocks rather than the app.
-    http.get(`${BASE}/api/v1/budgets`, () => HttpResponse.json({ success: true, budgets: [] }))
+    // Dashboard C reads the budget OVERVIEW (it carries the pace mark), not the plain list.
+    http.get(`${BASE}/api/v1/budgets/overview`, () => HttpResponse.json({
+      success: true, budgets: [], groups: [], totals: { planned: 0, actual: 0, remaining: 0, budgeted_actual: 0, unbudgeted_actual: 0 },
+      unsorted: { count: 0, actual: 0, categories: [], budget_count: 0, budgets: [] }, income: null, left_to_budget: null,
+    })),
+    http.get(`${BASE}/api/v1/goals`, () => HttpResponse.json({ success: true, goals: [] })),
   );
 
   return { analyticsCalls, transactionCalls };
@@ -165,25 +164,17 @@ describe('the Dashboard states its scope with a filter, not with four tags', () 
     );
   });
 
-  it('*** SENDS "WHERE THE MONTH WENT" DOWN THE PAGE, NOT OFF IT ***', async () => {
-    /* Owner, 2026-09-19: *"we litrally have the Monthly Expense Breakdown on
-       the same page"*. The card's action used to be `/transactions`, so the
-       answer to "where did the month go" was a different page — while the
-       full answer, opened on the same month, sat 400px below.
-
-       *** THE TARGET IS ASSERTED, NOT JUST THE LINK. *** An `href="#x"` with
-       no element of that id scrolls nowhere, throws nothing and logs nothing;
-       the link and the anchor are two strings that can drift apart, which is
-       exactly the failure a test has to catch because a human never will by
-       looking at the markup. */
+  it('*** "WHERE THE MONTH WENT" LINKS TO EVERY TRANSACTION ***', async () => {
+    /* Dashboard C (2026-11-20): the Monthly Expense Breakdown left the Dashboard, because Transactions lists every
+       transaction. The card's one link goes there, and the old in-page jump (and its anchor) are gone. */
     mockDashboard();
     const { container } = renderPage();
 
     await waitFor(() => expect(screen.getByText('Net Worth')).toBeInTheDocument());
-    const jump = await screen.findByRole('link', { name: /See the breakdown/ });
-    const href = jump.getAttribute('href') ?? '';
-    expect(href.startsWith('#')).toBe(true);
-    expect(container.querySelector(`#${CSS.escape(href.slice(1))}`)).toBeTruthy();
+    const link = await screen.findByRole('link', { name: 'See every transaction' });
+    expect(link.getAttribute('href')).toBe('/transactions');
+    expect(container.querySelector('#monthly-expense-breakdown')).toBeNull();
+    expect(screen.queryByText('Monthly Expense Breakdown')).not.toBeInTheDocument();
   });
 
   it('carries no per-figure scope tags any more', async () => {

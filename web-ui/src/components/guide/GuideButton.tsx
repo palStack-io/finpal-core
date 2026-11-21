@@ -11,9 +11,11 @@ import type { GuidePage } from '../../services/onboardingService';
  * card itself is the entry point and a second control would say the same thing twice.
  * Decorative image, real accessible name on the button.
  */
-export const GuideButton: React.FC<{ page: GuidePage }> = ({ page }) => {
+/** `always`: shown even before the card was ever dismissed, for a page that draws no card until asked (the Dashboard
+ *  and Budgets, Dashboard C / Budgets C 2026-11-20: the tips card opens only from the "?"). */
+export const GuideButton: React.FC<{ page: GuidePage; always?: boolean }> = ({ page, always = false }) => {
   const { status, pages, dismissed, reopen } = useGuideStore();
-  if (status !== 'ready' || !pages[page] || !dismissed.includes(page)) return null;
+  if (status !== 'ready' || !pages[page] || (!always && !dismissed.includes(page))) return null;
   return (
     <button type="button" id={`guide-button-${page}`} className="fp-guide-btn" aria-label="About this page"
             onClick={() => reopen(page)}>
