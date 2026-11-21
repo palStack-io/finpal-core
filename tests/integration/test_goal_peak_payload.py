@@ -74,11 +74,12 @@ def test_NO_RATE_ANYWHERE_IS_UNMEASURED_AND_NOT_BAND_ZERO(seeded):
     goal = _payoff(user.id, [_card(user.id, apr=None)])
     peak = _peak(goal)
 
-    assert peak['unmeasured'] is True
+    # Since 2026-11-20 (Harun) the mountain is the goal's SIZE, so a debt with no rate still has its mountain
+    # (1,650 to clear: Ben Nevis). What is unknown is only the interest line, and that is said, not guessed.
+    assert peak['unmeasured'] is False
+    assert peak['rate_unknown'] is True
     assert peak['magnitude'] is None
-    assert peak['band'] is None, 'an unmeasured peak must not be band 0'
-    assert peak['mountain'] is None
-    assert peak['apr'] is None
+    assert peak['mountain']['name'] == 'Ben Nevis'
 
 
 def test_AN_EXPLICIT_ZERO_PERCENT_IS_MEASURED_AND_MEASURES_ZERO(seeded):
@@ -91,9 +92,10 @@ def test_AN_EXPLICIT_ZERO_PERCENT_IS_MEASURED_AND_MEASURES_ZERO(seeded):
     peak = _peak(goal)
 
     assert peak['unmeasured'] is False
+    assert peak['rate_unknown'] is False
     assert peak['magnitude'] == 0
-    assert peak['band'] == 0
-    assert peak['mountain']['name'] == 'Table Mountain'
+    # The mountain is the goal's size (1,650 to clear), not the interest it costs.
+    assert peak['mountain']['name'] == 'Ben Nevis'
     assert peak['apr'] == 0.0
 
 
@@ -147,23 +149,17 @@ def test_A_MULTI_ACCOUNT_GOAL_SENDS_NO_APR_AT_ALL(seeded):
 # ---------------------------------------------------------------------------
 
 def test_THE_SUMMIT_NOTE_READS_THE_WATERMARK_NOT_THE_CURRENT_BAND(seeded):
-    """*** THE MOUNTAIN SHRINKS AS THE GOAL SUCCEEDS. ***
-
-    The band is recomputed from the CURRENT figure, so paying a card down walks
-    it back down the ladder and finishing lands on the SMALLEST mountain. Without
-    a watermark the card congratulates somebody on Table Mountain for clearing an
-    Aconcagua.
-    """
+    """Since 2026-11-20 the mountain is the goal's size, so it no longer shrinks as the card is paid down; the
+    watermark still names the largest mountain the goal ever was (a target lowered after the fact)."""
     user = UserFactory()
     goal = _payoff(user.id, [_card(user.id, balance=-40.0, apr='19.99')])
     goal.hardest_band = 4
     _db.session.commit()
 
     peak = _peak(goal)
-    # Nearly paid off, so it sits low NOW...
-    assert peak['band'] == 0
-    assert peak['mountain']['name'] == 'Table Mountain'
-    # ...but the note has to name what they actually beat.
+    # Nearly paid off, and the mountain is still the goal's size (1,650 to clear)...
+    assert peak['mountain']['name'] == 'Ben Nevis'
+    # ...while the note names the largest it has been.
     assert peak['hardest_band'] == 4
     assert peak['hardest_mountain']['name'] == 'Aconcagua'
 
@@ -205,7 +201,8 @@ def test_the_build_scale_is_never_unmeasured(seeded):
     assert peak['scale'] == 'build'
     assert peak['unmeasured'] is False
     assert peak['magnitude'] == 11000.0
-    assert peak['mountain'] is not None
+    assert peak['size'] == 16000.0
+    assert peak['mountain']['name'] == 'Aconcagua'
 
 
 # ---------------------------------------------------------------------------

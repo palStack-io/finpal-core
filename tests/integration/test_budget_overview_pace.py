@@ -100,3 +100,19 @@ def test_pace_applies_is_present_on_EVERY_row_so_a_client_never_guesses(
             for r in g['budgets']]
     assert len(rows) == 2
     assert all('pace_applies' in r for r in rows)
+
+
+def test_the_payload_carries_days_left_and_per_day_from_the_one_rule(client, auth_headers, user):
+    """Budgets C: the hero prints these as sent (no browser maths), from `budget.pace.days_left` / `per_day`."""
+    from src.services.budget.pace import days_left, per_day
+    _budget(user, 'Groceries', '400.00')
+    data = _overview(client, auth_headers, user)
+    assert data['days_left'] == days_left(data['pace'])
+    assert data['per_day'] == per_day(data['totals']['remaining'], data['pace'])
+    assert data['per_day'] == round(400.0 / data['days_left'], 2)
+
+
+def test_no_plan_sends_no_per_day(client, auth_headers, user):
+    data = _overview(client, auth_headers, user)
+    assert data['totals']['planned'] == 0
+    assert data['per_day'] is None

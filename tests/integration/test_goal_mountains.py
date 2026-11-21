@@ -197,58 +197,40 @@ def test_an_achieved_savings_goal_is_flat_not_negative(seeded, app):
 # *** THE WATERMARK — WHAT THE SUMMIT NOTE READS FROM ***
 # ---------------------------------------------------------------------------
 
-def test_THE_BAND_WATERMARK_REMEMBERS_THE_WORST_IT_EVER_WAS(seeded, app):
-    """*** THE TEST THIS FILE EXISTS FOR. ***
-
-    Paying a card down makes its mountain SMALLER — §3 recomputes the band from
-    the current figure, and the spec calls that a feature. It also means
-    finishing lands on Table Mountain. Without a watermark the summit note would
-    congratulate somebody on the smallest mountain for clearing the largest.
-    """
+def test_THE_BAND_WATERMARK_REMEMBERS_THE_LARGEST_IT_EVER_WAS(seeded, app):
+    """Since 2026-11-20 (Harun) the band is the goal's SIZE, so paying down no longer shrinks it; a target LOWERED
+    later does, and the watermark keeps the summit note on the larger mountain."""
     user = UserFactory(id='climber@test.com', name='C')
-    # £20,000 at 19.99% is ~£333/mo of interest: Everest.
-    goal, account = _card_goal(user.id, balance=-20000.0, apr='19.99',
-                               start='-20000.00', target='0.00')
+    goal, account = _card_goal(user.id, balance=-20000.0, apr='19.99', start='-20000.00', target='0.00')
     raise_hardest_band(goal); _db.session.commit()
-    assert goal.hardest_band == 5, 'did not start at Everest'
+    assert goal.hardest_band == 4, '20,000 to clear is Aconcagua'
 
-    # Pay it almost off. The CURRENT band collapses to the smallest.
-    account.balance = -100.0
+    account.balance = -100.0          # nearly paid: the mountain stays the goal's size
     _db.session.commit()
-    scale, mag = peak_magnitude(goal)
-    assert mountain_for(scale, mag).name == 'Table Mountain'
-
     raise_hardest_band(goal); _db.session.commit()
+    assert goal.hardest_band == 4
 
-    assert goal.hardest_band == 5, \
-        'the watermark fell — the summit note would name the wrong mountain'
-    hardest = Mountain.query.filter_by(slug=BAND_ORDER[goal.hardest_band]).one()
-    assert 'Everest' in hardest.summit_note or hardest.name == 'Everest'
+    goal.start_amount = Decimal('-1000.00')   # the goal itself made smaller
+    _db.session.commit()
+    raise_hardest_band(goal); _db.session.commit()
+    assert goal.hardest_band == 4, 'the watermark fell'
 
 
-def test_the_watermark_RISES_when_B12_adds_a_second_card(seeded, app):
-    """A watermark rather than "the band at creation", and this is why.
-
-    B12 made the account set mutable: `POST /goals/<id>/accounts` can add a
-    second card, the interest jumps, and the band goes UP mid-life.
-    """
+def test_the_watermark_RISES_when_the_goal_grows(seeded, app):
     user = UserFactory(id='b12@test.com', name='B')
-    goal, first = _card_goal(user.id, balance=-800.0, apr='19.99')
+    goal, _first = _card_goal(user.id, balance=-800.0, apr='19.99')
     raise_hardest_band(goal); _db.session.commit()
     started_at = goal.hardest_band
-
-    first.balance = -20000.0          # stands in for the added card's effect
+    goal.start_amount = Decimal('-20000.00')
     _db.session.commit()
     raise_hardest_band(goal); _db.session.commit()
-
     assert goal.hardest_band > started_at
 
 
-def test_an_unmeasured_peak_leaves_the_watermark_ALONE(seeded, app):
-    # No APR means no band — and `None` must not be written as band 0, which
-    # would claim the user faced Table Mountain when we simply do not know.
+def test_a_goal_with_no_size_leaves_the_watermark_ALONE(seeded, app):
+    # Nothing to clear means no band, and `None` must not be written as band 0.
     user = UserFactory(id='unmeas@test.com', name='U')
-    goal, _ = _card_goal(user.id, balance=-5000.0, apr=None)
+    goal, _ = _card_goal(user.id, balance=0.0, apr=None, start='0.00', target='0.00')
     raise_hardest_band(goal); _db.session.commit()
     assert goal.hardest_band is None
 
@@ -263,7 +245,7 @@ def test_the_engine_raises_the_band_alongside_progress(seeded, app):
 
     evaluate_for_goal(goal); _db.session.commit()
 
-    assert goal.hardest_band == 5
+    assert goal.hardest_band == 4          # 20,000 to clear: Aconcagua (sized by the goal since 2026-11-20)
     assert goal.highest_progress is not None
 
 
