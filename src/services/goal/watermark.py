@@ -73,20 +73,15 @@ def raise_watermark(goal):
 def raise_hardest_band(goal):
     """Move `goal.hardest_band` up to the current band. Never down.
 
-    *** THE MOUNTAIN SHRINKS AS YOU SUCCEED, WHICH IS WHY THIS EXISTS. *** The
-    band is recomputed from the goal's CURRENT figure, so paying a card down
-    walks it back down the ladder and FINISHING LANDS ON THE SMALLEST MOUNTAIN.
-    A summit note read from the current band would congratulate somebody on
-    Table Mountain for clearing an Aconcagua.
+    Since 2026-11-20 the band is the goal's SIZE (its target, or the amount to clear), so it moves only when the
+    target is edited; the watermark keeps the summit note on the largest mountain the goal ever was.
 
     Does not commit -- the caller owns the transaction.
     """
-    from src.services.goal.mountains import band_index, mountain_for, peak_magnitude
+    from src.services.goal.mountains import band_index, mountain_for_goal
 
-    scale, magnitude = peak_magnitude(goal)
-    if magnitude is None:
-        return goal.hardest_band          # unmeasured: no band, and not band 0
-    mountain = mountain_for(scale, magnitude)
+    # The same mapping the payload sends (the goal's size; Harun 2026-11-20), so the two can never disagree.
+    mountain = mountain_for_goal(goal)
     if mountain is None:
         return goal.hardest_band
     index = band_index(mountain.slug)

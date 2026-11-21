@@ -75,12 +75,7 @@ export const HEAD_BANDS: Record<string, HeadBand> = {
     d: 'M0,52 L120,28 L210,52 L320,18 L430,52 L560,30 L660,52 L800,22 L900,52 L1100,34 L1100,52 Z',
     opacity: 0.4,
   },
-  /* Budgets: coverage is its headline, so a broad even ridge rather than a
-     dramatic one. */
-  budgets: {
-    d: 'M0,52 L140,30 L250,52 L380,24 L500,52 L640,30 L760,52 L900,26 L1000,52 L1100,40 L1100,52 Z',
-    opacity: 0.38,
-  },
+  /* Budgets lost its band with Budgets C (2026-11-20): its head is the shared PageHero, which draws its own ridge. */
   /* The dashboard's own band is the quietest of all: the goal range sits
      directly below it and two ranges competing is one too many. */
   /* Groups: shared costs, so an even social ridge rather than a dramatic one. */

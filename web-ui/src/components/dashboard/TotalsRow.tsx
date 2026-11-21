@@ -30,13 +30,32 @@ export interface TotalsCell {
   valueColor?: string;
   /** One short line under the figure. */
   note?: React.ReactNode;
+  /** In the hero the pill already says "November so far", so this note is read to a screen reader only. */
+  quietNote?: boolean;
 }
 
 export interface TotalsRowProps {
   cells: TotalsCell[];
+  /** `hero`: the Dashboard's frosted panel on the page hero's sky (Dashboard C, 2026-11-20); colours come from the
+   *  hero's own tokens and the layout from `.fp-totals--hero` in finpal-theme.css. */
+  variant?: 'hero';
 }
 
-export const TotalsRow: React.FC<TotalsRowProps> = ({ cells }) => (
+export const TotalsRow: React.FC<TotalsRowProps> = ({ cells, variant }) => variant === 'hero' ? (
+  <div data-testid="page-totals" className="fp-totals--hero">
+    {cells.map((cell) => (
+      <div key={cell.label} className="fp-totals-hero__cell">
+        <div className="fp-totals-hero__label">{cell.label}</div>
+        <div className="fp-totals-hero__value" data-amount="" style={cell.valueColor ? { color: cell.valueColor } : undefined}>
+          {cell.value}
+        </div>
+        {cell.note && (
+          <div className={cell.quietNote ? 'sr-only' : 'fp-totals-hero__note'}>{cell.note}</div>
+        )}
+      </div>
+    ))}
+  </div>
+) : (
   <div
     data-testid="page-totals"
     className="fp-totals-row"

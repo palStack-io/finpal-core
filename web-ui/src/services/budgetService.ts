@@ -109,6 +109,11 @@ export interface BudgetOverview {
   /** Absent on a backend older than the pace mark — render no tick, the same
    *  discipline as `peak` being absent from a goal payload. */
   pace?: BudgetPace;
+  /** Days still to spend this month, TODAY INCLUDED (day 20 of 30 is 11; the last day is 1). The server's one rule
+   *  (`services/budget/pace.py`); the Budgets hero prints it as sent. Absent on an older backend. */
+  days_left?: number | null;
+  /** What is left spread over `days_left`, to the cent; null with no plan or nothing left. */
+  per_day?: number | null;
   /**
    * Budgets on INCOME categories, kept out of the expense totals entirely
    * (D-189). Absent on an older backend.

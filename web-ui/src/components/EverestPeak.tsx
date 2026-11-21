@@ -1,5 +1,5 @@
 import React from 'react';
-import { RANGE_SILHOUETTES } from '../utils/rangeSilhouettes';
+import { RANGE_SILHOUETTES, shapeSummit } from '../utils/rangeSilhouettes';
 
 /**
  * Everest, with a marker where the user stands — the basecamp's backdrop.
@@ -50,7 +50,7 @@ export const EverestPeak: React.FC<{
         )}
       </g>
       <line x1="-4" y1="100" x2="104" y2="100" stroke="var(--border-medium)" strokeWidth="1" />
-      <circle data-testid="everest-peak-marker" cx="46" cy={markerY} r="3.4"
+      <circle data-testid="everest-peak-marker" cx={shapeSummit(shape.body)[0]} cy={markerY} r="3.4"
         fill="var(--status-warn)" stroke="var(--bg-card)" strokeWidth="1" />
     </svg>
   );

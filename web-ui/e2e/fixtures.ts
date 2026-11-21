@@ -31,8 +31,10 @@ export const DEMO_USER = {
  * So it is a constant. One fact, one place — D-101's rule, applied to the suite
  * that enforces it. `Where you stand` is the same head for a user with no
  * goals, which is a real state this regex has to cover.
+ *
+ * Dashboard C (2026-11-20): the h1 is the page hero's greeting ("Good afternoon, Alex"); Your range is the hero's art.
  */
-export const DASHBOARD_HEADING = /Your range|Where you stand/;
+export const DASHBOARD_HEADING = /^Good (morning|afternoon|evening)/;
 
 export const STORAGE_STATE = path.join(process.cwd(), 'e2e/.auth/demo1.json');
 

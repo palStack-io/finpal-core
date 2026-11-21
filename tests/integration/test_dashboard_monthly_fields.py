@@ -82,3 +82,27 @@ def test_expenses_have_the_same_monthly_split(client, auth_headers, user):
     assert data['current_month_expenses_only'] == pytest.approx(120.0, abs=0.01)
     if earlier is not None:
         assert data['total_expenses_only'] == pytest.approx(420.0, abs=0.01)
+
+
+def test_THE_MONTH_SAVINGS_RATE_IS_THE_SERVERS_AND_KEEPS_ITS_SIGN(client, auth_headers, user):
+    """Dashboard C (review 2026-11-20): the Dashboard reads the month's savings rate from the server, no browser maths.
+
+    (income - expenses) / income for the calendar month to date, with its sign: spending more than came in is a
+    negative rate, never clamped to 0 (the clamp was a defect the Dashboard already fixed once).
+    """
+    now = datetime.utcnow().replace(day=15, hour=12, minute=0, second=0, microsecond=0)
+    ExpenseFactory(user_id=user.id, amount=1000.0, date=now, transaction_type='income')
+    ExpenseFactory(user_id=user.id, amount=250.0, date=now, transaction_type='expense')
+    data = client.get(ENDPOINT, headers=auth_headers(user, password='secret')).get_json()['data']
+    assert data['current_month_savings_rate'] == pytest.approx(75.0, abs=0.01)
+
+    ExpenseFactory(user_id=user.id, amount=2000.0, date=now, transaction_type='expense')
+    data = client.get(ENDPOINT, headers=auth_headers(user, password='secret')).get_json()['data']
+    assert data['current_month_savings_rate'] == pytest.approx(-125.0, abs=0.01)
+
+
+def test_NO_INCOME_THIS_MONTH_IS_NO_RATE_NOT_ZERO(client, auth_headers, user):
+    now = datetime.utcnow().replace(day=15, hour=12, minute=0, second=0, microsecond=0)
+    ExpenseFactory(user_id=user.id, amount=40.0, date=now, transaction_type='expense')
+    data = client.get(ENDPOINT, headers=auth_headers(user, password='secret')).get_json()['data']
+    assert data['current_month_savings_rate'] is None

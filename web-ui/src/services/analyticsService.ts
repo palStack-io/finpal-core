@@ -91,6 +91,9 @@ export interface DashboardData {
   current_month_income: number;
   net_cash_flow: number;
   savings_rate: number;
+  /** The calendar month's savings rate, with its sign (negative when more went out); null when nothing came in. The
+   *  Dashboard prints this; it never works a rate out itself. Absent on an older backend. */
+  current_month_savings_rate?: number | null;
   total_assets: number;
   total_debts: number;
   investment_total: number;

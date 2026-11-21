@@ -270,6 +270,12 @@ class AnalyticsService:
         # Calculate derived metrics
         net_cash_flow = total_income - total_expenses_only
 
+        # The MONTH's savings rate (Dashboard C, 2026-11-20): the same calendar month as the two figures beside it,
+        # with its sign (overspending is negative, never clamped), and None when nothing came in: no rate is not 0%.
+        current_month_savings_rate = (
+            ((current_month_income - current_month_expenses_only) / current_month_income) * 100
+            if current_month_income > 0 else None)
+
         # Calculate savings rate if income is not zero
         if total_income > 0:
             savings_rate = (net_cash_flow / total_income) * 100
@@ -320,6 +326,7 @@ class AnalyticsService:
             'total_transfers': total_transfers,
             'net_cash_flow': net_cash_flow,
             'savings_rate': savings_rate,
+            'current_month_savings_rate': current_month_savings_rate,
             'asset_trends_months': asset_debt_trends['months'],
             'asset_trends': asset_debt_trends['assets'],
             'debt_trends': asset_debt_trends['debts'],

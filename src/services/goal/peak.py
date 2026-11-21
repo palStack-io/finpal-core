@@ -25,7 +25,7 @@ look like when they ship.
 from src.models.mountain import Mountain
 from src.services.goal.projection import months_to_clear
 from src.services.goal.mountains import (
-    BAND_ORDER, band_index, mountain_for, peak_accounts, peak_magnitude,
+    BAND_ORDER, band_index, goal_size, mountain_for_goal, peak_accounts, peak_magnitude,
 )
 
 
@@ -124,8 +124,11 @@ def _projection(goal, scale):
 
 def peak_payload(goal):
     """`{'peak': {...}}`, to be merged into the goal payload."""
+    # *** THE MOUNTAIN IS THE GOAL'S SIZE (Harun, 2026-11-20). *** `magnitude` stays the figure the interest line
+    # is worded from (monthly interest for a debt, distance left for a saving goal); it no longer picks the peak.
     scale, magnitude = peak_magnitude(goal)
-    mountain = mountain_for(scale, magnitude)
+    _scale, size = goal_size(goal)
+    mountain = mountain_for_goal(goal)
     hardest = _mountain_for_band(goal.hardest_band)
 
     return {
@@ -135,17 +138,16 @@ def peak_payload(goal):
             # clients carry that rule in the COLOUR, so no caption has to.
             'scale': scale,
             'magnitude': float(magnitude) if magnitude is not None else None,
-            # Explicit rather than left to `magnitude is None`, because the
-            # clients must not have to rediscover that distinction and because
-            # zero and unknown are the pair most likely to be collapsed.
-            'unmeasured': magnitude is None,
+            # The goal's own size (target, or amount to clear): what the mountain and its drawn height come from.
+            'size': float(size) if size is not None else None,
+            # No size at all (nothing to save or clear): no mountain, the flat ridge. NOT band 0.
+            'unmeasured': size is None,
+            # A debt with no stated rate: the mountain is still its size; only the interest line is unknown.
+            'rate_unknown': scale == 'cost' and magnitude is None,
             'band': band_index(mountain.slug) if mountain is not None else None,
             'mountain': _mountain_dict(mountain),
-            # *** THE WATERMARK, AND THE SUMMIT NOTE MUST READ FROM IT. *** The
-            # band is recomputed from the goal's CURRENT figure, so the mountain
-            # SHRINKS as the user succeeds and finishing lands on the smallest
-            # one. Congratulating somebody on Table Mountain for clearing an
-            # Aconcagua is the failure this prevents.
+            # The watermark: the largest mountain this goal has been. Since the mountain is the goal's size it
+            # moves only when the target is edited; a lowered target keeps the summit note on the larger peak.
             'hardest_band': goal.hardest_band,
             'hardest_mountain': _mountain_dict(hardest),
             'apr': _sole_apr(goal),

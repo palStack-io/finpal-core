@@ -104,6 +104,33 @@ def peak_magnitude(goal):
     return scale, (total if any_rate else None)
 
 
+def goal_size(goal):
+    """`(scale, size)`: the goal's OWN size, which picks its mountain (Harun, 2026-11-20, binding).
+
+    *** A GOAL'S MOUNTAIN IS SIZED BY THE GOAL, AND HOW FAR UP IS ITS PROGRESS. *** A saving goal's size is its
+    target; a debt goal's is the amount to clear (`target - start`, positive for card debt). Both land on ONE money
+    ladder (the `build` bands), so a $16,000 goal is the same mountain whether it is saved or paid down, and the
+    mountain no longer shrinks as the goal fills: progress is drawn as how far up, not as a smaller peak.
+
+    `scale` still says which way the money moves ('cost' for a debt, 'build' for a saving goal): the clients colour
+    by it and word the interest line from `peak_magnitude`. `size` is `None` when the goal has no positive size.
+    """
+    from src.services.goal.service import GoalService
+    service = GoalService()
+    scale = 'cost' if service.direction(goal) == 'paydown' else 'build'
+    if scale == 'build':
+        size = Decimal(str(goal.target_amount or 0))
+    else:
+        size = Decimal(str(goal.target_amount or 0)) - Decimal(str(goal.start_amount or 0))
+    return scale, (size if size > 0 else None)
+
+
+def mountain_for_goal(goal):
+    """The real peak a goal's size lands on, or `None` when it has no size. The ONE mapping every screen reads."""
+    _scale, size = goal_size(goal)
+    return None if size is None else mountain_for('build', size)
+
+
 # Monthly equivalents for `RecurringExpense.frequency`, whose comment documents
 # exactly four values: 'daily', 'weekly', 'monthly', 'yearly'.
 #

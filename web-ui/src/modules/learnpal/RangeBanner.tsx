@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MountainSilhouette } from '../../components/MountainSilhouette';
-import { heightForMagnitude } from '../../utils/mountainGeometry';
+import { goalPeakHeight } from '../../utils/goalPeak';
 import { formatMoney } from '../../styles/money';
 import type { LearnRange, RangeScaleSide } from '../../types/learnpal';
 
@@ -53,7 +53,7 @@ const Cluster: React.FC<{ side: RangeScaleSide; scale: 'cost' | 'build' }> = ({ 
           <MountainSilhouette
             key={p.goal_id}
             band={p.peak.band}
-            height={heightForMagnitude(p.peak.magnitude, p.peak.scale)}
+            height={goalPeakHeight(p.peak)}
             scale={p.peak.scale}
             unmeasured={p.peak.unmeasured}
             maxPixelHeight={MAX_PX}

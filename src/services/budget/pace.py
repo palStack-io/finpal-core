@@ -35,6 +35,26 @@ def pace_for(now=None):
     }
 
 
+def days_left(pace):
+    """Days still to spend in this month, TODAY INCLUDED: day 20 of 30 is 11, the last day is 1. None without a pace.
+
+    *** ONE RULE FOR EVERY SCREEN. *** The Budgets hero prints this as sent (Budgets C, 2026-11-20); no client counts
+    days itself, so a phone and a browser in different time zones cannot read "10 days to go" beside "11 days left".
+    Core has no Ask; if it gains one, its "what's left" reads this too.
+    """
+    if not pace or not pace.get('days_in_month'):
+        return None
+    return max(1, int(pace['days_in_month']) - int(pace['day']) + 1)
+
+
+def per_day(left, pace):
+    """`left` spread over `days_left(pace)`, to the cent. None when nothing is left or there is no pace."""
+    days = days_left(pace)
+    if days is None or left is None or float(left) <= 0:
+        return None
+    return round(float(left) / days, 2)
+
+
 def pace_applies(period, spending_type):
     """Whether a pace mark means anything for this row.
 

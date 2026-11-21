@@ -91,6 +91,9 @@ def _serialize_dashboard(dashboard_data):
         'current_month_income': dashboard_data.get('current_month_income', 0) or 0,
         'net_cash_flow': dashboard_data.get('net_cash_flow', 0) or 0,
         'savings_rate': dashboard_data.get('savings_rate', 0) or 0,
+        # The month's rate (None when nothing came in; negative when more went out). The Dashboard reads this.
+        'current_month_savings_rate': (float(dashboard_data['current_month_savings_rate'])
+                                       if dashboard_data.get('current_month_savings_rate') is not None else None),
         'total_assets': dashboard_data.get('total_assets', 0) or 0,
         'total_debts': dashboard_data.get('total_debts', 0) or 0,
         'investment_total': dashboard_data.get('investment_total', 0) or 0,

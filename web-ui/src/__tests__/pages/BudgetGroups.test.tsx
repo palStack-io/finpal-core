@@ -135,15 +135,18 @@ beforeEach(() => {
 afterEach(() => { server.resetHandlers(); });
 
 describe('Budgets page groups', () => {
-  it('renders all three group headings in order', async () => {
+  // Budgets C (2026-11-20): Flexible, the part you can move, comes first in the reading order (the wide right column
+  // on a laptop, first on a phone); Fixed and Non-Monthly follow in the narrow column. Rows are h3s under them.
+  it('renders all three group headings, Flexible first in the reading order', async () => {
     mount(overview());
     await heading('Fixed');
     const headings = screen.getAllByRole('heading', { level: 2 })
       .map((h) => h.textContent);
-    // The budget cards contribute h2s too, so assert on ORDER, not on equality.
-    expect(headings.indexOf('Fixed')).toBeGreaterThanOrEqual(0);
-    expect(headings.indexOf('Fixed')).toBeLessThan(headings.indexOf('Flexible'));
-    expect(headings.indexOf('Flexible')).toBeLessThan(headings.indexOf('Non-Monthly'));
+    expect(headings.indexOf('Flexible')).toBeGreaterThanOrEqual(0);
+    expect(headings.indexOf('Flexible')).toBeLessThan(headings.indexOf('Fixed'));
+    expect(headings.indexOf('Fixed')).toBeLessThan(headings.indexOf('Non-Monthly'));
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent))
+      .toEqual(expect.arrayContaining([LONG_FIXED, LONG_FLEX]));
   });
 
   it('renders the SERVER subtotal, not one it summed itself', async () => {
@@ -160,21 +163,21 @@ describe('Budgets page groups', () => {
     expect(section.textContent).toContain('999');
   });
 
-  it('shows a negative remaining rather than clamping it to zero', async () => {
+  // Budgets C: an overspend is said in words on the row ("Over by $123.00"), from the server's remaining, never
+  // clamped to zero. Voice rule 1 ("no red first"): the chip is rust ink on a rust wash, never the red token.
+  it('says an overspend as "Over by", from the server remaining, never clamped to zero', async () => {
     mount(overview());
     const section = await sectionFor('Flexible');
-    // -123 somewhere in the group header, and NOT a 0.
-    expect(section.textContent).toMatch(/[-\u2212]\u2060?\s?\$?123/);
+    expect(section.textContent).toContain('Over by $123.00');
+    expect(section.textContent).toContain('$723.00 of $600.00');
   });
 
-  it('paints a negative remaining in ink, not red (voice rule 1)', async () => {
+  it('draws the over chip in rust, not in a red or status-over token', async () => {
     mount(overview());
     const section = await sectionFor('Flexible');
-    const negative = within(section).getByText((_, node) => (
-      node?.children.length === 0 && /[-\u2212]\u2060?\s?\$?123/.test(node?.textContent ?? '')
-    ));
-    expect(negative.getAttribute('style')).toContain('var(--text-primary)');
-    expect(negative.getAttribute('style')).not.toMatch(/status-over|re-ink|accent-red/);
+    const chip = within(section).getByText('Over by $123.00');
+    expect(chip.getAttribute('data-status')).toBe('over');
+    expect(chip.getAttribute('style') ?? '').not.toMatch(/status-over|danger|red/);
   });
 
   it('shows the Unsorted section with its count when categories are unclassified', async () => {
@@ -194,9 +197,10 @@ describe('Budgets page groups', () => {
     expect(screen.queryByRole('heading', { level: 2, name: 'Unsorted' })).toBeNull();
   });
 
-  it('renders Left to budget when income is known', async () => {
+  // Budgets C names Left to budget "Not given a job yet" (income minus planned, the server's left_to_budget).
+  it('renders Not given a job yet when income is known', async () => {
     mount(overview());
-    expect(await screen.findByText('Left to budget')).toBeTruthy();
+    expect(await screen.findByText('Not given a job yet')).toBeTruthy();
     expect(screen.getByText(/\$2,280/)).toBeTruthy();
   });
 
@@ -204,30 +208,35 @@ describe('Budgets page groups', () => {
     // *** THE DEMO'S ACTUAL SHAPE. *** Rendering null as 0 would print
     // "-$1,720 left to budget" to somebody who has not been paid yet.
     mount(overview({ income: null, left_to_budget: null }));
-    expect(await screen.findByText('Left to budget')).toBeTruthy();
+    expect(await screen.findByText('Not given a job yet')).toBeTruthy();
     expect(screen.getByText('No income recorded this month. Add it when you have it.')).toBeTruthy();
-    // An em dash, not a figure. Zero would be a claim they earned nothing.
-    expect(screen.getByText('\u2014')).toBeTruthy();
+    // An em dash, not a figure, for Came in and for Not given a job yet. Zero would be a claim they earned nothing.
+    expect(screen.getAllByText('\u2014').length).toBe(2);
   });
 
-  it('does not ask for a target on a fixed category', async () => {
-    // Fixed is reported, not budgeted: the card shows what it costs and does
-    // not score it out of a target it cannot respond to.
+  /* *** REVERSED BY BUDGETS C (Harun, 2026-11-20). *** This test pinned "fixed is reported, not scored": a fixed row
+     said "committed" with no plan and no bar. Budgets C shows a fixed cost against its plan under "Already decided",
+     and an overspend as "$X over the plan" in rust words (never red, never a verdict). */
+  it('shows a fixed cost against its plan under Already decided', async () => {
     mount(overview());
     const section = await sectionFor('Fixed');
-    expect(section.textContent).toContain('committed');
-    expect(section.textContent).not.toMatch(/of \$1,000/);
-    // The flexible card DOES still show its target, so this is the fixed
-    // branch and not the section failing to render at all.
-    expect(screen.getByText(/of \$600/)).toBeTruthy();
+    expect(section.textContent).toContain('Already decided');
+    expect(section.textContent).toContain('$1,000.00 of $1,000.00');
+    expect(section.textContent).not.toContain('committed');
+    expect(section.textContent).not.toContain('over the plan');
   });
 
-  it('offers a group control on every budget row and in Unsorted', async () => {
+  it('offers a group control on every budget row (behind its ⋯) and in Unsorted', async () => {
     mount(overview());
     await heading('Fixed');
-    const controls = await screen.findAllByLabelText('Spending group');
-    // three budgets + two unsorted categories
-    expect(controls.length).toBe(5);
+    // The two unsorted categories are in view; each budget row's control is behind its ⋯.
+    expect((await screen.findAllByLabelText('Spending group')).length).toBe(2);
+    for (const name of [LONG_FIXED, LONG_FLEX, 'Presents and seasonal giving']) {
+      await userEvent.click(screen.getByRole('button', { name: `Options for ${name}` }));
+      expect(screen.getAllByLabelText('Spending group').length).toBe(3);
+      await userEvent.keyboard('{Escape}');
+    }
+    const controls = screen.getAllByLabelText('Spending group');
     expect([...(controls[0] as HTMLSelectElement).options].map((o) => o.text))
       .toEqual(['Fixed', 'Flexible', 'Non-Monthly', 'Unsorted']);
   });
@@ -241,7 +250,9 @@ describe('Budgets page groups', () => {
       )),
     }));
     const section = await sectionFor('Non-Monthly');
+    // Budgets C: the plain empty state when no non-monthly lesson applies, with a way to plan one.
     expect(within(section).getByText('No non-monthly budgets yet.')).toBeTruthy();
+    expect(within(section).getByRole('button', { name: 'Plan it' })).toBeTruthy();
   });
 });
 
@@ -458,7 +469,8 @@ describe('a sinking fund row', () => {
   it('says NEITHER thing on an ordinary row', async () => {
     mount(withSinking({ period: 'monthly' }));
     await heading('Non-Monthly');
-    expect(screen.queryByText(/Set aside/)).toBeNull();
+    // "Set aside each month" is the Non-Monthly card's own subtitle; the row's caption is "Set aside $X a month".
+    expect(screen.queryByText(/Set aside \$/)).toBeNull();
     expect(screen.queryByText(/for the year/)).toBeNull();
   });
 
@@ -468,7 +480,7 @@ describe('a sinking fund row', () => {
       // old thing, never an "unmeasured" state the server never reported.
       mount(withSinking({}));
       await heading('Non-Monthly');
-      expect(screen.queryByText(/Set aside/)).toBeNull();
+      expect(screen.queryByText(/Set aside \$/)).toBeNull();
       expect(await screen.findByText(/of \$450\.00$/)).toBeTruthy();
     });
 });
@@ -578,12 +590,10 @@ describe('spending nobody budgeted is shown inside its own group', () => {
       expect(row).not.toHaveTextContent('%');
     });
 
-  it('*** THE HEADLINE IS ALL SPENDING, NOT THE BUDGETED SLICE OF IT ***', async () => {
-    /* D-271's actual headline. `totalSpent` was `budgets.reduce(...)`, so the
-       biggest figure on the page could only ever be spending in categories
-       the user happened to budget — 474.28 printed under the words "Total
-       Spent" while 2,359.72 left the account. It reads the server's figure
-       now, which is also D-101's rule: one arithmetic, server-side. */
+  it('*** ALL SPENDING IS STILL SAID, AND THE PLAN BAR STAYS THE BUDGETED SLICE ***', async () => {
+    /* D-271's lesson, carried into Budgets C's hero. The old headline printed only budgeted spending under "Total
+       Spent" (474.28 of 2,359.72 that left the account). The hero's plan bar is budgeted spending of the plan, so the
+       bar, its caption and the big "left to spend" agree; the rest of the spending is said beside it in words. */
     mount(overview({
       totals: {
         planned: 1400, actual: 2359.72, remaining: 925.72,
@@ -591,43 +601,31 @@ describe('spending nobody budgeted is shown inside its own group', () => {
       },
     }));
 
-    const row = await screen.findByTestId('page-totals');
-    expect(row.textContent).toContain('2,359.72');
-    expect(row.textContent).toContain('1,885.44 of it not budgeted');
-
-    /* *** AND THE BAR STAYS ADHERENCE. *** 474.28 of a 1,720 plan is 28%.
-       Dividing ALL spending by the plan would read 137% for somebody who is
-       not over a single budget — the opposite of what this bar is for. */
-    expect(row.textContent).toContain('28% used');
-    expect(row.textContent).not.toContain('137%');
+    const hero = await screen.findByTestId('budgets-hero');
+    expect(hero.textContent).toContain('$925.72');
+    expect(hero.textContent).toContain('$474.28 spent of $1,400.00 planned');
+    expect(hero.textContent).toContain('$1,885.44 more went to categories with no budget');
+    expect(hero.textContent).not.toContain('137%');
   });
 
-  it('*** A COLLAPSED GROUP STILL REPORTS WHAT IT COST ***', async () => {
-    /* The rows live in the group BODY, and a group collapses. Rendering the
-       figure only in the body meant collapsing Fixed hid 1,800 of rent again
-       — D-271 one interaction later, on a page that had just been fixed for
-       exactly that. Found by looking at the deployed demo: the header read
-       "Actual $0.00" directly above "NOT BUDGETED $1,800.00". */
+  it('*** NO GROUP COLLAPSES, SO THE UNBUDGETED RENT IS ALWAYS IN VIEW ***', async () => {
+    /* The old groups collapsed, and collapsing Fixed once hid 1,800 of rent (D-271 one interaction later). Budgets C
+       has one Not budgeted card that never folds a figure away: every row, biggest first. */
     mount(withUnbudgeted);
-    const heading = await screen.findByRole('heading', { name: 'Fixed' });
-    const header = heading.closest('button')!;
-
-    expect(header).toHaveTextContent('Not budgeted');
-    expect(header).toHaveTextContent('1,800');
-
-    // Collapse it: the figure is on the header, so it survives.
-    await userEvent.click(header);
-    expect(header).toHaveAttribute('aria-expanded', 'false');
-    expect(header).toHaveTextContent('1,800');
-    expect(screen.queryByTestId('unbudgeted-91')).not.toBeInTheDocument();
+    const card = (await screen.findByRole('heading', { level: 2, name: 'Not budgeted' })).closest('section') as HTMLElement;
+    const names = within(card).getAllByTestId(/^unbudgeted-/).map((r) => r.textContent);
+    expect(names[0]).toContain('Housing');
+    expect(names[0]).toContain('1,800');
+    expect(names.map((n) => n?.split('$')[0])).toEqual(['Housing', 'Groceries', 'Health & Fitness', 'Pharmacy']);
+    expect(document.querySelectorAll('section button[aria-expanded]').length)
+      .toBe(document.querySelectorAll('.fp-bc-name-btn, .fp-bc-more').length);
   });
 
-  it('shows no Not budgeted figure for a group that has none', async () => {
-    // Non-Monthly has nothing unbudgeted; a 0.00 beside three other figures is
-    // noise, and this page already refuses to pad.
+  it('prints the server total on Not budgeted only when it is exactly these rows', async () => {
+    // `totals.unbudgeted_actual` also counts Unsorted's money; with Unsorted present the card shows rows only.
     mount(withUnbudgeted);
-    const heading = await screen.findByRole('heading', { name: 'Non-Monthly' });
-    expect(heading.closest('button')!).not.toHaveTextContent('Not budgeted');
+    const card = (await screen.findByRole('heading', { level: 2, name: 'Not budgeted' })).closest('section') as HTMLElement;
+    expect(card.querySelector('.fp-bc-card-sub')).toBeNull();
   });
 
   it('renders against a server that predates the field, rather than blanking', async () => {
@@ -642,21 +640,25 @@ describe('spending nobody budgeted is shown inside its own group', () => {
 describe('budgets page — its guide', () => {
   const COPY = { heading: 'Budgets: a plan for the month', lines: ['One.', 'Two.'], pose: 'map' as const, tour: [{ target: 'budget-month', title: 'T', body: 'B' }] };
   const prime = (dismissed: string[]) => useGuideStore.setState({
-    status: 'ready', lang: 'en', pages: { budgets: COPY }, dismissed: dismissed as never, toured: [],
+    status: 'ready', lang: 'en', pages: { budgets: COPY }, dismissed: dismissed as never, toured: [], reopened: null,
   });
 
-  it('mounts the guide card itself, and tags what its tour points at', async () => {
+  // Budgets C: the tips card no longer opens on its own; the hero's "?" (About this page) brings it up.
+  it('keeps the card closed until the help button, and tags what its tour points at', async () => {
     prime([]);
     mount(overview());
+    await screen.findByTestId('budgets-hero');
+    expect(screen.queryByRole('region', { name: /budgets: a plan for the month/i })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /about this page/i }));
     expect(await screen.findByRole('region', { name: /budgets: a plan for the month/i })).toBeInTheDocument();
     expect(document.querySelector('[data-guide="budget-month"]')).not.toBeNull();
     expect(document.querySelector('[data-guide="budget-totals"]')).not.toBeNull();
   });
 
-  it('shows Nova\'s button in the header once the card is dismissed', async () => {
+  it('reopens a dismissed card from the same help button', async () => {
     prime(['budgets']);
     mount(overview());
-    expect(await screen.findByRole('button', { name: /about this page/i })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: /budgets: a plan for the month/i })).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: /about this page/i }));
+    expect(await screen.findByRole('region', { name: /budgets: a plan for the month/i })).toBeInTheDocument();
   });
 });
