@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { MountainSilhouette } from '../../../components/MountainSilhouette';
 import { BadgeIcon } from '../../../components/BadgeIcon';
-import { heightForMagnitude } from '../../../utils/mountainGeometry';
+import { goalPeakHeight } from '../../../utils/goalPeak';
 import { RANGE_BLURB, RANGE_BLURB_EMPTY, peakColorVar, peakSubline } from '../../../utils/peakCopy';
 import { formatMoney } from '../../../styles/money';
 import { pageContainerStyle, pageMaxWidthStyle } from '../../../styles/layoutStyles';
@@ -48,7 +48,7 @@ const Peak: React.FC<{ entry: RangePeak }> = ({ entry }) => {
   const { peak } = entry;
   const money = (amount: number) =>
     formatMoney(amount, { currency: entry.currency_code });
-  const height = heightForMagnitude(peak.magnitude, peak.scale);
+  const height = goalPeakHeight(peak);
 
   return (
     <div
