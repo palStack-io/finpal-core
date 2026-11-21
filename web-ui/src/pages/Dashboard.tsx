@@ -517,7 +517,7 @@ export const Dashboard = () => {
             Owner, 2026-09-16: *"the dashboard dont need the dashboard header
             section. i am ok with it starting with your range"*. They are right,
             and the reason is worth writing down rather than just obeying: a
-            head reading **Dashboard / Everyone sharing this finPal instance**
+            head reading **Dashboard / Everyone in your household**
             above a card reading **Your range** is two headers before any
             content, and the first one names the route rather than saying
             anything. Every other page's head names its ONE subject; this
@@ -574,14 +574,14 @@ export const Dashboard = () => {
             </span>
             {/* Its own element, not a bare string beside another one. A
                 fragment of two text nodes splits the sentence across them, and
-                `getByText('Everyone sharing this finPal instance')` matches a
+                `getByText('Everyone in your household')` matches a
                 single node's whole text — so the scope became unfindable by the
                 two assertions that exist to check it renders. A `<span>` makes
                 the statement a discrete thing on the page, which is what those
                 tests were always really asserting. */}
             <span>{selectedMember
               ? `${selectedMember.name}'s money`
-              : 'Everyone sharing this finPal instance'}</span>
+              : 'Everyone in your household'}</span>
           </>}
           /* Top of page, not beside the cards: this narrows the WHOLE page, and
              a control that sits next to one figure reads as belonging to it. */

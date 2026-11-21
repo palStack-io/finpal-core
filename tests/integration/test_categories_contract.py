@@ -70,7 +70,7 @@ BOTH_SPELLINGS = pytest.mark.parametrize('slash', ['', '/'],
 # `spending_type` joined this set when the budget spending groups shipped. It is
 # always PRESENT and may be null: a client has to be able to tell "unsorted"
 # from "this backend is too old to know", and an omitted key cannot say that.
-DETAIL_FIELDS = {'id', 'name', 'icon', 'color', 'parent_id', 'is_system',
+DETAIL_FIELDS = {'id', 'name', 'icon', 'icon_key', 'color', 'parent_id', 'is_system',
                  'spending_type'}
 
 
@@ -104,11 +104,11 @@ def _make_category(owner, name, **kwargs):
 # =============================================================================
 
 @BOTH_SPELLINGS
-def test_pin_get_one_category_returns_a_bare_seven_field_dict(
+def test_pin_get_one_category_returns_a_bare_eight_field_dict(
         client, db, me, headers, slash):
     """No envelope, no `success`, no `category` key — just the fields.
 
-    Was six fields until the budget spending groups added `spending_type`.
+    Was six fields until the budget spending groups added `spending_type`, and seven until `icon_key`.
     *** IT IS ASSERTED AS PRESENT-AND-NULL, NOT OMITTED. *** An absent key and a
     null mean different things to a client here: null is "the user has not
     classified this", absent is "this backend predates the feature", and the
@@ -121,7 +121,8 @@ def test_pin_get_one_category_returns_a_bare_seven_field_dict(
     assert resp.get_json() == {
         'id': category.id,
         'name': 'Groceries',
-        'icon': '🏷️',
+        'icon': '🏷️',          # the emoji old clients draw as text ...
+        'icon_key': 'tag',      # ... and the line icon's key (Wave 0, 2026-11-20)
         'color': '#112233',
         'parent_id': None,
         'is_system': False,

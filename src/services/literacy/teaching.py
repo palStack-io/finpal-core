@@ -54,10 +54,11 @@ TOPICS = {
     'mountains': {
         'title': 'Your goals are mountains',
         'body': (
-            'Each goal is drawn at the size of what it asks of you, from your '
-            'money and nothing else. No amount of studying, earning or buying '
-            'moves a peak. That is deliberate: the picture of your finances '
-            'has to stay honest even on a bad month.'
+            "A goal's mountain is sized by the goal, and how far up it you are is "
+            'your progress toward it, from your money and nothing else. No '
+            'amount of studying, earning or buying moves a peak. That is '
+            'deliberate: the picture of your finances has to stay honest even on '
+            'a bad month.'
         ),
     },
 }
