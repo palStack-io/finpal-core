@@ -41,21 +41,23 @@ The self-hosted version is **free and open source** under AGPL-3.0:
 - OIDC/SSO authentication
 - All current features you see in this repository
 
-### finPal Premium (Proprietary) - Managed Hosting Only
+### finPal Premium (Proprietary) - hosted finPal only
 
-Our managed hosting service will include **proprietary premium features**:
-- 🤖 **AI-powered receipt scanning** - Photo to expense in seconds
-- 📊 **Advanced analytics** - Deeper insights and forecasting
-- 👥 **Team collaboration** - Multi-household shared budgets
-- 📧 **Enhanced notifications** - Smart alerts and summaries
-- 🎯 **Premium integrations** - More banks, more services
-- ⚡ **Priority support** - Direct access to the team
+The hosted edition at [palstack.io/finpal](https://palstack.io/finpal) adds proprietary features on top of Core
+(updated 2026-11-23):
+
+- **Ask**: plain questions answered from your own budget with fixed rules on the server. No AI model reads your money.
+- **Your next dollar**: five questions, then the order many people follow, filled in with your money.
+- **The Analytics report**: what changed, what stood out, and one thing to try next.
+- **Module tracks and mountains**, such as Cards and points with pointsPal.
+- **Paid modules**: retirementPal, investmentPal, taxPal and businessTaxPal, coming with paid plans.
+- **The phone app**, which connects to hosted finPal only.
 
 **Premium features are:**
-- Available **only** via managed hosting subscription
+- Available **only** on hosted finPal
 - **Not open source** (proprietary code)
-- Used to fund development of the free Core version
-- Coming soon at [palstack.io/finpal](https://palstack.io/finpal)
+- Used to fund development of the free Core
+- Not taken from Core: what is in this repository stays here and stays complete
 
 ### Why Dual Licensing?
 

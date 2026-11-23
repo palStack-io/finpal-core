@@ -18,167 +18,19 @@
 
 ---
 
-## It started with "did I already pay you for that?"
+finPal is a budgeting app you run on your own server. It tracks what comes in and goes out, keeps your budgets and
+goals honest, splits shared costs, and teaches money from your own figures while you use it. No analytics, no
+tracking, no AI, and nothing about your money is ever sent to us.
 
-finPal began as **Dollar Dollar Bill Y'all**, built by two co-founders who happen to be
-married, to settle a small recurring argument: by the end of the month, even organised
-people lose track of who owes whom. Spreadsheets get messy. The question comes back.
-
-So we built something that just did the maths. No bank connections, no subscriptions,
-nothing harvested. Then friends started using it. Then people we had never met were running
-it on their own servers, and the requests arrived — budgets, investments, bank sync, shared
-expense clubs. Each one made sense. Eventually we had outgrown the name and the code
-underneath it, so we rewrote the whole thing and called it finPal.
-
-What never changed is the part we started with: **it is your money, on your server, and
-nobody is selling anything about you.**
-
----
-
-## Learn as you use it
-
-Most of us were never taught how money works, and a course you have to finish rarely sticks.
-finPal teaches from the thing you are already doing: your own budget.
-
-- **This week.** The Dashboard opens on one thing to understand and one thing to do, picked
-  from your figures. It stays the same from Monday to Sunday (the card names the dates) unless
-  you do it or set it aside, then the next one comes.
-- **"Why?" cards** sit next to the figures they explain, on Budgets, Goals and Accounts.
-- **A one-minute lesson** with your own numbers: what *your* card's interest cost last month,
-  what a first buffer would look like for *your* month. Each one ends with one small thing to do.
-- **Six skills, three marks each:** understood, used on your money, still remembered. Read your
-  month, know your fixed costs, plan for non-monthly costs, build a buffer, understand
-  interest, pay down debt.
-- **A question a few days later**, at most one a day, with "Not sure yet" and "Not now"
-  always there. Answer it and it comes back further apart; nothing is ever marked wrong.
-- **Quiet on hard days.** No lesson in a hard month, and you can turn the whole thing off in
-  Settings. What you already learned is kept.
-
-The full lessons and quizzes (learnPal) are still there behind it, unlocked by your own figures.
-
----
-
-## Why it feels different to use
-
-Most money apps open by telling you what to do. This one opens by getting your own figures
-straight, because almost every decision people regret was made on a number they had wrong.
-
-And because knowing the number is the hard part, finPal makes *that* the game.
-
-### Mountains
-
-Anything you are working towards is drawn as a mountain. The height is the size of the
-problem — what the debt is costing you every month, what is still left to save — **not how
-hard you have tried.** A mountain never shrinks because you had a bad month, and it never
-grows to make a point.
-
-### Coins
-
-You earn coins for telling finPal the truth about your money: naming an account, recording
-an interest rate, sorting a month of transactions. The reward and the benefit are the same
-act — the coin arrives *because* the picture got more accurate, and an accurate picture is
-the thing that actually changes decisions.
-
-### Gear
-
-Coins buy kit for your climber. It looks good and **it gates nothing, ever.** No feature is
-behind it, no number is inflated by it. It is there because finishing something small should
-feel like finishing something.
-
-### Badges
-
-Given, not bought, and **never taken back** — a hard month cannot remove one you have
-already earned. Some come from reading a lesson, which unlocks from your own figures rather
-than from a schedule. Others come from what actually happened: clearing a card, six months
-inside your budget, a year keeping to a paydown plan.
-
-That second kind is allowed *only* because a badge pays nothing. Coins can never be earned
-for an outcome — a careful person on a low wage may never manage one — but a badge costs
-nothing to give and is absent rather than false when you have not earned it, so no screen
-can ever tell you that you failed at something.
-
-### Everest
-
-One mountain everybody climbs, and **the only ceiling in the product**. Your altitude comes
-from the acts you have done and the lessons you have read, never from your money — 8,849 m
-is a shared public fact, identical for everyone. It ratchets: it cannot fall, so opening a
-credit card can never cost you height.
-
-Lessons carry you up it but cannot summit you. The last stretch is acts only.
-
-### Four promises, and they are structural
-
-These are not policies we intend to keep. They are properties of how the thing is built:
-
-- **Nothing is ever taken away.** No streak to break, no score to decay.
-- **No score you did not ask for.** The only progress bar is one whose target you chose.
-- **Studying cannot flatter your finances.** Only your actual money moves a mountain.
-- **You are never *paid* for your circumstances, only for what you did.**
-
-That last one matters more than it sounds. It is easy to write a money game that quietly
-pays people for having a mortgage, or for being able to save. This one does not — no coin
-and no metre of altitude can ever come from an outcome.
-
-A badge can, and the difference is the whole reason badges are safe: **a badge buys
-nothing.** It cannot be spent, it does not move your altitude, and an unearned one is
-absent rather than shown greyed out. So "six months on budget" can be marked when it
-happens without anyone being ranked by whether it did.
-
----
-
-## Your money stays on your server
-
-finPal has no analytics, no tracking and no AI. Nothing you tell it about your money is sent
-to us. There is no "us" in the path.
-
-The only things that ever leave are ones you switch on yourself — a bank connection, a
-share-price lookup, an email — and each one carries the least it can. The full inventory,
-with the commands to re-derive it yourself, is in
-**[docs/DATA_BOUNDARIES.md](docs/DATA_BOUNDARIES.md)**.
-
-finPal is open source and runs on a server somebody chose. If that is not you, whoever runs
-it holds the database, the backups and the mail server. That is worth knowing, and it is
-true of any app you do not host yourself — the difference is that you can read every line of
-this one.
-
----
-
-## What you get
-
-- **Expenses** that categorise themselves, with rules that learn your patterns
-- **Budgets** grouped into Fixed / Flexible / Non-Monthly, so the page can tell *the ground
-  is expensive* from *you overspent* — with a pace mark showing where you should be by now
-- **Sinking funds** — give a Non-Monthly budget a yearly period and finPal shows what to set
-  aside each month, instead of calling a £600 car tax an overspend every March
-- **Goals** for savings and debt payoff, tracked against real balances; one goal can watch
-  several accounts. Say what kind you are setting and finPal brings the right help:
-  - **Debt paydown** — choose highest-rate-first or smallest-balance-first, say what you
-    mean to pay each month, and it tells you where the month stands. It states *behind* and
-    offers nothing, because somebody behind is usually behind because they could not pay
-  - **Emergency fund** — what three or six months of your own essentials would cost, or
-    type your income and fixed costs yourself if nothing is sorted yet
-  - **Bills that are not monthly** — last year's total, divided by twelve
-- **A profile page** — the kit you own on a shelf, and the badges you have kept up
-- **Shared costs** with your household, and who owes whom
-- **Investments** across portfolios, with automatic price updates
-- **Bank sync** via [SimpleFin](docs/simplefin.md), or drop statements in a
-  [watched folder](docs/csv-import.md) and let them import themselves
-- **Optional modules** you can switch off at any time: pointsPal (which card to pay with)
-  and learnPal (the lessons and "learn as you use it" above)
-- Multi-currency, multi-account, dark mode, and a mobile app in testing
+This repository is **finPal Core**: open source (AGPL-3.0), complete, and free to self-host.
 
 > [!WARNING]
-> **finPal is under active development.** Features, APIs and the database schema still
-> change. Back up your data before upgrading.
+> **finPal is under active development.** Features, APIs and the database schema still change. Back up your data
+> before upgrading.
 
-Try it with no install at all on the **[live demo](https://findemo.palstack.io)** — four
-pre-seeded people, no account needed.
+## Quick start
 
----
-
-## Running it yourself
-
-Three commands. Nothing to build — the compose file pulls prebuilt images.
+Three commands. Nothing to build: the compose file pulls prebuilt images.
 
 ```bash
 git clone https://github.com/palStack-io/finpal-core.git && cd finpal-core
@@ -186,34 +38,98 @@ git clone https://github.com/palStack-io/finpal-core.git && cd finpal-core
 docker compose up -d
 ```
 
-Open **http://localhost**. The first account to sign up becomes the admin.
+Open **http://localhost**. The first account to sign up becomes the admin. Set `HTTP_PORT` in `.env` to serve on
+another port.
 
-Port 80 is the default — set `HTTP_PORT` in `.env` to serve elsewhere.
+`setup-env.sh` generates real secrets. finPal **refuses to start** on the `change_me_*` placeholders in `.env.example`,
+because those are published here and anyone could forge sessions signed with them.
 
-> `setup-env.sh` generates real secrets for you. finPal **refuses to start** on the
-> `change_me_*` placeholders in `.env.example`, because those are published in this
-> repository and anyone could forge sessions signed with them.
+**Upgrading:** `docker compose pull && docker compose up -d`. finPal reconciles its own schema on boot and logs what it
+did. Other compose files, backup and restore: **[docs/install.md](docs/install.md)**.
 
-### Upgrading
+No install at all? The **[live demo](https://findemo.palstack.io)** runs this edition with four ready-made people. No
+account needed.
 
-Pull the new images and restart. The schema catches itself up.
+## Core and hosted: what is in this repository
 
-```bash
-docker compose pull && docker compose up -d
-```
+| | finPal Core (this repo, self-hosted) | Hosted finPal (palstack.io) |
+|---|---|---|
+| Transactions, rules, budgets, goals, debt paydown, sinking funds | Yes | Yes |
+| Shared costs and who owes whom, investments, multi-currency | Yes | Yes |
+| Bank sync (SimpleFin) and CSV folder import | Yes | Yes |
+| **learnPal**: This week, "Why?" cards, short lessons, six skills, recall | Yes | Yes |
+| **pointsPal**: which card to pay with | Yes | Yes |
+| Coins, gear, badges and the climb up Everest | Yes | Yes |
+| Ask (plain questions answered from your budget, no AI), Your next dollar, the Analytics report | No | Yes |
+| Module tracks and their mountains (Cards and points, and the paid modules) | No | Yes |
+| Paid modules: retirementPal, investmentPal, taxPal, businessTaxPal | No | Coming with paid plans |
+| The phone app | No (it connects to hosted finPal only) | In testing |
 
-finPal reconciles its own schema on boot and logs what it did. The release notes will say so
-explicitly if that ever stops being true. The details, the other compose files, and backup
-and restore are all in **[docs/install.md](docs/install.md)**.
+Everything in Core stays open source and complete. The hosted edition funds this work; it takes nothing away from
+it. Licence details: **[docs/licensing.md](docs/licensing.md)**.
 
----
+## What you get
+
+- **Expenses** that categorise themselves, with rules that learn your patterns.
+- **Budgets** grouped into Fixed, Flexible and Non-monthly, so the page can tell *the ground is expensive* from
+  *you overspent*, with a pace mark showing where you should be by now.
+- **Sinking funds:** give a Non-monthly budget a yearly period and finPal shows what to set aside each month, instead
+  of calling a yearly bill an overspend.
+- **Goals** for savings and debt, tracked against real balances; one goal can watch several accounts.
+  - **Debt paydown:** highest rate first or smallest balance first, each priced in interest. It says *behind* plainly
+    and never scolds.
+  - **Emergency fund:** what three or six months of your own essentials would cost.
+  - **Bills that are not monthly:** last year's total, divided by twelve.
+- **Shared costs** with your household, and who owes whom.
+- **Investments** across portfolios, with automatic price updates.
+- **Bank sync** via [SimpleFin](docs/simplefin.md), or drop statements in a [watched folder](docs/csv-import.md).
+- **Optional modules** you can switch off any time: learnPal (below) and [pointsPal](docs/pointspal.md).
+- Multi-currency, multi-account, dark mode.
+
+## Learn as you use it (learnPal)
+
+Most of us were never taught how money works, and a course you have to finish rarely sticks. finPal teaches from the
+thing you are already doing: your own budget.
+
+- **This week:** the Dashboard opens on one thing to understand and one thing to do, picked from your figures, held
+  Monday to Sunday.
+- **"Why?" cards** next to the figures they explain, on Budgets, Goals and Accounts.
+- **A one-minute lesson** with your own numbers, ending with one small thing to do.
+- **Six skills, three marks each** (understood, used on your money, still remembered): read your month, know your
+  fixed costs, plan for non-monthly costs, build a buffer, understand interest, pay down debt.
+- **A question a few days later**, at most one a day, with "Not sure yet" and "Not now" always there.
+- **Quiet on hard days**, and one switch in Settings turns it all off. What you learned is kept.
+
+## The climb, and four promises
+
+Anything you are working towards is drawn as a real mountain. **Coins** come from telling finPal
+the truth about your money (naming an account, recording a rate), and buy **gear** for your climber that gates
+nothing. **Badges** are given and never taken back. **Everest** (8,849 m) is the one mountain everybody climbs; your
+height comes from what you have done and the lessons you have read, never from your balance, and it cannot fall.
+
+These are properties of how it is built, not policies:
+
+- **Nothing is ever taken away.** No streak to break, no score to decay.
+- **No score you did not ask for.** The only progress bar is one whose target you chose.
+- **Studying cannot flatter your finances.** Only your actual money moves a mountain.
+- **You are never paid for your circumstances**, only for what you did: no coin and no metre of altitude can come from
+  an outcome like having a mortgage or being able to save.
+
+## Your money stays on your server
+
+No analytics, no tracking, no AI. The only things that ever leave are ones you switch on yourself (a bank connection, a
+share-price lookup, an email), each carrying the least it can. The full inventory, with commands to check it yourself:
+**[docs/DATA_BOUNDARIES.md](docs/DATA_BOUNDARIES.md)**.
+
+If someone else runs your instance, they hold the database, the backups and the mail server. That is true of any app
+you do not host yourself; the difference is that you can read every line of this one.
 
 ## Documentation
 
 | Guide | What's in it |
 |---|---|
 | **[Install](docs/install.md)** | Setup, which compose file to use, upgrades, backup and restore |
-| **[Environment variables](docs/ENV_REFERENCE.md)** | Every setting, what it defaults to, what it affects |
+| **[Environment variables](docs/ENV_REFERENCE.md)** | Every setting, its default, what it affects |
 | **[Data boundaries](docs/DATA_BOUNDARIES.md)** | Everything that can leave your instance, and how to check |
 | **[Architecture](docs/architecture.md)** | What runs where, and the system requirements |
 | **[API tokens](docs/api-tokens.md)** | Personal access tokens for scripts and local LLMs |
@@ -222,28 +138,18 @@ and restore are all in **[docs/install.md](docs/install.md)**.
 | **[pointsPal](docs/pointspal.md)** | The optional card-rewards module |
 | **[Testing](docs/testing.md)** | Running the suites |
 | **[Contributing](CONTRIBUTING.md)** | How to propose a change |
-| **[About & roadmap](docs/about.md)** | Where this came from and where it is going |
-| **[Licensing in full](docs/licensing.md)** | AGPL-3.0, and what the Premium split means |
-
----
-
-## Hosting
-
-Self-hosting is the whole point, and it is free. If you would rather not run a server,
-palStack offers a hosted edition with optional paid modules — that revenue funds this work
-and takes nothing away from it. **Everything in this repository stays open source and
-complete.**
+| **[About](docs/about.md)** | Where finPal came from, and what is next |
+| **[Licensing](docs/licensing.md)** | AGPL-3.0, and what is hosted only |
 
 ## Contributing
 
-Bug reports, features, docs and translations are all welcome — see
-**[CONTRIBUTING.md](CONTRIBUTING.md)**. If you are reporting a bug, the most useful thing you
-can include is what you expected the number to be, and what it actually said.
+Bug reports, features, docs and translations are welcome: see **[CONTRIBUTING.md](CONTRIBUTING.md)**. For a bug, the
+most useful thing you can include is what you expected the number to be, and what it actually said.
 
 ## Licence
 
-**AGPL-3.0.** Use it, change it, host it. If you run a modified version as a service, share
-your changes. See [LICENSE](LICENSE) and [docs/licensing.md](docs/licensing.md).
+**AGPL-3.0.** Use it, change it, host it. If you run a modified version as a service, share your changes. See
+[LICENSE](LICENSE) and [docs/licensing.md](docs/licensing.md).
 
 ## Contact
 
@@ -251,5 +157,5 @@ your changes. See [LICENSE](LICENSE) and [docs/licensing.md](docs/licensing.md).
 [Issues](https://github.com/palStack-io/finpal-core/issues)
 
 <div align="center">
-  <sub>Built by palStack — privacy-first tools for people who would rather own their data.</sub>
+  <sub>Built by palStack. Everyday tools for food, money, home and friends.</sub>
 </div>

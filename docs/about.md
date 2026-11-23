@@ -15,16 +15,16 @@ The feature requests followed - budgets, investment tracking, bank sync, expense
 
 **Dollar Dollar Bill Y'all became finPal.** Complete rewrite, modern stack, all the features people asked for - while keeping what always mattered: privacy-first, self-hosted, no tracking.
 
-finPal is also the foundation for what's next: **debtFree** - a gamified debt payoff platform with financial literacy built in. finPal is where we learn what people need. debtFree is where we focus that on helping people get out of debt.
+We once planned a separate app for getting out of debt, called debtFree. It never became one: its ideas went into finPal itself, as learning from your own figures, debt paydown priced both ways, and the climb.
 
 ### Roadmap
 
 ```
-Dollar Dollar Bill Y'all (2023) - bill splitting
+Dollar Dollar Bill Y'all (2023)  - bill splitting
     ↓
-finPal (2024-2025) - full financial management
+finPal (2024-2025)              - full money management
     ↓
-debtFree (future) - gamified debt payoff + financial literacy
+finPal (2026)                   - learn money by managing yours
 ```
 
 We didn't come from fintech. We learned as we built - bank APIs, multi-currency, secure data handling - with AI tools helping us move faster and human review on everything. finPal is part of **palStack**, our collection of privacy-first tools.
@@ -33,18 +33,10 @@ We didn't come from fintech. We learned as we built - bank APIs, multi-currency,
 
 ### The palStack Family
 
-**Production Ready:**
-- **[pantryPal](https://palstack.io/pantrypal)** - Never buy duplicate groceries again
-
-**Final Testing Stage:**
-- **[finPal](https://palstack.io/finpal)** - You're here! Complete financial management platform
-
-**In Active Development:**
-- **[propertyPal](https://palstack.io/propertypal)** - Track home maintenance, warranties, documents, plus **petPal** (pet care) and **carPal** (vehicle maintenance)
-- **[clubPal](https://palstack.io/clubpal)** - Group coordination for dining, activities, and social clubs
-
-**Future Vision:**
-- **debtFree** - Gamified debt payoff with financial literacy built in (finPal's ultimate evolution)
+- **[finPal](https://palstack.io/finpal)**: money. You're here.
+- **[pantryPal](https://palstack.io/pantrypal)**: food, so you stop buying what you already have.
+- **[propertyPal](https://palstack.io/propertypal)**: home, with its upkeep, warranties and documents.
+- **[gatherPal](https://palstack.io/gatherpal)** (formerly clubPal): friends, and getting together.
 
 **Learn more at [palstack.io](https://palstack.io)**
 
@@ -72,45 +64,14 @@ Self-hosting means:
 
 ## Roadmap
 
-**Completed:**
-- [x] Backend API with Flask + PostgreSQL
-- [x] Web UI with React + TypeScript
-- [x] Expense tracking with auto-categorization
-- [x] Smart budgeting with alerts
-- [x] Bill splitting and group management
-- [x] Investment portfolio tracking
-- [x] SimpleFin bank sync (US banks)
-- [x] Multi-currency support
-- [x] OIDC/SSO authentication
+**In Core today:** expenses with rules, budgets (Fixed, Flexible, Non-monthly) with a pace mark, sinking funds, goals
+and debt paydown, shared costs and groups, investments, SimpleFin bank sync and CSV folder import, multi-currency,
+OIDC/SSO, API tokens, learnPal (learn as you use it) and pointsPal.
 
-**In Progress:**
-- [ ] Mobile apps (React Native + Expo)
-- [ ] GoCardless integration (European banks)
-- [ ] Progressive Web App (PWA) support
+**Next for Core:** fixes, and improvements to learnPal and pointsPal. Core is not a trial edition; it is maintained.
 
-**finPal Near-Term:**
-- [ ] Receipt scanning with OCR
-- [ ] Credit card points tracking
-- [ ] Multi-language support (i18n)
-- [ ] Recurring transaction automation
-- [ ] Advanced reporting and exports
-- [ ] Managed hosting service
-
-**The Ultimate Vision: debtFree**
-
-finPal is our stepping stone to **debtFree**—a gamified debt payoff platform with financial literacy at its core:
-
-- 🎮 **Gamification**: Progress bars, achievements, milestones that motivate
-- 📚 **Financial Literacy**: Educational content built into the experience
-- 🏆 **Community Challenges**: Make debt reduction social and supportive
-- 📊 **Debt Payoff Strategies**: Snowball, avalanche, custom methods
-- 💪 **Motivation System**: Celebrate wins, learn from setbacks
-- 🎓 **Built-in Education**: Financial literacy without the boring textbooks
-
-finPal teaches us what works for financial management. debtFree will laser-focus that knowledge on helping people escape debt and build financial freedom.
-
-**palStack Vision:**
-Cross-Pal integration: grocery spending from pantryPal, home expenses from propertyPal, all feeding into finPal's budgets and debtFree's payoff strategies.
+**Hosted only:** Ask, Your next dollar, the Analytics report, module tracks and mountains, the phone app, and the paid
+modules (retirementPal, investmentPal, taxPal, businessTaxPal). See [licensing.md](licensing.md).
 
 ---
 
@@ -129,7 +90,7 @@ We're not building engagement platforms or harvesting data. We solve real proble
 
 **Two Paths:**
 1. **Self-Host** - Free forever, full features, community support
-2. **Managed Hosting** - Coming soon! We handle infrastructure, you enjoy the app
+2. **Hosted finPal** - Hosted accounts open January 1, 2027. We run it, and it adds the hosted-only features above
 
 We're building sustainable tools that help people, not chasing unicorns. If we can pay our bills doing it—and sleep well at night—that's success.
 
@@ -137,15 +98,10 @@ We're building sustainable tools that help people, not chasing unicorns. If we c
 
 ## The palStack Ecosystem
 
-**Production Ready:**
-- **[pantryPal](https://pantrypal.palstack.io)** - Food waste reduction | [Docs](https://pantrypal.palstack.io/docs) | [GitHub](https://github.com/palStack-io/pantrypal-core)
-
-**Final Testing:**
-- **[finPal](https://palstack.io/finpal)** - Personal finance tracking | [Docs](https://palstack.io/finpal/docs) | [GitHub](https://github.com/palStack-io/finpal-core)
-
-**In Development:**
-- **[propertyPal](https://propertypal.palstack.io)** - Home, pet, and vehicle tracking | [GitHub](https://github.com/palStack-io/propertypal-core)
-- **[clubPal](https://clubpal.palstack.io)** - Group coordination | [GitHub](https://github.com/palStack-io/clubpal-core)
+- **[finPal](https://palstack.io/finpal)** - Money | [GitHub](https://github.com/palStack-io/finpal-core)
+- **[pantryPal](https://palstack.io/pantrypal)** - Food | [GitHub](https://github.com/palStack-io/pantrypal-core)
+- **[propertyPal](https://palstack.io/propertypal)** - Home | [GitHub](https://github.com/palStack-io/propertypal-core)
+- **[gatherPal](https://palstack.io/gatherpal)** (formerly clubPal) - Friends
 
 *Privacy-first • Family-focused • Home Assistant ready • AGPL-3.0*
 
