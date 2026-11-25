@@ -1,5 +1,10 @@
 # Contributing to finPal Core
 
+> [!IMPORTANT]
+> **Code contributions are paused** while we work out how to review AI-assisted changes well. Bug reports, ideas
+> and questions are very welcome: open an [issue](https://github.com/palStack-io/finpal-core/issues) or join us on
+> [Discord](https://discord.gg/mcgcp7RdYs). The setup notes below stay for anyone running finPal from source.
+
 finPal Core is the open-source, self-hostable edition of finPal: a Python/Flask
 REST API plus a React/TypeScript web UI, packaged with Docker.
 

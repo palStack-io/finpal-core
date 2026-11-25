@@ -7,7 +7,7 @@
     <a href="https://findemo.palstack.io"><strong>Try the demo →</strong></a> |
     <a href="docs/install.md">Install</a> |
     <a href="https://palstack.io/finpal/docs">Documentation</a> |
-    <a href="https://discord.gg/A4n3MtDgTj">Discord</a>
+    <a href="https://discord.gg/mcgcp7RdYs">Discord</a>
   </p>
 
   <p>
@@ -143,17 +143,24 @@ you do not host yourself; the difference is that you can read every line of this
 
 ## Contributing
 
-Bug reports, features, docs and translations are welcome: see **[CONTRIBUTING.md](CONTRIBUTING.md)**. For a bug, the
-most useful thing you can include is what you expected the number to be, and what it actually said.
+We have paused code contributions while we work out how to review AI-assisted changes well. Bug reports, ideas and
+questions are very welcome: open an [issue](https://github.com/palStack-io/finpal-core/issues) or join us on
+[Discord](https://discord.gg/mcgcp7RdYs). For a bug, the most useful thing you can include is what you expected the
+number to be, and what it actually said.
+
+Found a security problem? Please report it privately; see [SECURITY.md](https://github.com/palStack-io/.github/blob/main/SECURITY.md).
 
 ## Licence
 
-**AGPL-3.0.** Use it, change it, host it. If you run a modified version as a service, share your changes. See
-[LICENSE](LICENSE) and [docs/licensing.md](docs/licensing.md).
+**AGPL-3.0.** Use it, change it, self-host it. If you run a modified version as a network service, you must publish
+your changes under the same licence. See [LICENSE](LICENSE) and [docs/licensing.md](docs/licensing.md).
+
+finPal is built for personal and household use. To run it commercially, or as a service without the AGPL's
+obligations, contact **support@palstack.io** about a commercial licence.
 
 ## Contact
 
-[Discord](https://discord.gg/A4n3MtDgTj) · [palstack.io](https://palstack.io) ·
+[Discord](https://discord.gg/mcgcp7RdYs) · [palstack.io](https://palstack.io) ·
 [Issues](https://github.com/palStack-io/finpal-core/issues)
 
 <div align="center">

@@ -69,7 +69,7 @@ We believe in **both** open source **and** sustainable business:
 
 **Full License:** See [LICENSE](../LICENSE) file for complete terms.
 
-**Questions?** Email palstack4u@gmail.com
+**Questions, or a commercial licence?** Email support@palstack.io
 
 ---
 
