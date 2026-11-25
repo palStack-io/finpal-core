@@ -99,7 +99,7 @@ PAGE_GUIDES = {
                 'lines': [
                     'A goal is something you are saving toward, or a debt you are paying off. '
                     'Each one becomes a peak on your range, which you can see on the Dashboard.',
-                    'The size comes from the amount, and the climb is how far along you are.',
+                    'A goal\'s mountain is sized by the goal, and how far up it you are is your progress toward it.',
                     'Link an account and finPal tracks the progress for you.',
                 ],
             },
@@ -108,7 +108,7 @@ PAGE_GUIDES = {
                 'lines': [
                     'Una meta es algo para lo que ahorras, o una deuda que estás pagando. '
                     'Cada una se convierte en una cumbre de tu cordillera, que puedes ver en el Panel.',
-                    'El tamaño depende del monto, y el ascenso es cuánto has avanzado.',
+                    'La montaña de una meta tiene el tamaño de la meta, y lo alto que has subido en ella es tu avance hacia ella.',
                     'Vincula una cuenta y finPal registra el progreso por ti.',
                 ],
             },
@@ -503,14 +503,16 @@ PAGE_GUIDES = {
                 'heading': 'Your range: every goal as a mountain',
                 'lines': [
                     'Your goals as a range of mountains, with Mount Everest in the middle for everyone.',
-                    'Altitude comes from the coins you earn and the lessons you finish, and it only goes up.',
+                    'Your height on Everest comes only from what you do, like recording a detail of your own money or '
+                    'finishing a lesson, never from how much money you have. It only goes up.',
                 ],
             },
             'es': {
                 'heading': 'Tu cordillera: cada meta como una montaña',
                 'lines': [
                     'Tus metas como una cordillera, con el Monte Everest en el centro para todos.',
-                    'La altitud viene de las monedas que ganas y las lecciones que terminas, y solo sube.',
+                    'Tu altura en el Everest viene solo de lo que haces, como registrar un dato de tu propio dinero o '
+                    'terminar una lección, nunca de cuánto dinero tienes. Solo sube.',
                 ],
             },
         },

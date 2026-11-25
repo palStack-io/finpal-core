@@ -292,7 +292,7 @@ describe('the learnPal home', () => {
     server.use(http.get(`${BASE}/api/v1/learnpal/stats`, () =>
       HttpResponse.json({ success: false }, { status: 404 })));
     draw();
-    await screen.findByText(/learnPal is not enabled on this instance/);
+    await screen.findByText(/Learn is not turned on here/);
     expect(screen.queryByRole('alert')).toBeNull();
   });
 

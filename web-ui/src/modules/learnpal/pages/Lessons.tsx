@@ -106,7 +106,7 @@ export const Lessons: React.FC = () => {
         <PageHead guide="learnpal-lessons"
           band="learnpal"
           title="Lessons"
-          subtitle="learnPal is not enabled on this instance."
+          subtitle="Learn is not turned on here."
         />
       </div>
     );

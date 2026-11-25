@@ -510,6 +510,17 @@ def create_app(config_name=None):
                     'is_system correction could not run; categories seeded by '
                     'the old demo seeder stay uneditable until it succeeds')
 
+            # Wave 0 (2026-11-20): category icons are line-icon keys now. The seeders write keys; this is the
+            # condition-keyed correction for the emoji every earlier version wrote (D-178). Keyed on the old value,
+            # so a person's own icon is left alone and a second boot is a no-op.
+            try:
+                from src.services.category.icon_keys import correct_seeded_icon_emoji
+                correct_seeded_icon_emoji()
+            except Exception:
+                app.logger.exception(
+                    'category icon key correction could not run; old rows keep their emoji, which the API '
+                    'still answers, until it succeeds')
+
             # Module startup hooks (seeding, cache warming, etc.)
             try:
                 from src.modules.registry import module_registry

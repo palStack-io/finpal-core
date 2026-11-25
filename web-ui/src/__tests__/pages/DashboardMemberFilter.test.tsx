@@ -161,7 +161,7 @@ describe('the Dashboard states its scope with a filter, not with four tags', () 
     renderPage();
 
     await waitFor(() =>
-      expect(screen.getByText('Everyone sharing this finPal instance')).toBeInTheDocument()
+      expect(screen.getByText('Everyone in your household')).toBeInTheDocument()
     );
   });
 

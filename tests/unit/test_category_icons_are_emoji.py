@@ -1,5 +1,9 @@
 """
-A category icon is an emoji, because web-ui renders it as text.
+A category icon is never a FontAwesome name.
+
+*** SINCE 2026-11-20 THE STORED VALUE IS A LINE-ICON KEY, NOT AN EMOJI *** (src/models/category_icons.py and
+tests/integration/test_category_icon_keys.py). The API's `icon` field still answers an emoji. The history below is
+why the FontAwesome guard exists, and it still holds.
 
 The Categories page showed the literal string `fa-tag` where an icon belongs. Nothing in
 web-ui was wrong — it renders `category.icon` directly, which is exactly right for an

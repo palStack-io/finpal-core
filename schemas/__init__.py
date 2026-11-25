@@ -88,7 +88,8 @@ class CategorySchema(Schema):
     """Category serialization schema"""
     id = fields.Int(dump_only=True)
     name = fields.Str(required=True)
-    icon = fields.Str()
+    icon = fields.Str()          # an emoji, for clients that draw it as text
+    icon_key = fields.Str(dump_only=True, allow_none=True)   # the line icon's key; null for a person's own icon
     color = fields.Str()
     parent_id = fields.Int(allow_none=True)
     is_system = fields.Bool(dump_only=True)

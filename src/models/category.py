@@ -4,16 +4,15 @@ Category and CategoryMapping models
 
 from datetime import datetime
 from src.extensions import db
+from src.models.category_icons import DEFAULT_ICON_KEY, icon_key, legacy_text, to_key
 
 class Category(db.Model):
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    icon = db.Column(db.String(50), default="🏷️")  # An EMOJI, not a FontAwesome name.
-    # web-ui renders this value as text (CategoryManagement.tsx), so "fa-tag" printed
-    # the literal string "fa-tag" where the icon belongs. FontAwesome has never been a
-    # dependency here; src/data/convert_icons_to_emoji.py was written for this and its
-    # __main__ only printed a message, so it was never applied.
+    # A KEY such as "coffee" (src/models/category_icons.py), stored in the `icon` column. Read through the `icon` and
+    # `icon_key` properties below, never as `_icon`: `icon` keeps answering an emoji for clients that draw it as text.
+    _icon = db.Column('icon', db.String(50), default=DEFAULT_ICON_KEY)
     color = db.Column(db.String(20), default="#6c757d")
     parent_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     user_id = db.Column(db.String(120), db.ForeignKey('users.id'), nullable=False)
@@ -74,6 +73,34 @@ class Category(db.Model):
     # Relationships
     user = db.relationship('User', backref=db.backref('categories', lazy=True))
     parent = db.relationship('Category', remote_side=[id], backref=db.backref('subcategories', lazy=True))
+
+    @property
+    def icon(self):
+        """The old field: an emoji for a key (old clients draw it as text), a person's own icon as stored."""
+        return legacy_text(self._icon)
+
+    @icon.setter
+    def icon(self, value):
+        self._icon = to_key(value)
+
+    @property
+    def icon_key(self):
+        """The line icon's key, or None for a person's own icon."""
+        return icon_key(self._icon)
+
+    @property
+    def icon(self):
+        """The old field: an emoji for a key (old clients draw it as text), a person's own icon as stored."""
+        return legacy_text(self._icon)
+
+    @icon.setter
+    def icon(self, value):
+        self._icon = to_key(value)
+
+    @property
+    def icon_key(self):
+        """The line icon's key, or None for a person's own icon."""
+        return icon_key(self._icon)
 
     def __repr__(self):
         return f"<Category: {self.name}>"

@@ -171,7 +171,7 @@ export const Range: React.FC = () => {
         <PageHead guide="learnpal-range"
           band="learnpal"
           title="Your range"
-          subtitle="learnPal is not enabled on this instance."
+          subtitle="Learn is not turned on here."
         />
       </div>
     );

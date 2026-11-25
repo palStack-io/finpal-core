@@ -95,7 +95,7 @@ const HighestCard: React.FC<{ stats: LearnStats }> = ({ stats }) => {
         <div style={eyebrowStyle}>The hardest this ever got</div>
         <div style={{ ...figureStyle, marginTop: 6, fontSize: 20 }}>Nothing yet</div>
         <p style={{ ...mutedStyle, marginTop: 8 }}>
-          A goal is drawn as a mountain, sized by what it asks of you.{' '}
+          A goal is drawn as a mountain sized by the goal, and how far up it you are is your progress toward it.{' '}
           <Link to="/goals" style={linkStyle}>Add one</Link> and the hardest you
           ever face is recorded here.
         </p>
@@ -320,7 +320,7 @@ export const Home: React.FC = () => {
         <PageHead guide="learnpal"
           band="learnpal"
           title="Learn"
-          subtitle="learnPal is not enabled on this instance."
+          subtitle="Learn is not turned on here."
         />
       </div>
     );

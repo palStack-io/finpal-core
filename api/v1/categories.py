@@ -8,6 +8,7 @@ from src.models.category import Category
 from src.extensions import db
 from src.services.category.service import CategoryService, UNSET
 from src.services.category.spending_type import VALID_SPENDING_TYPES
+from src.models.category_icons import DEFAULT_ICON_KEY
 from schemas import category_schema, categories_schema
 from schemas.input_schemas import category_input
 from src.utils.validation import validate_request, validation_error_response
@@ -27,7 +28,8 @@ category_service = CategoryService()
 # Define request/response models
 category_model = ns.model('Category', {
     'name': fields.String(required=True, description='Category name'),
-    'icon': fields.String(description='Category icon class (e.g., fa-home)'),
+    'icon': fields.String(description='Icon key (e.g. coffee, see src/models/category_icons.py) or an emoji. '
+                                       'Responses carry the emoji in icon and the key in icon_key.'),
     # `color` was missing from this model while `category_input` validated it and
     # the handler discarded it — so the document was wrong in two directions at
     # once. Declared now that it is actually stored. #68's lesson: publishing a
@@ -102,7 +104,7 @@ class CategoryList(Resource):
         try:
             new_category = Category(
                 name=validated['name'],
-                icon=validated.get('icon', '🏷️'),  # emoji, not a FontAwesome name — web-ui renders it as text
+                icon=validated.get('icon', DEFAULT_ICON_KEY),  # a key or an emoji; Category stores the key (models/category_icons.py)
                 # `color` was validated by `category_input` and then dropped on
                 # the floor — a client could send it, get a 201, and find no
                 # colour stored. The retired blueprint's `create_category` did
@@ -205,6 +207,7 @@ class CategoryDetail(Resource):
                 'id': category.id,
                 'name': category.name,
                 'icon': category.icon,
+                'icon_key': category.icon_key,
                 'color': category.color,
                 'parent_id': category.parent_id,
                 'is_system': category.is_system,

@@ -131,24 +131,24 @@ def get_category_by_name(category_name, user_id):
         # Create new category
         # Define default icons and colors for categories
         category_defaults = {
-            'Groceries': {'icon': '🛒', 'color': '#10b981'},
-            'Dining': {'icon': '🍽️', 'color': '#f59e0b'},
-            'Transportation': {'icon': '🚗', 'color': '#6366f1'},
-            'Entertainment': {'icon': '🎬', 'color': '#ec4899'},
-            'Shopping': {'icon': '🛍️', 'color': '#8b5cf6'},
-            'Utilities': {'icon': '⚡', 'color': '#3b82f6'},
-            'Healthcare': {'icon': '🏥', 'color': '#ef4444'},
-            'Fitness': {'icon': '💪', 'color': '#06b6d4'},
-            'Travel': {'icon': '✈️', 'color': '#14b8a6'},
-            'Education': {'icon': '📚', 'color': '#f97316'},
-            'Bills & Fees': {'icon': '📄', 'color': '#64748b'},
-            'Personal Care': {'icon': '💅', 'color': '#a855f7'},
-            'Pet Care': {'icon': '🐾', 'color': '#84cc16'},
-            'Home & Garden': {'icon': '🏡', 'color': '#22c55e'},
-            'Charity': {'icon': '❤️', 'color': '#f43f5e'}
+            'Groceries': {'icon': 'shopping-cart', 'color': '#10b981'},
+            'Dining': {'icon': 'utensils', 'color': '#f59e0b'},
+            'Transportation': {'icon': 'car', 'color': '#6366f1'},
+            'Entertainment': {'icon': 'clapperboard', 'color': '#ec4899'},
+            'Shopping': {'icon': 'shopping-bag', 'color': '#8b5cf6'},
+            'Utilities': {'icon': 'zap', 'color': '#3b82f6'},
+            'Healthcare': {'icon': 'hospital', 'color': '#ef4444'},
+            'Fitness': {'icon': 'dumbbell', 'color': '#06b6d4'},
+            'Travel': {'icon': 'plane', 'color': '#14b8a6'},
+            'Education': {'icon': 'book-open', 'color': '#f97316'},
+            'Bills & Fees': {'icon': 'file-text', 'color': '#64748b'},
+            'Personal Care': {'icon': 'sparkles', 'color': '#a855f7'},
+            'Pet Care': {'icon': 'paw-print', 'color': '#84cc16'},
+            'Home & Garden': {'icon': 'house', 'color': '#22c55e'},
+            'Charity': {'icon': 'heart', 'color': '#f43f5e'}
         }
 
-        defaults = category_defaults.get(category_name, {'icon': '📊', 'color': '#6c757d'})
+        defaults = category_defaults.get(category_name, {'icon': 'chart-column', 'color': '#6c757d'})
 
         category = Category(
             user_id=user_id,

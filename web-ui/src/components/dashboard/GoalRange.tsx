@@ -535,7 +535,9 @@ export const GoalRange: React.FC<GoalRangeProps> = ({ goals, currency, everest }
             ...wrapLines(
               'Not one of your goals. Everyone on finPal climbs this one, and the '
               + 'summit is financial literacy: every act available to you, done. '
-              + 'You gain altitude by telling finPal the truth about your own money.',
+              + 'Your height on Everest comes only from what you do, like recording a detail '
+              + 'of your own money or finishing a lesson, never from how much money you have. '
+              + 'It only goes up.',
               44),
           ];
           return (

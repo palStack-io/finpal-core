@@ -58,6 +58,7 @@ def _serialize_expense(exp, amounts=None):
             'name': exp.category.name,
             'color': exp.category.color,
             'icon': exp.category.icon,
+            'icon_key': exp.category.icon_key,
         } if exp.category else 'Uncategorized',
         'account': {
             'name': exp.account.name,

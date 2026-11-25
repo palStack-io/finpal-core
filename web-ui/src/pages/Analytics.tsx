@@ -564,7 +564,7 @@ export const Analytics: React.FC = () => {
           subtitle={<>
             Where it went, and how that compares with the months behind it.
             {' '}
-            {selectedMember ? `${selectedMember.name}'s money.` : 'Everyone sharing this finPal instance.'}
+            {selectedMember ? `${selectedMember.name}'s money.` : 'Everyone in your household.'}
           </>}
           right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Beside the range selector: both narrow the whole page, so they

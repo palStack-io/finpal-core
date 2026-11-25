@@ -37,7 +37,7 @@ from src.modules.learnpal.stats import stats_for_user
 
 from src.models.user import User
 from src.modules.learnpal import marks as _marks
-from src.modules.learnpal.learn_skills import skill_by_id
+from src.modules.learnpal.learn_skills import WHY_FALLBACKS, WHY_SCREENS, skill_by_id, teaches_screen
 from src.modules.learnpal.models import LearnRecall, LearnSkillMark
 from src.modules.learnpal.recall import (
     CHOICES, RecallNotFound, answer_recall, due_recall, quiet_day)
@@ -50,7 +50,6 @@ learnpal_ns = Namespace('learnpal', description='learnPal lessons, gear and the 
 logger = logging.getLogger(__name__)
 
 SET_ASIDE_DAYS = 30
-WHY_SCREENS = ('budgets', 'goals', 'debt', 'dashboard')
 NOT_SURE_LABEL = 'Not sure yet'
 
 
@@ -295,6 +294,24 @@ def _open_cards(user_id, first_only=False):
     return out
 
 
+def _why_cards(user_id, screen):
+    """The open lessons for one screen's "Why?" slot: its own (`learn_skills.py`'s table), else ONE fallback.
+
+    Both come from `_open_cards`, so a used skill and one set aside in the last 30 days never appear either way.
+    """
+    opened = _open_cards(user_id)
+    own = [pair for pair in opened if teaches_screen(SHORT_LESSONS[pair[0]]['skill'], screen)]
+    if own:
+        return own
+    by_skill = {}
+    for pair in opened:
+        by_skill.setdefault(SHORT_LESSONS[pair[0]]['skill'], pair)
+    for skill_id in WHY_FALLBACKS.get(screen, ()):
+        if skill_id in by_skill:
+            return [by_skill[skill_id]]
+    return []
+
+
 def _week_pick(user, user_id, today):
     """This week's lesson, held Monday to Sunday (spec 5.5: "it stays the same all week unless taken
     or set aside, then the next one comes"). Returns ((short_id, figures) or None, monday).
@@ -348,15 +365,14 @@ class LearnWhy(Resource):
     @jwt_required()
     @_marks.memoised
     def get(self):
-        """Cards for one screen: relevant, not yet used, not set aside lately."""
+        """Cards for one screen: relevant, not yet used, not set aside lately; a fallback when none of its own is."""
         user_id = get_jwt_identity()
         screen = request.args.get('screen', '')
         if screen not in WHY_SCREENS:
             return {'success': False, 'error': 'Unknown screen'}, 400
         if not _marks.learning_on(_user(user_id)):
             return {'enabled': False, 'cards': []}, 200
-        cards = [_card(user_id, sid, fig) for sid, fig in _open_cards(user_id)
-                 if skill_by_id(SHORT_LESSONS[sid]['skill'])['screen'] == screen]
+        cards = [_card(user_id, sid, fig) for sid, fig in _why_cards(user_id, screen)]
         return {'enabled': True, 'cards': cards}, 200
 
 

@@ -6,6 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from src.models.user import User, UserApiSettings
+from src.models.category_icons import DEFAULT_ICON_KEY
 from src.extensions import db
 from src.utils.decorators import demo_restricted
 from src.utils.locale import is_a_usable_number_locale
@@ -944,7 +945,7 @@ def _import_user_data(user_id, data: dict) -> dict:
 
         cat = Category(
             name=cat_data.get('name', 'Unnamed'),
-            icon=cat_data.get('icon', '🏷️'),
+            icon=cat_data.get('icon', DEFAULT_ICON_KEY),
             color=cat_data.get('color', '#6c757d'),
             parent_id=new_parent_id,
             user_id=user_id,

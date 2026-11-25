@@ -246,7 +246,7 @@ def has_a_goal(user_id):
                 f'{_money(target, currency)}, and it is already covered.')
 
     if n == 1:
-        return (f'“{named.name}” is now drawn at the size of what it asks: '
+        return (f'“{named.name}” is now on your range: '
                 f'{_money(remaining, currency)} still to find. finPal could '
                 f'not put a figure on that before you named it.')
     return (f'“{named.name}” joins {n - 1} other '
