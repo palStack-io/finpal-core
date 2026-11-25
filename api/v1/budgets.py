@@ -9,7 +9,7 @@ from schemas import budget_schema, budgets_schema
 from schemas.input_schemas import budget_input
 from src.utils.validation import validate_request, validation_error_response
 from src.services.budget.service import BudgetService
-from src.services.budget.pace import pace_applies, pace_for
+from src.services.budget.pace import days_left, pace_applies, pace_for, per_day
 from src.services.budget.sinking import is_sinking_fund, monthly_set_aside
 from datetime import datetime
 import logging
@@ -623,6 +623,7 @@ class BudgetOverview(Resource):
 
             groups, unsorted, group_totals, income_section = _group_by_spending_type(
                 budgets, budget_details, visible_user_ids(current_user_id))
+            pace = pace_for()
 
             # *** None, NEVER 0. *** Zero is a claim that the user earned
             # nothing this month; None says nothing has been recorded yet.
@@ -657,7 +658,11 @@ class BudgetOverview(Resource):
                 # browser beside it. `pace_applies` decides PER ROW whether the
                 # mark means anything, and the client says why in words when it
                 # does not.
-                'pace': pace_for(),
+                'pace': pace,
+                # Budgets C (2026-11-20): the hero prints these AS SENT, from one rule (`days_left`, today counts).
+                # `per_day` is null with no plan or nothing left, and the hero says so in words instead.
+                'days_left': days_left(pace),
+                'per_day': per_day(group_totals['remaining'], pace) if group_totals['planned'] > 0 else None,
             }, 200
 
         except Exception as e:

@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, ChevronDown, ChevronUp, Edit2, Trash2, Calendar, ChevronLeft, ChevronRight, Loader2, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { formatMoney, Money } from '../styles/money';
-import { getBranding } from '../config/branding';
 import type { BudgetPace, IncomeSection } from '../services/budgetService';
 import { budgetService, type Budget } from '../services/budgetService';
 import { transactionsApi, type Transaction } from '../services/api/transactions';
@@ -10,7 +9,6 @@ import { categoriesApi, type Category } from '../services/api/categories';
 import { useToast } from '../contexts/ToastContext';
 import { SlidePanel } from '../components/SlidePanel';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
-import { TotalsRow } from '../components/dashboard/TotalsRow';
 import type { BudgetTotals } from '../services/budgetService';
 import { teamService } from '../services/teamService';
 import type { TeamMember } from '../types/team';
@@ -20,10 +18,34 @@ import { categoryIcon } from '../utils/categoryIcon';
 import { SpendingTypeControl } from '../components/budgets/SpendingTypeControl';
 import { GROUP_LABELS, UNSORTED_LABEL, type SpendingType } from '../utils/spendingGroups';
 import type { SpendingGroup, UnsortedSection } from '../services/budgetService';
-import { PageHead } from '../components/PageHead';
 import { WhyCard } from '../modules/learnpal/WhyCard';
+import { learnpalService } from '../modules/learnpal/service';
+import type { ShortTry, WhyCard as WhyCardData } from '../types/learnpal';
 import { HardMonthCard } from '../components/onboarding/HardMonthCard';
+import { PageGuide } from '../components/guide/PageGuide';
+import { useGuideStore } from '../store/guideStore';
 import { useSurfaceCoins } from '../contexts/CoinAwardContext';
+import { BudgetsHero } from '../components/budgets/BudgetsHero';
+import { BudgetLine } from '../components/budgets/BudgetLine';
+import { staggerStyle, useFirstVisitThisSession } from '../utils/entrance';
+
+/**
+ * The Budgets page, "Budgets C" (Harun's pick, 2026-11-20), core edition. Design brief: hero, lesson, content.
+ *
+ *   hero      the shared PageHero: "$769.74 left to spend, with 11 days to go", about $X a day, the plan bar, Came in /
+ *             Not given a job yet, New budget (BudgetsHero.tsx)
+ *   lesson    the Budgets Why card as ONE line (WhyCard variant="line"), directly under the hero
+ *   content   Flexible rows in the wide column; Fixed, Non-monthly, Not budgeted, Unsorted and Income in the narrow one.
+ *             Each row's group select, transactions, edit and delete sit behind its ⋯ (BudgetRowMenu.tsx).
+ *
+ * *** EVERY FIGURE IS THE SERVER'S. *** The big number is `totals.remaining`, days and per-day are the overview's
+ * `days_left` / `per_day` (one rule, `services/budget/pace.py`), the plan bar is `budgeted_actual` of `planned`, "over"
+ * is a row's `remaining < 0` (rollover included), and "this month" is `pace.as_of`. `GET /budgets/overview` has no
+ * month, so another month says the figures are this month's.
+ *
+ * Removed: the page-head card (its "?" moved into the hero and the tips card opens only from it), the Budget Health bar
+ * and the totals row (the hero carries the one answer).
+ */
 
 interface BudgetWithDetails extends Budget {
   spent: number;
@@ -58,67 +80,6 @@ interface BudgetWithDetails extends Budget {
 
 const fieldLabelStyle: React.CSSProperties = { display: 'block', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', marginBottom: '8px' };
 const secondaryBgStyle: React.CSSProperties = { background: 'var(--bg-secondary)' };
-
-const mutedSmallStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '13px' };
-const secondaryBodyStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '14px', margin: 0 };
-
-/**
- * The three group sections and Unsorted share one shell.
- *
- * Inline rather than a named role class: this shell has exactly one consumer,
- * and a role class with a single caller is a rule nothing keeps right -- two of
- * the two measured so far had drifted from what the app renders. It becomes a
- * role class the moment mobile or another page needs the same shell.
- */
-const groupSectionStyle: React.CSSProperties = {
-  background: 'var(--bg-card)',
-  border: '1px solid var(--border-light)',
-  borderRadius: '16px',
-  padding: '16px 20px',
-};
-
-const groupHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '16px',
-  width: '100%',
-  background: 'transparent',
-  border: 'none',
-  padding: '4px',
-  cursor: 'pointer',
-  textAlign: 'left',
-  color: 'var(--text-primary)',
-  flexWrap: 'wrap',
-};
-
-const groupTitleStyle: React.CSSProperties = {
-  fontSize: '18px',
-  fontWeight: 600,
-  color: 'var(--text-primary)',
-  margin: 0,
-};
-
-const groupFigureStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2px',
-  fontSize: '14px',
-  color: 'var(--text-primary)',
-};
-
-const unsortedChipStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '10px',
-  padding: '8px 12px',
-  background: 'var(--bg-secondary)',
-  border: '1px solid var(--border-light)',
-  borderRadius: '10px',
-  fontSize: '13px',
-  color: 'var(--text-primary)',
-  flexWrap: 'wrap',
-};
 
 /**
  * The start and end of the period a budget covers, relative to a reference date.
@@ -188,115 +149,58 @@ export const budgetTitle = (budget: {
 
 /** Show this many unbudgeted rows before folding the tail away. */
 const UNBUDGETED_SHOWN = 5;
-
 /**
- * The categories in a group that money left through with no budget on them.
+ * Budgets C: one "Not budgeted" card for the categories money left through with no budget, across the three groups.
  *
- * *** NO PROGRESS BAR, BECAUSE THERE IS NO DENOMINATOR. *** Every budgeted row
- * on this page is a fraction of a limit the user chose. These have no limit,
- * and an empty bar beside 1,800.00 of rent reads as "0% used" when the truth is
- * "nothing is capping this" — the opposite. Decision 5's rule, one surface
- * over: the only denominator this product draws is a target somebody picked.
+ * *** NO PROGRESS BAR, BECAUSE THERE IS NO DENOMINATOR. *** Every budgeted row is a fraction of a limit somebody
+ * chose; these have none, and an empty bar would read as "0% used" when the truth is "nothing caps this".
  *
- * *** THE GROUP TOTAL IS ON THE HEADER, SO FOLDING NEVER HIDES MONEY. *** Owner
- * asked what happens to a user with many categories. Measured across the four
- * demo personas: 2-7 unbudgeted categories a month, so nothing folds today —
- * but a real import could carry twenty, and the tail goes behind a disclosure
- * rather than pushing the budgets off the screen. Itemisation is what folds;
- * the figure is always in view.
+ * *** THE TOTAL IS THE SERVER'S. *** `totals.unbudgeted_actual` is all spending outside a budget, which also counts the
+ * Unsorted section's money; so it is printed here only when Unsorted is empty, where it is exactly the sum of these
+ * rows. Folding past five rows never hides money: the folded line names the folded total.
  */
-const UnbudgetedRows: React.FC<{
-  group: SpendingGroup;
+const NotBudgetedCard: React.FC<{
+  groups: SpendingGroup[];
+  total: number | null;
   currency: string;
   onBudget: (categoryId: number, spentSoFar: number) => void;
-}> = ({ group, currency, onBudget }) => {
+}> = ({ groups, total, currency, onBudget }) => {
   const [showAll, setShowAll] = useState(false);
-  /* *** DEFAULTED, BECAUSE A SERVER CAN PREDATE THE FIELD. *** Same choice as
-     `Goal.peak` being undefined on a backend older than mountains: a
-     self-hoster on an older image must get the page they always had, not a
-     blank one. Reading `.length` off undefined took the whole Budgets page
-     down, which is how this was found. */
-  const rows = group.unbudgeted_categories ?? [];
+  /* Defaulted, because a server can predate the field: reading `.length` off undefined once took the page down. */
+  const rows = groups.flatMap((g) => g.unbudgeted_categories ?? []).sort((a, b) => b.actual - a.actual);
   if (rows.length === 0) return null;
-
   const shown = showAll ? rows : rows.slice(0, UNBUDGETED_SHOWN);
   const folded = rows.length - shown.length;
-  const foldedTotal = rows.slice(shown.length)
-    .reduce((sum, row) => sum + row.actual, 0);
-
+  const foldedTotal = rows.slice(shown.length).reduce((sum, row) => sum + row.actual, 0);
   return (
-    <div style={{ marginTop: 4, paddingTop: 12, borderTop: '1px solid var(--border-light)' }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-        padding: '0 4px 8px',
-      }}>
-        <span style={{
-          fontSize: 12, fontWeight: 600, letterSpacing: '0.04em',
-          textTransform: 'uppercase', color: 'var(--text-secondary)',
-        }}>
-          Not budgeted
-        </span>
-        <strong style={{ fontSize: 15 }}>
-          <Money amount={group.unbudgeted_actual ?? 0} currency={currency} />
-        </strong>
+    <section className="fp-bc-card fp-rise" style={staggerStyle(3)} aria-labelledby="bc-not-budgeted" data-testid="not-budgeted">
+      <div className="fp-bc-card-head">
+        <h2 id="bc-not-budgeted" className="fp-bc-h2">Not budgeted</h2>
+        {total !== null && <span className="fp-bc-card-sub"><Money amount={total} currency={currency} /></span>}
       </div>
-
       {shown.map((row) => (
-        <div
-          key={row.id}
-          data-testid={`unbudgeted-${row.id}`}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '9px 4px', borderTop: '1px solid var(--border-light)',
-          }}
-        >
-          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5 }}>{row.name}</span>
-          <span style={{ fontSize: 14.5, fontVariantNumeric: 'tabular-nums' }}>
-            <Money amount={row.actual} currency={currency} />
-          </span>
-          <button
-            type="button"
-            onClick={() => onBudget(row.id, row.actual)}
-            style={{
-              background: 'transparent', color: 'var(--g-ink)',
-              border: '1px solid var(--border-medium)', borderRadius: 8,
-              padding: '4px 10px', fontSize: 12.5, fontWeight: 600,
-              cursor: 'pointer', flexShrink: 0,
-            }}
-          >
-            Budget this
-          </button>
+        <div key={row.id} data-testid={`unbudgeted-${row.id}`} className="fp-bc-plain-row">
+          <span className="fp-bc-plain-name" translate="no">{row.name}</span>
+          <span className="fp-bc-figure"><Money amount={row.actual} currency={currency} /></span>
+          <button type="button" className="fp-bc-link" onClick={() => onBudget(row.id, row.actual)}>Budget this</button>
         </div>
       ))}
-
       {folded > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowAll(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-            background: 'none', border: 0, borderTop: '1px solid var(--border-light)',
-            padding: '9px 4px', cursor: 'pointer',
-            color: 'var(--text-secondary)', fontSize: 13, textAlign: 'left',
-          }}
-        >
-          <ChevronDown size={14} />
+        <button type="button" className="fp-bc-fold" onClick={() => setShowAll(true)}>
+          <ChevronDown size={14} aria-hidden="true" />
           {folded} more · <Money amount={foldedTotal} currency={currency} />
         </button>
       )}
-    </div>
+    </section>
   );
 };
 
-
 const BudgetsMinimal = () => {
-  // The page names its own surface and nothing more; the server owns
-  // which acts a `budgets` mutation can move. Fires on mount as well as
-  // on demand, so an unwired mutation handler still gets its moment.
+  // The page names its own surface and nothing more; the server owns which acts a `budgets` mutation can move.
   useSurfaceCoins('budgets');
   const { user } = useAuthStore();
-  const branding = getBranding(user?.default_currency_code || 'USD');
   const { showToast } = useToast();
+  const firstVisit = useFirstVisitThisSession('budgets');
 
   const [budgets, setBudgets] = useState<BudgetWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -305,12 +209,8 @@ const BudgetsMinimal = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetWithDetails | null>(null);
-  /* *** THE PAGE HAS TO KNOW THE HOUSEHOLD SIZE TO SAY WHOSE MONEY THIS IS. ***
-     It used to stamp `scope="household"` on four cards without ever asking —
-     true for a shared instance, noise for somebody on their own, since with
-     one member the household and the caller are the same set. Failure is
-     silent and falls back to saying nothing, which is the honest default: a
-     scope claim finPal could not verify is worse than none. */
+  /* The household size, to say whose money this is; a failed lookup says nothing (an unverified scope claim is
+     worse than none). */
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [budgetFormData, setBudgetFormData] = useState({
     category_id: '',
@@ -321,16 +221,9 @@ const BudgetsMinimal = () => {
   });
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  // *** THE SERVER OWNS THESE. *** They are stored exactly as received and
-  // never re-summed here: two clients deriving the same subtotal is two chances
-  // to disagree with each other and with the database (D-101).
+  // *** THE SERVER OWNS THESE. *** Stored exactly as received and never re-summed here (D-101).
   const [groups, setGroups] = useState<SpendingGroup[]>([]);
-  /**
-   * Today's position in the month, ONCE for the whole page. The server sends a
-   * single figure because every row shares it — two clients working out "today"
-   * independently would draw the mark in two places, and a phone in another
-   * timezone would disagree with the browser beside it.
-   */
+  /** Today's position in the month, ONCE for the whole page (one figure, so no two clients draw the mark apart). */
   const [pace, setPace] = useState<BudgetPace | null>(null);
   /** Budgets on INCOME categories, kept out of the expense totals (D-189). */
   const [incomeSection, setIncomeSection] = useState<IncomeSection | null>(null);
@@ -342,32 +235,41 @@ const BudgetsMinimal = () => {
   });
   const [income, setIncome] = useState<number | null>(null);
   const [leftToBudget, setLeftToBudget] = useState<number | null>(null);
-  const [collapsedGroups, setCollapsedGroups] = useState<SpendingType[]>([]);
+  /** The overview's `days_left` / `per_day`, printed as sent. */
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+  const [perDay, setPerDay] = useState<number | null>(null);
+  /** The non-monthly lesson's own figures, for the empty Non-monthly card; only when that lesson applies. */
+  const [sinking, setSinking] = useState<Extract<ShortTry, { kind: 'sinking' }> | null>(null);
+  const sinkingAsked = useRef(false);
+  /** The row's ⋯ that opened the edit panel or the delete dialog: focus goes back to it when that closes. */
+  const focusBack = useRef<HTMLButtonElement | null>(null);
+  const returnFocus = () => {
+    const el = focusBack.current;
+    focusBack.current = null;
+    if (el) setTimeout(() => { if (el.isConnected) el.focus(); }, 0);
+  };
+  const firstLoad = useRef(true);
 
-  const toggleGroup = (value: SpendingType) => setCollapsedGroups((current) => (
-    current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
-  ));
-
-  // Was a local copy that used the user's currency with ZERO decimal places,
-  // while every other page hardcoded USD with two — so a user set to EUR saw €
-  // here and $ elsewhere, whole units here and cents elsewhere. One formatter
-  // now, and it respects the user's currency everywhere.
   const currency = user?.default_currency_code || 'USD';
   const formatCurrency = (amount: number) => formatMoney(amount, { currency });
 
+  /* The first visit shows the loading state; a month change reloads QUIETLY, so the hero is not remounted (its words
+     cross-fade) and no entrance replays. */
   useEffect(() => {
-    loadData();
-  }, [selectedMonth]);
+    if (firstLoad.current) { firstLoad.current = false; loadData(); } else loadData({ quiet: true });
+  }, [selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps -- reload when the month changes
 
-  /* Once, not per month: the household does not change when the user pages
-     through the calendar. Failure is swallowed — see the state's own note. */
+  /* Once, not per month: the household does not change when the user pages through the calendar. */
   useEffect(() => {
     teamService.getMembers().then(setMembers).catch(() => setMembers([]));
   }, []);
 
-  const loadData = async () => {
+  // `quiet`: reload the figures without the loading state (a month change, a group change, a delete), so the hero is
+  // not remounted and no entrance replays. An option object, so `onChanged={loadData}` callers cannot pass a boolean.
+  const loadData = async (opts?: { quiet?: boolean }) => {
+    const quiet = opts?.quiet === true;
     try {
-      setLoading(true);
+      if (!quiet) setLoading(true);
 
       // Load categories - returns { categories: Category[] }
       const categoriesResponse = await categoriesApi.getAll();
@@ -391,6 +293,8 @@ const BudgetsMinimal = () => {
       });
       setIncome(overview?.income ?? null);
       setLeftToBudget(overview?.left_to_budget ?? null);
+      setDaysLeft(overview?.days_left ?? null);
+      setPerDay(overview?.per_day ?? null);
 
       /**
        * Only the window the budgets actually cover, and every page of it.
@@ -463,12 +367,8 @@ const BudgetsMinimal = () => {
     }
   };
 
-  const handleExpandBudget = async (budgetId: number) => {
-    if (expandedBudget === budgetId) {
-      setExpandedBudget(null);
-    } else {
-      setExpandedBudget(budgetId);
-    }
+  const handleExpandBudget = (budgetId: number) => {
+    setExpandedBudget((current) => (current === budgetId ? null : budgetId));
   };
 
   const handleTransactionClick = (transaction: Transaction) => {
@@ -477,12 +377,16 @@ const BudgetsMinimal = () => {
 
   const handleTransactionSuccess = () => {
     setEditingTransaction(null);
-    loadData(); // Refresh budgets
+    loadData({ quiet: true });
   };
 
   const handleCloseTransactionPanel = () => {
     setEditingTransaction(null);
   };
+
+  const emptyForm = (period: 'weekly' | 'monthly' | 'yearly' = 'monthly', amount = '', category_id = '') => ({
+    category_id, amount, period, start_date: new Date().toISOString().split('T')[0], rollover: false,
+  });
 
   const handleOpenBudgetModal = (budget?: BudgetWithDetails) => {
     if (budget) {
@@ -496,43 +400,25 @@ const BudgetsMinimal = () => {
       });
     } else {
       setEditingBudget(null);
-      setBudgetFormData({
-        category_id: '',
-        amount: '',
-        period: 'monthly',
-        start_date: new Date().toISOString().split('T')[0],
-        rollover: false
-      });
+      setBudgetFormData(emptyForm());
     }
     setShowBudgetModal(true);
   };
 
   /**
-   * "Budget this", from an unbudgeted row.
-   *
-   * *** THE AMOUNT IS PREFILLED WITH WHAT THEY ACTUALLY SPENT, NOT LEFT BLANK.
-   * *** The whole point of the row is that finPal already knows the number;
-   * making somebody read 216.93 off the screen and retype it into the field
-   * beside it is asking them for a fact they came here to be told. It is a
-   * starting point in an editable field, not a target finPal chose — which is
-   * why it is the observed figure and not a rounded-up "suggestion" the user
-   * could not check against anything.
+   * "Budget this", from an unbudgeted row: the amount is prefilled with what they actually spent (a starting point in
+   * an editable field, not a target finPal chose).
    */
   const startBudgetFor = (categoryId: number, spentSoFar: number) => {
     setEditingBudget(null);
-    setBudgetFormData({
-      category_id: String(categoryId),
-      amount: spentSoFar > 0 ? spentSoFar.toFixed(2) : '',
-      period: 'monthly',
-      start_date: new Date().toISOString().split('T')[0],
-      rollover: false,
-    });
+    setBudgetFormData(emptyForm('monthly', spentSoFar > 0 ? spentSoFar.toFixed(2) : '', String(categoryId)));
     setShowBudgetModal(true);
   };
 
   const handleCloseBudgetPanel = () => {
     setShowBudgetModal(false);
     setEditingBudget(null);
+    returnFocus();
   };
 
   const handleCreateBudget = async (e: React.FormEvent) => {
@@ -550,7 +436,6 @@ const BudgetsMinimal = () => {
 
     try {
       if (editingBudget) {
-        // Update existing budget
         await budgetService.updateBudget(editingBudget.id, {
           amount: parseFloat(budgetFormData.amount),
           period: budgetFormData.period,
@@ -561,7 +446,6 @@ const BudgetsMinimal = () => {
         });
         showToast("Budget updated.", 'success');
       } else {
-        // Create new budget
         await budgetService.createBudget({
           name: '', // Optional name
           amount: parseFloat(budgetFormData.amount),
@@ -576,14 +460,9 @@ const BudgetsMinimal = () => {
 
       setShowBudgetModal(false);
       setEditingBudget(null);
-      setBudgetFormData({
-        category_id: '',
-        amount: '',
-        period: 'monthly',
-        start_date: new Date().toISOString().split('T')[0],
-        rollover: false
-      });
-      loadData(); // Refresh budgets
+      setBudgetFormData(emptyForm());
+      returnFocus();
+      loadData({ quiet: true });
     } catch (error: any) {
       showToast(apiErrorMessage(error, "We couldn't save that budget. Try again in a moment."), 'error');
     }
@@ -591,6 +470,7 @@ const BudgetsMinimal = () => {
 
   const handleDeleteBudget = async (budgetId: number) => {
     if (!window.confirm("Delete this budget?")) {
+      returnFocus();
       return;
     }
 
@@ -599,942 +479,284 @@ const BudgetsMinimal = () => {
       showToast("Budget deleted.", 'success');
       setShowBudgetModal(false);
       setEditingBudget(null);
-      loadData();
-    } catch (error: any) {
+      focusBack.current = null;
+      loadData({ quiet: true });
+    } catch {
+      returnFocus();
       showToast("We couldn't delete that budget. Try again in a moment.", 'error');
     }
   };
 
-  const totalBudgeted = budgets.reduce((sum, b) => sum + b.amount, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+  /* *** "THIS MONTH" IS THE SERVER'S. *** The overview always answers for the server's current month (`pace.as_of`);
+     the browser clock is only a fallback for an older backend that sends no pace. */
+  const serverToday = (() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(pace?.as_of ?? '');
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date();
+  })();
 
-  /* *** HOISTED OUT OF THE BUDGET-HEALTH IIFE ON 2026-09-19. *** The totals
-     row moved INSIDE `PageHead` so it sits in the band with the ridge beneath
-     it, the way Accounts does (owner: "the accounts is good because the
-     metrics are inside the header design with mountains under it"). That put
-     it outside the closure these were declared in, and two places now read
-     them — so they belong to the component, not to one block. */
-  const spentPct = totalBudgeted > 0
-    ? ((totals.budgeted_actual || totalSpent) / totalBudgeted) * 100 : 0;
-  // Status tokens, not raw accents: measured on the card, #22c55e was 2.21:1
-  // and #f59e0b 2.09:1 in light. `over` is the direction's clay, which piece 5
-  // reserved for exactly this — "clay ONLY for a broken budget".
-  const spentColor = spentPct >= 100 ? 'var(--status-over)'
-    : spentPct >= 80 ? 'var(--status-warn)' : 'var(--status-ok)';
-  const onTrack = budgets.filter(b => b.percentage < 80).length;
-  const warning = budgets.filter(b => b.percentage >= 80 && b.spent <= b.amount).length;
-  const over = budgets.filter(b => b.spent > b.amount).length;
+  const goToPreviousMonth = () => setSelectedMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  const goToNextMonth = () => setSelectedMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  const goToCurrentMonth = () => setSelectedMonth(new Date(serverToday.getFullYear(), serverToday.getMonth(), 1));
 
-  const totalRemaining = totalBudgeted - totalSpent;
+  /* The first answer may name a different month from the browser's (a time zone either side of midnight on the 1st):
+     the page follows the server's, once. */
+  const snapped = useRef(false);
+  useEffect(() => {
+    if (snapped.current || !pace?.as_of) return;
+    snapped.current = true;
+    if (serverToday.getFullYear() !== selectedMonth.getFullYear() || serverToday.getMonth() !== selectedMonth.getMonth()) {
+      setSelectedMonth(new Date(serverToday.getFullYear(), serverToday.getMonth(), 1));
+    }
+  }, [pace?.as_of]); // eslint-disable-line react-hooks/exhaustive-deps -- once, when the server first says which month
 
-  const daysLeftInMonth = () => {
-    const now = new Date();
-    const isCurrentMonth = selectedMonth.getMonth() === now.getMonth() && selectedMonth.getFullYear() === now.getFullYear();
-    if (!isCurrentMonth) return 0;
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return Math.max(0, lastDay.getDate() - now.getDate());
+  /* The Why line reports every Budgets card; when the non-monthly lesson applies, its figures fill the empty
+     Non-monthly card (`GET short/non-monthly`, no side effects). */
+  const onWhyCards = (cards: WhyCardData[]) => {
+    if (sinkingAsked.current || !cards.some((c) => c.id === 'non-monthly')) return;
+    sinkingAsked.current = true;
+    learnpalService.getShortLesson('non-monthly')
+      .then((s) => setSinking(s.try && s.try.kind === 'sinking' ? s.try : null))
+      .catch(() => setSinking(null));
   };
 
-  // Helper functions for month navigation
-  const goToPreviousMonth = () => {
-    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  };
-
-  const goToCurrentMonth = () => {
-    setSelectedMonth(new Date());
-  };
-
-  const formatMonthYear = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  };
-
-  const isCurrentMonth = () => {
-    const now = new Date();
-    return selectedMonth.getMonth() === now.getMonth() && selectedMonth.getFullYear() === now.getFullYear();
-  };
+  const isCurrentMonth = selectedMonth.getMonth() === serverToday.getMonth()
+    && selectedMonth.getFullYear() === serverToday.getFullYear();
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <Loader2 size={40} className="animate-spin" style={{ color: 'var(--status-ok)' }} />
-          <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>Loading budgets...</p>
+      <div style={{ minHeight: '100vh', padding: '24px' }}>
+        <div className="page-container">
+          <div className="fp-page-hero fp-page-hero--loading" role="status" aria-live="polite">
+            <span className="sr-only">Loading budgets...</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  /**
-   * One budget card.
-   *
-   * Extracted from an inline `budgets.map(...)` so the same card can be rendered
-   * inside each of the three group sections and inside Unsorted, without four
-   * copies of it drifting apart.
-   */
-  const renderBudgetCard = (budget: BudgetWithDetails, group: SpendingType | null = null) => {
-                const percentage = budget.percentage;
-                const remaining = budget.remaining;
-                // *** FIXED IS REPORTED, NOT SCORED. *** Setting a target for
-                // rent is theatre: it is usually the biggest line and it cannot
-                // respond this month, and demanding a number for it is a large
-                // part of why budgets get abandoned. So a committed category
-                // shows what it costs and skips the progress bar, the
-                // percentage and the OVER badge -- being "over" on a fixed cost
-                // is not a thing the user did.
-                const reported = group === 'fixed';
-                const isOver = !reported && budget.spent > budget.amount;
-                const isExpanded = expandedBudget === budget.id;
+  const thisMonthName = serverToday.toLocaleDateString('en-US', { month: 'long' });
+  const groupOf = (type: SpendingType) => groups.find((g) => g.spending_type === type);
+  const fixedGroup = groupOf('fixed');
+  const flexibleGroup = groupOf('flexible');
+  const nonMonthlyGroup = groupOf('non_monthly');
+  const unsortedHasContent = unsorted.count > 0 || unsorted.budgets.length > 0;
 
-                return (
-                  <div
-                    key={budget.id}
-                    style={{
-                      background: 'var(--bg-card)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid var(--border-light)',
-                      borderRadius: '16px',
-                      overflow: 'hidden',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    {/* Budget Header - Clickable */}
-                    <div
-                      style={{
-                        padding: '24px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onClick={() => handleExpandBudget(budget.id)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--surface-hover)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        {/* Icon */}
-                        <div style={{ fontSize: '36px', flexShrink: 0 }}>
-                          {budget.category_icon}
-                        </div>
+  // The "?" opens the tips card on demand (PageGuide onDemand): it never opens on its own on this page.
+  const openGuide = () => useGuideStore.getState().reopen('budgets');
 
-                        {/* Category & Progress */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                            {/* h2, not h3 — each budget row is a section under
-                                the page's <h1> and there is no level between,
-                                so h3 skipped one. Size is inline; nothing moves
-                                on screen. Caught by the E2E heading check. */}
-                            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                              {budgetTitle(budget)}
-                            </h2>
-                            {/* Edited in place, on the screen that shows the
-                                classification -- spec §4: a default the user
-                                cannot find is one they cannot correct. */}
-                            {budget.category_id != null && (
-                              <SpendingTypeControl
-                                categoryId={budget.category_id}
-                                value={group}
-                                onChanged={loadData}
-                              />
-                            )}
-                            {isOver && (
-                              <span style={{
-                                padding: '3px 10px',
-                                /* The FILL is the wash and the CLAY is the border
-                                   and the text. A red tint under clay measured
-                                   3.87:1 for 11px bold — the badge that shouts
-                                   loudest on the page was the least legible thing
-                                   on it. Clay on the wash is 4.53. */
-                                background: 'var(--kt-wash)',
-                                border: '1px solid var(--status-over)',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                color: 'var(--status-over)',
-                                fontWeight: '700'
-                              }}>
-                                OVER
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenBudgetModal(budget);
-                              }}
-                              aria-label="Edit budget"
-                              style={{
-                                marginLeft: 'auto',
-                                padding: '6px',
-                                background: 'var(--border-light)',
-                                border: '1px solid var(--border-medium)',
-                                borderRadius: '6px',
-                                color: 'var(--text-primary)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--border-medium)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--border-light)';
-                              }}
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                          </div>
-
-                          {/* Progress Bar — omitted for a committed cost, which
-                              has nothing to be a percentage OF. */}
-                          {!reported && (
-                          <div style={{ marginBottom: '8px' }}>
-                            {/* *** `overflow: visible` SO THE PACE MARK CAN SIT
-                                PROUD OF THE TRACK. *** The track used to clip,
-                                which is right for the fill and wrong for a tick
-                                that has to be findable at a glance. */}
-                            <div style={{
-                              position: 'relative',
-                              width: '100%',
-                              height: '8px',
-                              background: 'var(--progress-track)',
-                              borderRadius: '4px',
-                            }}>
-                              <div style={{
-                                width: `${Math.min(percentage, 100)}%`,
-                                height: '100%',
-                                background: isOver
-                                  ? 'var(--status-over)'
-                                  : percentage >= 80
-                                    ? 'var(--status-warn)'
-                                    : budget.category_color || 'var(--status-ok)',
-                                borderRadius: '4px',
-                                transition: 'width 0.5s ease'
-                              }}></div>
-                              {/* *** THE PACE MARK: WHERE YOU SHOULD BE BY NOW.
-                                  *** The one thing a budget is actually for —
-                                  not "how much have I spent" but "am I burning
-                                  this too fast". Drawn only where the server
-                                  says it can be READ: `pace_applies` is false
-                                  for a weekly or yearly budget, which has no
-                                  day-of-month position, and for the
-                                  `non_monthly` group, where an annual premium
-                                  is not "behind" in March, it is not due.
-                                  *** IT IS A MARK AND NEVER A COLOUR CHANGE.
-                                  *** A bar that turned red past the tick would
-                                  tell somebody with a big direct debit on the
-                                  1st that they had failed, every month, on the
-                                  day their rent left. That is voice rule 11
-                                  inverted: finPal cannot tell "the ground is
-                                  expensive" from "you lack discipline", so it
-                                  must not imply the second. The tick states a
-                                  fact; the user reads it. */}
-                              {pace && budget.pace_applies && (
-                                <span
-                                  aria-hidden="true"
-                                  title={`Today — day ${pace.day} of ${pace.days_in_month}`}
-                                  style={{
-                                    position: 'absolute',
-                                    left: `${Math.min(100, pace.fraction * 100)}%`,
-                                    top: '-3px',
-                                    width: '2px',
-                                    height: '14px',
-                                    background: 'var(--text-primary)',
-                                    borderRadius: '1px',
-                                  }}
-                                />
-                              )}
-                            </div>
-                          </div>
-                          )}
-
-                          {/* *** WHERE THE MARK CANNOT BE READ, SAY SO IN WORDS.
-                              *** A blank column reads as a bug; a sentence reads
-                              as a decision. The two cases are different and both
-                              are stated rather than left to be inferred:
-                              a weekly or yearly budget has no day-of-MONTH
-                              position at all, and a `non_monthly` group is
-                              "resupply that is not monthly" by definition — an
-                              annual premium is not behind in March, it is not
-                              due. `pace_applies === false` is the server's
-                              answer; `undefined` is an older backend and says
-                              nothing at all. */}
-                          {pace && budget.pace_applies === false && !reported && (
-                            <p className="fp-hint" style={{ margin: '0 0 8px' }}>
-                              {(budget.period || '').toLowerCase() !== 'monthly'
-                                ? `No pace mark — this is a ${(budget.period || 'non-monthly').toLowerCase()} budget`
-                                : 'No pace mark — not a monthly thing'}
-                            </p>
-                          )}
-
-                          {/* *** A SINKING FUND SAYS WHAT TO PUT BY, NOT WHAT
-                              YOU OWE TODAY. *** A £600 car tax compared against
-                              one month always reads as an overspend; finPal
-                              already ships a lesson (`sinking-funds`) telling
-                              people to divide the yearly cost by twelve, and
-                              teaching one thing while computing another is
-                              worse than doing neither.
-
-                              The figure is the SERVER'S — it is the same number
-                              the group's Planned total is built from, so the
-                              caption and the total cannot drift apart. */}
-                          {budget.is_sinking_fund && budget.monthly_set_aside != null && (
-                            <p className="fp-hint" style={{ margin: '0 0 8px' }}>
-                              Set aside {formatCurrency(budget.monthly_set_aside)} a month
-                              {' — that is what this month counts, not the whole bill.'}
-                            </p>
-                          )}
-
-                          {/* Spent / Budget */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={secondaryBodyStyle}>
-                              <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '16px' }}>
-                                {formatCurrency(budget.spent)}
-                              </span>
-                              {reported
-                                ? ' committed'
-                                /* The whole bill, said to BE the whole bill. Left
-                                   bare it reads as a monthly target the user is
-                                   nowhere near. */
-                                : budget.is_sinking_fund
-                                  ? ` of ${formatCurrency(budget.amount)} for the year`
-                                  : ` of ${formatCurrency(budget.amount)}`}
-                            </p>
-                            <p style={{
-                              color: isOver ? 'var(--status-over)' : 'var(--status-ok)',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              margin: 0
-                            }}>
-                              {isOver
-                                ? `+${formatCurrency(Math.abs(remaining))}`
-                                : formatCurrency(remaining)
-                              }
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Expand Icon */}
-                        <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
-                          {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Expanded Transactions */}
-                    {isExpanded && (
-                      <div style={{
-                        padding: '0 24px 24px 24px',
-                        borderTop: '1px solid var(--border-light)',
-                        paddingTop: '16px'
-                      }}>
-                        {budget.transactions && budget.transactions.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {budget.transactions.slice(0, 10).map((txn) => (
-                              <div
-                                key={txn.id}
-                                style={{
-                                  padding: '14px 16px',
-                                  background: 'var(--surface-hover)',
-                                  border: '1px solid var(--border-light)',
-                                  borderRadius: '10px',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s'
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleTransactionClick(txn);
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'var(--border-light)';
-                                  e.currentTarget.style.borderColor = `color-mix(in srgb, ${budget.category_color} 37.6%, transparent)`;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'var(--surface-hover)';
-                                  e.currentTarget.style.borderColor = 'var(--border-light)';
-                                }}
-                              >
-                                <div style={{ flex: 1 }}>
-                                  <p style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '500', margin: 0, marginBottom: '4px' }}>
-                                    {txn.description || txn.name || 'Unnamed Transaction'}
-                                  </p>
-                                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                                    {new Date(txn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                  </p>
-                                </div>
-                                <p style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                                  {formatCurrency(txn.amount)}
-                                </p>
-                              </div>
-                            ))}
-                            {budget.transactions.length > 10 && (
-                              <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '8px' }}>
-                                Showing 10 of {budget.transactions.length} transactions
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '16px' }}>
-
-                            Nothing recorded in this category yet. Transactions you put here will appear in this list.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
+  /* "Plan it" on an empty Non-monthly card: the create panel as a yearly budget, prefilled with the non-monthly
+     lesson's own yearly figure when that lesson applies (a starting point in an editable field, like "Budget this"). */
+  const planNonMonthly = () => {
+    const yearly = sinking ? Number(sinking.yearly) : NaN;
+    setEditingBudget(null);
+    setBudgetFormData(emptyForm('yearly', Number.isFinite(yearly) && yearly > 0 ? yearly.toFixed(2) : ''));
+    setShowBudgetModal(true);
   };
+
+  /**
+   * One row. Grouped rows come from `overview.groups`, which carries no category name or transactions; those are on
+   * the enriched `budgets` list, so they are joined by id (the old grouped cards never had them, which is why an
+   * expanded grouped row always said it had no transactions).
+   */
+  const renderRow = (raw: BudgetWithDetails, group: SpendingType | null, variant: 'flexible' | 'compact', index: number) => {
+    const enriched = budgets.find((b) => b.id === raw.id);
+    const budget: BudgetWithDetails = {
+      ...raw,
+      category_name: raw.category_name ?? enriched?.category_name,
+      transactions: raw.transactions ?? enriched?.transactions,
+    };
+    const title = budgetTitle(budget);
+    return (
+      <BudgetLine
+        key={budget.id}
+        row={budget}
+        title={title}
+        iconName={budget.category_name || title}
+        variant={variant}
+        pace={pace}
+        format={formatCurrency}
+        index={index}
+        controls={budget.category_id != null ? (
+          <div className="fp-bc-menu-field">
+            <span aria-hidden="true">Spending group</span>
+            <SpendingTypeControl categoryId={budget.category_id} value={group} onChanged={() => loadData({ quiet: true })} />
+          </div>
+        ) : null}
+        expanded={expandedBudget === budget.id}
+        onToggle={() => handleExpandBudget(budget.id)}
+        onEdit={(opener) => { focusBack.current = opener; handleOpenBudgetModal(budget); }}
+        onDelete={(opener) => { focusBack.current = opener; void handleDeleteBudget(budget.id); }}
+        onTransaction={handleTransactionClick}
+      />
+    );
+  };
+
+  const emptyGroup = (group: SpendingGroup) => (
+    <p className="fp-bc-note">No {(GROUP_LABELS[group.spending_type as SpendingType] ?? group.label).toLowerCase()} budgets yet.</p>
+  );
 
   return (
     <>
-      <div style={{ minHeight: '100vh', padding: '24px' }}>
+      <div style={{ minHeight: '100vh', padding: '24px' }} className={firstVisit ? undefined : 'fp-quiet'}>
         <div className="page-container">
+        <div className="fp-bc">
+          <BudgetsHero
+            scopeNote={householdScopeNote(members.length) ?? null}
+            monthLabel={selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            monthName={thisMonthName}
+            isCurrentMonth={isCurrentMonth}
+            totals={totals}
+            pace={pace}
+            daysLeft={daysLeft}
+            perDay={perDay}
+            income={income}
+            leftToBudget={leftToBudget}
+            currency={currency}
+            onPrev={goToPreviousMonth}
+            onNext={goToNextMonth}
+            onToday={goToCurrentMonth}
+            onNewBudget={() => handleOpenBudgetModal()}
+            onHelp={openGuide}
+          />
+          {/* Hero, lesson, content: the lesson line sits directly under the hero. */}
+          <WhyCard screen="budgets" variant="line" currency={currency} onCards={onWhyCards} />
+          {/* The tips card only on request (the "?" in the hero); its tour still points at the hero. */}
+          <PageGuide page="budgets" onDemand />
+          {/* Phase 1e: one calm line after a hard month. */}
+          <HardMonthCard />
 
-          {/* *** THIS PAGE HAND-ROLLED ITS OWN h1 AND WAS THE LAST ONE DOING IT.
-              *** A 32px inline title with neither `PageHead` nor
-              `.page-title` — which `pageShells.test.ts` found the moment its
-              assertion was changed from "the class appears on five pages" to
-              "no page invents its own title". The old count could not see this,
-              because four other pages still carried the class and kept the
-              number up.
-
-              The mockup's sentence, too: a limit is only useful for the part of
-              your spending that can move, which is the whole reason this page
-              groups by spending type. */}
-          <PageHead guide="budgets"
-            band="budgets"
-            title="Budgets"
-            subtitle={(() => {
-              const note = householdScopeNote(members.length);
-              const base = 'A limit is only useful for the part of your spending that can move.';
-              /* Two spans, not one string: `getByText` matches a node's WHOLE
-                 text, so concatenating makes each half unfindable. */
-              return note ? (
-                <><span>{base}</span>{' · '}<span>{note}</span></>
-              ) : base;
-            })()}
-            right={<div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {/* Compact Month Navigator */}
-              <div data-guide="budget-month" style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '8px',
-                padding: '6px 12px'
-              }}>
-                <button
-                  // WCAG 2 AA `button-name`, found by the E2E axe run. The label
-                  // is a lucide icon, which renders an <svg> with no text, so the
-                  // button is announced as "button" with no indication of what it
-                  // does. Both month arrows had this.
-                  aria-label="Previous month"
-                  onClick={goToPreviousMonth}
-                  style={{
-                    padding: '4px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    transition: 'all 0.2s',
-                    opacity: 0.7
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '140px', justifyContent: 'center' }}>
-                  <Calendar size={14} color="#86efac" />
-                  <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)' }}>
-                    {formatMonthYear(selectedMonth)}
-                  </span>
-                </div>
-
-                <button
-                  aria-label="Next month"
-                  onClick={goToNextMonth}
-                  style={{
-                    padding: '4px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    transition: 'all 0.2s',
-                    opacity: 0.7
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-
-              {!isCurrentMonth() && (
-                <button
-                  onClick={goToCurrentMonth}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'rgba(134, 239, 172, 0.1)',
-                    border: '1px solid rgba(134, 239, 172, 0.3)',
-                    borderRadius: '6px',
-                    color: 'var(--g-ink)',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    fontWeight: '500'
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(134, 239, 172, 0.2)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(134, 239, 172, 0.1)')}
-                >
-                  Today
-                </button>
+          {budgets.length === 0 ? (
+            <section className="fp-bc-card fp-bc-empty">
+              <p>No budgets yet. Start with one category you'd like to keep an eye on.</p>
+            </section>
+          ) : (
+            <div className="fp-bc-body-wrap">
+            <div className="fp-bc-body">
+              {/* Flexible first in the reading order (the part you can move); the grid draws it in the wide right
+                  column on a laptop and first on a phone. */}
+              {flexibleGroup && (
+                <section className="fp-bc-card fp-bc-area-wide fp-rise" style={staggerStyle(0)} aria-labelledby="bc-flexible" data-testid="bc-flexible">
+                  <div className="fp-bc-card-head">
+                    <h2 id="bc-flexible" className="fp-bc-h2">{GROUP_LABELS.flexible}</h2>
+                    <span className="fp-bc-card-sub">
+                      {formatCurrency(flexibleGroup.actual)} of {formatCurrency(flexibleGroup.planned)} · the part you can move
+                    </span>
+                  </div>
+                  {flexibleGroup.budgets.length === 0 ? emptyGroup(flexibleGroup) : (
+                    <div className="fp-bc-rows">
+                      {flexibleGroup.budgets.map((b, i) => renderRow(b as BudgetWithDetails, 'flexible', 'flexible', i))}
+                    </div>
+                  )}
+                  {pace && flexibleGroup.budgets.some((b) => (b as BudgetWithDetails).pace_applies) && (
+                    <p className="fp-bc-note fp-bc-foot">The line on each bar is where you would be by today.</p>
+                  )}
+                </section>
               )}
 
-              <button
-                onClick={() => handleOpenBudgetModal()}
-                style={{
-                  padding: '10px 20px',
-                  background: 'var(--brand-main-green)',
-                  border: 'none',
-                  borderRadius: '10px',
-                  color: 'white',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '15px',
-                  transition: 'all 0.3s'
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-dark-green)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-main-green)')}
-              >
-                <Plus size={18} /> New Budget
-              </button>
-            </div>}
-          >
-            {/* Phase 1e: one calm line after a hard month, before the totals. */}
-            <HardMonthCard />
-              {/* *** ONE HAIRLINE-SEPARATED ROW, NOT FOUR CARDS WITH ICON
-                  CHIPS. *** Owner, 2026-09-19: the KPI "look differes for
-                  each page", and Accounts is the one to match. `TotalsRow`'s
-                  own docstring had already argued this — "four separate cards
-                  under a card is why the page read as out of place", "the
-                  icon chips are gone, and that is the point of the change" —
-                  and this page plus Transactions kept the cards anyway. That
-                  is D-106's shape: a helper adopted in five places and
-                  bypassed in two.
-
-                  *** THE FOUR `HOUSEHOLD` CHIPS GO TOO. *** One fact printed
-                  four times is the duplication D-101 is about in chrome
-                  rather than arithmetic; it is stated once in the head, as
-                  Accounts states it.
-
-                  Nothing else is dropped: the progress bar and every caption
-                  ride in `note`, which takes a node precisely so a caller can
-                  put its own furniture there. */}
-            <div data-guide="budget-totals">
-                <TotalsRow cells={[
-                  {
-                    label: 'Total budgeted',
-                    /* The bar belongs HERE, with the plan it is a fraction of
-                       — not under "Total spent", which is now all spending and
-                       is not a fraction of anything. */
-                    value: formatCurrency(totalBudgeted),
-                    note: (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                        <div style={{ flex: 1, height: '6px', background: 'var(--progress-track)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${Math.min(spentPct, 100)}%`, height: '100%', background: spentColor, borderRadius: '3px' }} />
-                      </div>
-                        {/* *** THE BAR KEEPS THE STATUS COLOUR; THE LABEL
-                            CANNOT. *** Measured on the band's resolved
-                            #dce7de: `--status-over` is 4.08 and
-                            `--status-warn` 3.95, both under AA for text —
-                            they were only ever safe on the near-white card.
-                            A bar is a graphic (3.0 floor) and clears it, so
-                            the state keeps its colour where the colour is
-                            decoration, and the label states the number in
-                            ink. Nothing is carried by colour alone: the
-                            percentage is right there in words. */}
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {spentPct.toFixed(0)}% used
-                        </span>
+              <div className="fp-bc-area-narrow">
+                {fixedGroup && (
+                  <section className="fp-bc-card fp-rise" style={staggerStyle(1)} aria-labelledby="bc-fixed" data-testid="bc-fixed">
+                    <div className="fp-bc-card-head">
+                      <h2 id="bc-fixed" className="fp-bc-h2">{GROUP_LABELS.fixed}</h2>
+                      <span className="fp-bc-card-sub">Already decided</span>
                     </div>
-                    ),
-                  },
-                  {
-                    label: 'Total spent',
-                    /* *** THE SERVER'S FIGURE, AND IT IS ALL SPENDING — D-271.
-                       *** This said `budgets.reduce(...)`, so the headline of
-                       the page could only ever be spending in categories the
-                       user happened to budget: 474.28 against 2,359.72 that
-                       actually left the account, under the words "Total
-                       Spent". Summing it here was also a second arithmetic to
-                       disagree with the server's, which is D-101's rule. */
-                    value: formatCurrency(totals.actual),
-                    note: totals.unbudgeted_actual > 0
-                      ? `${formatCurrency(totals.unbudgeted_actual)} of it not budgeted`
-                      : `Across ${budgets.length} ${budgets.length === 1 ? 'category' : 'categories'}`,
-                  },
-                  {
-                    label: 'Remaining',
-                    value: formatCurrency(Math.abs(totalRemaining)),
-/* *** INK TOKENS, NOT STATUS TOKENS — THE ROW MOVED ONTO THE BAND. ***
-                       Measured against the band's resolved #dce7de: every
-                       `--status-*` fill FAILS AA there (ok/warn 3.95, over
-                       4.08) while every `--*-ink` clears it (g 5.61, re 5.09).
-                       They were fine on the near-white card and are not on
-                       green, which is the theme's own distinction: the inks
-                       are TEXT colours, the status tokens are fills. Caught
-                       by the contrast ratchet, not by eye. */
-                    // Negative in ink with its minus sign, not red (voice rule 1, UX audit 2026-11-20 P1-4).
-                    valueColor: totalRemaining >= 0 ? 'var(--g-ink)' : 'var(--text-primary)',
-                    note: `${daysLeftInMonth()} days left this month`,
-                  },
-                  {
-                    label: 'Left to budget',
-                    /* *** null IS NOT ZERO, AND THIS IS THE WHOLE POINT. *** No
-                       income recorded this month means finPal does not know
-                       what they earn; rendering that as 0 turns into
-                       "−$1,400 left to budget" for somebody who has not been
-                       paid yet on the 10th. */
-                    value: leftToBudget === null ? '—' : formatCurrency(leftToBudget),
-                    valueColor: leftToBudget === null
-                      ? 'var(--text-muted)'
-                      : leftToBudget >= 0 ? 'var(--g-ink)' : 'var(--text-primary)',
-                    note: income === null
-                      ? "No income recorded this month. Add it when you have it."
-                      : `${formatCurrency(income)} income − ${formatCurrency(totals.planned)} planned`,
-                  },
-                ]} />
-            </div>
-          </PageHead>
-
-          <WhyCard screen="budgets" />
-
-          {/* Top Stats */}
-          {(() => {
-            /* *** ADHERENCE, SO IT IS THE BUDGETED HALF OVER THE PLAN. ***
-               `totals.actual` is now ALL spending; dividing that by the plan
-               would read 168% for somebody who is not over a single budget,
-               which is the opposite of what this bar is for. */
-            return (
-              <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                {/* *** FIVE CARDS IN AN auto-fit GRID IS FOUR AND A LONELY
-                    ONE. *** At 1440px this grid computes four 273px columns, so
-                    the fifth card sat by itself on a second row with ~880px of
-                    empty space beside it — measured on the live page, and the
-                    first thing anyone notices about this screen.
-
-                    Spanning it is the fix rather than narrowing `minmax`:
-                    Budget Health is a BAR, it reads better wide than boxed, and
-                    a width that happens to fit five cards at one viewport
-                    breaks again at the next one. `1 / -1` is correct at every
-                    width, including the single-column phone layout where it is
-                    a no-op. */}
-                <div style={{ gridColumn: '1 / -1', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--card-shadow)' }}>
-                  <p className="fp-hint-block">Budget Health</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '10px' }}>
-                    <span style={{ color: 'var(--status-ok)' }}>{onTrack} on track</span>
-                    <span style={{ color: 'var(--status-warn)' }}>{warning} at risk</span>
-                    <span style={{ color: 'var(--status-over)' }}>{over} over</span>
-                  </div>
-                  {/* *** A ZERO COUNT DREW A VISIBLE SLIVER, SO THE BAR
-                      CONTRADICTED THE NUMBERS PRINTED DIRECTLY ABOVE IT. ***
-                      `flex: warning || 0.1` gave every empty band a floor, and
-                      on the live demo "0 at risk / 0 over" rendered 5.2px of
-                      amber and 5.2px of clay — measured, not guessed. A user
-                      reads a picture faster than a label, so the picture was
-                      telling them something was wrong when nothing was.
-
-                      Bands are now rendered only when they hold something. The
-                      `|| 0.1` existed so a flex child with no basis would not
-                      collapse; omitting the child entirely answers that without
-                      inventing a quantity. */}
-                  <div style={{ display: 'flex', gap: '2px', height: '20px', borderRadius: '6px', overflow: 'hidden', background: 'var(--progress-track)' }}>
-                    {onTrack > 0 && <div style={{ flex: onTrack, background: 'var(--status-ok)' }} />}
-                    {warning > 0 && <div style={{ flex: warning, background: 'var(--status-warn)' }} />}
-                    {over > 0 && <div style={{ flex: over, background: 'var(--status-over)' }} />}
-                  </div>
-                </div>
-              </div>
-              </>
-            );
-          })()}
-
-{/* Budget list, grouped by spending type */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {budgets.length === 0 ? (
-              <div style={{
-                background: 'var(--bg-card)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '16px',
-                padding: '48px',
-                textAlign: 'center'
-              }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>No budgets yet. Start with one category you'd like to keep an eye on.</p>
-              </div>
-            ) : (
-              <>
-                {/* *** INCOME IS ITS OWN SECTION, ABOVE THE EXPENSES, AND ITS
-                    COLUMNS ARE NAMED DIFFERENTLY ON PURPOSE — D-189. *** Money
-                    in and money out are arithmetically opposite, and they used
-                    to render identically: a budget on an income category fell
-                    into `unsorted` and was SUMMED AS PLANNED SPENDING, so the
-                    page told the user they had £4,500 of unearned money left to
-                    spend.
-
-                    "Still to come" is not "remaining" with a different label.
-                    On an expense, remaining is money you may still SPEND; on
-                    income it is money that has not ARRIVED. One heading over
-                    both is D-102's shape, the row where a caption said net
-                    worth rose 43% while the line fell.
-
-                    Rendered only when the section EXISTS and has something in
-                    it: an empty income block on an account that has never
-                    budgeted income is a heading with nothing under it, which is
-                    the noise D-192's guard exists to catch. */}
-                {incomeSection && incomeSection.budgets.length > 0 && (
-                  <section style={groupSectionStyle}>
-                    <div style={{ ...groupHeaderStyle, cursor: 'default' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <h2 style={groupTitleStyle}>Income</h2>
-                        <span className="fp-hint">
-                          {incomeSection.budgets.length}{' '}
-                          {incomeSection.budgets.length === 1 ? 'source' : 'sources'}
-                        </span>
-                      </span>
-                      <span style={{ display: 'flex', gap: '24px', alignItems: 'baseline' }}>
-                        <span style={groupFigureStyle}>
-                          <span className="fp-hint">Expected</span>
-                          <Money amount={incomeSection.planned} currency={currency} />
-                        </span>
-                        <span style={groupFigureStyle}>
-                          <span className="fp-hint">Received</span>
-                          <Money amount={incomeSection.received} currency={currency} />
-                        </span>
-                        <span style={groupFigureStyle}>
-                          <span className="fp-hint">Still to come</span>
-                          <Money amount={incomeSection.still_to_come} currency={currency} />
-                        </span>
-                      </span>
-                    </div>
-                    {/* *** THE SOURCES ARE NAMED. *** A section reading "1
-                        source" with nothing saying WHICH is D-192's shape —
-                        four anonymous budgets — one section up. Deliberately a
-                        plain list rather than the expense card: an income row
-                        has no progress bar, no pace and no overspend, so
-                        reusing that card would draw three things that mean
-                        nothing here. */}
-                    <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
-                      {incomeSection.budgets.map((row) => (
-                        <li
-                          key={row.id}
-                          style={{
-                            display: 'flex', justifyContent: 'space-between',
-                            gap: '12px', padding: '8px 4px',
-                            borderTop: '1px solid var(--border-light)',
-                          }}
-                        >
-                          <span style={{ color: 'var(--text-primary)' }}>
-                            {budgetTitle(row)}
-                          </span>
-                          <span className="fp-hint">
-                            <Money amount={row.spent} currency={currency} /> of{' '}
-                            <Money amount={row.amount} currency={currency} /> received
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="fp-hint" style={{ padding: '8px 4px 0' }}>
-                      {/* *** NO PACE MARK ON INCOME, AND SAYING SO IS THE POINT.
-                          *** For an expense, behind the mark is GOOD — you are
-                          underspending. For income it is BAD — the money has not
-                          arrived. The same phrase would reassure on one row and
-                          alarm on the other. And income arrives in LUMPS: a
-                          salary paid on the 26th is 0% on day 11 and that is not
-                          "behind", it is not due. */}
-                      Income has no pace mark — it arrives in lumps, not evenly
-                      through the month.
-                    </p>
-                  </section>
-                )}
-
-                {/* *** ALL THREE GROUPS ALWAYS RENDER, EVEN EMPTY. *** A section
-                    that vanishes when it has nothing in it makes the page jump
-                    around between months, and an absent group reads as "you have
-                    no fixed costs" rather than "you have not sorted them yet". */}
-                {groups.map((group) => {
-                  const collapsed = collapsedGroups.includes(group.spending_type);
-                  return (
-                    <section key={group.spending_type} style={groupSectionStyle}>
-                      <button
-                        onClick={() => toggleGroup(group.spending_type)}
-                        aria-expanded={!collapsed}
-                        style={groupHeaderStyle}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {collapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-                          <h2 style={groupTitleStyle}>{group.label}</h2>
-                          <span className="fp-hint">
-                            {group.budgets.length} {group.budgets.length === 1 ? 'budget' : 'budgets'}
-                          </span>
-                        </span>
-                        <span style={{ display: 'flex', gap: '24px', alignItems: 'baseline' }}>
-                          <span style={groupFigureStyle}>
-                            <span className="fp-hint">Planned</span>
-                            <Money amount={group.planned} currency={currency} />
-                          </span>
-                          <span style={groupFigureStyle}>
-                            <span className="fp-hint">Actual</span>
-                            <Money amount={group.actual} currency={currency} />
-                          </span>
-                          {/* *** THE HEADER HAS TO CARRY IT, BECAUSE A GROUP
-                              COLLAPSES. *** Rendering the unbudgeted rows in
-                              the BODY alone put "Actual $0.00" directly above
-                              "NOT BUDGETED $1,800.00" — and collapsing Fixed
-                              hid the rent entirely, which is D-271 again one
-                              interaction later. Seen on the deployed demo,
-                              not reasoned about.
-
-                              A fourth figure rather than folding it into
-                              `Actual`: Planned − Actual = Remaining still
-                              chains, so a reader who checks the arithmetic
-                              finds it true. */}
-                          {(group.unbudgeted_actual ?? 0) > 0 && (
-                            <span style={groupFigureStyle}>
-                              <span className="fp-hint">Not budgeted</span>
-                              <Money amount={group.unbudgeted_actual} currency={currency} />
-                            </span>
-                          )}
-                          <span style={groupFigureStyle}>
-                            <span className="fp-hint">Remaining</span>
-                            {/* Negative is NEVER clamped to zero: an overspend
-                                shown as 0 is a lie the user acts on. It renders in
-                                ink with its minus sign, not clay (voice rule 1,
-                                UX audit 2026-11-20 P1-4). */}
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                              {formatCurrency(group.remaining)}
-                            </span>
-                          </span>
-                        </span>
-                      </button>
-
-                      {/* *** THE HEADER'S FIGURES AND THE ROW'S ARE DIFFERENT
-                          SPANS, SO THE HEADER SAYS WHICH ONE IT IS. *** A
-                          sinking fund's row is the YEAR ("£430 of £600 for the
-                          year") and the group is the MONTH — planned is one
-                          twelfth and actual is this month's spending. Both are
-                          right and neither is obvious sitting one above the
-                          other, which is D-102's shape: two correct numbers
-                          reading as one claim. Shown only when a sinking fund is
-                          actually present, so it never appears as furniture on
-                          the other two groups. */}
-                      {group.budgets.some((b) => (b as BudgetWithDetails).is_sinking_fund) && (
-                        <p className="fp-hint" style={{ margin: '8px 4px 0' }}>
-                          These figures are this month's — a yearly budget counts one twelfth here.
-                        </p>
-                      )}
-
-                      {!collapsed && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                          {group.budgets.length === 0
-                            && (group.unbudgeted_categories ?? []).length === 0 ? (
-                            <p className="fp-hint" style={{ padding: '8px 4px' }}>
-                              {/* *** THE FIXED GROUP DOES NOT ASK FOR A TARGET. ***
-                                  Every other empty state on this page invites you
-                                  to set one; demanding a number for rent is
-                                  theatre, so this one reports and stops.
-
-                                  *** AND IT NOW MEANS IT. *** This copy said
-                                  "sort a category into Fixed and it will show
-                                  what it costs" while Housing WAS sorted into
-                                  Fixed with 1,800.00 against it — the group was
-                                  built by looping over budgets, so a classified
-                                  category with no budget landed nowhere. The
-                                  condition above is why the promise is now
-                                  kept: no budgets is not the same as nothing
-                                  here. */}
-                              {group.spending_type === 'fixed'
-                                ? 'Nothing here yet. Fixed costs are reported, not budgeted — sort a category into Fixed and it will show what it costs.'
-                                : `No ${group.label.toLowerCase()} budgets yet.`}
-                            </p>
-                          ) : (
-                            <>
-                              {group.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, group.spending_type))}
-                              <UnbudgetedRows
-                                group={group}
-                                currency={currency}
-                                onBudget={startBudgetFor}
-                              />
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </section>
-                  );
-                })}
-
-                {/* *** UNSORTED IS SHOWN ONLY WHEN IT HAS CONTENT. *** Unlike the
-                    three groups, an empty Unsorted is not a state worth a heading:
-                    it is a to-do list, and an empty to-do list is just noise. */}
-                {(unsorted.count > 0 || unsorted.budgets.length > 0) && (
-                  <section style={groupSectionStyle}>
-                    <div style={groupHeaderStyle}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <h2 style={groupTitleStyle}>{UNSORTED_LABEL}</h2>
-                        <span className="fp-hint">{unsorted.count}</span>
-                      </span>
-                      <span style={groupFigureStyle}>
-                        <span className="fp-hint">Actual</span>
-                        <Money amount={unsorted.actual} currency={currency} />
-                      </span>
-                    </div>
-                    <p className="fp-hint" style={{ margin: '4px 4px 12px' }}>
-                      Money left through these categories and they are not in a group
-                      yet. These are starting points until you set them.
-                    </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                      {unsorted.categories.map((category) => (
-                        <span key={category.id} style={unsortedChipStyle}>
-                          <span style={{ fontWeight: 600 }}>{category.name}</span>
-                          <Money amount={category.actual} currency={currency} />
-                          <SpendingTypeControl
-                            categoryId={category.id}
-                            value={null}
-                            onChanged={loadData}
-                          />
-                        </span>
-                      ))}
-                    </div>
-                    {unsorted.budgets.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                        {unsorted.budgets.map((row) => renderBudgetCard(row as BudgetWithDetails, null))}
+                    {fixedGroup.budgets.length === 0 ? emptyGroup(fixedGroup) : (
+                      <div className="fp-bc-rows">
+                        {fixedGroup.budgets.map((b, i) => renderRow(b as BudgetWithDetails, 'fixed', 'compact', i))}
                       </div>
                     )}
                   </section>
                 )}
-              </>
-            )}
-          </div>
+
+                {nonMonthlyGroup && (
+                  <section className="fp-bc-card fp-rise" style={staggerStyle(2)} aria-labelledby="bc-non-monthly" data-testid="bc-non-monthly">
+                    <div className="fp-bc-card-head">
+                      <h2 id="bc-non-monthly" className="fp-bc-h2">{GROUP_LABELS.non_monthly}</h2>
+                      <span className="fp-bc-card-sub">Set aside each month</span>
+                    </div>
+                    {/* A sinking fund's row is the YEAR and the group is the MONTH; said once, only when one is present. */}
+                    {nonMonthlyGroup.budgets.some((b) => (b as BudgetWithDetails).is_sinking_fund) && (
+                      <p className="fp-bc-note">These figures are this month's — a yearly budget counts one twelfth here.</p>
+                    )}
+                    {nonMonthlyGroup.budgets.length === 0 ? (
+                      <>
+                        <p className="fp-bc-body-text">
+                          {sinking
+                            ? `None yet. ${sinking.item} comes once a year: ${formatMoney(Number(sinking.monthly), { currency: sinking.currency || currency })} a month would cover it.`
+                            : 'No non-monthly budgets yet.'}
+                        </p>
+                        <button type="button" className="fp-bc-secondary fp-press" onClick={planNonMonthly}>Plan it</button>
+                      </>
+                    ) : (
+                      <div className="fp-bc-rows">
+                        {nonMonthlyGroup.budgets.map((b, i) => renderRow(b as BudgetWithDetails, 'non_monthly', 'compact', i))}
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                <NotBudgetedCard
+                  groups={groups}
+                  total={(unsorted.actual ?? 0) === 0 ? (totals.unbudgeted_actual ?? null) : null}
+                  currency={currency}
+                  onBudget={startBudgetFor}
+                />
+
+                {/* Unsorted only when it has content: an empty to-do list is noise. */}
+                {unsortedHasContent && (
+                  <section className="fp-bc-card fp-rise" style={staggerStyle(4)} aria-labelledby="bc-unsorted" data-testid="bc-unsorted">
+                    <div className="fp-bc-card-head">
+                      <h2 id="bc-unsorted" className="fp-bc-h2">{UNSORTED_LABEL}</h2>
+                      <span className="fp-bc-card-sub"><span>{unsorted.count}</span>{' · '}<Money amount={unsorted.actual} currency={currency} /></span>
+                    </div>
+                    <p className="fp-bc-note">
+                      Money left through these categories and they are not in a group yet. These are starting points until you set them.
+                    </p>
+                    {unsorted.categories.map((category) => (
+                      <div key={category.id} className="fp-bc-plain-row">
+                        <span className="fp-bc-plain-name" translate="no">{category.name}</span>
+                        <span className="fp-bc-figure"><Money amount={category.actual} currency={currency} /></span>
+                        <SpendingTypeControl categoryId={category.id} value={null} onChanged={() => loadData({ quiet: true })} />
+                      </div>
+                    ))}
+                    {unsorted.budgets.length > 0 && (
+                      <div className="fp-bc-rows">
+                        {unsorted.budgets.map((b, i) => renderRow(b as BudgetWithDetails, null, 'compact', i))}
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {/* *** INCOME IS ITS OWN SECTION AND ITS COLUMNS ARE NAMED DIFFERENTLY ON PURPOSE (D-189). *** "Still
+                    to come" is money that has not ARRIVED; an expense's remaining is money still to SPEND. */}
+                {incomeSection && incomeSection.budgets.length > 0 && (
+                  <section className="fp-bc-card fp-rise" style={staggerStyle(5)} aria-labelledby="bc-income">
+                    <div className="fp-bc-card-head">
+                      <h2 id="bc-income" className="fp-bc-h2">Income</h2>
+                      <span className="fp-bc-card-sub">{incomeSection.budgets.length} {incomeSection.budgets.length === 1 ? 'source' : 'sources'}</span>
+                    </div>
+                    <div className="fp-bc-income-figures">
+                      <span><span className="fp-bc-muted">Expected</span><Money amount={incomeSection.planned} currency={currency} /></span>
+                      <span><span className="fp-bc-muted">Received</span><Money amount={incomeSection.received} currency={currency} /></span>
+                      <span><span className="fp-bc-muted">Still to come</span><Money amount={incomeSection.still_to_come} currency={currency} /></span>
+                    </div>
+                    {incomeSection.budgets.map((row) => (
+                      <div key={row.id} className="fp-bc-plain-row">
+                        <span className="fp-bc-plain-name" translate="no">{budgetTitle(row)}</span>
+                        <span className="fp-bc-muted">
+                          <Money amount={row.spent} currency={currency} /> of <Money amount={row.amount} currency={currency} /> received
+                        </span>
+                      </div>
+                    ))}
+                    {/* No pace mark on income: it arrives in lumps, and "behind" would mean the opposite of an expense's. */}
+                    <p className="fp-bc-note">Income has no pace mark — it arrives in lumps, not evenly through the month.</p>
+                  </section>
+                )}
+              </div>
+            </div>
+            </div>
+          )}
+        </div>
 
           {/* Edit Transaction Panel */}
           <SlidePanel

@@ -38,30 +38,26 @@ describe('Everest in the range', () => {
 
   it('the range takes an everest prop and draws it', () => {
     expect(range()).toMatch(/everest\?:/);
-    expect(range()).toMatch(/everestSlot/);
+    expect(range()).toMatch(/data-testid="range-everest"/);
   });
 
-  it('puts it in the MIDDLE slot, with goals either side', () => {
-    expect(range()).toMatch(/Math\.floor\(ordered\.length \/ 2\)/);
+  it('stands it at the back, with goals either side (Dashboard C: `heroRangeLayout.ts`)', () => {
+    // Placement is the pure layout's (heroRangeLayout.test.ts); the drawing paints Everest before the goals so they
+    // stand in front of it.
+    const src = range();
+    expect(src.indexOf('data-testid="range-everest"')).toBeLessThan(src.indexOf('data-testid="range-peak"'));
+    expect(src).toMatch(/hasEverest: Boolean\(climb\)/);
   });
 
   it('renders for a user with NO goals, which is the whole reason', () => {
-    // The old guard was `if (peaks.length === 0) return null`.
     expect(range()).toMatch(/peaks\.length === 0 && !climb\) return null/);
-    // And the page stops branching to EmptyRange purely on goal count.
     expect(dash()).toMatch(/goals\.length > 0 \|\| everest\)/);
   });
 
-  /**
-   * Everest's own drawing block, from its opening IIFE to the comment that
-   * begins the goal loop. Sliced narrowly on purpose: a first version of this
-   * test sliced to `ordered.map`, which swept in the goals' own colours and
-   * failed for the wrong reason.
-   */
   const everestDrawing = () => {
     const src = range();
-    const start = src.indexOf('{climb && (() => {');
-    const end = src.indexOf('Tallest first, so shorter peaks', start);
+    const start = src.indexOf('{layout.everest && (() => {');
+    const end = src.indexOf('{/* The South Col route', start);
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     return src.slice(start, end);
@@ -73,43 +69,30 @@ describe('Everest in the range', () => {
   });
 
   it('draws at ZERO altitude too, as base camp', () => {
-    // *** THE CASE THE FIRST VERSION EXCLUDED. *** Gating on altitude > 0 hid
-    // Everest from a brand-new user — no goals and no coins — who is exactly
-    // the user the owner wants it present for. Decision 7: the empty state IS
-    // base camp.
     expect(range()).toMatch(/const climb = everest \?\? null/);
     expect(range()).toMatch(/you are at base camp/);
   });
 
   it('labels itself in METRES, where the goals are in money', () => {
-    expect(range()).toMatch(/summit_m\.toLocaleString\(\)\} m/);
-    // The altitude line is now a ternary — metres when climbing, "base camp"
-    // at zero — so match the metres branch rather than the old literal.
-    expect(range()).toMatch(/you are at \$\{climb\.altitude_m\.toLocaleString\(\)\} m/);
+    expect(range()).toMatch(/climb\.summit_m\.toLocaleString\('en-US'\)\} m — the shared summit/);
+    expect(range()).toMatch(/you are at \$\{climb\.altitude_m\.toLocaleString\('en-US'\)\} m/);
   });
 
-  it('carries a marker and no progress TRACK', () => {
-    // A track behind the marker would be a denominator, and the only one this
-    // product prints is the shop price.
-    expect(everestDrawing()).toMatch(/<circle/);
+  it('carries a marker on the real route and no progress TRACK', () => {
+    // A track behind the marker would be a denominator. The marker is the climber, placed on the South Col route by
+    // elevation from acts, never money.
+    expect(range()).toMatch(/data-testid="range-climber"/);
+    expect(range()).toMatch(/climbPoint\(layout\.everest\.place, climb\.altitude_m/);
     expect(everestDrawing()).not.toMatch(/<rect/);
   });
 
-  it('names no hardcoded colour in EVEREST\'s block', () => {
-    // *** SCOPED, BECAUSE THE FILE ALREADY HAS THREE HEXES AND THEY ARE FINE.
-    // *** `#000000` at two stops of the shade gradient and `#ffffff` for snow
-    // are deliberate: they are a shadow and snow, not theme colours, and they
-    // read correctly on both themes. Asserting over the whole file would have
-    // failed on pre-existing, correct code — which is how a gate gets weakened
-    // to pass instead of tightened to be true.
+  it("names no hardcoded colour in EVEREST's block", () => {
     expect(everestDrawing()).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
 
   it("Everest's snow is its own token, never the card colour — a hole on the dark card", () => {
-    /* Owner screenshot 2026-09-26: in dark mode the cap was `--bg-card`, so the
-       summit vanished into the background. */
-    expect(range()).not.toMatch(/shape\.snow\}\s*fill="var\(--bg-card\)"/);
-    expect(range()).toMatch(/shape\.snow\}\s*fill="var\(--peak-snow\)"/);
+    expect(range()).not.toMatch(/\.snow\}\s*fill="var\(--bg-card\)"/);
+    expect(range()).toMatch(/EVEREST\.snow\}\s*fill="var\(--peak-snow\)"/);
     const css = readFileSync('src/styles/finpal-theme.css', 'utf8');
     const dark = css.slice(css.indexOf('[data-theme="dark"]'));
     const snow = dark.match(/--peak-snow:\s*([^;]+);/);

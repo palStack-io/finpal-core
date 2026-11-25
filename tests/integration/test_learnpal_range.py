@@ -105,7 +105,9 @@ def test_an_unmeasured_peak_sorts_LAST_not_first(learn):
     _db.session.add(g); _db.session.commit()
 
     peaks = range_for_user(user.id)['cost']['peaks']
-    assert [p['peak']['unmeasured'] for p in peaks] == [False, True], (
+    # Since 2026-11-20 a debt with no rate still has its mountain (sized by the goal); "we do not know the rate"
+    # is `rate_unknown`, and it still sorts last.
+    assert [p['peak']['rate_unknown'] for p in peaks] == [False, True], (
         'a MEASURED zero must sort ahead of an unmeasured peak; both are 0 to a '
         'key that reads `magnitude or 0`'
     )

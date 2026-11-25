@@ -72,17 +72,24 @@ export interface PeakMountain {
  */
 export interface GoalPeak {
   scale: PeakScale;
-  /** Monthly interest for `cost`, distance remaining for `build`. */
+  /** Monthly interest for `cost`, distance remaining for `build`. Words the interest / to-go line only. */
   magnitude: number | null;
+  /**
+   * The goal's own size (a saving goal's target; a debt's amount to clear), which picks the mountain and its drawn
+   * height (Harun, 2026-11-20: a mountain is sized by its goal; how far up is the goal's `progress`). Absent on a
+   * backend older than that rule.
+   */
+  size?: number | null;
+  /** No size: no mountain, the flat ridge. */
   unmeasured: boolean;
+  /** A debt with no stated rate: the mountain is its size, only the interest line is unknown. */
+  rate_unknown?: boolean;
   /** 0 (Table Mountain) .. 5 (Everest). `null` when unmeasured. */
   band: number | null;
   mountain: PeakMountain | null;
   /**
-   * *** THE WATERMARK, AND THE SUMMIT NOTE READS FROM THIS ONE. *** `band` is
-   * recomputed from the goal's CURRENT figure, so the mountain SHRINKS as the
-   * user succeeds and finishing lands on the smallest one. Use `band` to draw
-   * the peak and `hardest_band` to say what they beat.
+   * The watermark the summit note reads from: the largest mountain this goal has been. Since 2026-11-20 `band` is
+   * the goal's size, so the two differ only after a target is lowered.
    */
   hardest_band: number | null;
   hardest_mountain: PeakMountain | null;

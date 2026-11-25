@@ -7,7 +7,7 @@ import { goalTrackingLabel } from '../utils/goalTracking';
 import { MountainSilhouette } from '../components/MountainSilhouette';
 import { PageHead } from '../components/PageHead';
 import { WhyCard } from '../modules/learnpal/WhyCard';
-import { heightForMagnitude } from '../utils/mountainGeometry';
+import { goalPeakHeight } from '../utils/goalPeak';
 import {
   UNMEASURED_SUBLINE, peakColorVar, peakEyebrow, peakHardestLine,
   peakSubline, peakSummitLine,
@@ -173,7 +173,8 @@ const GoalRow: React.FC<GoalRowProps> = ({
   // Height is the CLIENT's half of the split: the server picked the mountain,
   // this turns its one number into pixels. `heightForMagnitude` is byte-identical
   // in mobile and its ceilings are gated against the seeded band table (D-185).
-  const peakHeight = peak ? heightForMagnitude(peak.magnitude, peak.scale) : 0;
+  // Sized by the goal (Harun 2026-11-20): the server's `peak.size`, read through the one helper every screen uses.
+  const peakHeight = peak ? goalPeakHeight(peak) : 0;
 
   const loadContributions = async () => {
     if (contributions !== null) {
@@ -331,10 +332,12 @@ const GoalRow: React.FC<GoalRowProps> = ({
                   marginTop: 2,
                   fontStyle: peak.unmeasured ? 'italic' : undefined,
                 }}>
+                  {/* A debt with no rate still has its mountain (its size); only the interest is unknown, so the
+                      prompt to add an APR stays beside it. */}
                   {peak.unmeasured
                     ? UNMEASURED_SUBLINE
-                    : peakSubline(peak, (amount) => formatMoney(
-                        amount, { currency: goal.currency_code })) }
+                    : [peakSubline(peak, (amount) => formatMoney(amount, { currency: goal.currency_code })),
+                      peak.rate_unknown ? UNMEASURED_SUBLINE : null].filter(Boolean).join(' · ')}
                 </div>
               )}
             </div>
