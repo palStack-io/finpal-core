@@ -63,7 +63,7 @@ account needed.
 | Ask (plain questions answered from your budget, no AI), Your next dollar, the Analytics report | No | Yes |
 | Module tracks and their mountains (Cards and points, and the paid modules) | No | Yes |
 | Paid modules: retirementPal, investmentPal, taxPal, businessTaxPal | No | Coming with paid plans |
-| The phone app | No (it connects to hosted finPal only) | In testing |
+| Phone app (iOS and Android) | One-time purchase, from January 2027 | Included |
 
 Everything in Core stays open source and complete. The hosted edition funds this work; it takes nothing away from
 it. Licence details: **[docs/licensing.md](docs/licensing.md)**.
