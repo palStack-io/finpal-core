@@ -566,6 +566,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           <span style={{ fontSize: '13px', fontWeight: 600 }}>Logout</span>
         </div>
 
+        {/* Redesign A2 (Harun 2026-11-25): the same not-advice line as the hosted service. */}
+        <p className="fp-not-advice" data-testid="not-advice" style={{ margin: 0, padding: '0 12px 12px', fontSize: '12px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+          finPal explains money; it is not financial, tax or legal advice. For a big decision, talk to a fiduciary.
+        </p>
+
         {/* finPal Branding */}
         <div className="logo-footer">
           <img src="/finPal.png" alt="finPal" style={{ height: '28px', width: 'auto' }} />
